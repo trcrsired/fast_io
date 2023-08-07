@@ -37,15 +37,7 @@ inline constexpr io_scatter_status_t scatter_write_some_cold_impl(outstmtype out
 	basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 	::std::size_t n)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(pscatters);
-	}
-
+	::fast_io::details::prefetch<false>(pscatters);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_write_some_overflow_define<outstmtype>)
 	{
@@ -154,15 +146,7 @@ inline constexpr io_scatter_status_t scatter_write_some_impl(outstmtype outsm,
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>)
 	{
-#if __cpp_if_consteval >= 202106L
-		if !consteval
-#else
-		if (!std::is_constant_evaluated())
-#endif
-		{
-			::fast_io::details::prefetch<false>(pscatters);
-		}
-
+		::fast_io::details::prefetch<false>(pscatters);
 		using char_type = typename outstmtype::output_char_type;
 		char_type *curr{obuffer_curr(outsm)};
 		char_type *ed{obuffer_end(outsm)};
@@ -225,15 +209,7 @@ inline constexpr void scatter_write_all_cold_impl(outstmtype outsm,
 	basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 	::std::size_t n)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(pscatters);
-	}
-
+	::fast_io::details::prefetch<false>(pscatters);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_write_all_overflow_define<outstmtype>)
 	{
@@ -342,15 +318,7 @@ inline constexpr void scatter_write_all_impl(outstmtype outsm,
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>)
 	{
-#if __cpp_if_consteval >= 202106L
-		if !consteval
-#else
-		if (!std::is_constant_evaluated())
-#endif
-		{
-			::fast_io::details::prefetch<false>(pscatters);
-		}
-
+		::fast_io::details::prefetch<false>(pscatters);
 		using char_type = typename outstmtype::output_char_type;
 		char_type *curr{obuffer_curr(outsm)};
 		char_type *ed{obuffer_end(outsm)};
