@@ -9,21 +9,22 @@ namespace fast_io::details {
 	[[__gnu__::__artificial__]]
 #endif
 	inline constexpr void prefetch(void const* ptr) noexcept {
-#ifdef __has_builtin
-#if __has_builtin(__builtin_prefetch)
 #if __cpp_if_consteval >= 202106L
 		if !consteval
 #else
 		if (!__builtin_is_constant_evaluated())
 #endif
 		{
+#ifdef __has_builtin
+#if __has_builtin(__builtin_prefetch)
 			__builtin_prefetch(ptr, rw, 3);
+#else
+			_mm_prefetch(ptr, 0);
+#endif
+#else
+			_mm_prefetch(ptr, 0);
+#endif
 		}
-#else
-		_mm_prefetch(ptr, 0);
-#endif
-#else
-		_mm_prefetch(ptr, 0);
-#endif
+
 	}
 }
