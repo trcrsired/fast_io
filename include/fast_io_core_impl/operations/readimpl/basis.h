@@ -32,6 +32,15 @@ template<typename instmtype>
 inline constexpr typename instmtype::input_char_type* read_some_cold_impl(instmtype insm,
 	typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<true>(first);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_some_underflow_define<instmtype>)
 	{
@@ -121,6 +130,15 @@ template<typename instmtype>
 #endif
 inline constexpr ::std::byte* read_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<true>(first);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_some_bytes_underflow_define<instmtype>)
 	{
@@ -207,6 +225,15 @@ template<typename instmtype>
 #endif
 inline constexpr void read_all_cold_impl(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<true>(first);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_all_underflow_define<instmtype>)
 	{
@@ -345,6 +372,15 @@ template<typename instmtype>
 #endif
 inline constexpr void read_all_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<true>(first);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_all_bytes_underflow_define<instmtype>)
 	{
@@ -502,6 +538,15 @@ inline constexpr typename instmtype::input_char_type* read_some_impl(instmtype i
 	{
 	if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<true>(first);
+		}
+
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -535,6 +580,15 @@ inline constexpr void read_all_impl(instmtype insm,
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<true>(first);
+		}
+
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -566,6 +620,15 @@ inline constexpr ::std::byte* read_some_bytes_impl(instmtype insm,::std::byte *f
 	{
 	if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>&&sizeof(char_type)==1)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<true>(first);
+		}
+
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -604,6 +667,15 @@ inline constexpr void read_all_bytes_impl(instmtype insm,
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>&&sizeof(char_type)==1)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<true>(first);
+		}
+
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};
 		::std::ptrdiff_t bfddiff{ed-curr};

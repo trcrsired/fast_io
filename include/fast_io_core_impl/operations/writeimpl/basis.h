@@ -32,6 +32,15 @@ template<typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const* write_some_cold_impl(outstmtype outsm,
 	typename outstmtype::output_char_type const *first,typename outstmtype::output_char_type const *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(first);
+	}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_write_some_overflow_define<outstmtype>)
 	{
@@ -113,6 +122,15 @@ template<typename outstmtype>
 #endif
 inline constexpr ::std::byte const* write_some_bytes_cold_impl(outstmtype outsm,::std::byte const *first,::std::byte const *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(first);
+	}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_write_some_bytes_overflow_define<outstmtype>)
 	{
@@ -214,6 +232,15 @@ template<typename outstmtype>
 #endif
 inline constexpr void write_all_cold_impl(outstmtype outsm,typename outstmtype::output_char_type const *first,typename outstmtype::output_char_type const *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(first);
+	}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_write_all_overflow_define<outstmtype>)
 	{
@@ -327,6 +354,15 @@ template<typename outstmtype>
 #endif
 inline constexpr void write_all_bytes_cold_impl(outstmtype outsm,::std::byte const *first,::std::byte const *last)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(first);
+	}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_write_all_bytes_overflow_define<outstmtype>)
 	{
@@ -459,6 +495,15 @@ inline constexpr typename outstmtype::output_char_type const* write_some_impl(ou
 	{
 	if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(first);
+		}
+
 		char_type *curr{obuffer_curr(outsm)};
 		char_type *ed{obuffer_end(outsm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -489,6 +534,15 @@ inline constexpr void write_all_impl(outstmtype outsm,
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(first);
+		}
+
 		char_type *curr{obuffer_curr(outsm)};
 		char_type *ed{obuffer_end(outsm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -516,6 +570,15 @@ inline constexpr ::std::byte const* write_some_bytes_impl(outstmtype outsm,::std
 	}
 	if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>&&sizeof(char_type)==1)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(first);
+		}
+
 		char_type *curr{obuffer_curr(outsm)};
 		char_type *ed{obuffer_end(outsm)};
 		::std::ptrdiff_t bfddiff{ed-curr};
@@ -549,6 +612,15 @@ inline constexpr void write_all_bytes_impl(outstmtype outsm,
 	}
 	else
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(first);
+		}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>&&sizeof(char_type)==1)
 	{

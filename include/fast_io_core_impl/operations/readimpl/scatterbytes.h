@@ -12,6 +12,15 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_cold_impl(instmtype
 	io_scatter_t const *pscatters,
 	::std::size_t n)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_read_some_bytes_underflow_define<instmtype>)
 	{
@@ -94,6 +103,15 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_impl(instmtype insm
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(pscatters);
+		}
+
 		using char_type = typename instmtype::input_char_type;
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};
@@ -149,6 +167,15 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm,
 	io_scatter_t const *pscatters,
 	::std::size_t n)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_read_all_bytes_underflow_define<instmtype>)
 	{
@@ -264,6 +291,15 @@ inline constexpr void scatter_read_all_bytes_impl(instmtype insm,
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 	{
+#if __cpp_if_consteval >= 202106L
+		if !consteval
+#else
+		if (!std::is_constant_evaluated())
+#endif
+		{
+			::fast_io::details::prefetch<false>(pscatters);
+		}
+
 		using char_type = typename instmtype::input_char_type;
 		char_type *curr{ibuffer_curr(insm)};
 		char_type *ed{ibuffer_end(insm)};

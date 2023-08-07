@@ -29,6 +29,15 @@ inline constexpr io_scatter_status_t scatter_pwrite_some_cold_impl(outstmtype ou
 	basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 	::std::size_t n,::fast_io::intfpos_t off)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_pwrite_some_overflow_define<outstmtype>)
 	{
@@ -129,6 +138,15 @@ inline constexpr void scatter_pwrite_all_cold_impl(outstmtype outsm,
 	basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 	::std::size_t n,::fast_io::intfpos_t off)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_pwrite_all_overflow_define<outstmtype>)
 	{
 		scatter_pwrite_all_overflow_define(outsm,pscatters,n);

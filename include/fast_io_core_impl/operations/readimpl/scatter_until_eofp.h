@@ -27,6 +27,15 @@ inline constexpr io_scatter_status_t scatter_pread_until_eof_cold_impl(instmtype
 	basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 	::std::size_t n,::fast_io::intfpos_t off)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_pread_until_eof_underflow_define<instmtype>)
 	{
 		return scatter_pread_until_eof_underflow_define(insm,pscatters,n,off);
@@ -156,6 +165,15 @@ inline constexpr io_scatter_status_t scatter_pread_until_eof_bytes_cold_impl(ins
 	io_scatter_t const *pscatters,
 	::std::size_t n,::fast_io::intfpos_t off)
 {
+#if __cpp_if_consteval >= 202106L
+	if !consteval
+#else
+	if (!std::is_constant_evaluated())
+#endif
+	{
+		::fast_io::details::prefetch<false>(pscatters);
+	}
+
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_scatter_pread_until_eof_bytes_underflow_define<instmtype>)
 	{
