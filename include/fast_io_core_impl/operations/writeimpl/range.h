@@ -65,16 +65,7 @@ constexpr void write_all_iterator_decay_multiblock_common_impl(outstmtype outsm,
 	T const * lastblock_first,
 	T const * lastblock_curr)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(controller_first);
-	}
-
-
+	::fast_io::details::prefetch<false>(controller_first);
 	using output_char_type = typename outstmtype::output_char_type;
 	using nocref=::std::remove_cvref_t<T>;
 	constexpr bool hasbytesop{fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<outstmtype>};
@@ -157,15 +148,7 @@ constexpr void write_all_iterator_decay_multiblock_common_impl(outstmtype outsm,
 template<typename outstmtype,typename Iter,typename Iterlast>
 inline constexpr void write_all_iterator_decay_impl(outstmtype outsm,Iter first,Iterlast last)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(first);
-	}
-
+	::fast_io::details::prefetch<false>(first);
 	if constexpr(::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{::fast_io::operations::decay::output_stream_mutex_ref_decay(outsm)};
