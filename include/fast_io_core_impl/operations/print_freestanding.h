@@ -304,7 +304,7 @@ inline constexpr void print_control_single(output outstm,T t)
 		{
 			if constexpr(::fast_io::operations::decay::defines::has_obuffer_basic_operations<output>&&!asan_activated)
 			{
-				char_type* bcurr{obuffer_curr(outstm)};
+				char_type* bcurr{obuffer_curr(outstm)}; 
 				char_type* bend{obuffer_end(outstm)};
 				std::ptrdiff_t const diff(bend-bcurr);
 				bool smaller{static_cast<std::ptrdiff_t>(size)<diff};
