@@ -12,15 +12,7 @@ template<typename instmtype>
 #endif
 inline constexpr typename instmtype::input_char_type* pread_until_eof_cold_impl(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<true>(first);
-	}
-
+	::fast_io::details::prefetch<true>(first);
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pread_until_eof_underflow_define<instmtype>)
 	{
@@ -112,15 +104,7 @@ template<typename instmtype>
 #endif
 inline constexpr ::std::byte* pread_until_eof_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<true>(first);
-	}
-
+	::fast_io::details::prefetch<true>(first);
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pread_until_eof_bytes_underflow_define<instmtype>)
 	{

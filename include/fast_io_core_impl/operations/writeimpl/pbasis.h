@@ -12,15 +12,7 @@ template<typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const* pwrite_some_cold_impl(outstmtype outsm,
 	typename outstmtype::output_char_type const *first,typename outstmtype::output_char_type const *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(first);
-	}
-
+	::fast_io::details::prefetch<false>(first);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pwrite_some_overflow_define<outstmtype>)
 	{
@@ -108,15 +100,7 @@ template<typename outstmtype>
 #endif
 inline constexpr ::std::byte const* pwrite_some_bytes_cold_impl(outstmtype outsm,::std::byte const *first,::std::byte const *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(first);
-	}
-
+	::fast_io::details::prefetch<false>(first);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pwrite_some_bytes_overflow_define<outstmtype>)
 	{
@@ -221,15 +205,7 @@ template<typename outstmtype>
 #endif
 inline constexpr void pwrite_all_cold_impl(outstmtype outsm,typename outstmtype::output_char_type const *first,typename outstmtype::output_char_type const *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(first);
-	}
-
+	::fast_io::details::prefetch<false>(first);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pwrite_all_overflow_define<outstmtype>)
 	{
@@ -310,15 +286,7 @@ template<typename outstmtype>
 #endif
 inline constexpr void pwrite_all_bytes_cold_impl(outstmtype outsm,::std::byte const *first,::std::byte const *last,::fast_io::intfpos_t off)
 {
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!std::is_constant_evaluated())
-#endif
-	{
-		::fast_io::details::prefetch<false>(first);
-	}
-
+	::fast_io::details::prefetch<false>(first);
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pwrite_all_bytes_overflow_define<outstmtype>)
 	{
