@@ -223,8 +223,8 @@ inline constexpr ::std::byte* read_until_eof_bytes_cold_impl(instmtype insm,::st
 		{
 			while(first!=last)
 			{
-				auto it{read_some_bytes_underflow_define(insm,first,last)};
-				if(it==first)
+				auto [it,eof]{read_some_bytes_underflow_define(insm, first, last)};
+				if(eof)
 				{
 					return it;
 				}

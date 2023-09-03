@@ -71,7 +71,7 @@ inline constexpr char_type* read_until_eof_underflow_size_impl(
 			reinterpret_cast<::std::byte const*>(first))},
 		{pointers.buffer_begin,bfsz*sizeof(char_type)}
 		};
-		auto [pos,scpos]{::fast_io::operations::decay::scatter_read_until_eof_bytes_decay(instm,scatters,2)};
+		auto [pos,scpos,eof]{::fast_io::operations::decay::scatter_read_until_eof_bytes_decay(instm,scatters,2)};
 		if(pos==2)
 		{
 			pointers.buffer_end=(pointers.buffer_curr=pointers.buffer_begin)+bfsz;
@@ -85,7 +85,7 @@ inline constexpr char_type* read_until_eof_underflow_size_impl(
 		else
 		{
 			pointers.buffer_end=pointers.buffer_curr=pointers.buffer_begin;
-			return first+scpos/sizeof(char_type);
+			return last;
 		}
 	}
 	else

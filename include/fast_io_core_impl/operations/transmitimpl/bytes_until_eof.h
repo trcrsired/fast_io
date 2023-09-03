@@ -20,8 +20,9 @@ A dummy placeholder implementation
 	);
 	input_char_type *buffer_start{newptr.ptr};
 	input_char_type *buffer_end{newptr.ptr+newptr.size};
-	for(input_char_type *iter;(iter=::fast_io::operations::decay::read_some_decay(instm,buffer_start,buffer_end))!=buffer_start;)
+	for(rw_some_result<input_char_type> res;(res=::fast_io::operations::decay::read_some_decay(instm,buffer_start,buffer_end)).eof;)
 	{
+		auto iter{res.ptr};
 		auto bufferstartpbyte{reinterpret_cast<::std::byte const*>(buffer_start)};
 		auto iterpbyte{reinterpret_cast<::std::byte const*>(iter)};
 		::std::size_t off{static_cast<::std::size_t>(iterpbyte-bufferstartpbyte)};

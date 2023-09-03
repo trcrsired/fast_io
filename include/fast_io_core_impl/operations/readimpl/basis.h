@@ -180,9 +180,10 @@ inline constexpr rw_some_result<::std::byte> read_some_bytes_cold_impl(instmtype
 #endif
 		=
 		char_type*;
-		return reinterpret_cast<::std::byte*>(read_some_cold_impl(insm,
+		auto res{read_some_cold_impl(insm,
 			reinterpret_cast<char_type_ptr>(first),
-			reinterpret_cast<char_type_ptr>(last)));
+			reinterpret_cast<char_type_ptr>(last))};
+		return {reinterpret_cast<::std::byte*>(res.ptr),res.eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_seek_bytes_define<instmtype>&&
 		(::fast_io::operations::decay::defines::has_any_of_pread_bytes_operations<instmtype>))
