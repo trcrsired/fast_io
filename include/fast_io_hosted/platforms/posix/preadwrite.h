@@ -7,14 +7,14 @@ namespace details
 {
 
 #ifndef __wasi__
-inline ::std::byte* posix_pread_bytes_impl(int fd,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
+inline rw_some_result<::std::byte> posix_pread_bytes_impl(int fd,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
 	auto ret{::fast_io::noexcept_call(::pread,fd,first,static_cast<::std::size_t>(last-first),off)};
 	if(ret<0)
 	{
 		::fast_io::throw_posix_error();
 	}
-	return first+ret;
+	return {first+ret,!ret};
 }
 
 inline ::std::byte const* posix_pwrite_bytes_impl(int fd,::std::byte const *first,::std::byte const *last,::fast_io::intfpos_t off)
