@@ -20,6 +20,7 @@ FAST_IO_MODULE_EXPORT struct io_scatter_status_t
 {
 	std::size_t position;
 	std::size_t position_in_scatter;
+	bool eof;
 };
 
 template<typename T>
@@ -113,6 +114,15 @@ beg = 0,				//SEEK_SET
 cur = 1,				//SEEK_CUR
 end = 2,				//SEEK_END
 };
+
+
+template <typename char_type>
+FAST_IO_MODULE_EXPORT struct rw_some_result
+{
+	char_type* ptr;
+	bool eof;
+};
+
 
 using uintfpos_t = ::std::uintmax_t;
 using intfpos_t = ::std::intmax_t;

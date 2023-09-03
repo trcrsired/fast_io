@@ -24,7 +24,7 @@ template<typename instmtype,::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr char_type* read_some(instmtype&& instm,char_type *first, char_type *last)
+inline constexpr rw_some_result<char_type> read_some(instmtype&& instm,char_type *first, char_type *last)
 {
 	return ::fast_io::details::read_some_impl(::fast_io::operations::input_stream_ref(instm),first,last);
 }
@@ -57,7 +57,7 @@ template<typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr ::std::byte* read_some_bytes(instmtype&& instm,::std::byte *first, ::std::byte *last)
+inline constexpr rw_some_result<::std::byte> read_some_bytes(instmtype&& instm,::std::byte *first, ::std::byte *last)
 {
 	return ::fast_io::details::read_some_bytes_impl(::fast_io::operations::input_stream_ref(instm),first,last);
 }
@@ -150,7 +150,7 @@ template<typename instmtype,::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr char_type* pread_some(instmtype&& instm,char_type *first, char_type *last,::fast_io::intfpos_t off)
+inline constexpr rw_some_result<char_type> pread_some(instmtype&& instm,char_type *first, char_type *last,::fast_io::intfpos_t off)
 {
 	return ::fast_io::details::pread_some_impl(::fast_io::operations::input_stream_ref(instm),first,last,off);
 }
@@ -172,7 +172,7 @@ template<typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr ::std::byte* pread_some_bytes(instmtype&& instm,::std::byte *first, ::std::byte *last,::fast_io::intfpos_t off)
+inline constexpr rw_some_result<::std::byte> pread_some_bytes(instmtype&& instm,::std::byte *first, ::std::byte *last,::fast_io::intfpos_t off)
 {
 	return ::fast_io::details::pread_some_bytes_impl(::fast_io::operations::input_stream_ref(instm),first,last,off);
 }

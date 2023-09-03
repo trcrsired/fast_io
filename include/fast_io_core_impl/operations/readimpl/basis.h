@@ -20,7 +20,7 @@ inline constexpr void pread_all_bytes_cold_impl(instmtype insm,::std::byte *firs
 
 
 template<typename instmtype>
-inline constexpr ::std::byte* read_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last);
+inline constexpr rw_some_result<::std::byte> read_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last);
 
 template<typename instmtype>
 inline constexpr void read_all_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last);
@@ -29,65 +29,67 @@ template<typename instmtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr typename instmtype::input_char_type* read_some_cold_impl(instmtype insm,
+inline constexpr rw_some_result<typename instmtype::input_char_type> read_some_cold_impl(instmtype insm,
 	typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_some_underflow_define<instmtype>)
 	{
-		return read_some_underflow_define(insm,first,last);
+		auto ptr{ read_some_underflow_define(insm,first,last) };
+		bool eof{ ptr == first ? true : false };
+		return {ptr,eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_some_underflow_define<instmtype>)
 	{
 		::std::size_t len{static_cast<::std::size_t>(last-first)};
 		basic_io_scatter_t<char_type> sc{first,len};
-		auto [pos,scpos]{scatter_read_some_underflow_define(insm,__builtin_addressof(sc),1)};
+		auto [pos,scpos,eof]{scatter_read_some_underflow_define(insm,__builtin_addressof(sc),1)};
 		if(!pos)
 		{
-			return first+scpos;
+			return {first+scpos,eof};
 		}
-		return last;
+		return {last,eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_read_until_eof_underflow_define<instmtype>)
 	{
-		return read_until_eof_underflow_define(insm,first,last);
+		return {read_until_eof_underflow_define(insm,first,last),true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_until_eof_underflow_define<instmtype>)
 	{
 		::std::size_t len{static_cast<::std::size_t>(last-first)};
 		basic_io_scatter_t<char_type> sc{first,len};
-		auto [pos,scpos]{scatter_read_until_eof_underflow_define(insm,__builtin_addressof(sc),1)};
+		auto [pos,scpos,eof]{scatter_read_until_eof_underflow_define(insm,__builtin_addressof(sc),1)};
 		if(!pos)
 		{
-			return first+scpos;
+			return {first + scpos,eof};
 		}
-		return last;
+		return {last,eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_read_all_underflow_define<instmtype>)
 	{
 		read_all_underflow_define(insm,first,last);
-		return last;
+		return {last,true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_all_underflow_define<instmtype>)
 	{
 		::std::size_t len{static_cast<::std::size_t>(last-first)};
 		basic_io_scatter_t<char_type> sc{first,len};
 		scatter_read_all_underflow_define(insm,__builtin_addressof(sc),1);
-		return last;
+		return {last,true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_any_of_read_bytes_operations<instmtype>)
 	{
 		if constexpr(sizeof(typename instmtype::input_char_type)==1)
 		{
 			::std::byte* firstptr{reinterpret_cast<::std::byte*>(first)};
-			::std::byte* ptr{read_some_bytes_cold_impl(insm,
+			auto [ptr, eof]{read_some_bytes_cold_impl(insm,
 			firstptr,reinterpret_cast<::std::byte*>(last))};
-			return ptr-firstptr+first;
+			return {ptr - firstptr + first, eof};
 		}
 		else
 		{
 			::std::byte* firstptr{reinterpret_cast<::std::byte*>(first)};
-			::std::byte* ptr{read_some_bytes_cold_impl(insm,
+			auto [ptr, eof]{read_some_bytes_cold_impl(insm,
 			firstptr,reinterpret_cast<::std::byte*>(last))};
 			::std::size_t diff{static_cast<::std::size_t>(ptr-firstptr)};
 			::std::size_t v{diff/sizeof(char_type)};
@@ -96,22 +98,24 @@ inline constexpr typename instmtype::input_char_type* read_some_cold_impl(instmt
 			{
 				read_all_bytes_cold_impl(insm,ptr,ptr+remain);
 			}
-			return first+v;
+			return {first+v,true};
 		}
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_seek_define<instmtype>&&
 	(::fast_io::operations::decay::defines::has_any_of_pread_operations<instmtype>))
 	{
 		auto ret{::fast_io::details::pread_some_cold_impl(insm,first,last)};
+		auto eof{ ret == first ? true : false };
 		::fast_io::operations::decay::input_stream_seek_decay(insm,ret-first,::fast_io::seekdir::cur);
-		return ret;
+		return {ret,eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_seek_bytes_define<instmtype>&&
 	(::fast_io::operations::decay::defines::has_any_of_pread_bytes_operations<instmtype>))
 	{
 		auto ret{::fast_io::details::pread_some_cold_impl(insm,first,last)};
+		auto eof{ ret == first ? true : false };
 		::fast_io::operations::decay::input_stream_seek_bytes_decay(insm,(ret-first)*sizeof(char_type),::fast_io::seekdir::cur);
-		return ret;
+		return {ret,eof};
 	}
 }
 
@@ -119,38 +123,38 @@ template<typename instmtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr ::std::byte* read_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last)
+inline constexpr rw_some_result<::std::byte> read_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_read_some_bytes_underflow_define<instmtype>)
 	{
-		return read_some_bytes_underflow_define(insm,first,last);
+		return { read_some_bytes_underflow_define(insm,first,last),true };
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_some_bytes_underflow_define<instmtype>)
 	{
 		::std::size_t len{static_cast<::std::size_t>(last-first)};
 		io_scatter_t sc{first,len};
-		auto [pos,inscpos] = scatter_read_some_bytes_underflow_define(insm,__builtin_addressof(sc),1);
+		auto [pos,inscpos,eof] = scatter_read_some_bytes_underflow_define(insm,__builtin_addressof(sc),1);
 		if(!pos)
 		{
-			return first+inscpos;
+			return {first+inscpos,eof};
 		}
-		return last;
+		return {last,true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_read_until_eof_bytes_underflow_define<instmtype>)
 	{
-		return read_until_eof_bytes_underflow_define(insm,first,last);
+		return {read_until_eof_bytes_underflow_define(insm,first,last),true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_until_eof_bytes_underflow_define<instmtype>)
 	{
 		::std::size_t len{static_cast<::std::size_t>(last-first)};
 		io_scatter_t sc{first,len};
-		auto [pos,inscpos] = scatter_read_until_eof_bytes_underflow_define(insm,__builtin_addressof(sc),1);
+		auto [pos,inscpos,eof] = scatter_read_until_eof_bytes_underflow_define(insm,__builtin_addressof(sc),1);
 		if(!pos)
 		{
-			return first+inscpos;
+			return {first+inscpos,eof};
 		}
-		return last;
+		return {last,eof};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_read_all_bytes_underflow_define<instmtype>)
 	{
@@ -163,13 +167,13 @@ inline constexpr ::std::byte* read_some_bytes_cold_impl(instmtype insm,::std::by
 		read_all_bytes_underflow_define(insm,
 			reinterpret_cast<char_type_ptr>(first),
 			reinterpret_cast<char_type_ptr>(last));
-		return last;
+		return {last,true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_all_bytes_underflow_define<instmtype>)
 	{
 		io_scatter_t sc{first,static_cast<::std::size_t>(last-first)};
 		scatter_read_all_bytes_underflow_define(insm,__builtin_addressof(sc),1);
-		return last;
+		return {last,true};
 	}
 	else if constexpr(sizeof(char_type)==1&&
 		(::fast_io::operations::decay::defines::has_any_of_read_operations<instmtype>))
@@ -188,16 +192,18 @@ inline constexpr ::std::byte* read_some_bytes_cold_impl(instmtype insm,::std::by
 		(::fast_io::operations::decay::defines::has_any_of_pread_bytes_operations<instmtype>))
 	{
 		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm,first,last)};
+		auto eof{ ret == first ? true : false };
 		::fast_io::operations::decay::input_stream_seek_bytes_decay(insm,ret-first,::fast_io::seekdir::cur);
-		return ret;
+		return {ret,eof};
 	}
 	else if constexpr(sizeof(char_type)==1&&::fast_io::operations::decay::defines::has_input_or_io_stream_seek_define<instmtype>&&
 		(::fast_io::operations::decay::defines::has_any_of_pread_operations<instmtype>))
 	{
 
 		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm,first,last)};
+		auto eof{ ret == first ? true : false };
 		::fast_io::operations::decay::input_stream_seek_decay(insm,ret-first,::fast_io::seekdir::cur);
-		return ret;
+		return {ret,eof};
 	}
 }
 
@@ -490,7 +496,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm,::std::byte *first
 }
 
 template<typename instmtype>
-inline constexpr typename instmtype::input_char_type* read_some_impl(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
+inline constexpr rw_some_result<typename instmtype::input_char_type> read_some_impl(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -507,13 +513,13 @@ inline constexpr typename instmtype::input_char_type* read_some_impl(instmtype i
 		::std::ptrdiff_t bfddiff{ed-curr};
 		::std::ptrdiff_t itdiff{last-first};
 		if(itdiff<bfddiff)
-#if __has_cpp_attribute(__gnu__::__may_alias__)
+#if __has_cpp_attribute(likely)
 [[likely]]
 #endif
 		{
 			non_overlapped_copy_n(curr,static_cast<::std::size_t>(itdiff),first);
 			ibuffer_set_curr(insm,curr+itdiff);
-			return last;
+			return { last,false };
 		}
 	}
 	return ::fast_io::details::read_some_cold_impl(insm,first,last);
@@ -554,7 +560,7 @@ inline constexpr void read_all_impl(instmtype insm,
 }
 
 template<typename instmtype>
-inline constexpr ::std::byte* read_some_bytes_impl(instmtype insm,::std::byte *first,::std::byte *last)
+inline constexpr rw_some_result<::std::byte> read_some_bytes_impl(instmtype insm,::std::byte *first,::std::byte *last)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -571,7 +577,7 @@ inline constexpr ::std::byte* read_some_bytes_impl(instmtype insm,::std::byte *f
 		::std::ptrdiff_t bfddiff{ed-curr};
 		::std::ptrdiff_t itdiff{last-first};
 		if(itdiff<bfddiff)
-#if __has_cpp_attribute(__gnu__::__may_alias__)
+#if __has_cpp_attribute(likely)
 [[likely]]
 #endif
 		{
@@ -583,7 +589,7 @@ inline constexpr ::std::byte* read_some_bytes_impl(instmtype insm,::std::byte *f
 			non_overlapped_copy_n(curr,static_cast<::std::size_t>(itdiff),
 				reinterpret_cast<char_type_ptr>(first));
 			ibuffer_set_curr(insm,curr+itdiff);
-			return last;
+			return {last,false};
 		}
 	}
 	return ::fast_io::details::read_some_bytes_cold_impl(insm,first,last);

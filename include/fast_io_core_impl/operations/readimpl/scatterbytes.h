@@ -29,14 +29,14 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_cold_impl(instmtype
 			auto [baseb,len] = pscatters[i];
 			::std::byte *base{reinterpret_cast<::std::byte*>(const_cast<void*>(baseb))};
 			auto ed{base+len};
-			auto written{::fast_io::details::read_some_bytes_impl(insm,base,ed)};
+			auto [written,eof]{::fast_io::details::read_some_bytes_impl(insm, base, ed)};
 			::std::size_t sz{static_cast<::std::size_t>(written-base)};
 			if(sz!=len)
 			{
-				return {i,sz};
+				return {i,sz,eof};
 			}
 		}
-		return {n,0};
+		return {n,0,true};
 	}
 	else if constexpr(::fast_io::operations::decay::defines::has_scatter_read_all_bytes_underflow_define<instmtype>||
 		::fast_io::operations::decay::defines::has_read_all_bytes_underflow_define<instmtype>)

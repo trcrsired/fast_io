@@ -276,8 +276,8 @@ inline constexpr void write_all_cold_impl(outstmtype outsm,typename outstmtype::
 			{
 				::std::size_t len{static_cast<::std::size_t>(last-first)};
 				basic_io_scatter_t<char_type> sc{first,len};
-				auto [position,position_in_scatter]{scatter_write_some_overflow_define(outsm,__builtin_addressof(sc),1)};
-				if(position==1)
+				auto [position,position_in_scatter, eof]{scatter_write_some_overflow_define(outsm,__builtin_addressof(sc),1)};
+				if(eof)
 				{
 					return;
 				}

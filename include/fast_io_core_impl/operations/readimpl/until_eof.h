@@ -113,8 +113,8 @@ inline constexpr typename instmtype::input_char_type* read_until_eof_cold_impl(i
 			{
 				::std::size_t len{static_cast<::std::size_t>(last-first)};
 				basic_io_scatter_t<char_type> sc{first,len};
-				auto [position,position_io_scatter]{scatter_read_some_underflow_define(insm,__builtin_addressof(sc),1)};
-				if(position==1)
+				auto [position,position_io_scatter,eof]{scatter_read_some_underflow_define(insm,__builtin_addressof(sc),1)};
+				if(eof)
 				{
 					return last;
 				}

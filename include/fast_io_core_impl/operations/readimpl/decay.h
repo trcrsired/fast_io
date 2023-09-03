@@ -4,7 +4,7 @@ namespace fast_io::operations::decay
 {
 
 template<typename instmtype>
-inline constexpr typename instmtype::input_char_type* read_some_decay(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
+inline constexpr rw_some_result<typename instmtype::input_char_type> read_some_decay(instmtype insm,typename instmtype::input_char_type *first,typename instmtype::input_char_type *last)
 {
 	return ::fast_io::details::read_some_impl(insm,first,last);
 }
