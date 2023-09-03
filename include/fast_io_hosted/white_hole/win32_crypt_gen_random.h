@@ -34,7 +34,7 @@ inline constexpr void input_stream_require_secure_clear_define(basic_win32_crypt
 namespace win32::details
 {
 
-inline ::std::byte* win32_crypt_gen_random_some_impl(::std::uintptr_t hprov,::std::byte *first,::std::byte *last)
+inline rw_some_result<::std::byte> win32_crypt_gen_random_some_impl(::std::uintptr_t hprov,::std::byte *first,::std::byte *last)
 {
 	if constexpr(sizeof(::std::size_t)<=sizeof(::std::uint_least32_t))
 	{
@@ -44,7 +44,7 @@ inline ::std::byte* win32_crypt_gen_random_some_impl(::std::uintptr_t hprov,::st
 		{
 			throw_win32_error();
 		}
-		return last;
+		return {last,true};
 	}
 	else
 	{
@@ -57,20 +57,20 @@ inline ::std::byte* win32_crypt_gen_random_some_impl(::std::uintptr_t hprov,::st
 			if(!::fast_io::win32::CryptGenRandom(hprov,static_cast<std::uint_least32_t>(toreadthisround),
 				reinterpret_cast<char unsigned*>(first)))
 			{
-				return first;
+				return {first,false};
 			}
 			first+=toreadthisround;
 		}
-		return last;
+		return {last,true};
 	}
 }
 
 inline void win32_crypt_gen_random_all_impl(::std::uintptr_t hprov,::std::byte *first,::std::byte *last)
 {
-	auto ret{win32_crypt_gen_random_some_impl(hprov,first,last)};
+	auto eof{win32_crypt_gen_random_some_impl(hprov,first,last).eof};
 	if constexpr(sizeof(::std::uint_least32_t)<sizeof(::std::size_t))
 	{
-		if(ret!=last)
+		if(!eof)
 		{
 			throw_win32_error();
 		}
@@ -81,7 +81,7 @@ inline void win32_crypt_gen_random_all_impl(::std::uintptr_t hprov,::std::byte *
 
 template<std::integral char_type>
 requires (sizeof(::std::uint_least32_t)<sizeof(::std::size_t))
-inline ::std::byte* read_some_bytes_underflow_define(basic_win32_crypt_gen_random_io_observer<char_type> bcgiob,::std::byte* first,::std::byte* last)
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(basic_win32_crypt_gen_random_io_observer<char_type> bcgiob,::std::byte* first,::std::byte* last)
 {
 	return ::fast_io::win32::details::win32_crypt_gen_random_some_impl(bcgiob.hprov,first,last);
 }

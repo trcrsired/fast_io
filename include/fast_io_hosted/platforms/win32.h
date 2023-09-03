@@ -677,7 +677,7 @@ inline void win32_calculate_offset_impl(void* __restrict handle,::fast_io::win32
 		static_cast<std::uint_least32_t>(u64off>>32)};
 }
 
-inline ::std::byte* read_or_pread_some_bytes_common_impl(void* __restrict handle,::std::byte *first,
+inline rw_some_result<::std::byte> read_or_pread_some_bytes_common_impl(void* __restrict handle,::std::byte *first,
 	::std::byte *last,::fast_io::win32::overlapped *lpoverlapped)
 {
 	::std::uint_least32_t number_of_bytes{};
@@ -687,19 +687,19 @@ inline ::std::byte* read_or_pread_some_bytes_common_impl(void* __restrict handle
 	{
 		auto err(win32::GetLastError());
 		if(err==109)
-			return first;
+			return {first,false};
 		throw_win32_error(err);
 	}
-	return first+number_of_bytes;
+	return {first+number_of_bytes,!number_of_bytes};
 }
 
-inline ::std::byte* read_some_bytes_impl(void* __restrict handle,::std::byte *first,
+inline rw_some_result<::std::byte> read_some_bytes_impl(void* __restrict handle,::std::byte *first,
 	::std::byte *last)
 {
 	return ::fast_io::win32::details::read_or_pread_some_bytes_common_impl(handle,first,last,nullptr);
 }
 
-inline ::std::byte* pread_some_bytes_impl(void* __restrict handle,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
+inline rw_some_result<::std::byte> pread_some_bytes_impl(void* __restrict handle,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
 	::fast_io::win32::overlapped overlap{};
 	::fast_io::win32::details::win32_calculate_offset_impl(handle,overlap,off);
@@ -737,7 +737,7 @@ inline ::std::byte const* pwrite_some_bytes_impl(void* __restrict handle,
 }
 
 template<win32_family family,std::integral ch_type>
-inline ::std::byte* read_some_bytes_underflow_define(basic_win32_family_io_observer<family,ch_type> wiob,
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(basic_win32_family_io_observer<family,ch_type> wiob,
 	::std::byte* first, ::std::byte* last)
 {
 	return ::fast_io::win32::details::read_some_bytes_impl(wiob.handle,first,last);
@@ -762,7 +762,7 @@ I am not confident that i understand semantics correctly. Disabled first and tes
 */
 
 template<win32_family family,std::integral ch_type>
-inline ::std::byte* pread_some_bytes_underflow_define(basic_win32_family_io_observer<family,ch_type> niob,
+inline rw_some_result<::std::byte> pread_some_bytes_underflow_define(basic_win32_family_io_observer<family,ch_type> niob,
 	::std::byte* first, ::std::byte* last, ::fast_io::intfpos_t off)
 {
 	return ::fast_io::win32::details::pread_some_bytes_impl(niob.handle,first,last,off);

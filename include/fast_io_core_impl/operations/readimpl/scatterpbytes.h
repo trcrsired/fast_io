@@ -37,12 +37,12 @@ inline constexpr io_scatter_status_t scatter_pread_some_bytes_cold_impl(instmtyp
 			auto [baseb,len] = pscatters[i];
 			::std::byte *base{reinterpret_cast<::std::byte*>(const_cast<void*>(baseb))};
 			auto ed{base+len};
-			auto written{::fast_io::details::pread_some_bytes_impl(insm,base,ed,off)};
-			::std::ptrdiff_t dfsz{written-base};
-			::std::size_t sz{static_cast<::std::size_t>(written-base)};
+			auto written_result{::fast_io::details::pread_some_bytes_impl(insm,base,ed,off)};
+			::std::ptrdiff_t dfsz{ written_result.ptr-base};
+			::std::size_t sz{static_cast<::std::size_t>(written_result.ptr-base)};
 			if(sz!=len)
 			{
-				return {i,sz};
+				return {i,sz,written_result.eof};
 			}
 			off=::fast_io::fposoffadd_nonegative(off,dfsz);
 		}

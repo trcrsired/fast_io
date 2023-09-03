@@ -6,7 +6,7 @@ namespace fast_io
 namespace details
 {
 
-inline ::std::byte* posix_read_bytes_impl(int fd,::std::byte *first,::std::byte *last)
+inline rw_some_result<::std::byte> posix_read_bytes_impl(int fd,::std::byte *first,::std::byte *last)
 {
 #if defined(__linux__) && defined(__NR_read)
 	auto ret{system_call<__NR_read,::std::ptrdiff_t>(fd,first,static_cast<::std::size_t>(last-first))};
@@ -23,7 +23,9 @@ inline ::std::byte* posix_read_bytes_impl(int fd,::std::byte *first,::std::byte 
 		::fast_io::throw_posix_error();
 	}
 #endif
-	return first+ret;
+	if(ret==0)
+		return {first,true};
+	return {first+ret,false};
 }
 
 inline ::std::byte const* posix_write_bytes_impl(int fd,::std::byte const *first,::std::byte const *last)
@@ -49,7 +51,7 @@ inline ::std::byte const* posix_write_bytes_impl(int fd,::std::byte const *first
 }
 
 template<::std::integral char_type>
-inline ::std::byte* read_some_bytes_underflow_define(
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(
 ::fast_io::basic_posix_io_observer<char_type> piob,
 ::std::byte *first,::std::byte *last)
 {

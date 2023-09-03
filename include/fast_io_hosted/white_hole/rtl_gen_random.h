@@ -21,7 +21,7 @@ namespace win32
 namespace details
 {
 
-inline ::std::byte* rtl_gen_random_some_impl(::std::byte *first,::std::byte *last)
+inline rw_some_result<::std::byte> rtl_gen_random_some_impl(::std::byte *first,::std::byte *last)
 {
 	if constexpr(sizeof(::std::size_t)<=sizeof(::std::uint_least32_t))
 	{
@@ -30,7 +30,7 @@ inline ::std::byte* rtl_gen_random_some_impl(::std::byte *first,::std::byte *las
 		{
 			throw_win32_error();
 		}
-		return last;
+		return {last,true};
 	}
 	else
 	{
@@ -42,20 +42,20 @@ inline ::std::byte* rtl_gen_random_some_impl(::std::byte *first,::std::byte *las
 				toreadthisround=uintleast32mx;
 			if(!::fast_io::win32::SystemFunction036(first,static_cast<std::uint_least32_t>(toreadthisround)))
 			{
-				return first;
+				return {first,false};
 			}
 			first+=toreadthisround;
 		}
-		return last;
+		return {last,true};
 	}
 }
 
 inline void rtl_gen_random_all_impl(::std::byte *first,::std::byte *last)
 {
-	auto ret{rtl_gen_random_some_impl(first,last)};
+	auto eof{rtl_gen_random_some_impl(first,last).eof};
 	if constexpr(sizeof(::std::uint_least32_t)<sizeof(::std::size_t))
 	{
-		if(ret!=last)
+		if(!eof)
 		{
 			throw_win32_error();
 		}
@@ -67,7 +67,7 @@ inline void rtl_gen_random_all_impl(::std::byte *first,::std::byte *last)
 
 template<std::integral char_type>
 requires (sizeof(::std::uint_least32_t)<sizeof(::std::size_t))
-inline ::std::byte* read_some_bytes_underflow_define(basic_rtl_gen_random<char_type>,::std::byte* first,::std::byte* last)
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(basic_rtl_gen_random<char_type>,::std::byte* first,::std::byte* last)
 {
 	return ::fast_io::win32::details::rtl_gen_random_some_impl(first,last);
 }

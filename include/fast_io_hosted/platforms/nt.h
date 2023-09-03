@@ -422,7 +422,7 @@ inline ::std::int_least64_t nt_calculate_offset_impl(void* __restrict handle,::f
 }
 
 template<nt_family family>
-inline ::std::byte* nt_read_pread_some_bytes_common_impl(void* __restrict handle,::std::byte *first,::std::byte *last,::std::int_least64_t *pbyteoffset)
+inline rw_some_result<::std::byte> nt_read_pread_some_bytes_common_impl(void* __restrict handle,::std::byte *first,::std::byte *last,::std::int_least64_t *pbyteoffset)
 {
 //some poeple in zwclose7 forum said we do not need to initialize io_status_block
 	win32::nt::io_status_block block;
@@ -433,11 +433,12 @@ inline ::std::byte* nt_read_pread_some_bytes_common_impl(void* __restrict handle
 		pbyteoffset, nullptr)};
 	if(status)
 		throw_nt_error(status);
-	return first+block.Information;
+	auto bytes_read{block.Information};
+	return {first+bytes_read,!bytes_read};
 }
 
 template<nt_family family>
-inline ::std::byte* nt_read_some_bytes_impl(void* __restrict handle,::std::byte *first,::std::byte *last)
+inline rw_some_result<::std::byte> nt_read_some_bytes_impl(void* __restrict handle,::std::byte *first,::std::byte *last)
 {
 	return ::fast_io::win32::nt::details::nt_read_pread_some_bytes_common_impl<family>(handle,first,last,nullptr);
 }
@@ -575,7 +576,7 @@ public:
 };
 
 template<nt_family family,std::integral ch_type>
-inline ::std::byte* read_some_bytes_underflow_define(basic_nt_family_io_observer<family,ch_type> niob,
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(basic_nt_family_io_observer<family,ch_type> niob,
 	::std::byte* first, ::std::byte* last)
 {
 	return ::fast_io::win32::nt::details::nt_read_some_bytes_impl<family>(niob.handle,first,last);

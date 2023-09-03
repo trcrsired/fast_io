@@ -6,7 +6,7 @@ namespace fast_io
 namespace details
 {
 
-inline ::std::byte* posix_pread_bytes_impl(int fd,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
+inline rw_some_result<::std::byte> posix_pread_bytes_impl(int fd,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
 	return ::fast_io::win32::details::pread_some_bytes_impl(
 		::fast_io::details::my_get_osfile_handle(fd),

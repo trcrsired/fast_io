@@ -112,7 +112,7 @@ template<typename instmtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr ::std::byte* pread_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
+inline constexpr rw_some_result<::std::byte> pread_some_bytes_cold_impl(instmtype insm,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr(::fast_io::operations::decay::defines::has_pread_some_bytes_underflow_define<instmtype>)
@@ -426,7 +426,7 @@ inline constexpr void pread_all_impl(instmtype insm,
 }
 
 template<typename instmtype>
-inline constexpr ::std::byte* pread_some_bytes_impl(instmtype insm,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
+inline constexpr rw_some_result<::std::byte> pread_some_bytes_impl(instmtype insm,::std::byte *first,::std::byte *last,::fast_io::intfpos_t off)
 {
 	if constexpr(::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

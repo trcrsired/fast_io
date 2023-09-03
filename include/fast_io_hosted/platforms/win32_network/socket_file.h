@@ -51,14 +51,14 @@ inline ::std::byte const* win32_socket_write_bytes_impl(std::uintptr_t socket, :
 	return first+sent;
 }
 
-inline ::std::byte* win32_socket_read_bytes_impl(std::uintptr_t socket, ::std::byte *first,::std::byte *last)
+inline rw_some_result<::std::byte> win32_socket_read_bytes_impl(std::uintptr_t socket, ::std::byte *first,::std::byte *last)
 {
 	int recved{::fast_io::win32::recv(socket,
 		reinterpret_cast<char*>(first),
 		::fast_io::details::read_write_bytes_compute<::std::int_least32_t>(first,last),0)};
 	if(recved==-1)
 		throw_win32_error(static_cast<std::uint_least32_t>(::fast_io::win32::WSAGetLastError()));
-	return first+recved;
+	return {first+recved,!recved};
 }
 
 inline void posix_connect_win32_socket_impl(std::uintptr_t hsocket,void const* addr,int addrlen)
@@ -90,7 +90,7 @@ inline std::uintptr_t posix_accept_win32_socket_impl(std::uintptr_t hsocket,void
 }
 
 template<win32_family family,std::integral ch_type>
-inline ::std::byte* read_some_bytes_underflow_define(basic_win32_family_socket_io_observer<family,ch_type> wiob,
+inline rw_some_result<::std::byte> read_some_bytes_underflow_define(basic_win32_family_socket_io_observer<family,ch_type> wiob,
 	::std::byte* first, ::std::byte* last)
 {
 	return ::fast_io::win32::details::win32_socket_read_bytes_impl(wiob.hsocket,first,last);
