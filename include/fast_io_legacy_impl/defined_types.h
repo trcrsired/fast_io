@@ -40,7 +40,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) win() noexcept
+wnative_io_observer win() noexcept
 {
 	return native_stdin<wchar_t>();
 }
@@ -49,7 +49,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) wout() noexcept
+wnative_io_observer wout() noexcept
 {
 	return native_stdout<wchar_t>();
 }
@@ -58,7 +58,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) werr() noexcept
+wnative_io_observer werr() noexcept
 {
 	return native_stderr<wchar_t>();
 }
@@ -68,7 +68,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u8in() noexcept
+u8native_io_observer u8in() noexcept
 {
 	return native_stdin<char8_t>();
 }
@@ -77,7 +77,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u8out() noexcept
+u8native_io_observer u8out() noexcept
 {
 	return native_stdout<char8_t>();
 }
@@ -86,7 +86,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u8err() noexcept
+u8native_io_observer u8err() noexcept
 {
 	return native_stderr<char8_t>();
 }
@@ -96,7 +96,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u16in() noexcept
+u16native_io_observer u16in() noexcept
 {
 	return native_stdin<char16_t>();
 }
@@ -105,7 +105,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u16out() noexcept
+u16native_io_observer u16out() noexcept
 {
 	return native_stdout<char16_t>();
 }
@@ -114,7 +114,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u16err() noexcept
+u16native_io_observer u16err() noexcept
 {
 	return native_stderr<char16_t>();
 }
@@ -124,7 +124,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u32in() noexcept
+u32native_io_observer u32in() noexcept
 {
 	return native_stdin<char32_t>();
 }
@@ -133,7 +133,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u32out() noexcept
+u32native_io_observer u32out() noexcept
 {
 	return native_stdout<char32_t>();
 }
@@ -142,7 +142,7 @@ inline
 #if defined(__WINE__) || !defined(_WIN32)
 constexpr
 #endif
-decltype(auto) u32err() noexcept
+u32native_io_observer u32err() noexcept
 {
 	return native_stderr<char32_t>();
 }
