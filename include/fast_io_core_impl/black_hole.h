@@ -59,10 +59,10 @@ inline constexpr basic_black_hole<ch_type> io_bytes_stream_ref_define(basic_blac
 template<::std::integral ch_type>
 inline constexpr void io_stream_buffer_flush_define(basic_black_hole<ch_type> other) noexcept {}
 
-template<typename ch_type>
+template<::std::integral ch_type>
 inline constexpr ::fast_io::intfpos_t io_stream_seek_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {}
 
-template<typename ch_type>
+template<::std::integral ch_type>
 inline constexpr ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {}
 
 }
