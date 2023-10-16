@@ -60,9 +60,13 @@ template<::std::integral ch_type>
 inline constexpr void io_stream_buffer_flush_define(basic_black_hole<ch_type> other) noexcept {}
 
 template<::std::integral ch_type>
-inline constexpr ::fast_io::intfpos_t io_stream_seek_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {}
+inline constexpr ::fast_io::intfpos_t io_stream_seek_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {
+	return {};
+}
 
 template<::std::integral ch_type>
-inline constexpr ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {}
+inline constexpr ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_black_hole<ch_type> fb, ::fast_io::intfpos_t off, ::fast_io::seekdir sdir) noexcept {
+	return {};
+}
 
 }
