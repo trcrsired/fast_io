@@ -220,7 +220,7 @@ public:
 	inline constexpr const_reference operator[](size_type size) const noexcept {
 		return address_begin[size];
 	}
-	inline void close() {
+	inline void close() noexcept {
 		::fast_io::win32::nt::details::nt_unload_address<family>(address_begin);
 		address_end = address_begin = nullptr;
 	}

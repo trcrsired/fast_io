@@ -220,7 +220,7 @@ public:
 	{
 		return address_begin[size];
 	}
-	inline void close()
+	inline void close() noexcept
 	{
 		::fast_io::win32::details::win32_unload_address(address_begin);
 		address_end=address_begin=nullptr;
