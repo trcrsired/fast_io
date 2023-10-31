@@ -158,8 +158,7 @@ inline
 	constexpr
 #endif
 #endif
-	void*
-	my_memcpy(void* dest, void const* src, ::std::size_t count) noexcept {
+	void* my_memcpy(void* dest, void const* src, ::std::size_t count) noexcept {
 	return
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_memcpy)
@@ -179,8 +178,7 @@ inline
 	constexpr
 #endif
 #endif
-	void*
-	my_memmove(void* dest, void const* src, ::std::size_t count) noexcept {
+	void* my_memmove(void* dest, void const* src, ::std::size_t count) noexcept {
 	return
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_memmove)
@@ -214,8 +212,7 @@ inline
 	constexpr
 #endif
 #endif
-	int
-	my_memcmp(void const* dest, void const* src, ::std::size_t count) noexcept {
+	int my_memcmp(void const* dest, void const* src, ::std::size_t count) noexcept {
 	return
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_memcmp)

@@ -29,7 +29,7 @@ inline constexpr ::std::size_t cstr_len(char_type const* cstr) noexcept {
 		return details::dummy_cstr_len(cstr);
 	}
 #else
-	if (::std::is_constant_evaluated()) {
+	if (__builtin_is_constant_evaluated()) {
 		return details::dummy_cstr_len(cstr);
 	}
 #endif
@@ -57,7 +57,7 @@ inline constexpr ::std::size_t cstr_nlen(char_type const* cstr, ::std::size_t n)
 		return details::dummy_cstr_nlen(cstr, n);
 	}
 #else
-	if (::std::is_constant_evaluated()) {
+	if (__builtin_is_constant_evaluated()) {
 		return details::dummy_cstr_nlen(cstr, n);
 	}
 #endif

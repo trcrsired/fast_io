@@ -6,8 +6,7 @@ namespace fast_io::details {
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr ::std::byte*
-bytes_copy_naive_n_impl(::std::byte const* first, ::std::size_t n, ::std::byte* dest) noexcept {
+inline constexpr ::std::byte* bytes_copy_naive_n_impl(::std::byte const* first, ::std::size_t n, ::std::byte* dest) noexcept {
 	for (::std::size_t i{}; i != n; ++i) {
 		dest[i] = first[i];
 	}
@@ -20,8 +19,7 @@ namespace fast_io::freestanding {
 #if __has_cpp_attribute(__gnu__::__flatten__)
 [[__gnu__::__flatten__]]
 #endif
-inline constexpr ::std::byte*
-bytes_copy_n(::std::byte const* first, ::std::size_t n, ::std::byte* dest) noexcept {
+inline constexpr ::std::byte* bytes_copy_n(::std::byte const* first, ::std::size_t n, ::std::byte* dest) noexcept {
 #if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
 #if __cpp_if_consteval >= 202106L
 	if consteval
