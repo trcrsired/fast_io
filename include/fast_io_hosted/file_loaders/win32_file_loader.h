@@ -227,7 +227,7 @@ public:
 	}
 	~win32_family_file_loader()
 	{
-		win32::details::win32_unload_address(address_begin);
+		::fast_io::win32::details::win32_unload_address(address_begin);
 	}
 };
 

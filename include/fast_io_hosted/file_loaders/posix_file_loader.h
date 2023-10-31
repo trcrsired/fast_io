@@ -484,7 +484,7 @@ public:
 	}
 	~posix_file_loader_impl()
 	{
-		posix_unload_address<allocation>(address_begin,static_cast<::std::size_t>(address_end-address_begin));
+		posix_unload_address<allocation>(address_begin, static_cast<::std::size_t>(address_end - address_begin));
 	}
 };
 

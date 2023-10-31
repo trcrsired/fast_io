@@ -139,7 +139,7 @@ inline constexpr char_type* print_reserve_define(io_reserve_type_t<char_type,win
 #if defined(_MSC_VER) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS == 0)
 	fast_terminate();
 #else
-	throw ::fast_io::error{win32_domain_value,static_cast<::std::uintptr_t>(win32::GetLastError())};
+	throw ::fast_io::error{::fast_io::win32_domain_value, static_cast<::std::uintptr_t>(::fast_io::win32::GetLastError())};
 #endif
 #else
 	fast_terminate();
@@ -151,7 +151,7 @@ inline constexpr char_type* print_reserve_define(io_reserve_type_t<char_type,win
 #if defined(_MSC_VER) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS == 0)
 	fast_terminate();
 #else
-	throw ::fast_io::error{win32_domain_value,static_cast<::std::uintptr_t>(err)};
+	throw ::fast_io::error{::fast_io::win32_domain_value, static_cast<::std::uintptr_t>(err)};
 #endif
 #else
 	fast_terminate();

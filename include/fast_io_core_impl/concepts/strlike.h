@@ -1,19 +1,16 @@
 ﻿#pragma once
 
-namespace fast_io
-{
+namespace fast_io {
 
-template<::std::integral char_type,typename T>
-struct io_strlike_type_t
-{
+template <::std::integral char_type, typename T>
+struct io_strlike_type_t {
 	explicit constexpr io_strlike_type_t() noexcept = default;
 };
 
-template<::std::integral char_type,typename T>
-inline constexpr io_strlike_type_t<char_type,T> io_strlike_type{};
+template <::std::integral char_type, typename T>
+inline constexpr io_strlike_type_t<char_type, T> io_strlike_type{};
 
-namespace details
-{
+namespace details {
 template<typename char_type,typename T>
 concept buffer_strlike_impl = requires(T& t)
 {
@@ -78,4 +75,4 @@ concept sso_buffer_strlike = buffer_strlike<char_type,T> && requires()
 	{strlike_sso_size(io_strlike_type<char_type,T>)}->::std::same_as<::std::size_t>;
 };
 
-}
+}  // namespace fast_io

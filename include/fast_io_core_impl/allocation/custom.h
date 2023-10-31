@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-namespace fast_io
-{
+namespace fast_io {
 
 class custom_global_allocator;
 
@@ -11,4 +10,4 @@ using custom_thread_local_allocator = custom_global_allocator
 class custom_thread_local_allocator;
 #endif
 
-}
+}  // namespace fast_io
