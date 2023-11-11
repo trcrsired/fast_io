@@ -113,12 +113,6 @@ inline constexpr basic_os_c_str_with_known_size<char_type> os_c_str_with_known_s
 	return {cstr,n};
 }
 
-template <::std::integral char_type>
-inline constexpr basic_os_c_str_with_known_size<char_type> os_c_str_with_known_size(char_type const* cstr) noexcept 
-{
-	return {cstr, ::fast_io::cstr_len(cstr)};
-}
-
 inline constexpr void os_c_str_with_known_size(decltype(nullptr),::std::size_t)=delete;
 
 template<::std::integral ch_type>
