@@ -1031,7 +1031,6 @@ Since many people are using console like msys2, we need to first write something
 		throw_win32_error();
 }
 
-
 inline void win32_clear_screen_impl(void* handle)
 {
 	if(!win32_is_character_device(handle))
@@ -1039,6 +1038,28 @@ inline void win32_clear_screen_impl(void* handle)
 	win32_clear_screen_main(handle);
 }
 
+struct win32_console_cp_guard {
+	::std::uint_least32_t input_cp{};
+	::std::uint_least32_t output_cp{};
+
+	::std::uint_least32_t last_input_cp{};
+	::std::uint_least32_t last_output_cp{};
+
+	win32_console_cp_guard(::std::uint_least32_t ic, ::std::uint_least32_t oc) : input_cp{ic}, output_cp{oc} {
+		last_input_cp = ::fast_io::win32::GetConsoleCP();
+		last_output_cp = ::fast_io::win32::GetConsoleOutputCP();
+		if (::fast_io::win32::SetConsoleCP(input_cp)) 
+			throw_win32_error();
+		if (::fast_io::win32::SetConsoleOutputCP(output_cp))
+			throw_win32_error();
+	}
+	win32_console_cp_guard(win32_console_cp_guard const&) = delete;
+	win32_console_cp_guard& operator=(win32_console_cp_guard const&) = delete;
+	~win32_console_cp_guard() {
+		::fast_io::win32::SetConsoleCP(last_input_cp);
+		::fast_io::win32::SetConsoleOutputCP(last_output_cp);
+	}
+};
 }
 
 template<win32_family family,::std::integral ch_type>
