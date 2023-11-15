@@ -422,7 +422,7 @@ inline void* win32_family_create_file_impl(::std::conditional_t<family==win32_fa
 template<win32_family family>
 struct win32_family_open_file_parameter
 {
-	using family_char_type = ::std::conditional_t<family==::fast_io::win32_family::ansi_9x,char8_t,char16_t>;
+	using family_char_type = ::std::conditional_t<family==win32_family::wide_nt,char16_t,char>;
 	open_mode_perms ompm{};
 	inline void* operator()(family_char_type const* filename)
 	{
