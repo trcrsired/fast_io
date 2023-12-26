@@ -14,7 +14,7 @@ inline constexpr bool ibuffer_underflow_rl_size_impl(instmtype insm,
 	if(ibuffer.buffer_begin==nullptr)
 	{
 		ibuffer.buffer_end = ibuffer.buffer_curr = ibuffer.buffer_begin = typed_allocator_type::allocate(bfsz);
-		::fast_io::details::prefetch(ibuffer.buffer_begin);
+		::fast_io::details::prefetch<0>(ibuffer.buffer_begin);
 	}
 	ibuffer.buffer_end=::fast_io::operations::decay::read_until_eof_decay(insm,ibuffer.buffer_begin,ibuffer.buffer_begin+bfsz);
 	ibuffer.buffer_curr=ibuffer.buffer_begin;
@@ -36,7 +36,7 @@ inline constexpr void ibuffer_minimum_size_underflow_all_prepare_rl_size_impl(in
 	if(ibuffer.buffer_begin==nullptr) 
 	{
 		ibuffer.buffer_end = ibuffer.buffer_curr = ibuffer.buffer_begin = typed_allocator_type::allocate(bfsz);
-		::fast_io::details::prefetch(ibuffer.buffer_begin);
+		::fast_io::details::prefetch<0>(ibuffer.buffer_begin);
 	}
 	auto bg{ibuffer.buffer_begin};
 	auto ed{bg+bfsz};
@@ -67,7 +67,7 @@ inline constexpr char_type* read_until_eof_underflow_size_impl(
 	if(pointers.buffer_begin==nullptr)
 	{
 		pointers.buffer_end=pointers.buffer_curr=pointers.buffer_begin=typed_allocator_type::allocate(bfsz);
-		::fast_io::details::prefetch(pointers.buffer_begin);
+		::fast_io::details::prefetch<0>(pointers.buffer_begin);
 	}
 	if constexpr(::fast_io::operations::decay::defines::has_any_of_read_bytes_operations<instmtype>)
 	{
