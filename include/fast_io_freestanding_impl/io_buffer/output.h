@@ -15,6 +15,7 @@ inline constexpr void write_nullptr_case(
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type,char_type>;
 	char_type *buffer_begin = typed_allocator_type::allocate(buffersize);
+	::fast_io::details::prefetch(buffer_begin);
 	char_type *buffer_curr = non_overlapped_copy(first,last,buffer_begin);
 	pointers.buffer_begin=buffer_begin;
 	pointers.buffer_curr=buffer_curr;
@@ -204,6 +205,7 @@ inline constexpr void obuffer_minimum_size_flush_prepare_impl(optstmtype optstm,
 			using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type,char_type>;
 			pointers.buffer_end=((pointers.buffer_curr=
 				pointers.buffer_begin=typed_allocator_type::allocate(buffer_size))+buffer_size);
+			::fast_io::details::prefetch(pointers.buffer_begin);
 		}
 	}
 	else
