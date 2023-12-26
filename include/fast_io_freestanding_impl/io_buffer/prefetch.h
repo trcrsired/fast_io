@@ -23,7 +23,7 @@ inline constexpr void prefetch(void const* const ptr) noexcept {
 	{
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_prefetch)
-		__builtin_prefetch(ptr, wirte, level);
+		__builtin_prefetch(ptr, write, level);
 #else
 		__mm_prefetch(ptr, level);
 #endif
