@@ -1,13 +1,11 @@
 ﻿#pragma once
 
-namespace fast_io
-{
+namespace fast_io {
 
-namespace freestanding
-{
+namespace freestanding {
 
 using ::std::errc;
 
 }
 
-}
+} // namespace fast_io

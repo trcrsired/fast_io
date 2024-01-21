@@ -1,8 +1,3 @@
 #pragma once
 
-namespace fast_io::intrinsics::msvc
-{
-
-
-
-}
+namespace fast_io::intrinsics::msvc {}

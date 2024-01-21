@@ -1,0 +1,8 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 120
+SortIncludes: Never
+NamespaceIndentation: None
+AllowShortFunctionsOnASingleLine: Empty
+
+# Get-ChildItem -Recurse -Filter *.h | ForEach-Object { clang-format -style=file -i $_.FullName }

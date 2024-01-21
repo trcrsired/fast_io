@@ -1,16 +1,11 @@
 ﻿#pragma once
 
-namespace fast_io
-{
+namespace fast_io {
 
-namespace freestanding
-{
+namespace freestanding {
 
-enum class errc:
-	::std::uint_least32_t
-{
-};
+enum class errc : ::std::uint_least32_t {};
 
 }
 
-}
+} // namespace fast_io

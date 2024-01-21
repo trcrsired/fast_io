@@ -1,7 +1,6 @@
-﻿#include<cstdio>
-#include<fast_io.h>
+﻿#include <cstdio>
+#include <fast_io.h>
 
-int main()
-{
-	transmit(fast_io::c_stdout(),fast_io::c_stdin());
+int main() {
+    transmit(fast_io::c_stdout(), fast_io::c_stdin());
 }

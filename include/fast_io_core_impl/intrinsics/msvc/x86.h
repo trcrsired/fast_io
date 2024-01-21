@@ -1,10 +1,8 @@
 #pragma once
 
-namespace fast_io::intrinsics::msvc::x86
-{
+namespace fast_io::intrinsics::msvc::x86 {
 
-extern "C"
-{
+extern "C" {
 unsigned __int64 __readgsqword(unsigned long);
 unsigned long __readfsdword(unsigned long);
 unsigned char _addcarry_u8(unsigned char, unsigned char, unsigned char, unsigned char *);
@@ -22,4 +20,4 @@ unsigned __int64 __shiftleft128(unsigned __int64, unsigned __int64, unsigned cha
 unsigned __int64 __shiftright128(unsigned __int64, unsigned __int64, unsigned char);
 }
 
-}
+} // namespace fast_io::intrinsics::msvc::x86
