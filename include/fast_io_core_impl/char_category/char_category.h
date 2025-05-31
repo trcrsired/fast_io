@@ -3,6 +3,10 @@
 namespace fast_io::char_category
 {
 
+enum class c_is_ctype_family
+{
+};
+
 template <::std::integral char_type>
 inline constexpr bool is_c_alnum(char_type ch) noexcept
 {
@@ -1935,28 +1939,51 @@ inline constexpr bool is_c_space(char_type ch) noexcept
 	{
 		if constexpr (::fast_io::details::is_ebcdic<char_type>)
 		{
-			return details::is_c_space_tb<true, char8_t>[static_cast<::std::make_unsigned_t<char_type>>(ch)];
+			return ::fast_io::char_category::details::is_c_space_tb<true, char8_t>[static_cast<::std::make_unsigned_t<char_type>>(ch)];
 		}
 		else
 		{
-			return details::is_c_space_tb<false, char8_t>[static_cast<::std::make_unsigned_t<char_type>>(ch)];
+			return ::fast_io::char_category::details::is_c_space_tb<false, char8_t>[static_cast<::std::make_unsigned_t<char_type>>(ch)];
 		}
 	}
 	else
 	{
 		if constexpr (::fast_io::details::is_ebcdic<char_type>)
 		{
-			return details::is_c_space_impl<true>(ch);
+			return ::fast_io::char_category::details::is_c_space_impl<true>(ch);
 		}
 		else if constexpr (::std::same_as<char_type, wchar_t> && ::fast_io::details::wide_is_none_utf_endian)
 		{
-			return details::is_c_space_wide_impl(ch);
+			return ::fast_io::char_category::details::is_c_space_wide_impl(ch);
 		}
 		else
 		{
-			return details::is_c_space_impl<false>(
+			return ::fast_io::char_category::details::is_c_space_impl<false>(
 				static_cast<char32_t>(static_cast<::std::make_unsigned_t<char_type>>(ch)));
 		}
+	}
+}
+
+template <::std::integral char_type>
+inline constexpr bool is_c_blank(char_type ch) noexcept
+{
+	return (ch == ::fast_io::char_literal_v<u8' ', char_type>) |
+		   (ch == ::fast_io::char_literal_v<u8'\v', char_type>);
+}
+
+template <::std::integral char_type>
+inline constexpr bool is_c_cntrl(char_type ch) noexcept
+{
+	using uchar_type = ::std::make_unsigned_t<char_type>;
+	if constexpr (::fast_io::details::is_ebcdic<char_type>)
+	{
+		// Convert to unsigned type before checking EBCDIC control characters
+		return (static_cast<uchar_type>(ch) <= 0x3F) | (static_cast<uchar_type>(ch) == 0xFF);
+	}
+	else
+	{
+		// Convert to unsigned type before checking ASCII control characters
+		return (static_cast<uchar_type>(ch) <= 0x1F) | (static_cast<uchar_type>(ch) == 0x7F);
 	}
 }
 
@@ -2225,6 +2252,7 @@ inline constexpr bool is_dos_path_invalid_prefix_character(T ch) noexcept
 		return ::fast_io::char_category::details::is_dos_path_invalid_prefix_character_impl(static_cast<char32_t>(ch));
 	}
 }
+
 } // namespace fast_io::char_category
 
 namespace fast_io
