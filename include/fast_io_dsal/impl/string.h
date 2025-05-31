@@ -1511,6 +1511,58 @@ public:
 	{
 		return this->trim_suffix(::fast_io::char_category::c_space{});
 	}
+
+	template <typename charcate>
+		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
+			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
+			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
+		}
+	inline constexpr string_view_type trim_subview(charcate traits) const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_subview(traits);
+	}
+	inline constexpr string_view_type trim_subview_c_space() const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_subview_c_space();
+	}
+
+	template <typename charcate>
+		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
+			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
+		}
+	inline constexpr cstring_view_type trim_prefix_subview(charcate traits) const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return cstring_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_prefix_subview(traits);
+	}
+	inline constexpr cstring_view_type trim_prefix_subview_c_space() const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return cstring_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_prefix_subview_c_space();
+	}
+
+	template <typename charcate>
+		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
+			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
+		}
+	inline constexpr string_view_type trim_suffix_subview(charcate traits) const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_suffix_subview(traits);
+	}
+	inline constexpr string_view_type trim_suffix_subview_c_space() const noexcept
+	{
+		auto beginptr{this->imp.begin_ptr};
+		auto currptr{this->imp.curr_ptr};
+		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_suffix_subview_c_space();
+	}
 };
 
 template <::std::integral chtype, typename allocator1, typename U>
