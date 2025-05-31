@@ -110,7 +110,10 @@ public:
 		}
 	}
 	template <::std::integral char_type>
-	static inline constexpr bool operator()(char_type ch) noexcept
+#ifdef __cpp_static_call_operator
+	static
+#endif
+		inline constexpr bool operator()(char_type ch) noexcept
 	{
 		return char_is(ch);
 	}
