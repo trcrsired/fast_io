@@ -227,23 +227,13 @@ inline auto ungetc_unlocked_impl(char_type ch, FILE *fp) noexcept
 
 #if defined(__GLIBC__) || defined(__LLVM_LIBC_TYPES_FILE_H__)
 #define FAST_IO_UNGETC(...) ::ungetc(__VA_ARGS__)
-#elif defined(ungetc_unlocked)
+#elif defined(ungetc)
 #define FAST_IO_UNGETC(...) ungetc(__VA_ARGS__)
 #else
 #define FAST_IO_UNGETC(...) ::fast_io::noexcept_call(::ungetc, __VA_ARGS__)
 #endif
 
-#if defined(__BIONIC__)
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETC_UNLOCKED 1
-#elif defined(_WIN32) && !defined(__WINE__)
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETC_UNLOCKED 1
-#elif defined(__LLVM_LIBC_TYPES_FILE_H__)
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETC_UNLOCKED 1
-#elif defined(__NEWLIB__)
-#if __GNU_VISIBLE
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETC_UNLOCKED 1
-#endif
-#elif _POSIX_C_SOURCE >= 199309L || _XOPEN_SOURCE || _POSIX_SOURCE || _BSD_SOURCE || _SVID_SOURCE
+#if !defined(__BIONIC__) && defined(_MSC_VER)
 #define FAST_IO_PLATFORM_SUPPORTS_UNGETC_UNLOCKED 1
 #endif
 
@@ -301,19 +291,8 @@ inline auto ungetc_unlocked_impl(char_type ch, FILE *fp) noexcept
 #define FAST_IO_UNGETWC(...) ::fast_io::noexcept_call(::ungetwc, __VA_ARGS__)
 #endif
 
-#if defined(__BIONIC__)
+#if !defined(__BIONIC__) && defined(_MSC_VER)
 #define FAST_IO_PLATFORM_SUPPORTS_UNGETWC_UNLOCKED 1
-#elif defined(_WIN32) && !defined(__WINE__)
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETWC_UNLOCKED 1
-#elif defined(__LLVM_LIBC_TYPES_FILE_H__)
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETWC_UNLOCKED 1
-#elif defined(__NEWLIB__)
-#if __GNU_VISIBLE
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETWC_UNLOCKED 1
-#endif
-#elif _POSIX_C_SOURCE >= 199309L || _XOPEN_SOURCE || _POSIX_SOURCE || _BSD_SOURCE || _SVID_SOURCE
-#define FAST_IO_PLATFORM_SUPPORTS_UNGETWC_UNLOCKED 1
-
 #endif
 
 #if defined(FAST_IO_PLATFORM_NOT_SUPPORTS_UNGETWC)
