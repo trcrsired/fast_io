@@ -135,7 +135,7 @@ using basic_qt_io_observer = basic_general_qdevice_io_observer<char_type, QFile>
 
 template <::std::integral ch_type, typename T>
 inline constexpr basic_qiodevice_io_observer<ch_type>
-io_value_handle(basic_general_qdevice_io_observer<ch_type, T> gqiob) noexcept
+io_stream_ref_define(basic_general_qdevice_io_observer<ch_type, T> gqiob) noexcept
 {
 	return {gqiob.qdevice};
 }
