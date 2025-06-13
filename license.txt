@@ -19,11 +19,7 @@ When PWA (Progressive Web Applications) or Wine and other cross-platform technol
 If a platform deliberately undermines open internet access (e.g., restricting the use of Progressive Web Applications (PWA) through a closed framework), then all software on that platform must be licensed under GPLv3, ensuring users have full modification and installation rights.
 
 4. Exceptions
-The following categories of devices are exempt from Sections 2 and 3 and may use this software without modification requirements:
-
-Medical Equipment: Devices used for life support, diagnostics, or critical healthcare applications.
-
-Automotive Systems: Software used in autonomous driving, vehicle control, or safety-critical functions.
+No devices are exempted from this license.
 
 5. Enforcement & Non-Mandatory Action
 The copyright holder reserves the right to enforce this license but is not obligated to do so.
