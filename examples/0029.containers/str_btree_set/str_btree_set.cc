@@ -38,7 +38,7 @@ int main()
 	bset.insert_key("asfasf");
 	bset.insert_key("asfasfsf");
 	bset.insert_key("aaa");
-	str_btree_set_inorder_traverse<char, 63>(bset.root, [](::fast_io::string_view v) {
+	str_btree_set_inorder_traverse(bset.root, [](::fast_io::string_view v) {
 		::fast_io::io::println(v);
 	});
 }
