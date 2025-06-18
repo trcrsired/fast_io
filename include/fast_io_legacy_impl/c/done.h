@@ -232,21 +232,13 @@ inline ::std::size_t c_fread_unlocked_impl(void *__restrict begin, ::std::size_t
 #if defined(__CYGWIN__)
 			__sferror(fp)
 #elif defined(__USE_MISC) || defined(__BSD_VISIBLE) || defined(__DARWIN_C_LEVEL)
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_ferror_unlocked)
+#if FAST_IO_HAS_BUILTIN(__builtin_ferror_unlocked)
 			__builtin_ferror_unlocked(fp)
 #else
 			ferror_unlocked(fp)
 #endif
-#else
-			ferror_unlocked(fp)
-#endif
-#elif !defined(ferror) && defined(__has_builtin)
-#if __has_builtin(__builtin_ferror)
+#elif !defined(ferror) && FAST_IO_HAS_BUILTIN(__builtin_ferror)
 			__builtin_ferror(fp)
-#else
-			ferror(fp)
-#endif
 #else
 			ferror(fp)
 #endif
@@ -343,12 +335,8 @@ inline ::std::size_t c_fread_impl(void *__restrict begin, ::std::size_t type_siz
 	if (read_count == 0) [[unlikely]]
 	{
 		if (
-#if !defined(ferror) && defined(__has_builtin)
-#if __has_builtin(__builtin_ferror)
+#if !defined(ferror) && FAST_IO_HAS_BUILTIN(__builtin_ferror)
 			__builtin_ferror(fp)
-#else
-			ferror(fp)
-#endif
 #else
 			ferror(fp)
 #endif

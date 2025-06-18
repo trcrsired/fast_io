@@ -36,12 +36,8 @@ struct
 #endif
 	inline void load(void const *address) noexcept
 	{
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_memcpy)
+#if FAST_IO_HAS_BUILTIN(__builtin_memcpy)
 		__builtin_memcpy(__builtin_addressof(value), address, sizeof(value));
-#else
-		::std::memcpy(__builtin_addressof(value), address, sizeof(value));
-#endif
 #else
 		::std::memcpy(__builtin_addressof(value), address, sizeof(value));
 #endif
@@ -53,14 +49,10 @@ struct
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
 #endif
-	inline void store(void *address) noexcept
+	inline void store(void *address) const noexcept
 	{
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_memcpy)
+#if FAST_IO_HAS_BUILTIN(__builtin_memcpy)
 		__builtin_memcpy(address, __builtin_addressof(value), sizeof(value));
-#else
-		::std::memcpy(address, __builtin_addressof(value), sizeof(value));
-#endif
 #else
 		::std::memcpy(address, __builtin_addressof(value), sizeof(value));
 #endif
