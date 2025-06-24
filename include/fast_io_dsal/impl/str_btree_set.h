@@ -63,7 +63,7 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
-inline constexpr void str_btree_split_node(nodetype *node) noexcept;
+inline constexpr void str_btree_split_node(nodetype *node, nodetype** proot) noexcept;
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key(nodetype *node,
