@@ -5,6 +5,11 @@ namespace fast_io::containers
 
 namespace details
 {
+struct btree_node_common
+{
+	void *root;
+	void *next;
+};
 
 template <::std::integral chtype, ::std::size_t keys_number>
 struct str_btree_set_node
@@ -17,6 +22,19 @@ struct str_btree_set_node
 	str_btree_set_node<char_type, keys_number> *parent;                      // Pointer to parent node
 };
 
+template <::std::size_t keys_number>
+struct
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+[[__gnu__::__may_alias__]]
+#endif
+str_btree_set_common
+{
+	::std::size_t size;
+	bool leaf;
+	::fast_io::io_scatter_t keys[keys_number];
+	void *childrens[keys_number + 1u];
+	void *parent;
+};
 
 struct find_btree_node_insert_position_result
 {
@@ -26,7 +44,7 @@ struct find_btree_node_insert_position_result
 
 template <typename nodetype>
 inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
-																							typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+	typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
 	using char_type = typename nodetype::char_type;
 	auto *b{node->keys}, *i{b}, *e{b + node->size};
@@ -49,7 +67,7 @@ inline constexpr void str_btree_split_node(nodetype *node) noexcept;
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key(nodetype *node,
-										   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn, bool ismoved) noexcept
+										   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn, bool ismoved, nodetype** proot) noexcept
 {
 	using char_type = typename nodetype::char_type;
 	// **Find the correct position for insertion**
@@ -64,6 +82,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	// **If the node is a leaf**
 	if (node->leaf)
 	{
+
 		// **If there is space, insert the key directly**
 		if (node->size < keys_number)
 		{
@@ -88,19 +107,19 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		else
 		{
 			// **If the node is full, split it**
-			str_btree_split_node<allocator_type, keys_number>(node);
-			return str_btree_insert_key<allocator_type, keys_number>(node->parent, keystrptr, keystrn, ismoved);
+			str_btree_split_node<allocator_type, keys_number>(node, proot);
+			return str_btree_insert_key<allocator_type, keys_number>(node->parent, keystrptr, keystrn, ismoved, proot);
 		}
 	}
 	else
 	{
 		// **Recursively insert into the correct child**
-		return str_btree_insert_key<allocator_type, keys_number>(node->childrens[pos], keystrptr, keystrn, ismoved);
+		return str_btree_insert_key<allocator_type, keys_number>(node->childrens[pos], keystrptr, keystrn, ismoved, proot);
 	}
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
-inline constexpr void str_btree_split_node(nodetype *node) noexcept
+inline constexpr void str_btree_split_node(nodetype *node, nodetype** proot) noexcept
 {
 	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
@@ -146,9 +165,10 @@ inline constexpr void str_btree_split_node(nodetype *node) noexcept
 	{
 		// **Allocate a new root using the stateless allocator**
 		nodetype *new_root{typed_allocator_type::allocate(1)};
-		new_root->keys[0] = node->keys[mid];
+		*proot = new_root;
+		*(new_root->keys) = node->keys[mid];
 		new_root->size = 1;
-		new_root->childrens[0] = node;
+		*(new_root->childrens) = node;
 		new_root->childrens[1] = new_node;
 		new_root->leaf = false;
 		node->parent = new_root;
@@ -157,17 +177,19 @@ inline constexpr void str_btree_split_node(nodetype *node) noexcept
 	else
 	{
 		// **Insert the middle key into the parent node**
-		str_btree_insert_key<allocator_type, keys_number>(node->parent, node->keys[mid].ptr, node->keys[mid].n, true);
+		str_btree_insert_key<allocator_type, keys_number>(node->parent, node->keys[mid].ptr, node->keys[mid].n, true, proot);
 		node->parent->childrens[node->parent->size] = new_node;
 		new_node->parent = node->parent;
 	}
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
-inline constexpr bool str_btree_insert_key_with_root(nodetype *&node,
+inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 													 typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
+
+	auto node{*proot};
 
 	// **If the tree is empty, allocate a new root**
 	if (node == nullptr)
@@ -177,9 +199,10 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype *&node,
 		node->leaf = true;
 		node->parent = nullptr;
 		*(node->keys) = ::fast_io::details::create_associative_string<allocator_type, typename nodetype::char_type>(keystrptr, keystrn);
+		*proot = node;
 		return true;
 	}
-	return ::fast_io::containers::details::str_btree_insert_key<allocator_type, keys_number>(node, keystrptr, keystrn, false);
+	return ::fast_io::containers::details::str_btree_insert_key<allocator_type, keys_number>(node, keystrptr, keystrn, false, proot);
 }
 #if 0
 template <::std::integral chtype, ::std::size_t keys_number>
@@ -251,14 +274,97 @@ inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_i
 }
 #endif
 
-template <::std::integral chtype, ::std::size_t keys_number = 63>
-struct btree_set_root
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+struct str_btree_set_iterator
 {
-	using node_type = ::fast_io::containers::details::str_btree_set_node<chtype, keys_number>;
-	node_type *root{};
-	node_type *last{};
-	node_type *prev{};
+	using char_type = chtype;
+	using value_type = char_type;
+	using cstring_view_type = ::fast_io::basic_cstring_view<char_type>;
+	using const_iterator = ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev>;
+	using iterator = const_iterator;
+	::fast_io::containers::details::str_btree_set_node<chtype, keys_number> *ptr{};
+	inline constexpr const_iterator operator++() noexcept
+	{
+		return {};
+	}
+	inline constexpr const_iterator operator++(int) noexcept
+	{
+		auto tmp{*this};
+		++*this;
+		return tmp;
+	}
 };
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator==(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> b) noexcept
+{
+	return a.ptr == b.ptr;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> b) noexcept
+{
+	return a.ptr != b.ptr;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator==(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a,
+								 ::std::default_sentinel_t) noexcept
+{
+	return a.ptr == nullptr;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator==(::std::default_sentinel_t,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a) noexcept
+{
+	return a.ptr == nullptr;
+}
+
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a,
+								 ::std::default_sentinel_t) noexcept
+{
+	return a.ptr != nullptr;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+inline constexpr bool operator!=(::std::default_sentinel_t,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev> a) noexcept
+{
+	return a.ptr != nullptr;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number, bool isrev>
+struct str_btree_set_iters_type
+{
+	using char_type = chtype;
+	using value_type = char_type;
+	using cstring_view_type = ::fast_io::basic_cstring_view<char_type>;
+	using const_iterator = ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number, isrev>;
+	using iterator = const_iterator;
+	const_iterator i;
+	constexpr const_iterator cbegin() const noexcept
+	{
+		return i;
+	}
+	constexpr ::std::default_sentinel_t cend() const noexcept
+	{
+		return {};
+	}
+	constexpr const_iterator begin() const noexcept
+	{
+		return i;
+	}
+	constexpr ::std::default_sentinel_t end() const noexcept
+	{
+		return {};
+	}
+};
+
 } // namespace details
 
 template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 63>
@@ -273,10 +379,12 @@ public:
 	using string_view_type = ::fast_io::basic_string_view<char_type>;
 	using cstring_view_type = ::fast_io::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
+	using const_iters_type = ::fast_io::containers::details::str_btree_set_iters_type<chtype, keys_number, false>;
+	using const_reverse_iters_type = ::fast_io::containers::details::str_btree_set_iters_type<chtype, keys_number, true>;
 #if 0
 	using const_iterator = ::fast_io::details::str_btree_set_iterator<char_type, keys_number>;
 	using iterator = ::fast_io::details::str_btree_set_iterator<char_type, keys_number>;
-	::fast_io::containers::details::btree_set_root root;
+	::fast_io::containers::details::btree_node_common root;
 #endif
 	node_type *root{};
 
@@ -304,7 +412,7 @@ public:
 	}
 	constexpr bool insert_key(string_view_type strvw) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number>(this->root, strvw.data(), strvw.size());
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number>(__builtin_addressof(this->root), strvw.data(), strvw.size());
 	}
 
 private:
@@ -350,6 +458,7 @@ public:
 		clear_node(this->root);
 		this->root = nullptr;
 	}
+
 	constexpr void clear_destroy() noexcept
 	{
 		this->clear();
@@ -377,7 +486,7 @@ public:
 		clear_node(this->root);
 	}
 #if 0
-	constexpr  iters() const noexcept
+	constexpr  citers() const noexcept
 	{}
 #endif
 };
