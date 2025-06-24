@@ -171,6 +171,7 @@ inline constexpr void str_btree_split_node(nodetype *node, nodetype** proot) noe
 		*(new_root->childrens) = node;
 		new_root->childrens[1] = new_node;
 		new_root->leaf = false;
+		new_node->parent = nullptr;
 		node->parent = new_root;
 		new_node->parent = new_root;
 	}
