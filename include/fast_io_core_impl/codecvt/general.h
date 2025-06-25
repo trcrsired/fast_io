@@ -159,7 +159,8 @@ general_code_cvt(src_char_type const *src_first, src_char_type const *src_last, 
 					}
 					else
 					{
-						*dst = static_cast<dest_char_type>(0xFDFF0000);
+						constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
+						*dst = val; 
 					}
 					++dst;
 				}
@@ -410,7 +411,8 @@ inline constexpr dest_char_type *general_code_cvt(state_type &__restrict state, 
 					}
 					else
 					{
-						*dst = static_cast<dest_char_type>(0xFDFF0000);
+						constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
+						*dst = val; 
 					}
 					++dst;
 				}
@@ -516,6 +518,7 @@ template <encoding_scheme src_encoding = encoding_scheme::execution_charset,
 inline constexpr dest_char_type *general_code_cvt_full(src_char_type const *src_first, src_char_type const *src_last,
 													   dest_char_type *__restrict dst) noexcept
 {
+	// No need to consider dst_last
 	if constexpr (src_encoding == encoding_scheme::execution_charset)
 	{
 		constexpr auto src_scheme = get_execution_charset_encoding_scheme<src_char_type>(src_encoding);
@@ -535,7 +538,8 @@ inline constexpr dest_char_type *general_code_cvt_full(src_char_type const *src_
 				}
 				else
 				{
-					*new_dst = static_cast<dest_char_type>(0xFDFF0000);
+					constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
+					*new_dst = val; 
 				}
 				++new_dst;
 			}

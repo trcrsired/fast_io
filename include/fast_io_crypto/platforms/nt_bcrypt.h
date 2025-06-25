@@ -35,15 +35,15 @@ public:
 	inline nt_bcrypt_hash_file &operator=(nt_bcrypt_hash_file const &) = delete;
 	inline ~nt_bcrypt_hash_file()
 	{
-		if (digest_buffer)
+		if (digest_buffer) [[likely]]
 		{
 			::fast_io::details::deallocate_with_secure_clear<false>(digest_buffer, bcrypt_size);
 		}
-		if (this->hashHandle)
+		if (this->hashHandle) [[likely]]
 		{
 			::fast_io::win32::BCryptDestroyHash(this->hashHandle);
 		}
-		if (this->phAlgorithm)
+		if (this->phAlgorithm) [[likely]]
 		{
 			::fast_io::win32::BCryptCloseAlgorithmProvider(this->phAlgorithm, 0u);
 		}
@@ -81,7 +81,7 @@ struct bcrypt_algo_guard
 	inline bcrypt_algo_guard &operator=(bcrypt_algo_guard const &) = delete;
 	inline ~bcrypt_algo_guard()
 	{
-		if (this->phalgo)
+		if (this->phalgo) [[likely]]
 		{
 			::fast_io::win32::BCryptCloseAlgorithmProvider(this->phalgo, 0u);
 		}
