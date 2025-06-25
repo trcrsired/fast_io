@@ -13,12 +13,10 @@ inline void close_nt_user_process_information_not_null(nt_user_process_informati
 	if (hnt_user_process_info.hthread) [[likely]]
 	{
 		::fast_io::win32::nt::nt_close<family == nt_family::zw>(hnt_user_process_info.hthread);
-		hnt_user_process_info.hthread = nullptr;
 	}
 	if (hnt_user_process_info.hprocess) [[likely]]
 	{
 		::fast_io::win32::nt::nt_close<family == nt_family::zw>(hnt_user_process_info.hprocess);
-		hnt_user_process_info.hprocess = nullptr;
 	}
 }
 template <nt_family family>
@@ -69,17 +67,14 @@ struct nt_process_rtl_guard
 		: rtl_up{r} {};
 	nt_process_rtl_guard(nt_process_rtl_guard const &) = delete;
 	nt_process_rtl_guard &operator=(nt_process_rtl_guard const &) = delete;
-	inline constexpr ~nt_process_rtl_guard()
+	inline ~nt_process_rtl_guard()
 	{
 		clear();
 	}
-	inline constexpr void clear() noexcept
+	inline void clear() noexcept
 	{
-		if (rtl_up) [[likely]]
-		{
-			::fast_io::win32::nt::RtlDestroyProcessParameters(rtl_up);
-			rtl_up = nullptr;
-		}
+		::fast_io::win32::nt::RtlDestroyProcessParameters(rtl_up);
+		rtl_up = nullptr;
 	}
 };
 
@@ -100,11 +95,8 @@ struct nt_process_thread_local_heap_allocate_guard
 	};
 	inline constexpr void clear() noexcept
 	{
-		if (ptr) [[likely]]
-		{
-			alloc::deallocate(ptr);
-			ptr = nullptr;
-		}
+		alloc::deallocate(ptr);
+		ptr = nullptr;
 	}
 };
 
@@ -902,7 +894,6 @@ public:
 	inline ~nt_family_process()
 	{
 		win32::nt::details::close_nt_user_process_information_and_wait<family>(this->hnt_user_process_info);
-		this->hnt_user_process_info = {};
 	}
 };
 
