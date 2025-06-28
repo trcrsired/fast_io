@@ -69,13 +69,13 @@ template <::std::size_t src_char_type_size, ::std::size_t dest_char_type_size>
 	requires((dest_char_type_size <= 4) && (src_char_type_size <= 4))
 inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size) noexcept
 {
-	constexpr ::std::size_t external_max{::std::numeric_limits<::std::size_t>::max() / dest_char_type_size};
+	[[maybe_unused]] constexpr ::std::size_t external_max{::std::numeric_limits<::std::size_t>::max() / dest_char_type_size};
 	constexpr ::std::size_t internal_max{::std::numeric_limits<::std::size_t>::max() / src_char_type_size};
 	if constexpr (src_char_type_size == 4)
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max};
+			constexpr ::std::size_t imax{internal_max};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -84,7 +84,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 		}
 		else if constexpr (dest_char_type_size == 2)
 		{
-			constexpr ::std::size_t imax{external_max / 2};
+			constexpr ::std::size_t imax{internal_max / 2};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -93,7 +93,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 		}
 		else
 		{
-			constexpr ::std::size_t imax{external_max / 8};
+			constexpr ::std::size_t imax{internal_max / 8};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -105,7 +105,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max};
+			constexpr ::std::size_t imax{internal_max};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -114,7 +114,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 		}
 		else if constexpr (dest_char_type_size == 2)
 		{
-			constexpr ::std::size_t imax{external_max / 2};
+			constexpr ::std::size_t imax{internal_max / 2};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -123,7 +123,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 		}
 		else
 		{
-			constexpr ::std::size_t imax{external_max / 8};
+			constexpr ::std::size_t imax{internal_max / 8};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -135,7 +135,7 @@ inline constexpr ::std::size_t cal_full_reserve_size(::std::size_t internal_size
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max};
+			constexpr ::std::size_t imax{internal_max};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -167,13 +167,13 @@ template <::std::size_t src_char_type_size, ::std::size_t dest_char_type_size>
 	requires((dest_char_type_size <= 4) && (src_char_type_size <= 4))
 inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal_size) noexcept
 {
-	constexpr ::std::size_t external_max{::std::numeric_limits<::std::size_t>::max() / dest_char_type_size};
+	[[maybe_unused]] constexpr ::std::size_t external_max{::std::numeric_limits<::std::size_t>::max() / dest_char_type_size};
 	constexpr ::std::size_t internal_max{::std::numeric_limits<::std::size_t>::max() / src_char_type_size};
 	if constexpr (src_char_type_size == 4)
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max};
+			constexpr ::std::size_t imax{internal_max};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -182,7 +182,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 		}
 		else if constexpr (dest_char_type_size == 2)
 		{
-			constexpr ::std::size_t imax{external_max / 2};
+			constexpr ::std::size_t imax{internal_max / 2};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -191,7 +191,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 		}
 		else
 		{
-			constexpr ::std::size_t imax{external_max / 8};
+			constexpr ::std::size_t imax{internal_max / 8};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -203,7 +203,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max - 1};
+			constexpr ::std::size_t imax{internal_max - 1};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -212,7 +212,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 		}
 		else if constexpr (dest_char_type_size == 2)
 		{
-			constexpr ::std::size_t imax{external_max / 2 - 1};
+			constexpr ::std::size_t imax{internal_max / 2 - 1};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -221,7 +221,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 		}
 		else
 		{
-			constexpr ::std::size_t imax{external_max / 8 - 1};
+			constexpr ::std::size_t imax{internal_max / 8 - 1};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -233,7 +233,7 @@ inline constexpr ::std::size_t cal_decorated_reserve_size(::std::size_t internal
 	{
 		if constexpr (dest_char_type_size == 4)
 		{
-			constexpr ::std::size_t imax{external_max - 7};
+			constexpr ::std::size_t imax{internal_max - 7};
 			if (internal_size >= imax)
 			{
 				fast_terminate();
@@ -503,6 +503,8 @@ template <::std::integral T, ::std::integral U>
 	requires((sizeof(T) == 1) && (sizeof(U) == 1 || sizeof(U) == 2 || sizeof(U) == 4))
 inline code_cvt_result<T, U> convert_ascii_with_sse(T const *__restrict pSrc, U *__restrict pDst) noexcept
 {
+	// No internal buffer judgment, external calls need to be judged
+
 	::std::uint_least32_t mask;
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER)
 	using namespace fast_io::intrinsics;
