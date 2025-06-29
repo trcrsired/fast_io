@@ -86,7 +86,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		// **If there is space, insert the key directly**
 		if (node->size < keys_number)
 		{
-			for (::std::size_t j = node->size; pos < j; --j)
+			for (::std::size_t j{node->size}; pos < j; --j)
 			{
 				node->keys[j] = node->keys[j - 1];
 			}
@@ -430,10 +430,10 @@ private:
 			{
 				clear_node(node->childrens[i]);
 			}
-
+#if 0
 			::fast_io::io::debug_println(::fast_io::mnp::pointervw(node),
 										 i, " ", ::fast_io::mnp::pointervw(node->keys + i), " ", node->keys[i].strvw());
-
+#endif
 			auto ki{node->keys[i]};
 			::fast_io::typed_generic_allocator_adapter<untyped_allocator_type, char_type>::deallocate_n(const_cast<char_type *>(ki.ptr),
 																										static_cast<::std::size_t>(ki.n + 1u));
