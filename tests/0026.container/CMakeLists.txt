@@ -1,0 +1,2 @@
+add_executable(trivialclass trivialclass.cc)
+add_test(trivialclass trivialclass)

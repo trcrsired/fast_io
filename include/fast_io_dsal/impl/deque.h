@@ -155,7 +155,9 @@ namespace fast_io::containers {
                     elem_curr_begin_ = *block_elem_begin_;
                     elem_curr_end_ = elem_begin_begin_ + block_elements_v<T>;
                 }
-                assert(block_elem_curr_ < block_elem_end_ && block_elem_curr_ >= block_elem_begin_);
+                if (!(block_elem_curr_ < block_elem_end_ && block_elem_curr_ >= block_elem_begin_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *this;
             }
 
@@ -183,7 +185,9 @@ namespace fast_io::containers {
                     elem_curr_begin_ = *block_elem_begin_;
                     elem_curr_end_ = elem_begin_begin_ + block_elements_v<T>;
                 }
-                assert(block_elem_curr_ < block_elem_end_);
+                if (!(block_elem_curr_ < block_elem_end_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *this;
             }
 
@@ -206,7 +210,9 @@ namespace fast_io::containers {
                     elem_begin_begin_ = *(block_elem_begin_ - 1uz);
                     elem_begin_end_ = elem_begin_begin_ + block_elements_v<T>;
                 }
-                assert(block_elem_curr_ >= block_elem_begin_);
+                if (!(block_elem_curr_ >= block_elem_begin_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *this;
             }
 
@@ -330,7 +336,9 @@ namespace fast_io::containers {
             }
 
             constexpr ::std::span<T> at_impl(::std::size_t const pos) const noexcept {
-                assert(block_elem_begin_ + pos <= block_elem_end_);
+                if (!(block_elem_begin_ + pos <= block_elem_end_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 if (pos == 0uz) {
                     return {elem_begin_begin_, elem_begin_end_};
                 } else if (block_elem_begin_ + pos + 1uz == block_elem_end_) {
@@ -499,7 +507,9 @@ namespace fast_io::containers {
             constexpr T &at_impl_(::std::ptrdiff_t const pos) const noexcept {
                 auto const [block_step, elem_step] = details::calc_pos<T>(elem_curr_ - elem_begin_, pos);
                 auto const target_block = block_elem_curr_ + block_step;
-                assert(target_block < block_elem_end_);
+                if (!(target_block < block_elem_end_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *((*target_block) + elem_step);
             }
 
@@ -512,8 +522,12 @@ namespace fast_io::containers {
                         elem_begin_ = ::std::to_address(*target_block);
                         elem_curr_ = elem_begin_ + elem_step;
                     } else {
-                        assert(target_block == block_elem_end_);
-                        assert(elem_step == 0uz);
+                        if (!(target_block == block_elem_end_)) [[unlikely]] {
+                            fast_terminate();
+                        }
+                        if (!(elem_step == 0uz)) [[unlikely]] {
+                            fast_terminate();
+                        }
                         block_elem_curr_ = target_block - 1uz;
                         elem_begin_ = ::std::to_address(*(target_block - 1uz));
                         elem_curr_ = elem_begin_ + details::block_elements_v<T>;
@@ -542,7 +556,9 @@ namespace fast_io::containers {
             }
 
             constexpr ::std::strong_ordering operator<=>(deque_iterator const &other) const noexcept {
-                assert(block_elem_end_ == other.block_elem_end_);
+                if (!(block_elem_end_ == other.block_elem_end_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 if (block_elem_curr_ < other.block_elem_curr_)
                     return ::std::strong_ordering::less;
                 if (block_elem_curr_ > other.block_elem_curr_)
@@ -555,18 +571,24 @@ namespace fast_io::containers {
             }
 
             constexpr T &operator*() noexcept {
-                assert(elem_curr_ != elem_begin_ + details::block_elements_v<T>);
+                if (!(elem_curr_ != elem_begin_ + details::block_elements_v<T>)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *elem_curr_;
             }
 
             constexpr T &operator*() const noexcept {
-                assert(elem_curr_ != elem_begin_ + details::block_elements_v<T>);
+                if (!(elem_curr_ != elem_begin_ + details::block_elements_v<T>)) [[unlikely]] {
+                    fast_terminate();
+                }
                 return *elem_curr_;
             }
 
             constexpr deque_iterator &operator++() noexcept {
                 // 空deque的迭代器不能自增，不需要考虑
-                assert(elem_curr_ != elem_begin_ + details::block_elements_v<T>);
+                if (!(elem_curr_ != elem_begin_ + details::block_elements_v<T>)) [[unlikely]] {
+                    fast_terminate();
+                }
                 ++elem_curr_;
                 if (elem_curr_ == elem_begin_ + details::block_elements_v<T>) {
                     if (block_elem_curr_ + 1uz != block_elem_end_) {
@@ -617,7 +639,9 @@ namespace fast_io::containers {
             }
 
             friend constexpr ::std::ptrdiff_t operator-(deque_iterator const &lhs, deque_iterator const &rhs) noexcept {
-                assert(lhs.block_elem_end_ == rhs.block_elem_end_);
+                if (!(lhs.block_elem_end_ == rhs.block_elem_end_)) [[unlikely]] {
+                    fast_terminate();
+                }
                 auto const block_size = lhs.block_elem_curr_ - rhs.block_elem_curr_;
                 return block_size * static_cast<::std::ptrdiff_t>(block_elements_v<T>) + lhs.elem_curr_ - lhs.
                        elem_begin_ -
@@ -1052,8 +1076,12 @@ namespace fast_io::containers {
         // 向前分配新block，需要block_size小于等于(block_alloc_begin -
         // block_ctrl_begin) 且不block_alloc_X不是空指针
         constexpr void extent_block_front_uncond_(::std::size_t const block_size) {
-            assert(block_alloc_begin_ != block_ctrl_begin_());
-            assert(block_alloc_begin_);
+            if (!(block_alloc_begin_ != block_ctrl_begin_())) [[unlikely]] {
+                fast_terminate();
+            }
+            if (!(block_alloc_begin_)) [[unlikely]] {
+                fast_terminate();
+            }
             for (auto i = 0uz; i != block_size; ++i) {
                 --block_alloc_begin_;
                 *block_alloc_begin_ = alloc_block_();
@@ -1063,8 +1091,12 @@ namespace fast_io::containers {
         // 向后分配新block，需要block_size小于等于(block_ctrl_end - block_alloc_end)
         // 且不block_alloc_X不是空指针
         constexpr void extent_block_back_uncond_(::std::size_t const block_size) {
-            assert(block_alloc_end_ != block_ctrl_end_);
-            assert(block_alloc_end_);
+            if (!(block_alloc_end_ != block_ctrl_end_)) [[unlikely]] {
+                fast_terminate();
+            }
+            if (!(block_alloc_end_)) [[unlikely]] {
+                fast_terminate();
+            }
             for (auto i = 0uz; i != block_size; ++i) {
                 *block_alloc_end_ = alloc_block_();
                 ++block_alloc_end_;
@@ -1689,7 +1721,9 @@ namespace fast_io::containers {
                 if (not(check_block && check_elem))
                     throw ::std::out_of_range{"deque::at"};
             } else {
-                assert(check_block && check_elem);
+                if (!(check_block && check_elem)) [[unlikely]] {
+                    fast_terminate();
+                }
             }
             return *((*target_block) + elem_step);
         }
@@ -1790,7 +1824,9 @@ namespace fast_io::containers {
         // 该函数调用后如果容器大小为0，则使得elem_begin/end为nullptr
         // 这是emplace_back的先决条件
         constexpr void pop_back() noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             --elem_end_end_;
             ::std::destroy_at(elem_end_begin_);
             if (elem_end_end_ == elem_end_begin_) {
@@ -1813,7 +1849,9 @@ namespace fast_io::containers {
 
         // 参考pop_back
         constexpr void pop_front() noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             ::std::destroy_at(elem_begin_begin_);
             ++elem_begin_begin_;
             if (elem_begin_end_ == elem_begin_begin_) {
@@ -1836,36 +1874,48 @@ namespace fast_io::containers {
         }
 
         constexpr T &front() noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             return *(elem_begin_begin_);
         }
 
         constexpr T &back() noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             return *(elem_end_end_ - 1uz);
         }
 
         constexpr T const &front() const noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             return *(elem_begin_begin_);
         }
 
         constexpr T const &back() const noexcept {
-            assert(not empty());
+            if (empty()) [[unlikely]] {
+                fast_terminate();
+            }
             return *(elem_end_end_ - 1uz);
         }
 
     private:
         constexpr void pop_back_n_(::std::size_t const count) noexcept {
             for (auto i = 0uz; i != count; ++i) {
-                assert(!empty());
+                if (empty()) [[unlikely]] {
+                    fast_terminate();
+                }
                 pop_back();
             }
         }
 
         constexpr void pop_front_n_(::std::size_t const count) noexcept {
             for (auto i = 0uz; i != count; ++i) {
-                assert(!empty());
+                if (empty()) [[unlikely]] {
+                    fast_terminate();
+                }
                 pop_front();
             }
         }
@@ -2046,7 +2096,9 @@ namespace fast_io::containers {
     private:
         // 收缩专用
         constexpr void resize_shrink_(::std::size_t const old_size, ::std::size_t const new_size) noexcept {
-            assert(old_size >= new_size);
+            if (!(old_size >= new_size)) [[unlikely]] {
+                fast_terminate();
+            }
             if constexpr (::std::is_trivially_destructible_v<T> && is_default_operation_) {
                 auto const [block_step, elem_step] =
                         details::calc_pos<T>(static_cast<::std::size_t>(elem_begin_begin_ - elem_begin_first_),
@@ -2065,7 +2117,9 @@ namespace fast_io::containers {
             } else {
                 auto const count = old_size - new_size;
                 for (auto i = 0uz; i != count; ++i) {
-                    assert(!empty());
+                    if (empty()) [[unlikely]] {
+                        fast_terminate();
+                    }
                     pop_back();
                 }
             }

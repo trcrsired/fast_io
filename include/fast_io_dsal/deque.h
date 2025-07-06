@@ -7,7 +7,6 @@
 #endif
 
 #include <algorithm>
-#include <concepts>
 #include <limits>
 #include <memory>
 
@@ -22,16 +21,16 @@
 defined(FAST_IO_ENABLE_HOSTED_FEATURES))
 
 namespace fast_io {
-    template<typename T, typename Alloc = ::fast_io::native_global_allocator>
-    using deque = ::fast_io::containers::deque<T, Alloc>;
+    template<typename T, typename Alloc = native_global_allocator>
+    using deque = containers::deque<T, Alloc>;
 
     namespace containers {
         template<::std::input_iterator U, typename V>
         deque(U, V) -> deque<typename ::std::iterator_traits<U>::value_type,
-            typename ::fast_io::generic_allocator_adapter<typename ::std::iterator_traits<U>::value_type> >;
+            generic_allocator_adapter<typename ::std::iterator_traits<U>::value_type> >;
 
         template<::std::input_iterator U, typename V,
-            ::fast_io::containers::details::mini_alloc Alloc = ::fast_io::generic_allocator_adapter<typename
+            details::mini_alloc Alloc = generic_allocator_adapter<typename
                 ::std::iterator_traits<
                     U>::value_type> >
         deque(U, V, Alloc) -> deque<typename ::std::iterator_traits<U>::value_type, Alloc>;
