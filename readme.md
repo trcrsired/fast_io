@@ -319,20 +319,21 @@ iconv test:
 
 The creation and development of this project were made possible thanks to the valuable contributions of various open-source projects. While the code was not copied directly from these projects, I used them as references and re-implemented them to suit the specific purposes of this library. In some cases, integration issues arose that required modifications to the original code. I am grateful to these projects and their developers for their commitment to making their code open and accessible to the wider community.
 
-|Project          | Url
-|-----------------|-----------------------------------------
-|Grisu-Exact      |https://github.com/jk-jeon/Grisu-Exact
-|Ryu              |https://github.com/ulfjack/ryu
-|SHA-Intrinsics   |https://github.com/noloader/SHA-Intrinsics
-|SHA1             |https://github.com/vog/sha1
-|UTF-utils        |https://github.com/BobSteagall/utf_utils
-|jenkins-hash-java|https://github.com/vkandy/jenkins-hash-java
-|md5              |https://github.com/JieweiWei/md5
-|ReactOS          |https://github.com/reactos/reactos
-|dirent_h         |https://github.com/win32ports/dirent_h
-|GNU C library    |https://www.gnu.org/software/libc/
-|GNU Newlib       |https://sourceware.org/newlib/
-|Dragonbox        |https://github.com/jk-jeon/dragonbox
-|JEAIII           |https://github.com/jeaiii/itoa
-|Crypto++         |https://github.com/weidai11/cryptopp
-|MyItoA           |https://gitee.com/xjkp2283572185/MyStd
+| Project           | Url
+|-------------------|-----------------------------------------
+| Grisu-Exact       |https://github.com/jk-jeon/Grisu-Exact
+| Ryu               |https://github.com/ulfjack/ryu
+| SHA-Intrinsics    |https://github.com/noloader/SHA-Intrinsics
+| SHA1              |https://github.com/vog/sha1
+| UTF-utils         |https://github.com/BobSteagall/utf_utils
+| jenkins-hash-java |https://github.com/vkandy/jenkins-hash-java
+| md5               |https://github.com/JieweiWei/md5
+| ReactOS           |https://github.com/reactos/reactos
+| dirent_h          |https://github.com/win32ports/dirent_h
+| GNU C library     |https://www.gnu.org/software/libc/
+| GNU Newlib        |https://sourceware.org/newlib/
+| Dragonbox         |https://github.com/jk-jeon/dragonbox
+| JEAIII            |https://github.com/jeaiii/itoa
+| Crypto++          |https://github.com/weidai11/cryptopp
+| MyItoA            |https://gitee.com/xjkp2283572185/MyStd
+| deque             |https://github.com/YexuanXiao/deque
