@@ -89,7 +89,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	}
 	auto tempkey = ::fast_io::details::create_associative_string<allocator_type, char_type>(keystrptr, keystrn);
 
-	__builtin_printf("%s %d %s\n",__FILE__,__LINE__,tempkey.ptr);
 	auto keys{node->keys};
 	auto n{node->size};
 	auto keysit{keys + pos};
@@ -104,7 +103,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	}
 
 	constexpr ::std::size_t keys_number_half{keys_number >> (1u)};
-	constexpr ::std::size_t keys_number_half_m1{keys_number_half - 1u};
 	constexpr ::std::size_t keys_number_half_p1{keys_number_half + 1u};
 	// ** Split now
 	auto rightchild{typed_allocator_type::allocate(1)};
@@ -117,7 +115,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	char_type const *movekeystrptr{};
 	::std::size_t movekeystrn{};
 
-	__builtin_printf("%s %d %s\n",__FILE__,__LINE__,tempkey.ptr);
 	auto midptr{keys + keys_number_half};
 	auto poskeys_number_halfcmp{pos <=> keys_number_half};
 	if (poskeys_number_halfcmp < 0)
@@ -145,18 +142,15 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		++it;
 		::fast_io::details::non_overlapped_copy(keysit, keysed, it);
 	}
-	__builtin_printf("%s %d %s node->parent=%p\n",__FILE__,__LINE__,tempkey.ptr,node->parent);
 	::std::size_t child_pos{node->parent_pos};
 	for (auto j{node->parent}; j; j = j->parent)
 	{
 		auto jkeys{j->keys};
 		auto jchildrens{j->childrens};
 		auto jn{j->size};
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 		// If parent node has space, insert the promoted key and return
 		if (jn != keys_number)
 		{
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 			// Shift keys and children to make room for the promoted key and new child
 			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jkeys + jn, jkeys + child_pos + 1);
 			jkeys[child_pos].ptr = movekeystrptr;
@@ -174,88 +168,16 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			++j->size;
 			return true;
 		}
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 		// Parent is full, must split upward
 		auto new_right = typed_allocator_type::allocate(1);
-		node->leaf = new_right->leaf = false;
+		j->leaf = new_right->leaf = false;
 		j->size = new_right->size = keys_number_half;
 
 		auto jmidptr = jkeys + keys_number_half;
-#if 0 
 
-		auto child_poskeys_number_halfcmp{child_pos <=> keys_number_half};
-		// CASE 1: promoted child is in the left half (before the mid key)
-		if (child_poskeys_number_halfcmp < 0)
-		{
-			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right->keys);
-			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jmidptr, jkeys + child_pos + 1);
-			jkeys[child_pos].ptr = movekeystrptr;
-			jkeys[child_pos].n = movekeystrn;
-
-			auto &midkey = jmidptr[-1];
-			movekeystrptr = midkey.ptr;
-			movekeystrn = midkey.n;
-
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half + 1, keys_number_half, new_right->childrens);
-			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number_half + 1, jchildrens + child_pos + 2);
-			jchildrens[child_pos + 1] = rightchild;
-
-			for (::std::size_t i{}; i != keys_number_half; ++i)
-			{
-				auto p = new_right->childrens[i];
-				p->parent = new_right;
-				p->parent_pos = i;
-			}
-		}
-		// CASE 2: promoted child goes exactly after the mid key (replace middle)
-		else if (child_poskeys_number_halfcmp == 0)
-		{
-			::fast_io::details::non_overlapped_copy_n(jmidptr + 1, keys_number_half, new_right->keys);
-			movekeystrptr = tempkey.ptr;
-			movekeystrn = tempkey.n;
-
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half + 1, keys_number_half, new_right->childrens);
-			*(new_right->childrens) = rightchild;
-
-			for (::std::size_t i{}; i != keys_number_half + 1; ++i)
-			{
-				auto p = new_right->childrens[i];
-				p->parent = new_right;
-				p->parent_pos = i;
-			}
-		}
-		// CASE 3: promoted child is in the right half (after the mid key)
-		else
-		{
-			auto &midkey = *jmidptr;
-			movekeystrptr = midkey.ptr;
-			movekeystrn = midkey.n;
-
-			::fast_io::details::non_overlapped_copy_n(jmidptr + 1, keys_number_half, new_right->keys);
-			auto it = ::fast_io::details::non_overlapped_copy(jmidptr + 2, jkeys + child_pos, new_right->keys);
-			*it = tempkey;
-			++it;
-			::fast_io::details::non_overlapped_copy(jkeys + child_pos, jkeys + keys_number, it);
-
-			auto itc = ::fast_io::details::non_overlapped_copy(jchildrens + keys_number_half + 2, jchildrens + child_pos + 1, new_right->childrens + 1);
-			*itc = rightchild;
-			++itc;
-			::fast_io::details::non_overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number + 1, itc);
-
-			for (::std::size_t i{}; i != keys_number_half + 1; ++i)
-			{
-				auto p = new_right->childrens[i];
-				p->parent = new_right;
-				p->parent_pos = i;
-			}
-		}
-#else
-
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 		auto new_right_keys{new_right->keys};
 		auto new_right_childrens{new_right->childrens};
 		auto child_poskeys_number_halfcmp{child_pos <=> keys_number_half};
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 		// CASE 1: promoted child is in the left half (before the mid key)
 		if (child_poskeys_number_halfcmp < 0)
 		{
@@ -268,8 +190,8 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			auto &jmidkey = jmidptr[-1];
 			movekeystrptr = jmidkey.ptr;
 			movekeystrn = jmidkey.n;
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens);
+//	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
+			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half, keys_number_half_p1, new_right_childrens);
 			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number_half_p1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
 			rightchild->parent = node;
@@ -284,30 +206,29 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		}
 		else if (child_poskeys_number_halfcmp == 0)
 		{
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
+//	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
 			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens);
+			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half_p1, new_right_childrens);
 			*(new_right->childrens) = rightchild;
 			rightchild->parent = node;
-			rightchild->parent_pos = child_pos + 1;
+			rightchild->parent_pos = 0;
 		}
 		else
 		{
-	__builtin_printf("%s %d %s j=%p child_pos=%zu\n",__FILE__,__LINE__,tempkey.ptr, j, child_pos);
-			auto &jkeystrptrkeysnumber{*jmidptr};
-			movekeystrptr = jkeystrptrkeysnumber.ptr;
-			movekeystrn = jkeystrptrkeysnumber.n;
-	__builtin_printf("%s %d %s j=%p child_pos=%zu\n",__FILE__,__LINE__,tempkey.ptr, j, child_pos);
 			auto jkeysit{jkeys + child_pos};
 			auto jkeysed{jkeys + keys_number};
 			auto it{::fast_io::details::non_overlapped_copy(jmidptr + 1, jkeysit, new_right_keys)};
-		__builtin_printf("%s %d %s j=%p child_pos=%zu\n",__FILE__,__LINE__,tempkey.ptr, j, child_pos);
-			*it = tempkey;
+			it->ptr = movekeystrptr;
+			it->n = movekeystrn;
 			++it;
 			::fast_io::details::non_overlapped_copy(jkeysit, jkeysed, it);
-	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,tempkey.ptr, j);
-			auto jchildrensit{jchildrens + child_pos};
-			auto jchildrensed{jchildrens + keys_number};
+
+			auto &jkeystrptrkeysnumber{*jmidptr};
+			movekeystrptr = jkeystrptrkeysnumber.ptr;
+			movekeystrn = jkeystrptrkeysnumber.n;
+
+			auto jchildrensit{jchildrens + child_pos + 1};
+			auto jchildrensed{jchildrens + keys_number + 1};
 			auto kit{::fast_io::details::non_overlapped_copy(jchildrens + keys_number_half_p1, jchildrensit, new_right_childrens)};
 			*kit = rightchild;
 			++kit;
@@ -321,11 +242,10 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			kref.parent = new_right;
 			kref.parent_pos = static_cast<::std::size_t>(k-new_right_childrens);
 		}
-#endif
 		rightchild = new_right;
 		child_pos = j->parent_pos;
+		node = j;
 	}
-	__builtin_printf("%s %d %s\n",__FILE__,__LINE__,tempkey.ptr);
 	auto new_root = typed_allocator_type::allocate(1);
 	new_root->leaf = false;
 	new_root->size = 1;
@@ -339,8 +259,8 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	node->parent_pos = 0;
 	rightchild->parent = new_root;
 	rightchild->parent_pos = 1;
-
 	*proot = new_root;
+
 	return true;
 }
 
