@@ -67,6 +67,7 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key(nodetype *node,
 										   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn, nodetype **proot) noexcept
 {
+	__builtin_printf("\n\n%s %d %s\n",__FILE__,__LINE__,keystrptr);
 	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
 	::std::size_t pos;
@@ -142,9 +143,12 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		++it;
 		::fast_io::details::non_overlapped_copy(keysit, keysed, it);
 	}
+
+	__builtin_printf("%s %d %s\n",__FILE__,__LINE__,keystrptr);
 	::std::size_t child_pos{node->parent_pos};
 	for (auto j{node->parent}; j; j = j->parent)
 	{
+		__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,movekeystrptr, j);
 		auto jkeys{j->keys};
 		auto jchildrens{j->childrens};
 		auto jn{j->size};
@@ -168,6 +172,8 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			++j->size;
 			return true;
 		}
+
+	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,movekeystrptr, j);
 		// Parent is full, must split upward
 		auto new_right = typed_allocator_type::allocate(1);
 		j->leaf = new_right->leaf = false;
@@ -215,6 +221,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		}
 		else
 		{
+	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,movekeystrptr, j);
 			auto jkeysit{jkeys + child_pos};
 			auto jkeysed{jkeys + keys_number};
 			auto it{::fast_io::details::non_overlapped_copy(jmidptr + 1, jkeysit, new_right_keys)};
@@ -233,7 +240,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			*kit = rightchild;
 			++kit;
 			::fast_io::details::non_overlapped_copy(jchildrensit, jchildrensed, kit);
-
+	__builtin_printf("%s %d %s j=%p\n",__FILE__,__LINE__,movekeystrptr, j);
 		}
 
 		for (auto k{new_right_childrens},ked{new_right_childrens+keys_number_half_p1}; k != ked; ++k)
@@ -246,6 +253,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		child_pos = j->parent_pos;
 		node = j;
 	}
+	__builtin_printf("%s %d %s\n",__FILE__,__LINE__,movekeystrptr);
 	auto new_root = typed_allocator_type::allocate(1);
 	new_root->leaf = false;
 	new_root->size = 1;
