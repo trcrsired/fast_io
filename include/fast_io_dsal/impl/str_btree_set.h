@@ -245,7 +245,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 
 		for (auto k{new_right_childrens},ked{new_right_childrens+keys_number_half_p1}; k != ked; ++k)
 		{
-			auto kref{**k};
+			auto& kref{**k};
 			kref.parent = new_right;
 			kref.parent_pos = static_cast<::std::size_t>(k-new_right_childrens);
 		}
