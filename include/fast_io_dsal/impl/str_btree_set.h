@@ -162,9 +162,9 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			rightchild->parent = j;
 			rightchild->parent_pos = child_pos + 1;
 
-			for(auto k{jchildrens+(child_pos+2)},ked{jchildrens+(jn+2)};k!=ked;++k)
+			for (auto k{jchildrens + (child_pos + 2)}, ked{jchildrens + (jn + 2)}; k != ked; ++k)
 			{
-				(*k)->parent_pos = static_cast<::std::size_t>(k-jchildrens);
+				(*k)->parent_pos = static_cast<::std::size_t>(k - jchildrens);
 			}
 			++j->size;
 			return true;
@@ -201,14 +201,12 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			{
 				jchildrens[i]->parent_pos = i;
 			}
-
-
 		}
 		else if (child_poskeys_number_halfcmp == 0)
 		{
 			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half_p1, new_right_childrens);
-			*(new_right->childrens) = rightchild;
+			*new_right_childrens = rightchild;
+			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens + 1);
 			rightchild->parent = node;
 			rightchild->parent_pos = 0;
 		}
@@ -234,11 +232,11 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			::fast_io::details::non_overlapped_copy(jchildrensit, jchildrensed, kit);
 		}
 
-		for (auto k{new_right_childrens},ked{new_right_childrens+keys_number_half_p1}; k != ked; ++k)
+		for (auto k{new_right_childrens}, ked{new_right_childrens + keys_number_half_p1}; k != ked; ++k)
 		{
-			auto& kref{**k};
+			auto &kref{**k};
 			kref.parent = new_right;
-			kref.parent_pos = static_cast<::std::size_t>(k-new_right_childrens);
+			kref.parent_pos = static_cast<::std::size_t>(k - new_right_childrens);
 		}
 		rightchild = new_right;
 		child_pos = j->parent_pos;
@@ -354,7 +352,6 @@ private:
 		if (!node->leaf)
 		{
 			clear_node(node->childrens[n]);
-
 		}
 
 		// **Deallocate the node using the allocator**
