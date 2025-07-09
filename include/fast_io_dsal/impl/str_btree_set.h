@@ -50,7 +50,7 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 	using char_type = typename nodetype::char_type;
 	auto *b{node->keys}, *i{b}, *e{b + node->size};
 	bool found{};
-	::fast_io::basic_string_view<char_type> newkey(keystrptr, keystrn);
+	::fast_io::containers::basic_string_view<char_type> newkey(keystrptr, keystrn);
 	for (; i != e; ++i)
 	{
 		auto cmpres{newkey <=> i->strvw()};
@@ -292,8 +292,8 @@ class basic_str_btree_set
 
 public:
 	using char_type = chtype;
-	using string_view_type = ::fast_io::basic_string_view<char_type>;
-	using cstring_view_type = ::fast_io::basic_cstring_view<char_type>;
+	using string_view_type = ::fast_io::containers::basic_string_view<char_type>;
+	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
 
 	node_type *root{};
