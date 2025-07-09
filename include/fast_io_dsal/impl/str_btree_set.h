@@ -207,8 +207,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
 			*new_right_childrens = rightchild;
 			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens + 1);
-			rightchild->parent = node;
-			rightchild->parent_pos = 0;
 		}
 		else
 		{
