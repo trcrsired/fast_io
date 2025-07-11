@@ -111,7 +111,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 
 	auto rightchildkeys{rightchild->keys};
 	//	auto rightchildchildrens{rightchild->childrens};
-
 	char_type const *movekeystrptr{};
 	::std::size_t movekeystrn{};
 
@@ -119,11 +118,12 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	auto poskeys_number_halfcmp{pos <=> keys_number_half};
 	if (poskeys_number_halfcmp < 0)
 	{
-		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
-		::fast_io::freestanding::overlapped_copy(keys + pos, keys + keys_number_half, keys + pos + 1);
 		auto &keystrptrkeysnumber{midptr[-1]};
 		movekeystrptr = keystrptrkeysnumber.ptr;
 		movekeystrn = keystrptrkeysnumber.n;
+		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
+		::fast_io::freestanding::overlapped_copy(keys + pos, keys + keys_number_half, keys + pos + 1);
+
 		keys[pos] = tempkey;
 	}
 	else if (poskeys_number_halfcmp == 0)
@@ -156,7 +156,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jkeys + jn, jkeys + child_pos + 1);
 			jkeys[child_pos].ptr = movekeystrptr;
 			jkeys[child_pos].n = movekeystrn;
-
 			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + jn + 1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
 			rightchild->parent = j;
@@ -169,7 +168,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			++j->size;
 			return true;
 		}
-
 		// Parent is full, must split upward
 		auto new_right = typed_allocator_type::allocate(1);
 		j->leaf = new_right->leaf = false;
@@ -339,10 +337,6 @@ private:
 			{
 				clear_node(node->childrens[i]);
 			}
-#if 0
-			::fast_io::io::debug_println(::fast_io::mnp::pointervw(node),
-										 i, " ", ::fast_io::mnp::pointervw(node->keys + i), " ", node->keys[i].strvw());
-#endif
 			auto ki{node->keys[i]};
 			::fast_io::typed_generic_allocator_adapter<untyped_allocator_type, char_type>::deallocate_n(const_cast<char_type *>(ki.ptr),
 																										static_cast<::std::size_t>(ki.n + 1u));
