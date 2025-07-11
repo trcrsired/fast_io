@@ -181,14 +181,19 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		// CASE 1: promoted child is in the left half (before the mid key)
 		if (child_poskeys_number_halfcmp < 0)
 		{
-			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
-			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jmidptr, jkeys + child_pos + 1);
-			jkeys[child_pos].ptr = movekeystrptr;
-			jkeys[child_pos].n = movekeystrn;
 
 			auto &jmidkey = jmidptr[-1];
-			movekeystrptr = jmidkey.ptr;
-			movekeystrn = jmidkey.n;
+			auto tmpptr{jmidkey.ptr};
+			auto tmpn{jmidkey.n};
+
+			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
+			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jmidptr, jkeys + child_pos + 1);
+			auto &jkeyschildpos{jkeys[child_pos]};
+			jkeyschildpos.ptr = movekeystrptr;
+			jkeyschildpos.n = movekeystrn;
+			movekeystrptr = tmpptr;
+			movekeystrn = tmpn;
+
 			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half, keys_number_half_p1, new_right_childrens);
 			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number_half_p1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
@@ -208,6 +213,8 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		}
 		else
 		{
+
+			::fast_io::io::debug_println(::std::source_location::current());
 			auto jkeysit{jkeys + child_pos};
 			auto jkeysed{jkeys + keys_number};
 			auto it{::fast_io::details::non_overlapped_copy(jmidptr + 1, jkeysit, new_right_keys)};
@@ -345,7 +352,6 @@ private:
 		{
 			clear_node(node->childrens[n]);
 		}
-
 		// **Deallocate the node using the allocator**
 		typed_allocator_type::deallocate_n(node, 1);
 	}
