@@ -8,11 +8,12 @@ thread_local ::std::size_t n{};
 
 extern "C" int LLVMFuzzerTestOneInput(::std::uint8_t *data, ::std::size_t size)
 {
-    if(n==100000)
-    {
-        bset.clear_destroy();
-    }
-    bset.insert_key(::fast_io::string_view(reinterpret_cast<char const*>(data),size));
-    ++n;
-    return 0;
+	if (n == 100000)
+	{
+		bset.clear_destroy();
+		n = 0;
+	}
+	bset.insert_key(::fast_io::string_view(reinterpret_cast<char const *>(data), size));
+	++n;
+	return 0;
 }
