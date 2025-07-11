@@ -213,8 +213,6 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		}
 		else
 		{
-
-			::fast_io::io::debug_println(::std::source_location::current());
 			auto jkeysit{jkeys + child_pos};
 			auto jkeysed{jkeys + keys_number};
 			auto it{::fast_io::details::non_overlapped_copy(jmidptr + 1, jkeysit, new_right_keys)};
