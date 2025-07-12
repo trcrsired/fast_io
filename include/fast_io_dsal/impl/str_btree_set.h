@@ -96,7 +96,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	// **If there is space, insert the key directly**
 	if (n != keys_number)
 	{
-		::fast_io::freestanding::overlapped_copy(keysit, keysed, keysit + 1);
+		::fast_io::freestanding::overlapped_copy(keysit, keys + n, keysit + 1);
 		*keysit = tempkey;
 		++node->size;
 		return true;
@@ -113,14 +113,15 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	//	auto rightchildchildrens{rightchild->childrens};
 	char_type const *movekeystrptr{};
 	::std::size_t movekeystrn{};
-
 	auto midptr{keys + keys_number_half};
 	auto poskeys_number_halfcmp{pos <=> keys_number_half};
+
 	if (poskeys_number_halfcmp < 0)
 	{
 		auto &keystrptrkeysnumber{midptr[-1]};
 		movekeystrptr = keystrptrkeysnumber.ptr;
 		movekeystrn = keystrptrkeysnumber.n;
+
 		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
 		::fast_io::freestanding::overlapped_copy(keys + pos, keys + keys_number_half, keys + pos + 1);
 
@@ -142,20 +143,21 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		++it;
 		::fast_io::details::non_overlapped_copy(keysit, keysed, it);
 	}
-
 	::std::size_t child_pos{node->parent_pos};
 	for (auto j{node->parent}; j; j = j->parent)
 	{
 		auto jkeys{j->keys};
 		auto jchildrens{j->childrens};
 		auto jn{j->size};
+
 		// If parent node has space, insert the promoted key and return
 		if (jn != keys_number)
 		{
 			// Shift keys and children to make room for the promoted key and new child
 			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jkeys + jn, jkeys + child_pos + 1);
-			jkeys[child_pos].ptr = movekeystrptr;
-			jkeys[child_pos].n = movekeystrn;
+			auto &jkeyschildpos{jkeys[child_pos]};
+			jkeyschildpos.ptr = movekeystrptr;
+			jkeyschildpos.n = movekeystrn;
 			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + jn + 1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
 			rightchild->parent = j;
@@ -166,6 +168,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 				(*k)->parent_pos = static_cast<::std::size_t>(k - jchildrens);
 			}
 			++j->size;
+
 			return true;
 		}
 		// Parent is full, must split upward
@@ -197,7 +200,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half, keys_number_half_p1, new_right_childrens);
 			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number_half_p1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
-			rightchild->parent = node;
+			rightchild->parent = j;
 			rightchild->parent_pos = child_pos + 1;
 
 			for (::std::size_t i{child_pos + 2}; i != keys_number_half_p1; ++i)
