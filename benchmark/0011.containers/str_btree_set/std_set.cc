@@ -16,4 +16,15 @@ int main()
 			bset.insert(e);
 		}
 	}
+	{
+		::std::size_t count{};
+		{
+			::fast_io::timer t(u8"contains");
+			for (auto const &e : vec)
+			{
+				count += static_cast<::std::size_t>(bset.contains(e));
+			}
+		}
+		::fast_io::io::perrln("count=", count);
+	}
 }

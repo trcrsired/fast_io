@@ -15,4 +15,15 @@ int main()
 			bset.insert_key(::fast_io::mnp::os_c_str(e));
 		}
 	}
+	{
+		::std::size_t count{};
+		{
+			::fast_io::timer t(u8"contains");
+			for (auto const &e : vec)
+			{
+				count += static_cast<::std::size_t>(bset.contains(::fast_io::mnp::os_c_str(e)));
+			}
+		}
+		::fast_io::io::perrln("count=", count);
+	}
 }

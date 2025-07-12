@@ -126,6 +126,34 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 
 #endif
 
+template <typename nodetype>
+inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+{
+	if (node == nullptr)
+	{
+		return false;
+	}
+	::std::size_t pos;
+	// **Find the correct position for insertion**
+	for (;;)
+	{
+		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
+		pos = postemp;
+		// **If the key already exists, return false (no duplicate keys)**
+		if (found)
+		{
+			return true;
+		}
+		// **If the node is a leaf**
+		if (node->leaf)
+		{
+			break;
+		}
+		node = node->childrens[pos];
+	}
+	return false;
+}
+
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key(nodetype *node,
 										   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn, nodetype **proot) noexcept
@@ -377,13 +405,13 @@ public:
 		}
 	}
 
-	constexpr bool contains(string_view_type) const noexcept
+	constexpr bool contains(string_view_type strvw) const noexcept
 	{
-		return false;
+		return ::fast_io::containers::details::str_btree_contains(this->root, strvw.ptr, strvw.n);
 	}
 	constexpr bool is_empty() const noexcept
 	{
-		return false;
+		return root == nullptr;
 	}
 	constexpr bool erase_key(string_view_type) noexcept
 	{
@@ -391,7 +419,7 @@ public:
 	}
 	constexpr bool insert_key(string_view_type strvw) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number>(__builtin_addressof(this->root), strvw.data(), strvw.size());
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number>(__builtin_addressof(this->root), strvw.ptr, strvw.n);
 	}
 
 private:
