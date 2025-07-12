@@ -42,6 +42,65 @@ struct find_btree_node_insert_position_result
 	::std::size_t pos{};
 	bool found{};
 };
+#if 0
+template <typename nodetype>
+inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
+                                                                                            typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+{
+    using char_type = typename nodetype::char_type;
+    auto *b{node->keys};
+    ::std::size_t size{node->size};
+
+    ::fast_io::containers::basic_string_view<char_type> newkey(keystrptr, keystrn);
+
+    bool found {};
+
+    // Threshold for using linear search; adjust as needed for performance
+    constexpr ::std::size_t linear_threshold{4};
+
+    if (size < linear_threshold)
+    {
+        // Linear search for small nodes
+        auto *i = b;
+        auto *e = b + size;
+        for (; i != e; ++i)
+        {
+            auto cmpres = newkey <=> i->strvw();
+            if (cmpres <= 0)
+            {
+                found = (cmpres == 0);
+                return {static_cast<::std::size_t>(i - b), found};
+            }
+        }
+        return {size, false}; // Key goes at the end
+    }
+
+
+    // Binary search for larger nodes
+    ::std::size_t left = 0, right = size;
+    while (left < right)
+    {
+        ::std::size_t mid = left + (right - left) / 2;
+        auto cmpres = newkey <=> b[mid].strvw();
+        if (cmpres < 0)
+        {
+            right = mid;
+        }
+        else if (0 < cmpres)
+        {
+            left = mid + 1;
+        }
+        else
+        {
+            found = true;
+            right = mid; // Insert position should be at the first equal key
+        }
+    }
+
+    return {left, found};
+}
+
+#else
 
 template <typename nodetype>
 inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
@@ -49,8 +108,10 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 {
 	using char_type = typename nodetype::char_type;
 	auto *b{node->keys}, *i{b}, *e{b + node->size};
-	bool found{};
+
 	::fast_io::containers::basic_string_view<char_type> newkey(keystrptr, keystrn);
+
+	bool found{};
 	for (; i != e; ++i)
 	{
 		auto cmpres{newkey <=> i->strvw()};
@@ -62,6 +123,8 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 	}
 	return {static_cast<::std::size_t>(i - b), found};
 }
+
+#endif
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key(nodetype *node,
@@ -289,7 +352,7 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 
 } // namespace details
 
-template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 63>
+template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 15>
 class basic_str_btree_set
 {
 	using node_type = ::fast_io::containers::details::str_btree_set_node<chtype, keys_number>;
