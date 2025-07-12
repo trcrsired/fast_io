@@ -24,9 +24,8 @@
 
 #include "impl/freestanding.h"
 #include "impl/common.h"
+#include "string_view.h"
 #include "impl/associative_string.h"
-#include "impl/string_view.h"
-#include "impl/cstring_view.h"
 #include "impl/str_btree_set.h"
 
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \
