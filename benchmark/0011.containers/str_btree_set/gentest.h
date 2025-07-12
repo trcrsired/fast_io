@@ -10,7 +10,7 @@ inline ::fast_io::vector<T> gentest()
 	::fast_io::vector<T> vec;
 	::std::mt19937_64 eng;
 	::std::uniform_int_distribution<std::size_t> ud(0, 61);
-	::std::uniform_int_distribution<std::size_t> rlen(8, 20);
+	::std::uniform_int_distribution<std::size_t> rlen(25, 30);
 	for (::std::size_t i{}; i != 1000000; ++i)
 	{
 		T tempstr;
