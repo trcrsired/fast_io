@@ -133,12 +133,10 @@ inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char
 	{
 		return false;
 	}
-	::std::size_t pos;
 	// **Find the correct position for insertion**
 	for (;;)
 	{
 		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
-		pos = postemp;
 		// **If the key already exists, return false (no duplicate keys)**
 		if (found)
 		{
@@ -149,7 +147,7 @@ inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char
 		{
 			break;
 		}
-		node = node->childrens[pos];
+		node = node->childrens[postemp];
 	}
 	return false;
 }
@@ -380,7 +378,7 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 
 } // namespace details
 
-template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 15>
+template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 16>
 class basic_str_btree_set
 {
 	using node_type = ::fast_io::containers::details::str_btree_set_node<chtype, keys_number>;
