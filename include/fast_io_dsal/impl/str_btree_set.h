@@ -379,6 +379,7 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 } // namespace details
 
 template <::std::integral chtype, typename Allocator, ::std::size_t keys_number = 16>
+	requires((keys_number != 0) && ((keys_number & 1) == 0))
 class basic_str_btree_set
 {
 	using node_type = ::fast_io::containers::details::str_btree_set_node<chtype, keys_number>;
