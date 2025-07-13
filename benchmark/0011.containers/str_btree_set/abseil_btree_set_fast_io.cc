@@ -8,9 +8,9 @@
 
 int main()
 {
-	auto vec{::gentest<::std::string>()};
+	auto vec{::gentest()};
 	::fast_io::timer t(u8"str_btree_set");
-	::absl::btree_set<typename decltype(vec)::value_type> bset;
+	::absl::btree_set<::fast_io::string> bset;
 	{
 		::fast_io::timer t(u8"insert");
 		for (auto const &e : vec)
