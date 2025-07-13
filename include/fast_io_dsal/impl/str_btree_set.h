@@ -5,10 +5,11 @@ namespace fast_io::containers
 
 namespace details
 {
-struct btree_node_common
+struct btree_imp
 {
 	void *root;
-	void *next;
+	void *leftmost;
+	void *rightmost;
 };
 
 template <::std::integral chtype, ::std::size_t keys_number>
@@ -43,65 +44,6 @@ struct find_btree_node_insert_position_result
 	::std::size_t pos{};
 	bool found{};
 };
-#if 0
-template <typename nodetype>
-inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
-                                                                                            typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
-{
-    using char_type = typename nodetype::char_type;
-    auto *b{node->keys};
-    ::std::size_t size{node->size};
-
-    ::fast_io::containers::basic_string_view<char_type> newkey(keystrptr, keystrn);
-
-    bool found {};
-
-    // Threshold for using linear search; adjust as needed for performance
-    constexpr ::std::size_t linear_threshold{4};
-
-    if (size < linear_threshold)
-    {
-        // Linear search for small nodes
-        auto *i = b;
-        auto *e = b + size;
-        for (; i != e; ++i)
-        {
-            auto cmpres = newkey <=> i->strvw();
-            if (cmpres <= 0)
-            {
-                found = (cmpres == 0);
-                return {static_cast<::std::size_t>(i - b), found};
-            }
-        }
-        return {size, false}; // Key goes at the end
-    }
-
-
-    // Binary search for larger nodes
-    ::std::size_t left = 0, right = size;
-    while (left < right)
-    {
-        ::std::size_t mid = left + (right - left) / 2;
-        auto cmpres = newkey <=> b[mid].strvw();
-        if (cmpres < 0)
-        {
-            right = mid;
-        }
-        else if (0 < cmpres)
-        {
-            left = mid + 1;
-        }
-        else
-        {
-            found = true;
-            right = mid; // Insert position should be at the first equal key
-        }
-    }
-
-    return {left, found};
-}
-
-#else
 
 template <typename nodetype>
 inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
@@ -124,8 +66,6 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 	}
 	return {static_cast<::std::size_t>(i - b), found};
 }
-
-#endif
 
 template <typename nodetype>
 inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
@@ -154,48 +94,30 @@ inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
-inline constexpr bool str_btree_insert_key(nodetype *node,
-										   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn, nodetype **proot) noexcept
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline constexpr bool str_btree_insert_key_cold(nodetype *node, ::std::size_t pos,
+												typename nodetype::char_type const *tempkeystrptr, ::std::size_t tempkeystrn,
+												::fast_io::containers::details::btree_imp &imp) noexcept
 {
 	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
-	::std::size_t pos;
-	// **Find the correct position for insertion**
-	for (;;)
-	{
-		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
-		pos = postemp;
-		// **If the key already exists, return false (no duplicate keys)**
-		if (found)
-		{
-			return false;
-		}
-		// **If the node is a leaf**
-		if (node->leaf)
-		{
-			break;
-		}
-		node = node->childrens[pos];
-	}
-	auto tempkey = ::fast_io::details::create_associative_string<allocator_type, char_type>(keystrptr, keystrn);
+
 
 	auto keys{node->keys};
 	auto n{node->size};
 	auto keysit{keys + pos};
 	auto keysed{keys + keys_number};
-	// **If there is space, insert the key directly**
-	if (n != keys_number)
-	{
-		::fast_io::freestanding::overlapped_copy(keysit, keys + n, keysit + 1);
-		*keysit = tempkey;
-		++node->size;
-		return true;
-	}
 
 	constexpr ::std::size_t keys_number_half{keys_number >> (1u)};
 	constexpr ::std::size_t keys_number_half_p1{keys_number_half + 1u};
 	// ** Split now
 	auto rightchild{typed_allocator_type::allocate(1)};
+	if (node == imp.rightmost)
+	{
+		imp.rightmost = rightchild;
+	}
 	node->leaf = rightchild->leaf = true;
 	node->size = rightchild->size = keys_number_half;
 
@@ -215,13 +137,13 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
 		::fast_io::freestanding::overlapped_copy(keys + pos, keys + keys_number_half, keys + pos + 1);
 
-		keys[pos] = tempkey;
+		keys[pos] = {tempkeystrptr, tempkeystrn};
 	}
 	else if (poskeys_number_halfcmp == 0)
 	{
 		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
-		movekeystrptr = tempkey.ptr;
-		movekeystrn = tempkey.n;
+		movekeystrptr = tempkeystrptr;
+		movekeystrn = tempkeystrn;
 	}
 	else
 	{
@@ -229,7 +151,7 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 		movekeystrptr = keystrptrkeysnumber.ptr;
 		movekeystrn = keystrptrkeysnumber.n;
 		auto it{::fast_io::details::non_overlapped_copy(midptr + 1, keysit, rightchildkeys)};
-		*it = tempkey;
+		*it = {tempkeystrptr, tempkeystrn};
 		++it;
 		::fast_io::details::non_overlapped_copy(keysit, keysed, it);
 	}
@@ -349,18 +271,19 @@ inline constexpr bool str_btree_insert_key(nodetype *node,
 	node->parent_pos = 0;
 	rightchild->parent = new_root;
 	rightchild->parent_pos = 1;
-	*proot = new_root;
+	imp.root = new_root;
 
 	return true;
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
-inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
+inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::details::btree_imp &imp,
 													 typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
+	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
 
-	auto node{*proot};
+	auto node{static_cast<::fast_io::containers::details::str_btree_set_node<char_type, keys_number> *>(imp.root)};
 
 	// **If the tree is empty, allocate a new root**
 	if (node == nullptr)
@@ -370,17 +293,50 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 		node->leaf = true;
 		node->parent = nullptr;
 		node->parent_pos = 0;
-		*(node->keys) = ::fast_io::details::create_associative_string<allocator_type, typename nodetype::char_type>(keystrptr, keystrn);
-		*proot = node;
+		*(node->keys) = ::fast_io::details::create_associative_string<allocator_type, char_type>(keystrptr, keystrn);
+		imp.rightmost = imp.leftmost = imp.root = node;
 		return true;
 	}
-	return ::fast_io::containers::details::str_btree_insert_key<allocator_type, keys_number>(node, keystrptr, keystrn, proot);
+
+	::std::size_t pos;
+	// **Find the correct position for insertion**
+	for (;;)
+	{
+		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
+		pos = postemp;
+		// **If the key already exists, return false (no duplicate keys)**
+		if (found)
+		{
+			return false;
+		}
+		// **If the node is a leaf**
+		if (node->leaf)
+		{
+			break;
+		}
+		node = node->childrens[pos];
+	}
+
+	auto tempkey = ::fast_io::details::create_associative_string<allocator_type, char_type>(keystrptr, keystrn);
+	auto n{node->size};
+	// **If there is space, insert the key directly**
+	if (n != keys_number)
+	{
+		auto keys{node->keys};
+		auto keysit{keys + pos};
+		::fast_io::freestanding::overlapped_copy(keysit, keys + n, keysit + 1);
+		*keysit = tempkey;
+		++node->size;
+		return true;
+	}
+	return ::fast_io::containers::details::str_btree_insert_key_cold<allocator_type, keys_number>(node, pos, tempkey.ptr, tempkey.n, imp);
 }
 
 struct str_btree_set_iterator_common
 {
 	void const *ptr{};
 	::std::size_t pos{};
+	void const *last{};
 };
 
 template <::std::size_t keys_number>
@@ -427,7 +383,7 @@ public:
 
 	constexpr str_btree_set_iterator &operator++() noexcept
 	{
-		::fast_io::containers::details::str_btree_set_next_node<keys_number>(node);
+		::fast_io::containers::details::str_btree_set_next_node<keys_number>(this->node);
 		return *this;
 	}
 	constexpr str_btree_set_iterator operator++(int) noexcept
@@ -472,7 +428,7 @@ public:
 	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
 
-	node_type *root{};
+	::fast_io::containers::details::btree_imp imp{nullptr, nullptr, nullptr};
 
 	constexpr basic_str_btree_set() noexcept = default;
 
@@ -486,11 +442,11 @@ public:
 
 	constexpr bool contains(string_view_type strvw) const noexcept
 	{
-		return ::fast_io::containers::details::str_btree_contains(this->root, strvw.ptr, strvw.n);
+		return ::fast_io::containers::details::str_btree_contains(static_cast<node_type *>(this->imp.root), strvw.ptr, strvw.n);
 	}
 	constexpr bool is_empty() const noexcept
 	{
-		return root == nullptr;
+		return this->imp.root == nullptr;
 	}
 	constexpr bool erase_key(string_view_type) noexcept
 	{
@@ -498,12 +454,13 @@ public:
 	}
 	constexpr bool insert_key(string_view_type strvw) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number>(__builtin_addressof(this->root), strvw.ptr, strvw.n);
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, strvw.ptr, strvw.n);
 	}
 
 private:
-	static inline constexpr void clear_node(node_type *node) noexcept
+	static inline constexpr void clear_node(void *nodev) noexcept
 	{
+		auto node{static_cast<node_type *>(nodev)};
 		if (node == nullptr)
 		{
 			return;
@@ -530,8 +487,8 @@ private:
 public:
 	constexpr void clear() noexcept
 	{
-		clear_node(this->root);
-		this->root = nullptr;
+		clear_node(this->imp.root);
+		this->imp = {nullptr, nullptr, nullptr};
 	}
 
 	constexpr void clear_destroy() noexcept
@@ -542,23 +499,23 @@ public:
 	constexpr basic_str_btree_set(basic_str_btree_set const &) noexcept = delete;
 	constexpr basic_str_btree_set &operator=(basic_str_btree_set const &) noexcept = delete;
 
-	constexpr basic_str_btree_set(basic_str_btree_set &&other) noexcept : root{other.root}
+	constexpr basic_str_btree_set(basic_str_btree_set &&other) noexcept : imp(other.imp)
 	{
-		other.root = nullptr;
+		other.imp = {nullptr, nullptr, nullptr};
 	}
 	constexpr basic_str_btree_set &operator=(basic_str_btree_set &&other) noexcept
 	{
-		if (::std::addressof(other) == this)
+		if (__builtin_addressof(other) == this)
 		{
 			return *this;
 		}
-		this->root = other.root;
-		other.root = nullptr;
+		this->imp = other.imp;
+		other.imp = {nullptr, nullptr, nullptr};
 		return *this;
 	}
 	constexpr ~basic_str_btree_set()
 	{
-		clear_node(this->root);
+		clear_node(this->imp.root);
 	}
 };
 
