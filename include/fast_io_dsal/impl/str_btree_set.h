@@ -35,6 +35,7 @@ struct
 	::fast_io::io_scatter_t keys[keys_number];
 	void *childrens[keys_number + 1u];
 	void *parent;
+	::std::size_t parent_pos;
 };
 
 struct find_btree_node_insert_position_result
@@ -374,6 +375,85 @@ inline constexpr bool str_btree_insert_key_with_root(nodetype **proot,
 		return true;
 	}
 	return ::fast_io::containers::details::str_btree_insert_key<allocator_type, keys_number>(node, keystrptr, keystrn, proot);
+}
+
+struct str_btree_set_iterator_common
+{
+	void const *ptr{};
+	::std::size_t pos{};
+};
+
+template <::std::size_t keys_number>
+inline constexpr void str_btree_set_next_node(str_btree_set_iterator_common &c) noexcept
+{
+	auto ptrv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)};
+
+	auto leaf{ptrv->leaf};
+	if (leaf)
+	{
+		if (++c.pos == ptrv->size)
+		{
+			auto parent{ptrv->parent};
+			auto parent_pos{ptrv->parent_pos};
+			for (; parent; parent = ptrv->parent)
+			{
+				auto parentn{parent->size};
+				if (parent_pos != parentn)
+				{
+					break;
+				}
+				parent_pos = ptrv->parent_pos;
+			}
+			c.ptr = parent;
+			c.pos = parent_pos;
+		}
+	}
+	else
+	{
+		auto nextptr{ptrv->childrens[c.pos + 1]};
+		for (; !nextptr->leaf; nextptr = *ptrv->childrens)
+		{
+		}
+		c.ptr = nextptr;
+		c.pos = 0;
+	}
+}
+
+template <::std::integral chtype, ::std::size_t keys_number>
+class str_btree_set_iterator
+{
+public:
+	::fast_io::containers::details::str_btree_set_iterator_common node;
+
+	constexpr str_btree_set_iterator &operator++() noexcept
+	{
+		::fast_io::containers::details::str_btree_set_next_node<keys_number>(node);
+		return *this;
+	}
+	constexpr str_btree_set_iterator operator++(int) noexcept
+	{
+		auto tmp{*this};
+		++*this;
+		return tmp;
+	}
+	constexpr ::fast_io::containers::basic_cstring_view<chtype> operator*() const noexcept
+	{
+		return static_cast<::fast_io::containers::details::str_btree_set_node<char, keys_number> const *>(node.ptr)->keys[node.pos].strvw();
+	}
+};
+
+template <::std::integral chtype, ::std::size_t keys_number>
+inline constexpr bool operator==(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> b) noexcept
+{
+	return a.node.ptr == b.node.ptr && a.node.n == b.node.n;
+}
+
+template <::std::integral chtype, ::std::size_t keys_number>
+inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> b) noexcept
+{
+	return !operator==(a, b);
 }
 
 } // namespace details

@@ -12,9 +12,9 @@ struct associative_string
 	using size_type = ::std::size_t;
 	char_type const *ptr;
 	size_type n;
-	constexpr ::fast_io::containers::basic_string_view<char_type> strvw() const noexcept
+	constexpr ::fast_io::containers::basic_cstring_view<char_type> strvw() const noexcept
 	{
-		return ::fast_io::containers::basic_string_view<char_type>(ptr, n);
+		return ::fast_io::containers::basic_cstring_view<char_type>(::fast_io::null_terminated, ptr, n);
 	}
 };
 
