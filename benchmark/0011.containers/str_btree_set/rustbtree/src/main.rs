@@ -43,7 +43,7 @@ fn main() {
     let mut count = 0;
     let start_contains = Instant::now();
     for s in &vec {
-        if bset.contains_key(s) {
+        if bset.contains(s) {
             count += 1;
         }
     }
