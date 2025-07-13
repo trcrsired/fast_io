@@ -8,11 +8,11 @@ fn generate_test_data() -> Vec<String> {
     let mut rng = StdRng::seed_from_u64(0xDEADBEEF); // deterministic seed
 
     for _ in 0..1_000_000 {
-        let len = rng.random_range(8..21); // replaces Uniform(8, 20)
+        let len = rng.random_range(25..=30); // replaces Uniform(8, 20)
         let mut s = String::with_capacity(len);
 
         for _ in 0..len {
-            let x = rng.random_range(0..62); // replaces Uniform(0, 61)
+            let x = rng.random_range(0..=61); // replaces Uniform(0, 61)
             let ch = match x {
                 x if x < 10 => (b'0' + x as u8) as char,
                 x if x < 36 => (b'a' + (x - 10) as u8) as char,
