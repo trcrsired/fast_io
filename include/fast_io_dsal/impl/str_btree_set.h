@@ -434,7 +434,7 @@ inline constexpr void str_btree_set_prev_node(str_btree_set_iterator_common &c) 
 		while (!static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(prevptr)->leaf)
 		{
 			auto e{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(prevptr)};
-			prevptr = e->childrens[e->size - 1u];
+			prevptr = e->childrens[e->size];
 		}
 		c.ptr = prevptr;
 		c.pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)->size - 1u);
