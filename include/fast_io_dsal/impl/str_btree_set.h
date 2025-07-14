@@ -332,33 +332,40 @@ inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::deta
 	return ::fast_io::containers::details::str_btree_insert_key_cold<allocator_type, keys_number>(node, pos, tempkey.ptr, tempkey.n, imp);
 }
 
+/* Common structure used for str_btree_set iterator.
+Holds the current node pointer, position within node, and optional 'last' for reversed iteration fallback. */
 struct str_btree_set_iterator_common
 {
-	void const *ptr{};
-	::std::size_t pos{};
-	void const *last{};
+	void const *ptr{};  // Pointer to current node
+	std::size_t pos{};  // Position within current node
+	void const *last{}; // Pointer to last node (used for -- from end)
 };
 
+/* Advances the iterator to the next key in str_btree_set.
+Traverses leaf nodes linearly, and climbs up the parent chain when leaf ends.
+For internal nodes, descends leftmost into the right child. */
 template <::std::size_t keys_number>
 inline constexpr void str_btree_set_next_node(str_btree_set_iterator_common &c) noexcept
 {
 	auto ptrv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)};
 
-	auto leaf{ptrv->leaf};
-	if (leaf)
+	if (ptrv->leaf)
 	{
+		// Move to next key inside leaf
 		if (++c.pos == ptrv->size)
 		{
+			// Reached end of leaf, climb parent chain to find next sibling
 			auto parent{ptrv->parent};
-			auto parent_pos{ptrv->parent_pos};
-			for (; parent; parent = ptrv->parent)
+			auto parent_pos{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(ptrv)->parent_pos};
+			while (parent)
 			{
-				auto parentn{parent->size};
+				auto parentn{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(parent)->size};
 				if (parent_pos != parentn)
 				{
-					break;
+					break; // Found next available key in parent
 				}
-				parent_pos = ptrv->parent_pos;
+				parent_pos = static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(parent)->parent_pos;
+				parent = static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(parent)->parent;
 			}
 			c.ptr = parent;
 			c.pos = parent_pos;
@@ -366,12 +373,75 @@ inline constexpr void str_btree_set_next_node(str_btree_set_iterator_common &c) 
 	}
 	else
 	{
+		// Internal node: descend into leftmost key of right child
 		auto nextptr{ptrv->childrens[c.pos + 1]};
-		for (; !nextptr->leaf; nextptr = *ptrv->childrens)
+		while (!static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(nextptr)->leaf)
 		{
+			nextptr = *(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(nextptr)->childrens);
 		}
 		c.ptr = nextptr;
 		c.pos = 0;
+	}
+}
+
+/* Moves the iterator to the previous key in str_btree_set.
+From null (end), restores last node. In leaf, moves left or climbs parent.
+For internal node, descends rightmost into the left child. */
+template <::std::size_t keys_number>
+inline constexpr void str_btree_set_prev_node(str_btree_set_iterator_common &c) noexcept
+{
+	if (c.ptr == nullptr)
+	{
+		// Iterator was at end(); fallback to last node if known
+		c.ptr = c.last;
+		c.pos = 0;
+		if (c.ptr)
+		{
+			// Set to last key of last node
+			c.pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)->size - 1u);
+		}
+		return;
+	}
+
+	auto ptrv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)};
+
+	if (ptrv->leaf)
+	{
+		if (!c.pos)
+		{
+			// Start of leaf, need to go up to parent and find left sibling
+			auto parent{ptrv->parent};
+			auto parent_pos{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(ptrv)->parent_pos};
+			while (parent)
+			{
+				if (parent_pos)
+				{
+					break; // Found non-zero position in parent
+				}
+				parent_pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(parent)->parent_pos);
+				parent = static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(parent)->parent;
+			}
+			c.ptr = parent;
+			c.pos = 0;
+			if (parent)
+			{
+				c.pos = static_cast<::std::size_t>(parent_pos - 1u);
+			}
+			return;
+		}
+		--c.pos; // Move left inside leaf
+	}
+	else
+	{
+		// Internal node: descend into rightmost key of left child
+		auto prevptr{ptrv->childrens[c.pos]};
+		while (!static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(prevptr)->leaf)
+		{
+			auto e{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(prevptr)};
+			prevptr = e->childrens[e->size - 1u];
+		}
+		c.ptr = prevptr;
+		c.pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)->size - 1u);
 	}
 }
 
@@ -379,6 +449,9 @@ template <::std::integral chtype, ::std::size_t keys_number>
 class str_btree_set_iterator
 {
 public:
+	using value_type = ::fast_io::containers::basic_cstring_view<chtype>;
+	using iterator_tag = ::std::bidirectional_iterator_tag;
+	using difference_type = ::std::ptrdiff_t;
 	::fast_io::containers::details::str_btree_set_iterator_common node;
 
 	constexpr str_btree_set_iterator &operator++() noexcept
@@ -392,22 +465,33 @@ public:
 		++*this;
 		return tmp;
 	}
-	constexpr ::fast_io::containers::basic_cstring_view<chtype> operator*() const noexcept
+	constexpr str_btree_set_iterator &operator--() noexcept
+	{
+		::fast_io::containers::details::str_btree_set_prev_node<keys_number>(this->node);
+		return *this;
+	}
+	constexpr str_btree_set_iterator operator--(int) noexcept
+	{
+		auto tmp{*this};
+		--*this;
+		return tmp;
+	}
+	constexpr value_type operator*() const noexcept
 	{
 		return static_cast<::fast_io::containers::details::str_btree_set_node<char, keys_number> const *>(node.ptr)->keys[node.pos].strvw();
 	}
 };
 
 template <::std::integral chtype, ::std::size_t keys_number>
-inline constexpr bool operator==(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> a,
-								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> b) noexcept
+inline constexpr bool operator==(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> const &a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> const &b) noexcept
 {
-	return a.node.ptr == b.node.ptr && a.node.n == b.node.n;
+	return a.node.ptr == b.node.ptr && a.node.pos == b.node.pos;
 }
 
 template <::std::integral chtype, ::std::size_t keys_number>
-inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> a,
-								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> b) noexcept
+inline constexpr bool operator!=(::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> const &a,
+								 ::fast_io::containers::details::str_btree_set_iterator<chtype, keys_number> const &b) noexcept
 {
 	return !operator==(a, b);
 }
@@ -427,6 +511,10 @@ public:
 	using string_view_type = ::fast_io::containers::basic_string_view<char_type>;
 	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
+	using const_iterator = ::fast_io::containers::details::str_btree_set_iterator<char_type, keys_number>;
+	using iterator = const_iterator;
+	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
+	using reverse_iterator = const_reverse_iterator;
 
 	::fast_io::containers::details::btree_imp imp{nullptr, nullptr, nullptr};
 
@@ -512,6 +600,66 @@ public:
 		this->imp = other.imp;
 		other.imp = {nullptr, nullptr, nullptr};
 		return *this;
+	}
+	constexpr const_iterator cbegin() const noexcept
+	{
+		return {this->imp.leftmost, 0, this->imp.rightmost};
+	}
+
+	constexpr const_iterator cend() const noexcept
+	{
+		return {nullptr, 0, this->imp.rightmost};
+	}
+	constexpr const_iterator begin() const noexcept
+	{
+		return this->cbegin();
+	}
+	constexpr const_iterator end() const noexcept
+	{
+		return this->cend();
+	}
+
+	constexpr const_reverse_iterator crbegin() const noexcept
+	{
+		return reverse_iterator(cend());
+	}
+
+	constexpr const_reverse_iterator crend() const noexcept
+	{
+		return reverse_iterator(cbegin());
+	}
+	constexpr const_reverse_iterator rbegin() const noexcept
+	{
+		return this->crbegin();
+	}
+	constexpr const_reverse_iterator rend() const noexcept
+	{
+		return this->crend();
+	}
+	constexpr cstring_view_type front() const noexcept
+	{
+		if (this->imp.leftmost == nullptr) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		return this->front_unchecked();
+	}
+	constexpr cstring_view_type back() const noexcept
+	{
+		if (this->imp.rightmost == nullptr) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		return this->back_unchecked();
+	}
+	constexpr cstring_view_type front_unchecked() const noexcept
+	{
+		return static_cast<::fast_io::containers::details::str_btree_set_node<char, keys_number> const *>(this->imp.leftmost)->keys->strvw();
+	}
+	constexpr cstring_view_type back_unchecked() const noexcept
+	{
+		auto &e{*static_cast<::fast_io::containers::details::str_btree_set_node<char, keys_number> const *>(this->imp.rightmost)};
+		return e.keys[e.size - 1u].strvw();
 	}
 	constexpr ~basic_str_btree_set()
 	{
