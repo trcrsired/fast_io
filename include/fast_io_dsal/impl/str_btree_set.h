@@ -46,8 +46,8 @@ struct find_btree_node_insert_position_result
 };
 
 template <typename nodetype>
-inline constexpr find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
-																							typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+inline constexpr ::fast_io::containers::details::find_btree_node_insert_position_result find_str_btree_node_insert_position(nodetype *node,
+																															typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
 	using char_type = typename nodetype::char_type;
 	auto *b{node->keys}, *i{b}, *e{b + node->size};
@@ -67,6 +67,39 @@ inline constexpr find_btree_node_insert_position_result find_str_btree_node_inse
 	return {static_cast<::std::size_t>(i - b), found};
 }
 
+
+struct find_btree_insert_result
+{
+	void *node{};
+	::std::size_t pos{};
+};
+
+template <typename nodetype>
+inline constexpr ::fast_io::containers::details::find_btree_insert_result str_btree_find(nodetype *node, typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+{
+	if (node == nullptr)
+	{
+		return {};
+	}
+	// **Find the correct position for insertion**
+	for (;;)
+	{
+		auto [postemp, found] = ::fast_io::containers::details::find_str_btree_node_insert_position(node, keystrptr, keystrn);
+		// **If the key already exists, return false (no duplicate keys)**
+		if (found)
+		{
+			return {node, postemp};
+		}
+		// **If the node is a leaf**
+		if (node->leaf)
+		{
+			break;
+		}
+		node = node->childrens[postemp];
+	}
+	return {};
+}
+
 template <typename nodetype>
 inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
@@ -77,7 +110,7 @@ inline constexpr bool str_btree_contains(nodetype *node, typename nodetype::char
 	// **Find the correct position for insertion**
 	for (;;)
 	{
-		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
+		auto [postemp, found] = ::fast_io::containers::details::find_str_btree_node_insert_position(node, keystrptr, keystrn);
 		// **If the key already exists, return false (no duplicate keys)**
 		if (found)
 		{
@@ -302,7 +335,7 @@ inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::deta
 	// **Find the correct position for insertion**
 	for (;;)
 	{
-		auto [postemp, found] = find_str_btree_node_insert_position(node, keystrptr, keystrn);
+		auto [postemp, found] = ::fast_io::containers::details::find_str_btree_node_insert_position(node, keystrptr, keystrn);
 		pos = postemp;
 		// **If the key already exists, return false (no duplicate keys)**
 		if (found)
@@ -511,6 +544,8 @@ public:
 	using iterator = const_iterator;
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 	using reverse_iterator = const_reverse_iterator;
+	using size_type = ::std::size_t;
+	using difference_type = ::std::ptrdiff_t;
 
 	::fast_io::containers::details::btree_imp imp{nullptr, nullptr, nullptr};
 
@@ -528,14 +563,25 @@ public:
 	{
 		return ::fast_io::containers::details::str_btree_contains(static_cast<node_type *>(this->imp.root), strvw.ptr, strvw.n);
 	}
+	constexpr size_type count(string_view_type strvw) const noexcept
+	{
+		return static_cast<size_type>(this->contains(strvw));
+	}
+	constexpr const_iterator find(string_view_type strvw) const noexcept
+	{
+		auto [ptr, pos] = ::fast_io::containers::details::str_btree_find(static_cast<node_type *>(this->imp.root), strvw.ptr, strvw.n);
+		return {ptr, pos, this->imp.rightmost};
+	}
 	constexpr bool is_empty() const noexcept
 	{
 		return this->imp.root == nullptr;
 	}
+#if 0
 	constexpr bool erase_key(string_view_type) noexcept
 	{
 		return false;
 	}
+#endif
 	constexpr bool insert_key(string_view_type strvw) noexcept
 	{
 		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, strvw.ptr, strvw.n);

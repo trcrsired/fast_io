@@ -1,66 +1,50 @@
+
 #include <fast_io.h>
-#include <fast_io_dsal/string_view.h>
-#include <fast_io_dsal/impl/associative_string.h>
-#include <fast_io_dsal/impl/str_btree_set.h>
-
-template <::std::integral chtype, ::std::size_t keys_number>
-inline constexpr void str_btree_set_inorder_traverse(
-	::fast_io::containers::details::str_btree_set_node<chtype, keys_number> *node,
-	auto &&callback) noexcept
-{
-	if (node == nullptr)
-	{
-		return;
-	}
-
-	// **Traverse left subtree**
-	for (::std::size_t i{}; i != node->size; ++i)
-	{
-		if (!node->leaf)
-		{
-			str_btree_set_inorder_traverse<chtype, keys_number>(node->childrens[i], callback);
-		}
-
-		// **Visit current key**
-		callback(node->keys[i].strvw());
-	}
-
-	// **Traverse rightmost subtree**
-	if (!node->leaf)
-	{
-		str_btree_set_inorder_traverse<chtype, keys_number>(node->childrens[node->size], callback);
-	}
-}
+#include <fast_io_dsal/str_btree_set.h>
 
 int main()
 {
-	::fast_io::containers::basic_str_btree_set<char, ::fast_io::native_global_allocator, 16> bset;
-    bset.insert_key("apple");
-    bset.insert_key("banana");
-    bset.insert_key("cherry");
-    bset.insert_key("date");
-    bset.insert_key("elderberry");
-    bset.insert_key("fig");
-    bset.insert_key("grape");
-    bset.insert_key("honeydew");
-    bset.insert_key("kiwi");
-    bset.insert_key("lemon");
-    bset.insert_key("mango");
-    bset.insert_key("nectarine");
-    bset.insert_key("orange");
-    bset.insert_key("papaya");
-    bset.insert_key("quince");
-    bset.insert_key("raspberry");
-    bset.insert_key("strawberry");
-    bset.insert_key("tangerine");
-    bset.insert_key("ugli");
-    bset.insert_key("vanilla");
-    bset.insert_key("watermelon");
-    bset.insert_key("xigua");
-    bset.insert_key("yellowfruit");
-    bset.insert_key("zucchini");
+	::fast_io::str_btree_set bset;
+	constexpr ::fast_io::string_view fruits[]{
+		::fast_io::string_view("kiwi"),
+		::fast_io::string_view("ugli"),
+		::fast_io::string_view("lemon"),
+		::fast_io::string_view("fig"),
+		::fast_io::string_view("zucchini"),
+		::fast_io::string_view("honeydew"),
+		::fast_io::string_view("raspberry"),
+		::fast_io::string_view("orange"),
+		::fast_io::string_view("vanilla"),
+		::fast_io::string_view("yellowfruit"),
+		::fast_io::string_view("date"),
+		::fast_io::string_view("grape"),
+		::fast_io::string_view("strawberry"),
+		::fast_io::string_view("cherry"),
+		::fast_io::string_view("quince"),
+		::fast_io::string_view("apple"),
+		::fast_io::string_view("elderberry"),
+		::fast_io::string_view("banana"),
+		::fast_io::string_view("nectarine"),
+		::fast_io::string_view("watermelon"),
+		::fast_io::string_view("xigua"),
+		::fast_io::string_view("papaya"),
+		::fast_io::string_view("mango")};
 
-	str_btree_set_inorder_traverse(bset.root, [](::fast_io::string_view v) {
-		::fast_io::io::println(v);
-	});
+	for (auto const &e : fruits)
+	{
+		bset.insert_key(e);
+	}
+
+	for (auto const &e : bset)
+	{
+		::fast_io::io::println(e);
+	}
+
+	::fast_io::io::print("\nreverse:\n");
+	for (auto const &e : ::std::ranges::reverse_view(bset))
+	{
+		::fast_io::io::println(e);
+	}
+
+	::fast_io::io::println("\nfront()=", bset.front(), "\tback()=", bset.back());
 }
