@@ -1,7 +1,7 @@
-use std::collections::BTreeSet;
-use std::time::Instant;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::collections::BTreeSet;
+use std::time::Instant;
 
 fn generate_test_data() -> Vec<String> {
     let mut vec = Vec::with_capacity(1_000_000);
@@ -48,6 +48,29 @@ fn main() {
         }
     }
     println!("contains: {:.2?}", start_contains.elapsed());
+    // 🚀 Forward iteration benchmark
+    let mut total_size = 0;
+    let start_iter = Instant::now();
+    for s in &bset {
+        total_size += s.len();
+    }
+    println!(
+        "forward iteration total_size = {}, elapsed: {:.2?}",
+        total_size,
+        start_iter.elapsed()
+    );
+
+    // 🔄 Reverse iteration benchmark
+    let mut total_size = 0;
+    let start_rev_iter = Instant::now();
+    for s in bset.iter().rev() {
+        total_size += s.len();
+    }
+    println!(
+        "reverse iteration total_size = {}, elapsed: {:.2?}",
+        total_size,
+        start_rev_iter.elapsed()
+    );
 
     println!("count = {}", count);
     println!("total time: {:.2?}", start_total.elapsed());
