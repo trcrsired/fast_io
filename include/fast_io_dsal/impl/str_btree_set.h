@@ -394,12 +394,8 @@ inline constexpr void str_btree_set_prev_node(str_btree_set_iterator_common &c) 
 	{
 		// Iterator was at end(); fallback to last node if known
 		c.ptr = c.last;
-		c.pos = 0;
-		if (c.ptr)
-		{
-			// Set to last key of last node
-			c.pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)->size - 1u);
-		}
+		// c.ptr must not be nullptr or it is on empty container which is undefined behavior
+		c.pos = static_cast<::std::size_t>(static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> const *>(c.ptr)->size - 1u);
 		return;
 	}
 
