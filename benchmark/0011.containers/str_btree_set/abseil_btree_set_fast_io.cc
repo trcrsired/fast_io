@@ -29,4 +29,26 @@ int main()
 		}
 		::fast_io::io::perrln("count=", count);
 	}
+	{
+		::std::size_t total_size{};
+		{
+			::fast_io::timer t(u8"iteration");
+			for (auto const &e : bset)
+			{
+				total_size += e.size();
+			}
+		}
+		::fast_io::io::perrln("total_size=", total_size);
+	}
+	{
+		::std::size_t total_size{};
+		{
+			::fast_io::timer t(u8"reverse iteration");
+			for (auto const &e : ::std::ranges::reverse_view(bset))
+			{
+				total_size += e.size();
+			}
+		}
+		::fast_io::io::perrln("total_size=", total_size);
+	}
 }
