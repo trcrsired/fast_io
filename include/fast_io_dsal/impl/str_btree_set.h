@@ -365,6 +365,30 @@ inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::deta
 	return ::fast_io::containers::details::str_btree_insert_key_cold<allocator_type, keys_number>(node, pos, tempkey.ptr, tempkey.n, imp);
 }
 
+template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
+inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp &imp,
+									  typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+{
+	using char_type = typename nodetype::char_type;
+	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
+
+	auto [it, pos] = ::fast_io::containers::details::str_btree_find(imp, keystrptr, keystrn);
+	if (it == nullptr)
+	{
+		return false;
+	}
+#if 0
+	constexpr
+		::std::size_t keys_number_half{keys_number>>1u};
+	auto itv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number>*>(it)};
+	if(itv->leaf)
+	{
+
+	}
+#endif
+	return false;
+}
+
 /* Common structure used for str_btree_set iterator.
 Holds the current node pointer, position within node, and optional 'last' for reversed iteration fallback. */
 struct str_btree_set_iterator_common
@@ -559,32 +583,30 @@ public:
 		}
 	}
 
-	constexpr bool contains(string_view_type strvw) const noexcept
+	constexpr bool contains(string_view_type key) const noexcept
 	{
-		return ::fast_io::containers::details::str_btree_contains(static_cast<node_type *>(this->imp.root), strvw.ptr, strvw.n);
+		return ::fast_io::containers::details::str_btree_contains(static_cast<node_type *>(this->imp.root), key.ptr, key.n);
 	}
-	constexpr size_type count(string_view_type strvw) const noexcept
+	constexpr size_type count(string_view_type key) const noexcept
 	{
-		return static_cast<size_type>(this->contains(strvw));
+		return static_cast<size_type>(this->contains(key));
 	}
-	constexpr const_iterator find(string_view_type strvw) const noexcept
+	constexpr const_iterator find(string_view_type key) const noexcept
 	{
-		auto [ptr, pos] = ::fast_io::containers::details::str_btree_find(static_cast<node_type *>(this->imp.root), strvw.ptr, strvw.n);
+		auto [ptr, pos] = ::fast_io::containers::details::str_btree_find(static_cast<node_type *>(this->imp.root), key.ptr, key.n);
 		return {ptr, pos, this->imp.rightmost};
 	}
 	constexpr bool is_empty() const noexcept
 	{
 		return this->imp.root == nullptr;
 	}
-#if 0
-	constexpr bool erase_key(string_view_type) noexcept
+	constexpr size_type erase_key(string_view_type key) noexcept
 	{
-		return false;
+		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
 	}
-#endif
-	constexpr bool insert_key(string_view_type strvw) noexcept
+	constexpr bool insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, strvw.ptr, strvw.n);
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
 	}
 
 private:
@@ -664,6 +686,18 @@ public:
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return reverse_iterator(cend());
+	}
+
+	static inline constexpr size_type max_size() noexcept
+	{
+		constexpr size_type mx{::std::numeric_limits<size_type>::max() / sizeof(node_type)};
+		return mx;
+	}
+
+	static inline constexpr size_type max_size_bytes() noexcept
+	{
+		constexpr size_type mx{::std::numeric_limits<size_type>::max() / sizeof(node_type) * sizeof(node_type)};
+		return mx;
 	}
 
 	constexpr const_reverse_iterator crend() const noexcept
