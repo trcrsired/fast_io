@@ -46,5 +46,29 @@ int main()
 		::fast_io::io::println(e);
 	}
 
-	::fast_io::io::println("\nfront()=", bset.front(), "\tback()=", bset.back());
+	::fast_io::io::print("\nfront()=", bset.front(), "\tback()=", bset.back(), "\nbset.find(\"xigua\"):\n");
+	{
+		auto it{bset.find("xigua")};
+		if (it == bset.cend())
+		{
+			::fast_io::io::print("not found\n");
+		}
+		else
+		{
+			::fast_io::io::println("found: ", *it);
+		}
+	}
+
+	::fast_io::io::print("bset.find(\"buffalo\"):\n");
+	{
+		auto it{bset.find("buffalo")};
+		if (it == bset.cend())
+		{
+			::fast_io::io::print("not found\n");
+		}
+		else
+		{
+			::fast_io::io::println("found: ", *it);
+		}
+	}
 }
