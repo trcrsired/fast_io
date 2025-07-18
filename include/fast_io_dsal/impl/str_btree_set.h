@@ -602,11 +602,11 @@ public:
 	}
 	constexpr size_type erase_key(string_view_type key) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
+		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
 	constexpr bool insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
 
 private:
