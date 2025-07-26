@@ -377,16 +377,25 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 	{
 		return false;
 	}
-#if 0
-	constexpr
-		::std::size_t keys_number_half{keys_number>>1u};
-	auto itv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number>*>(it)};
-	if(itv->leaf)
+	constexpr ::std::size_t keys_number_half{keys_number >> 1u};
+	auto itv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> *>(it)};
+	auto keys{it->keys};
+	auto keyspos{keys + pos};
+	::fast_io::details::deallocate_associative_string(keyspos->ptr, keyspos->n);
+	::std::size_t n{itv->size};
+	if (itv->leaf)
 	{
-
+		if (itv->parent == nullptr || keys_number_half < n)
+		{
+			::fast_io::freestanding::overlapped_copy(keyspos + 1, keys + n, keyspos);
+			--itv->size;
+			return true;
+		}
 	}
-#endif
-	return false;
+	else
+	{
+	}
+	return true;
 }
 
 /* Common structure used for str_btree_set iterator.
@@ -602,11 +611,11 @@ public:
 	}
 	constexpr size_type erase_key(string_view_type key) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
+		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
 	constexpr bool insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, strkeyvw.n);
+		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
 
 private:
