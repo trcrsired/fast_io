@@ -201,7 +201,7 @@ struct vector_internal
 
 } // namespace details
 
-template <::std::movable T, typename allocator>
+template <typename T, typename allocator>
 class vector FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 {
 public:
@@ -397,7 +397,7 @@ public:
 	}
 
 	inline constexpr vector(vector const &vec)
-		requires(::std::copyable<value_type>)
+		requires(::std::is_copy_constructible_v<value_type>)
 	{
 		std::size_t const vecsize{static_cast<std::size_t>(vec.imp.curr_ptr - vec.imp.begin_ptr)};
 		if (vecsize == 0)
