@@ -71,4 +71,7 @@ int main()
 			::fast_io::io::println("found: ", *it);
 		}
 	}
+
+	bset.erase_key("apple");
+	//bset.erase_key("banana");
 }

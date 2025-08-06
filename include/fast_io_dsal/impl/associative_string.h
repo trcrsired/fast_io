@@ -32,4 +32,12 @@ inline constexpr ::fast_io::details::associative_string<char_type> create_associ
 	return {newp, n};
 }
 
+template <typename allocator_type, ::std::integral char_type>
+inline constexpr void deallocate_associative_string(void const *p, ::std::size_t n) noexcept
+{
+	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
+	::std::size_t const np1{static_cast<::std::size_t>(n + 1u)};
+	typed_allocator_type::deallocate_n(static_cast<char_type *>(const_cast<void *>(p)), np1);
+}
+
 } // namespace fast_io::details

@@ -369,32 +369,202 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp &imp,
 									  typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
 {
+	// unfinished
 	using char_type = typename nodetype::char_type;
-	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
+	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type,
+																			::fast_io::containers::details::str_btree_set_common<keys_number>>;
+	using nodeptr
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+		[[__gnu__::__may_alias__]]
+#endif
+		= ::fast_io::containers::details::str_btree_set_common<keys_number> *;
+	auto node{static_cast<::fast_io::containers::details::str_btree_set_node<char_type, keys_number> *>(imp.root)};
 
-	auto [it, pos] = ::fast_io::containers::details::str_btree_find(imp, keystrptr, keystrn);
+	auto [it, pos] = ::fast_io::containers::details::str_btree_find(node, keystrptr, keystrn);
 	if (it == nullptr)
 	{
 		return false;
 	}
 	constexpr ::std::size_t keys_number_half{keys_number >> 1u};
-	auto itv{static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> *>(it)};
-	auto keys{it->keys};
+	auto itv{static_cast<nodeptr>(it)};
+	auto keys{itv->keys};
 	auto keyspos{keys + pos};
-	::fast_io::details::deallocate_associative_string(keyspos->ptr, keyspos->n);
+	::fast_io::details::deallocate_associative_string<allocator_type, char_type>(keyspos->base, keyspos->len);
 	::std::size_t n{itv->size};
+
+	auto parent{static_cast<nodeptr>(itv->parent)};
 	if (itv->leaf)
 	{
-		if (itv->parent == nullptr || keys_number_half < n)
+		if (keys_number_half < n)
 		{
 			::fast_io::freestanding::overlapped_copy(keyspos + 1, keys + n, keyspos);
 			--itv->size;
+
+			return true;
+		}
+		else if (parent == nullptr)
+		{
+			::fast_io::freestanding::overlapped_copy(keyspos + 1, keys + n, keyspos);
+			if (!(--itv->size))
+			{
+				// **Deallocate the node using the allocator**
+				typed_allocator_type::deallocate_n(itv, 1);
+				imp = {};
+			}
+			return true;
+		}
+		::std::size_t parpos{itv->parent_pos};
+		::std::size_t parent_size{parent->size};
+		nodeptr rightbrother{};
+		if (parpos != parent_size)
+		{
+			rightbrother = static_cast<nodeptr>(parent->childrens[parpos + 1]);
+			::std::size_t rightbrothern{rightbrother->size};
+			if (rightbrothern < keys_number_half)
+			{
+				// Borrow from right brother's leftmost key
+				auto rightbrotherkeys{rightbrother->keys};
+				auto &borrowed_key = *rightbrotherkeys;
+				auto &parent_key = parent->keys[parpos];
+
+				// Move borrowed key to current node
+				keys[n] = parent_key;
+				++itv->size;
+
+				// Update parent key
+				parent_key = borrowed_key;
+
+				// Shift right brother's keys left
+				::fast_io::freestanding::overlapped_copy(
+					rightbrotherkeys + 1,
+					rightbrotherkeys + rightbrothern,
+					rightbrotherkeys);
+				--rightbrother->size;
+
+				return true;
+			}
+		}
+		// Try left brother if right failed
+		nodeptr leftbrother{};
+		if (parpos != 0)
+		{
+			leftbrother = static_cast<nodeptr>(parent->childrens[parpos - 1]);
+			::std::size_t leftbrothern{leftbrother->size};
+			if (keys_number_half < leftbrothern)
+			{
+				// Borrow from left brother's rightmost key
+				auto &borrowed_key = leftbrother->keys[leftbrothern - 1];
+				auto &parent_key = parent->keys[parpos - 1];
+
+				// Shift current keys right
+				::fast_io::freestanding::overlapped_copy(
+					keyspos,
+					keys + n,
+					keyspos + 1);
+
+				// Insert parent key
+				*keys = parent_key;
+				++itv->size;
+
+				// Update parent key
+				parent_key = borrowed_key;
+				--leftbrother->size;
+
+				return true;
+			}
+		}
+		// Merge with sibling (prefer right if possible)
+		if (parpos != parent_size)
+		{
+			// Merge with right brother
+			keys[n] = parent->keys[parpos];
+			::fast_io::freestanding::non_overlapped_copy(
+				rightbrother->keys,
+				rightbrother->keys + rightbrother->size,
+				keys + n + 1);
+			itv->size += rightbrother->size + 1;
+
+			// Deallocate right brother
+			typed_allocator_type::deallocate_n(rightbrother, 1);
+
+			// Shift parent's keys and children
+			::fast_io::freestanding::overlapped_copy(
+				parent->keys + parpos + 1,
+				parent->keys + parent_size,
+				parent->keys + parpos);
+			::fast_io::freestanding::overlapped_copy(
+				parent->childrens + parpos + 2,
+				parent->childrens + parent_size + 1,
+				parent->childrens + parpos + 1);
+			--parent->size;
+
+			return true;
+		}
+		else
+		{
+			// Merge with left brother
+			auto &merge_key = parent->keys[parpos - 1];
+			::fast_io::freestanding::non_overlapped_copy(
+				keys,
+				keys + n,
+				leftbrother->keys + leftbrother->size + 1);
+			leftbrother->keys[leftbrother->size] = merge_key;
+			leftbrother->size += n + 1;
+
+			// Deallocate current node
+			typed_allocator_type::deallocate_n(itv, 1);
+
+			// Shift parent's keys and children
+			::fast_io::freestanding::overlapped_copy(
+				parent->keys + parpos,
+				parent->keys + parent_size,
+				parent->keys + parpos - 1);
+			::fast_io::freestanding::overlapped_copy(
+				parent->childrens + parpos + 1,
+				parent->childrens + parent_size + 1,
+				parent->childrens + parpos);
+			--parent->size;
+
 			return true;
 		}
 	}
+
+#if 0
+
+	::fast_io::io::debug_println(::std::source_location::current(),"\t", ::fast_io::mnp::os_c_str_with_known_size(keystrptr, keystrn));
+
+	
+	for (auto j{parent}; j; j = static_cast<::fast_io::containers::details::str_btree_set_common<keys_number> *>(j->parent))
+	{
+		bool isroot{itv==imp.root};
+
+		::std::size_t parent_size{parent->size},
+				parentsizep1{static_cast<::std::size_t>(parent_size+1u)};;
+		::std::size_t parent_pos{itv->parent_pos};
+		::std::size_t parent_pos_p1{static_cast<::std::size_t>(parent_pos+1u)};
+		auto parentchildrens{parent->childrens};
+		if(parent_pos!=parentsizep1)
+		{
+			auto nextnode{static_cast<nodeptr>(parentchildrens[parent_pos_p1])};
+			::std::size_t const nextsize{nextnode->size};
+			if(keys_number_half <= nextsize)
+			{
+
+			}
+			else
+			{
+
+			}
+		}
+		else
+		{
+		}
+	}
+
 	else
 	{
 	}
+#endif
 	return true;
 }
 
