@@ -395,6 +395,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 	auto parent{static_cast<nodeptr>(itv->parent)};
 	if (itv->leaf)
 	{
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 		if (keys_number_half < n)
 		{
 			::fast_io::freestanding::overlapped_copy(keyspos + 1, keys + n, keyspos);
@@ -415,6 +416,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 		}
 		::std::size_t parpos{itv->parent_pos};
 		::std::size_t parent_size{parent->size};
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 		nodeptr rightbrother{};
 		if (parpos != parent_size)
 		{
@@ -444,6 +446,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 				return true;
 			}
 		}
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 		// Try left brother if right failed
 		nodeptr leftbrother{};
 		if (parpos != 0)
@@ -469,7 +472,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 				// Update parent key
 				parent_key = borrowed_key;
 				--leftbrother->size;
-
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 				return true;
 			}
 		}
@@ -497,7 +500,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 				parent->childrens + parent_size + 1,
 				parent->childrens + parpos + 1);
 			--parent->size;
-
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 			return true;
 		}
 		else
@@ -528,7 +531,7 @@ inline constexpr bool str_btree_erase(::fast_io::containers::details::btree_imp 
 			return true;
 		}
 	}
-
+		__builtin_printf("hello world: %s %d\n",__FILE__,__LINE__);
 #if 0
 
 	::fast_io::io::debug_println(::std::source_location::current(),"\t", ::fast_io::mnp::os_c_str_with_known_size(keystrptr, keystrn));
