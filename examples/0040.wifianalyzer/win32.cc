@@ -202,7 +202,7 @@ int main() {
             std::uint_least32_t ch_start = center_channel >= ch_span ? center_channel - ch_span : center_channel;
             std::uint_least32_t ch_end = center_channel + ch_span;
 
-            ::fast_io::io::println("SSID:", ssid, "\t",
+            ::fast_io::io::print("SSID:", ssid, "\t",
                 "Signal:", entry.lRssi, " dBm (Quality:", signal_quality(entry.lRssi), ")\t"
                 "Frequency:", entry.ulChCenterFrequency, "kHz\t",
                 "Band:", frequency_to_band(entry.ulChCenterFrequency), "\t"
