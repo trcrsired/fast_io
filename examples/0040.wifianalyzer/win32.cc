@@ -111,41 +111,7 @@ inline constexpr  ::fast_io::cstring_view frequency_to_band(::std::uint_least32_
     }
     return ::fast_io::cstring_view("Unknown");
 }
-struct channel_range
-{
-    ::std::uint_least32_t from, to;
-};
-// Estimate the occupied channel range based on center frequency in kHz
-inline constexpr channel_range estimated_channel_range(::std::uint_least32_t freq_khz) noexcept {
-    // Convert frequency from kHz to MHz for easier comparison
-    ::std::uint_least32_t freq_mhz = freq_khz / 1000;
 
-    // Map center frequency to its corresponding WiFi channel number
-    ::std::uint_least32_t center = frequency_to_channel(freq_khz);
-
-    // Initialize lower and upper bounds of the channel range
-    ::std::uint_least32_t lower = center;
-    ::std::uint_least32_t upper = center;
-
-    // For 2.4 GHz band (typically 20 MHz wide), assume ±2 channels
-    if (freq_mhz >= 2400 && freq_mhz <= 2500) {
-        lower = 2 < center ? center - 2 : 1; // Prevent underflow; channel must be ≥1
-        upper = center + 2;
-    }
-    // For 5 GHz band (often 80 MHz wide), assume ±4 channels
-    else if (freq_mhz >= 5000 && freq_mhz <= 5900) {
-        lower = 4 < center ? center - 4 : 36; // Prevent underflow; lowest legal channel is 36
-        upper = center + 4;
-    }
-    // For 6 GHz band (variable width), conservatively assume ±4 channels
-    else if (freq_mhz >= 5925 && freq_mhz <= 7125) {
-        lower = 4 < center ? center - 4 : center; // No strict lower bound defined
-        upper = center + 4;
-    }
-
-    // Return the estimated channel range
-    return {lower, upper};
-}
 int main() {
     win32_wlan_file wlan(2);
     HANDLE scan_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -193,17 +159,55 @@ int main() {
         for (::std::uint_least32_t j{}; j != bss_list->dwNumberOfItems; ++j) {
             WLAN_BSS_ENTRY const& entry = bss_list->wlanBssEntries[j];
             ::fast_io::string_view ssid(reinterpret_cast<char const*>(entry.dot11Ssid.ucSSID), entry.dot11Ssid.uSSIDLength);
-            if (ssid.is_empty())
-            {
-                ssid=::fast_io::string_view("[Hidden]");
+            if (ssid.is_empty()) {
+                ssid = ::fast_io::string_view("[Hidden]");
             }
-            auto [ch_start,ch_end] = estimated_channel_range(entry.ulChCenterFrequency);
+
+            // Default to 20 MHz if no IE is found
+            std::uint_least32_t channel_width_mhz = 20;
+
+            // Parse IEs to determine actual channel width
+            std::uint_least8_t const* ie_data = reinterpret_cast<std::uint_least8_t const*>(&entry) + entry.ulIeOffset;
+            for (std::uint_least32_t i{}; i + 2 < entry.ulIeSize;) {
+                std::uint_least8_t id = ie_data[i];
+                std::uint_least8_t len = ie_data[i + 1];
+                if (i + 2 + len > entry.ulIeSize) break; // prevent overflow
+
+                std::uint_least8_t const* data = &ie_data[i + 2];
+
+                // HT Operation IE (ID 0x3D)
+                if (id == 0x3D && len >= 3) {
+                    std::uint_least8_t ht_info = data[1];
+                    std::uint_least8_t channel_width_flag = data[2]; // bit 0: 0 = 20 MHz, 1 = 40 MHz
+                    if (channel_width_flag & 0x01) {
+                        channel_width_mhz = 40;
+                    }
+                }
+
+                // VHT Operation IE (ID 0xC0)
+                else if (id == 0xC0 && len >= 1) {
+                    std::uint_least8_t vht_channel_width = data[0]; // 0 = 20/40, 1 = 80, 2 = 160 or 80+80
+                    if (vht_channel_width == 1) channel_width_mhz = 80;
+                    else if (vht_channel_width == 2) channel_width_mhz = 160;
+                }
+
+                // You can add HE parsing here if needed
+
+                i += 2 + len;
+            }
+
+            // Estimate channel range based on actual width
+            std::uint_least32_t center_channel = frequency_to_channel(entry.ulChCenterFrequency);
+            std::uint_least32_t ch_span = channel_width_mhz / 20;
+            std::uint_least32_t ch_start = center_channel >= ch_span ? center_channel - ch_span : center_channel;
+            std::uint_least32_t ch_end = center_channel + ch_span;
+
             ::fast_io::io::println("SSID:", ssid, "\t",
-                "Signal:", entry.lRssi, " dBm (Quality:",signal_quality(entry.lRssi),")\t"
-                "Frequency:",entry.ulChCenterFrequency,"kHz\t",
-                "Band:",frequency_to_band(entry.ulChCenterFrequency), "\t"
-                "Channel:",frequency_to_channel(entry.ulChCenterFrequency)," "
-                "(covers:",ch_start, "-", ch_end,")\n");
+                "Signal:", entry.lRssi, " dBm (Quality:", signal_quality(entry.lRssi), ")\t"
+                "Frequency:", entry.ulChCenterFrequency, "kHz\t",
+                "Band:", frequency_to_band(entry.ulChCenterFrequency), "\t"
+                "Channel:", center_channel, " "
+                "(width:", channel_width_mhz, " MHz, covers:", ch_start, "-", ch_end, ")\n");
         }
     }
 }
