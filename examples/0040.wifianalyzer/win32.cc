@@ -87,8 +87,8 @@ inline ::fast_io::cstring_view signal_quality(::std::int_least32_t rssi_dbm) noe
     if (rssi_dbm >= -85) return ::fast_io::cstring_view("Weak");
     return ::fast_io::cstring_view("Very Weak");
 }
-inline constexpr std::uint_least32_t frequency_to_channel(std::uint_least32_t freq_khz) noexcept {
-    std::uint_least32_t freq_mhz = freq_khz / 1000;
+inline constexpr ::std::uint_least32_t frequency_to_channel(::std::uint_least32_t freq_khz) noexcept {
+    ::std::uint_least32_t freq_mhz = freq_khz / 1000u;
     if (freq_mhz >= 2412 && freq_mhz <= 2472) {
         return (freq_mhz - 2407) / 5;  // Channels 1–13
     } else if (freq_mhz == 2484) {
@@ -100,8 +100,8 @@ inline constexpr std::uint_least32_t frequency_to_channel(std::uint_least32_t fr
     }
     return 0;  // Unknown or unsupported
 }
-inline constexpr  ::fast_io::cstring_view frequency_to_band(std::uint_least32_t freq_khz) noexcept {
-    std::uint_least32_t freq_mhz = freq_khz / 1000;
+inline constexpr  ::fast_io::cstring_view frequency_to_band(::std::uint_least32_t freq_khz) noexcept {
+    std::uint_least32_t freq_mhz = freq_khz / 1000u;
     if (freq_mhz >= 2400 && freq_mhz <= 2500) {
         return ::fast_io::cstring_view("2.4 GHz");
     } else if (freq_mhz >= 5000 && freq_mhz <= 5900) {
@@ -110,6 +110,41 @@ inline constexpr  ::fast_io::cstring_view frequency_to_band(std::uint_least32_t 
         return ::fast_io::cstring_view("6 GHz");
     }
     return ::fast_io::cstring_view("Unknown");
+}
+struct channel_range
+{
+    ::std::uint_least32_t from, to;
+};
+// Estimate the occupied channel range based on center frequency in kHz
+inline constexpr channel_range estimated_channel_range(::std::uint_least32_t freq_khz) noexcept {
+    // Convert frequency from kHz to MHz for easier comparison
+    ::std::uint_least32_t freq_mhz = freq_khz / 1000;
+
+    // Map center frequency to its corresponding WiFi channel number
+    ::std::uint_least32_t center = frequency_to_channel(freq_khz);
+
+    // Initialize lower and upper bounds of the channel range
+    ::std::uint_least32_t lower = center;
+    ::std::uint_least32_t upper = center;
+
+    // For 2.4 GHz band (typically 20 MHz wide), assume ±2 channels
+    if (freq_mhz >= 2400 && freq_mhz <= 2500) {
+        lower = 2 < center ? center - 2 : 1; // Prevent underflow; channel must be ≥1
+        upper = center + 2;
+    }
+    // For 5 GHz band (often 80 MHz wide), assume ±4 channels
+    else if (freq_mhz >= 5000 && freq_mhz <= 5900) {
+        lower = 4 < center ? center - 4 : 36; // Prevent underflow; lowest legal channel is 36
+        upper = center + 4;
+    }
+    // For 6 GHz band (variable width), conservatively assume ±4 channels
+    else if (freq_mhz >= 5925 && freq_mhz <= 7125) {
+        lower = 4 < center ? center - 4 : center; // No strict lower bound defined
+        upper = center + 4;
+    }
+
+    // Return the estimated channel range
+    return {lower, upper};
 }
 int main() {
     win32_wlan_file wlan(2);
@@ -162,11 +197,13 @@ int main() {
             {
                 ssid=::fast_io::string_view("[Hidden]");
             }
+            auto [ch_start,ch_end] = estimated_channel_range(entry.ulChCenterFrequency);
             ::fast_io::io::println("SSID:", ssid, "\t",
                 "Signal:", entry.lRssi, " dBm (Quality:",signal_quality(entry.lRssi),")\t"
                 "Frequency:",entry.ulChCenterFrequency,"kHz\t",
                 "Band:",frequency_to_band(entry.ulChCenterFrequency), "\t"
-                "Channel:",frequency_to_channel(entry.ulChCenterFrequency));
+                "Channel:",frequency_to_channel(entry.ulChCenterFrequency)," "
+                "(covers:",ch_start, "-", ch_end,")\n");
         }
     }
 }
