@@ -80,6 +80,13 @@ inline void WINAPI wlan_notification_callback(PWLAN_NOTIFICATION_DATA data, void
         ::fast_io::io::panic("SetEvent failure\n");
     }
 }
+inline ::fast_io::cstring_view signal_quality(::std::int_least32_t rssi_dbm) noexcept {
+    if (rssi_dbm >= -55) return ::fast_io::cstring_view("Excellent");
+    if (rssi_dbm >= -65) return ::fast_io::cstring_view("Good");
+    if (rssi_dbm >= -75) return ::fast_io::cstring_view("Fair");
+    if (rssi_dbm >= -85) return ::fast_io::cstring_view("Weak");
+    return ::fast_io::cstring_view("Very Weak");
+}
 inline constexpr std::uint_least32_t frequency_to_channel(std::uint_least32_t freq_khz) noexcept {
     std::uint_least32_t freq_mhz = freq_khz / 1000;
     if (freq_mhz >= 2412 && freq_mhz <= 2472) {
@@ -156,7 +163,7 @@ int main() {
                 ssid=::fast_io::string_view("[Hidden]");
             }
             ::fast_io::io::println("SSID:", ssid, "\t",
-                "Signal:", entry.lRssi, " dBm\t"
+                "Signal:", entry.lRssi, " dBm (Quality:",signal_quality(entry.lRssi),")\t"
                 "Frequency:",entry.ulChCenterFrequency,"kHz\t",
                 "Band:",frequency_to_band(entry.ulChCenterFrequency), "\t"
                 "Channel:",frequency_to_channel(entry.ulChCenterFrequency));
