@@ -132,7 +132,6 @@ int main() {
     DWORD wait_result = WaitForSingleObject(scan_event, 10000);  // 10s timeout
     if (wait_result != WAIT_OBJECT_0) {
         ::fast_io::io::perrln("Scan did not complete in time");
-        return 1;
     }
     ::fast_io::io::print("Elapsed time for scanning: ",
         ::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::realtime)-start_time, "s\n");
