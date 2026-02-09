@@ -5,7 +5,10 @@ using ::fast_io::char_literal_v;
 using ::fast_io::pr_rsv_size;
 using ::fast_io::pr_rsv_to_iterator_unchecked;
 
+using ::fast_io::io_alias_t;
+using ::fast_io::io_alias;
 using ::fast_io::io_alias_type_t;
+using ::fast_io::io_alias_type;
 
 using ::fast_io::io_reserve_type_t;
 using ::fast_io::io_reserve_type;
@@ -124,7 +127,7 @@ using ::fast_io::io_stream_buffer_flush_define;
 
 namespace manipulators
 {
-    
+
 using ::fast_io::manipulators::print_alias_define;
 using ::fast_io::manipulators::print_reserve_size;
 using ::fast_io::manipulators::print_reserve_define;
@@ -217,8 +220,19 @@ using ::fast_io::manipulators::strvw;
 
 namespace char_category
 {
-    using ::fast_io::char_category::is_dos_file_invalid_character;
-}
+using ::fast_io::char_category::is_dos_file_invalid_character;
+using ::fast_io::char_category::char_category_family;
+using ::fast_io::char_category::char_category_traits;
+using ::fast_io::char_category::to_c_lower;
+using ::fast_io::char_category::to_c_upper;
+using ::fast_io::char_category::to_c_halfwidth;
+namespace ranges
+{
+using ::fast_io::char_category::ranges::to_c_lower;
+using ::fast_io::char_category::ranges::to_c_upper;
+using ::fast_io::char_category::ranges::to_c_halfwidth;
+} // namespace ranges
+} // namespace char_category
 
 namespace mnp = manipulators;
 
