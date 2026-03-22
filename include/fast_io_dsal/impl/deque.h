@@ -596,6 +596,9 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 			::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr);
 			controller.front_block.controller_ptr += diff;
 			controller.back_block.controller_ptr += diff;
+			// Update begin_ptr to match the rotated controller array
+			controller.front_block.begin_ptr = *controller.front_block.controller_ptr;
+			controller.back_block.begin_ptr = *controller.back_block.controller_ptr;
 		}
 
 		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slots_count};
@@ -611,6 +614,9 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 			controller.back_block.controller_ptr += diff;
 			controller.controller_block.controller_start_reserved_ptr += diff;
 			*(controller.controller_block.controller_after_reserved_ptr += diff) = nullptr;
+			// Update begin_ptr to match the shifted controller array
+			controller.front_block.begin_ptr = *controller.front_block.controller_ptr;
+			controller.back_block.begin_ptr = *controller.back_block.controller_ptr;
 		}
 	}
 }
@@ -1243,6 +1249,9 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 			::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr);
 			controller.front_block.controller_ptr += diff;
 			controller.back_block.controller_ptr += diff;
+			// Update begin_ptr to match the rotated controller array
+			controller.front_block.begin_ptr = *controller.front_block.controller_ptr;
+			controller.back_block.begin_ptr = *controller.back_block.controller_ptr;
 		}
 		auto const half_slotsextra_count{static_cast<::std::size_t>((total_slots_count + extrablocks) >> 1u)};
 		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slotsextra_count};
@@ -1255,6 +1264,9 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 			controller.back_block.controller_ptr += diff;
 			controller.controller_block.controller_start_reserved_ptr += diff;
 			*(controller.controller_block.controller_after_reserved_ptr += diff) = nullptr;
+			// Update begin_ptr to match the shifted controller array
+			controller.front_block.begin_ptr = *controller.front_block.controller_ptr;
+			controller.back_block.begin_ptr = *controller.back_block.controller_ptr;
 		}
 	}
 }
