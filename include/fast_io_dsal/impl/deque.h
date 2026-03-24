@@ -2563,7 +2563,7 @@ public:
 			{
 				return;
 			}
-			return this->insert_range_front_impl(0, ::std::forward<R>(rg), this->size(), rgsize);
+			this->insert_range_front_impl(0, ::std::forward<R>(rg), this->size(), rgsize);
 		}
 		else
 		{
