@@ -67,9 +67,17 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	::std::size_t bfsz{static_cast<::std::size_t>(bob.end_ptr - bob.begin_ptr)};
 	::std::size_t rlsz{static_cast<::std::size_t>(bob.curr_ptr - bob.begin_ptr)};
 	::std::size_t diff{static_cast<::std::size_t>(last - first)};
-	::std::size_t to_allocate{bfsz + diff};
-	::std::size_t twicebfsz;
 	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+	::std::size_t to_allocate;
+	if (bfsz > mx - diff)
+	{
+		to_allocate = mx;
+	}
+	else
+	{
+		to_allocate = bfsz + diff;
+	}
+	::std::size_t twicebfsz;
 	constexpr ::std::size_t mxdv2{mx >> 1u};
 	if (bfsz > mxdv2)
 	{
@@ -77,7 +85,7 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	}
 	else
 	{
-		twicebfsz = bfsz;
+		twicebfsz = bfsz << 1u;
 	}
 	if (to_allocate < twicebfsz)
 	{
