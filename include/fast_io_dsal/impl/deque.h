@@ -2365,7 +2365,7 @@ private:
 	};
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type old_size, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
 		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
 																   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2382,7 +2382,7 @@ private:
 	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type old_size, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
 		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
 																  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2415,11 +2415,11 @@ private:
 			size_type const half_size{old_size >> 1u};
 			if (pos < half_size)
 			{
-				return this->insert_range_front_impl(pos, ::std::forward<R>(rg), old_size, rgsize);
+				return this->insert_range_front_impl(pos, ::std::forward<R>(rg), rgsize);
 			}
 			else
 			{
-				return this->insert_range_back_impl(pos, ::std::forward<R>(rg), old_size, rgsize);
+				return this->insert_range_back_impl(pos, ::std::forward<R>(rg), rgsize);
 			}
 		}
 		else
@@ -2511,8 +2511,8 @@ public:
 			{
 				return;
 			}
-			size_type const oldn{this->size()};
-			this->insert_range_back_impl(oldn, ::std::forward<R>(rg), oldn, rgsize);
+			// To do write append specific code without using insert_range
+			this->insert_range_back_impl(this->size(), ::std::forward<R>(rg), rgsize);
 		}
 		else
 		{
@@ -2563,7 +2563,7 @@ public:
 			{
 				return;
 			}
-			this->insert_range_front_impl(0, ::std::forward<R>(rg), this->size(), rgsize);
+			this->insert_range_front_impl(0, ::std::forward<R>(rg), rgsize);
 		}
 		else
 		{
