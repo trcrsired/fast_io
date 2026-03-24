@@ -49,8 +49,8 @@ constexpr auto lexicographical_compare_three_way(I1 f1, I1 l1, I2 f2, I2 l2)
 #endif
 #endif
 
-#if 0
-//__STDC_HOSTED__==1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED==1)
+#if 1
+
 namespace fast_io::freestanding
 {
 using ::std::find_if;

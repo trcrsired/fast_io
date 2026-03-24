@@ -50,7 +50,7 @@ int main(int argc, char **argv)
       $install_prog $dir/$dlname $destdir/$dlname~
       chmod a+x $destdir/$dlname~
       if test -n '\''$stripme'\'' && test -n '\''$striplib'\''; then
-	eval '\''$striplib $destdir/$dlname'\'' || exit \$?;
+        eval '\''$striplib $destdir/$dlname'\'' || exit \$?;
       fi'
     else
     postinstall_cmds='base_file=`basename \${file}`~
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
       $install_prog $dir/$dlname \$dldir/$dlname~
       chmod a+x \$dldir/$dlname~
       if test -n '\''$stripme'\'' && test -n '\''$striplib'\''; then
-	eval '\''$striplib \$dldir/$dlname'\'' || exit \$?;
+        eval '\''$striplib \$dldir/$dlname'\'' || exit \$?;
       fi'
     fi
     postuninstall_cmds='dldll=`$SHELL 2>&1 -c '\''. $file; echo \$dlname'\''`~

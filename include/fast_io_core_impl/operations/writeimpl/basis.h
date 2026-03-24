@@ -341,6 +341,11 @@ template <typename outstmtype>
 inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
 {
 	using char_type = typename outstmtype::output_char_type;
+	using char_type_const_ptr
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+		[[__gnu__::__may_alias__]]
+#endif
+		= char_type const *;
 	if constexpr (::fast_io::operations::decay::defines::has_write_all_bytes_overflow_define<outstmtype>)
 	{
 		write_all_bytes_overflow_define(outsm, first, last);
@@ -363,7 +368,8 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
 				{
-					obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+					obuffer_set_curr(outsm, non_overlapped_copy_n(
+												reinterpret_cast<char_type_const_ptr>(first), static_cast<::std::size_t>(itdiff), curr));
 					return;
 				}
 			}
@@ -421,11 +427,6 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 						::fast_io::operations::decay::defines::has_scatter_write_some_overflow_define<outstmtype> ||
 						::fast_io::operations::decay::defines::has_scatter_write_all_overflow_define<outstmtype>))
 	{
-		using char_type_const_ptr
-#if __has_cpp_attribute(__gnu__::__may_alias__)
-			[[__gnu__::__may_alias__]]
-#endif
-			= char_type const *;
 		char_type_const_ptr firstcptr{reinterpret_cast<char_type_const_ptr>(first)};
 		char_type_const_ptr lastcptr{reinterpret_cast<char_type_const_ptr>(last)};
 		::fast_io::details::write_all_cold_impl(outsm, firstcptr, lastcptr);
@@ -448,11 +449,6 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 						::fast_io::operations::decay::defines::has_pwrite_some_overflow_define<outstmtype> ||
 						::fast_io::operations::decay::defines::has_scatter_pwrite_some_overflow_define<outstmtype>))
 	{
-		using char_type_const_ptr
-#if __has_cpp_attribute(__gnu__::__may_alias__)
-			[[__gnu__::__may_alias__]]
-#endif
-			= char_type const *;
 		char_type_const_ptr firstcptr{reinterpret_cast<char_type_const_ptr>(first)};
 		char_type_const_ptr lastcptr{reinterpret_cast<char_type_const_ptr>(last)};
 		::fast_io::details::pwrite_all_cold_impl(outsm, firstcptr, lastcptr);
