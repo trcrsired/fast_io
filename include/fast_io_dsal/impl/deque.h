@@ -2365,6 +2365,44 @@ private:
 	};
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type old_size, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
+																   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
+		auto thisbg{this->begin()};
+		auto posit{thisbg + pos};
+		auto thisbgrgsize{thisbg - rgsize};
+		auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg,
+																			 posit, thisbgrgsize)};
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, thisbgrgsizenew);
+
+		this->controller.front_block = thisbgrgsize.itercontent;
+		this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
+		return {pos, thisbgrgsizenew};
+	}
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type old_size, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
+																  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
+		auto posit{this->begin() + pos};
+		auto thisend{this->end()};
+		auto thisendrgsize{thisend + rgsize};
+		::fast_io::freestanding::uninitialized_relocate_backward(posit,
+																 thisend, thisendrgsize);
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, posit);
+		if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
+		{
+			thisendrgsize.itercontent.curr_ptr =
+				(thisendrgsize.itercontent.begin_ptr = *--thisendrgsize.itercontent.controller_ptr) + block_size;
+		}
+		this->controller.back_block = thisendrgsize.itercontent;
+		this->controller.back_end_ptr = thisendrgsize.itercontent.begin_ptr + block_size;
+		return {pos, posit};
+	}
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr insert_range_result insert_range_impl(size_type pos, R &&rg, size_type old_size) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
 		if constexpr (::std::ranges::sized_range<R>)
@@ -2377,37 +2415,11 @@ private:
 			size_type const half_size{old_size >> 1u};
 			if (pos < half_size)
 			{
-				::fast_io::containers::details::deque_reserve_front_spaces<allocator,
-																		   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
-				auto thisbg{this->begin()};
-				auto posit{thisbg + pos};
-				auto thisbgrgsize{thisbg - rgsize};
-				auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg,
-																					 posit, thisbgrgsize)};
-				::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, thisbgrgsizenew);
-
-				this->controller.front_block = thisbgrgsize.itercontent;
-				this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
-				return {pos, thisbgrgsizenew};
+				return this->insert_range_front_impl(pos, ::std::forward<R>(rg), old_size, rgsize);
 			}
 			else
 			{
-				::fast_io::containers::details::deque_reserve_back_spaces<allocator,
-																		  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
-				auto posit{this->begin() + pos};
-				auto thisend{this->end()};
-				auto thisendrgsize{thisend + rgsize};
-				::fast_io::freestanding::uninitialized_relocate_backward(posit,
-																		 thisend, thisendrgsize);
-				::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, posit);
-				if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
-				{
-					thisendrgsize.itercontent.curr_ptr =
-						(thisendrgsize.itercontent.begin_ptr = *--thisendrgsize.itercontent.controller_ptr) + block_size;
-				}
-				this->controller.back_block = thisendrgsize.itercontent;
-				this->controller.back_end_ptr = thisendrgsize.itercontent.begin_ptr + block_size;
-				return {pos, posit};
+				return this->insert_range_back_impl(pos, ::std::forward<R>(rg), old_size, rgsize);
 			}
 		}
 		else
@@ -2447,7 +2459,7 @@ public:
 	inline constexpr iterator insert_range(const_iterator pos, R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
 		return this->insert_range_impl(
-					   ::fast_io::containers::details::deque_iter_difference_unsigned_common(pos.itercontent, this->controller.front_block), rg, this->size())
+					   ::fast_io::containers::details::deque_iter_difference_unsigned_common(pos.itercontent, this->controller.front_block), ::std::forward<R>(rg), this->size())
 			.it;
 	}
 
@@ -2460,7 +2472,7 @@ public:
 		{
 			::fast_io::fast_terminate();
 		}
-		return this->insert_range_impl(pos, rg, n).pos;
+		return this->insert_range_impl(pos, ::std::forward<R>(rg), n).pos;
 	}
 
 private:
@@ -2492,22 +2504,35 @@ public:
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void append_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
-		// To do: cleanup code
-		if constexpr (::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+		if constexpr (::std::ranges::sized_range<R>)
 		{
-			for (auto &e : rg)
+			size_type const rgsize{::std::ranges::size(rg)};
+			if (!rgsize)
 			{
-				this->push_back(e);
+				return;
 			}
+			size_type const oldn{this->size()};
+			this->insert_range_back_impl(oldn, ::std::forward<R>(rg), oldn, rgsize);
 		}
 		else
 		{
-			append_range_guard guard{this, this->size()};
-			for (auto &e : rg)
+			// To do: cleanup code
+			if constexpr (::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 			{
-				this->push_back(e);
+				for (auto &e : rg)
+				{
+					this->push_back(e);
+				}
 			}
-			guard.thisdeq = nullptr;
+			else
+			{
+				append_range_guard guard{this, this->size()};
+				for (auto &e : rg)
+				{
+					this->push_back(e);
+				}
+				guard.thisdeq = nullptr;
+			}
 		}
 	}
 #if 0
@@ -2531,27 +2556,39 @@ public:
 		::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>> &&
 		::std::is_nothrow_swappable_v<value_type>)
 	{
-		// To do: cleanup code
-		size_type oldn{this->size()};
-		if constexpr (
-			::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>> &&
-			::std::is_nothrow_swappable_v<value_type>)
+		if constexpr (::std::ranges::sized_range<R>)
 		{
-			for (auto &e : rg)
+			size_type const rgsize{::std::ranges::size(rg)};
+			if (!rgsize)
 			{
-				this->push_front(e);
+				return;
 			}
-			::std::reverse(this->begin(), this->end() - oldn);
+			return this->insert_range_front_impl(0, ::std::forward<R>(rg), this->size(), rgsize);
 		}
 		else
 		{
-			prepend_range_guard guard{this, oldn};
-			for (auto &e : rg)
+			// To do: cleanup code
+			size_type oldn{this->size()};
+			if constexpr (
+				::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>> &&
+				::std::is_nothrow_swappable_v<value_type>)
 			{
-				this->push_front(e);
+				for (auto &e : rg)
+				{
+					this->push_front(e);
+				}
+				::std::reverse(this->begin(), this->end() - oldn);
 			}
-			::std::reverse(this->begin(), this->end() - oldn);
-			guard.thisdeq = nullptr;
+			else
+			{
+				prepend_range_guard guard{this, oldn};
+				for (auto &e : rg)
+				{
+					this->push_front(e);
+				}
+				::std::reverse(this->begin(), this->end() - oldn);
+				guard.thisdeq = nullptr;
+			}
 		}
 	}
 
