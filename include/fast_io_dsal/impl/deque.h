@@ -2422,14 +2422,17 @@ private:
 				return {pos, this->begin() + pos};
 			}
 			size_type const half_size{old_size >> 1u};
+			insert_range_result ret;
 			if (pos < half_size)
 			{
-				return this->insert_range_front_impl(pos, ::std::forward<R>(rg), rgsize);
+				ret = this->insert_n_front_common_impl(pos, rgsize);
 			}
 			else
 			{
-				return this->insert_range_back_impl(pos, ::std::forward<R>(rg), rgsize);
+				ret = this->insert_n_back_common_impl(pos, rgsize);
 			}
+			::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+			return ret;
 		}
 		else
 		{
