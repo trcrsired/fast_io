@@ -2363,9 +2363,7 @@ private:
 		size_type pos;
 		iterator it;
 	};
-	template <::std::ranges::range R>
-		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_n_front_common_impl(size_type pos, size_type rgsize) noexcept
 	{
 		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
 																   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2374,15 +2372,19 @@ private:
 		auto thisbgrgsize{thisbg - rgsize};
 		auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg,
 																			 posit, thisbgrgsize)};
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, thisbgrgsizenew);
-
 		this->controller.front_block = thisbgrgsize.itercontent;
 		this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
 		return {pos, thisbgrgsizenew};
 	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		auto ret{this->insert_n_front_common_impl(pos, rgsize)};
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		return ret;
+	}
+	inline constexpr insert_range_result insert_n_back_common_impl(size_type pos, size_type rgsize) noexcept
 	{
 		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
 																  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2391,7 +2393,6 @@ private:
 		auto thisendrgsize{thisend + rgsize};
 		::fast_io::freestanding::uninitialized_relocate_backward(posit,
 																 thisend, thisendrgsize);
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, posit);
 		if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
 		{
 			thisendrgsize.itercontent.curr_ptr =
@@ -2400,6 +2401,14 @@ private:
 		this->controller.back_block = thisendrgsize.itercontent;
 		this->controller.back_end_ptr = thisendrgsize.itercontent.begin_ptr + block_size;
 		return {pos, posit};
+	}
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		auto ret{this->insert_n_back_common_impl(pos, rgsize)};
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		return ret;
 	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
@@ -2592,6 +2601,91 @@ public:
 		}
 	}
 
+#if 0
+	inline constexpr iterator insert(const_iterator iter, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		return this->emplace(iter, val);
+	}
+
+	inline constexpr iterator insert(const_iterator iter, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		return this->emplace(iter, ::std::move(val));
+	}
+
+	inline constexpr reference insert_index(size_type idx, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		return this->emplace_index(idx, val);
+	}
+
+	inline constexpr reference insert_index(size_type idx, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		return this->emplace_index(idx, ::std::move(val));
+	}
+#endif
+private:
+#if 0
+	inline constexpr insert_range_result insert_front_impl(size_type pos) noexcept
+	{
+		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
+																   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
+		auto thisbg{this->begin()};
+		auto posit{thisbg + pos};
+		auto thisbgrgsize{thisbg - rgsize};
+		auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg,
+																			 posit, thisbgrgsize)};
+
+
+		this->controller.front_block = thisbgrgsize.itercontent;
+		this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
+		return {pos, posit};
+	}
+	inline constexpr insert_range_result insert_back_impl(size_type pos) noexcept
+	{
+		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
+																  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
+		auto posit{this->begin() + pos};
+		auto thisend{this->end()};
+		auto thisendrgsize{thisend + 1};
+		::fast_io::freestanding::uninitialized_relocate_backward(posit,
+																 thisend, thisendrgsize);
+
+		if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
+		{
+			thisendrgsize.itercontent.curr_ptr =
+				(thisendrgsize.itercontent.begin_ptr = *--thisendrgsize.itercontent.controller_ptr) + block_size;
+		}
+		this->controller.back_block = thisendrgsize.itercontent;
+		this->controller.back_end_ptr = thisendrgsize.itercontent.begin_ptr + block_size;
+		return {pos, posit};
+	}
+	inline constexpr iterator emplace_impl(const_iterator iter) noexcept
+	{
+		
+	}
+#endif
+public:
+#if 0
+	template<typename... Args>
+	inline constexpr iterator emplace(const_iterator iter, Args&&... args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+	{
+		if constexpr(::std::is_nothrow_constructible_v<value_type, Args...>)
+		{
+
+		}
+		else
+		{
+		}
+	}
+#endif
+#if 0
+	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+	}
+	inline constexpr iterator insert_index(size_type idx, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		
+	}
+#endif
 private:
 	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
