@@ -397,8 +397,10 @@ public:
 	}
 
 	inline constexpr vector(vector const &vec)
-		requires(::std::is_copy_constructible_v<value_type>)
 	{
+		// Using static_assert instead of requires to delay the check
+		// related to tests/0026.container/0001.vector/recursive.cc
+		static_assert(::std::is_copy_constructible_v<value_type>, "vector's value type must be copy constructible to use copy constructor");
 		std::size_t const vecsize{static_cast<std::size_t>(vec.imp.curr_ptr - vec.imp.begin_ptr)};
 		if (vecsize == 0)
 		{
@@ -433,10 +435,12 @@ public:
 		}
 		des.thisvec = nullptr;
 	}
-	inline constexpr vector(vector const &vec) = delete;
+
 	inline constexpr vector &operator=(vector const &vec)
-		requires(::std::copyable<value_type>)
 	{
+		// Using static_assert instead of requires to delay the check
+		// related to tests/0026.container/0001.vector/recursive.cc
+		static_assert(::std::copyable<value_type>, "vector's value type must be copyable to use copy assignment operator");
 		if (__builtin_addressof(vec) == this) [[unlikely]]
 		{
 			return *this;
@@ -445,7 +449,7 @@ public:
 		this->operator=(::std::move(newvec));
 		return *this;
 	}
-	inline constexpr vector &operator=(vector const &vec) = delete;
+
 	inline constexpr vector(vector &&vec) noexcept
 		: imp(vec.imp)
 	{
