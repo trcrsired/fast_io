@@ -8,16 +8,16 @@ using namespace fast_io::mnp;
 // minimal allocator with debug output
 struct NAlloc
 {
-	static void *allocate(std::size_t n)
+	static void *allocate(std::size_t n) noexcept
 	{
 		void *p = ::operator new(n);
 		return p;
 	}
-	static void deallocate_n(void *p, std::size_t)
+	static void deallocate_n(void *p, std::size_t) noexcept
 	{
 		::operator delete(p);
 	}
-	static void deallocate(void *p)
+	static void deallocate(void *p) noexcept
 	{
 		::operator delete(p);
 	}
