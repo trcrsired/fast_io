@@ -2629,7 +2629,7 @@ private:
 
 	struct emplace_decision
 	{
-		iterator retit;
+		::std::size_t pos;
 		::std::int_fast8_t decision;
 	};
 	template <bool isnothrow>
@@ -2715,7 +2715,6 @@ private:
 	struct emplace_index_decision
 	{
 		pointer retptr;
-		iterator retit; // Only valid for decision == 0
 		::std::int_fast8_t decision;
 	};
 	template <bool isnothrow>
@@ -2742,7 +2741,7 @@ private:
 				}
 				else
 				{
-					return emplace_index_decision{retptr, {}, 1};
+					return emplace_index_decision{retptr, 1};
 				}
 			}
 		}
@@ -2757,7 +2756,7 @@ private:
 				}
 				else
 				{
-					return emplace_index_decision{retptr, {}, -1};
+					return emplace_index_decision{retptr, -1};
 				}
 			}
 		}
@@ -2769,14 +2768,14 @@ private:
 		}
 		else
 		{
-			return emplace_index_decision{retptr, result.it, 0};
+			return emplace_index_decision{retptr, 0};
 		}
 	}
 
 	struct emplace_index_guard
 	{
 		deque *thisdeq;
-		iterator retit;
+		::std::size_t pos;
 		::std::size_t oldsize;
 		::std::int_fast8_t decision;
 		constexpr ~emplace_index_guard()
@@ -2794,13 +2793,9 @@ private:
 				}
 				else
 				{
-					::std::size_t const distofront{
-						::fast_io::containers::details::deque_iter_difference_unsigned_common(
-							retit.itercontent, thisdeq->controller.front_block)};
-					::std::size_t const deqsize{thisdeq->size()};
 					thisdeq->erase_unchecked_single_nodestroy_impl(
-						retit,
-						static_cast<::std::size_t>(deqsize - distofront) < distofront);
+						thisdeq->begin() + static_cast<::std::ptrdiff_t>(pos),
+						static_cast<::std::size_t>(oldsize - pos) <= pos);
 				}
 			}
 		}
@@ -2842,8 +2837,8 @@ public:
 		}
 		else
 		{
-			auto [retptr, retit, decision] = this->emplace_index_decision_common<false>(idx);
-			emplace_index_guard guard{this, retit, oldsize, decision};
+			auto [retptr, decision] = this->emplace_index_decision_common<false>(idx);
+			emplace_index_guard guard{this, idx, oldsize, decision};
 			::std::construct_at(retptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return *retptr;
