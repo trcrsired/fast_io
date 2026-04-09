@@ -2659,9 +2659,9 @@ private:
 		}
 		else if (iter_curr_ptr == this->controller.front_block.curr_ptr)
 		{
-			if (this->controller.front_block.curr_ptr != this->controller.front_begin_ptr) [[likely]]
+			if (this->controller.front_block.curr_ptr != this->controller.front_block.begin_ptr) [[likely]]
 			{
-				iterator retit{this->controller.front_begin_ptr,
+				iterator retit{this->controller.front_block.begin_ptr,
 							   --this->controller.front_block.curr_ptr,
 							   this->controller.front_block.controller_ptr};
 				if constexpr (isnothrow)
@@ -2694,7 +2694,7 @@ private:
 		{
 			if (thisdeq) [[unlikely]]
 			{
-				auto &thiscontroller{*thisdeq->controller};
+				auto &thiscontroller{thisdeq->controller};
 				if (decision < 0)
 				{
 					++thiscontroller.front_block.curr_ptr;
@@ -2748,7 +2748,7 @@ private:
 		}
 		else if (!idx)
 		{
-			if (this->controller.front_block.curr_ptr != this->controller.front_begin_ptr) [[likely]]
+			if (this->controller.front_block.curr_ptr != this->controller.front_block.begin_ptr) [[likely]]
 			{
 				pointer retptr{--this->controller.front_block.curr_ptr};
 				if constexpr (isnothrow)
@@ -2782,7 +2782,7 @@ private:
 		{
 			if (thisdeq) [[unlikely]]
 			{
-				auto &thiscontroller{*thisdeq->controller};
+				auto &thiscontroller{thisdeq->controller};
 				if (decision < 0)
 				{
 					++thiscontroller.front_block.curr_ptr;
@@ -2814,7 +2814,7 @@ public:
 		else
 		{
 			auto [retit, decision] = this->emplace_decision_common<false>(iter);
-			emplace_guard guard{__builtin_addressof(this->controller), retit, decision};
+			emplace_guard guard{this, retit, decision};
 			::std::construct_at(retit.itercontent.curr_ptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return retit;
@@ -2838,7 +2838,7 @@ public:
 		else
 		{
 			auto [retptr, decision] = this->emplace_index_decision_common<false>(idx);
-			emplace_index_guard guard{__builtin_addressof(this->controller), idx, oldsize, decision};
+			emplace_index_guard guard{this, idx, oldsize, decision};
 			::std::construct_at(retptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return *retptr;

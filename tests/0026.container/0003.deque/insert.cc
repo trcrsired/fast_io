@@ -2,13 +2,79 @@
 #include <fast_io_dsal/deque.h>
 #include <deque>
 #include <vector>
+#include <stdexcept>
 
 namespace
 {
+inline constexpr ::std::size_t throw_threshold{50};
+
+// Throwing type for exception safety testing - must be at namespace scope for static members
+struct ThrowingType
+{
+	static ::std::size_t construct_count;
+
+	::std::size_t value;
+
+	ThrowingType() : value{0}
+	{
+		++construct_count;
+		check_threshold();
+	}
+
+	ThrowingType(::std::size_t v) : value{v}
+	{
+		++construct_count;
+		check_threshold();
+	}
+
+	ThrowingType(ThrowingType &&other) noexcept : value{other.value}
+	{
+		other.value = 0;
+		// Move constructor is noexcept to avoid issues during relocation
+	}
+
+	ThrowingType(ThrowingType const &other) : value{other.value}
+	{
+		++construct_count;
+		check_threshold();
+	}
+
+	ThrowingType &operator=(ThrowingType &&other) noexcept
+	{
+		value = other.value;
+		other.value = 0;
+		return *this;
+	}
+
+	ThrowingType &operator=(ThrowingType const &other)
+	{
+		value = other.value;
+		return *this;
+	}
+
+	~ThrowingType() noexcept = default;
+
+	static void check_threshold()
+	{
+		if (construct_count > throw_threshold)
+		{
+			throw ::std::runtime_error("construction threshold exceeded");
+		}
+	}
+
+	static void reset() noexcept
+	{
+		construct_count = 0;
+	}
+};
+
+::std::size_t ThrowingType::construct_count{0};
 
 inline void test_insert_single()
 {
 	::fast_io::io::perr("=== deque insert single element test ===\n");
+
+	ThrowingType::reset();
 
 	using T = ::std::size_t;
 	::fast_io::deque<T> dq;
@@ -269,32 +335,6 @@ inline void test_insert_return_value()
 inline void test_insert_exception_safety()
 {
 	::fast_io::io::perr("=== deque insert exception safety test ===\n");
-
-	// Type that throws on construction after threshold
-	struct ThrowingType
-	{
-		static constexpr ::std::size_t throw_threshold{50};
-		static ::std::size_t construct_count;
-
-		::std::size_t value;
-
-		ThrowingType(::std::size_t v) : value{v}
-		{
-			++construct_count;
-			if (construct_count > throw_threshold)
-			{
-				construct_count = throw_threshold; // prevent infinite throws
-				throw ::std::runtime_error("construction threshold exceeded");
-			}
-		}
-
-		ThrowingType(ThrowingType const &) = delete;
-		ThrowingType(ThrowingType &&) = delete;
-		ThrowingType &operator=(ThrowingType const &) = delete;
-		ThrowingType &operator=(ThrowingType &&) = delete;
-	};
-
-	ThrowingType::construct_count = 0;
 
 	::fast_io::deque<ThrowingType> dq;
 
