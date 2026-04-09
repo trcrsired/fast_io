@@ -18,7 +18,7 @@ int main()
 		v.push_back(sz);
 		if (cap != v.capacity())
 		{
-			println(left(v.size(), 7), left(v.capacity(), 11), left(v.capacity() / static_cast<float>(cap), 10));
+			println(left(v.size(), 7), left(v.capacity(), 11), left(float(v.capacity()) / static_cast<float>(cap), 10));
 			cap = v.capacity();
 		}
 	}
