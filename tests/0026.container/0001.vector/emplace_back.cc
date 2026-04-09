@@ -30,7 +30,6 @@ int main()
 	fast_io::vector<President> elections;
 	print("emplace_back:\n");
 	auto &ref = elections.emplace_back("Nelson Mandela", "South Africa", 1994);
-	// assert(ref.year == 1994 && "uses a reference to the created object (C++17)");
 	if (ref.year != 1994)
 	{
 		::fast_io::fast_terminate();
