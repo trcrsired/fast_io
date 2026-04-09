@@ -2675,7 +2675,6 @@ private:
 			}
 		}
 		iterator retit{this->emplace_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block)).it};
-		++controller.back_block.curr_ptr;
 		if constexpr (isnothrow)
 		{
 			return retit;
