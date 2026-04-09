@@ -2807,13 +2807,13 @@ public:
 	{
 		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
 		{
-			auto retit = this->emplace_decision_common(iter);
+			auto retit = this->emplace_decision_common<true>(iter);
 			::std::construct_at(retit.itercontent.curr_ptr, ::std::forward<Args>(args)...);
 			return retit;
 		}
 		else
 		{
-			auto [retit, decision] = this->emplace_decision_common(iter);
+			auto [retit, decision] = this->emplace_decision_common<false>(iter);
 			emplace_guard guard{__builtin_addressof(this->controller), retit, decision};
 			::std::construct_at(retit.itercontent.curr_ptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
@@ -2831,13 +2831,13 @@ public:
 		}
 		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
 		{
-			auto retptr = this->emplace_index_decision_common(idx);
+			auto retptr = this->emplace_index_decision_common<true>(idx);
 			::std::construct_at(retptr, ::std::forward<Args>(args)...);
 			return *retptr;
 		}
 		else
 		{
-			auto [retptr, decision] = this->emplace_index_decision_common(idx);
+			auto [retptr, decision] = this->emplace_index_decision_common<false>(idx);
 			emplace_index_guard guard{__builtin_addressof(this->controller), idx, oldsize, decision};
 			::std::construct_at(retptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
