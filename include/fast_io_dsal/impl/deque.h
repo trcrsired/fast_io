@@ -2642,52 +2642,47 @@ private:
 		if (iter_curr_ptr == this->controller.back_block.curr_ptr ||
 			this->controller.back_block.controller_ptr < iter.itercontent.controller_ptr)
 		{
-			if (this->controller.back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
+			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
 			{
-				this->grow_back();
-			}
-			auto iter{iterator{this->controller.back_block.begin_ptr,
+				iterator retit{this->controller.back_block.begin_ptr,
 							   this->controller.back_block.curr_ptr++,
-							   this->controller.back_block.controller_ptr}};
-			if constexpr (isnothrow)
-			{
-				return iter;
-			}
-			else
-			{
-				return emplace_decision{iter, 1};
+							   this->controller.back_block.controller_ptr};
+				if constexpr (isnothrow)
+				{
+					return retit;
+				}
+				else
+				{
+					return emplace_decision{retit, 1};
+				}
 			}
 		}
 		else if (iter_curr_ptr == this->controller.front_block.curr_ptr)
 		{
-			if (this->controller.front_block.curr_ptr == this->controller.front_begin_ptr) [[unlikely]]
+			if (this->controller.front_block.curr_ptr != this->controller.front_begin_ptr) [[likely]]
 			{
-				this->grow_front();
+				iterator retit{this->controller.front_begin_ptr,
+							   --this->controller.front_block.curr_ptr,
+							   this->controller.front_block.controller_ptr};
+				if constexpr (isnothrow)
+				{
+					return retit;
+				}
+				else
+				{
+					return emplace_decision{retit, -1};
+				}
 			}
-			iterator iter{this->controller.front_begin_ptr,
-						  --this->controller.front_block.curr_ptr,
-						  this->controller.front_block.controller_ptr};
-			if constexpr (isnothrow)
-			{
-				return iter;
-			}
-			else
-			{
-				return emplace_decision{iter, -1};
-			}
+		}
+		iterator retit{this->emplace_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block)).it};
+		++controller.back_block.curr_ptr;
+		if constexpr (isnothrow)
+		{
+			return retit;
 		}
 		else
 		{
-			iterator iter{this->emplace_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block))};
-			++controller.back_block.curr_ptr;
-			if constexpr (isnothrow)
-			{
-				return iter;
-			}
-			else
-			{
-				return emplace_decision{iter, 0};
-			}
+			return emplace_decision{retit, 0};
 		}
 	}
 	struct emplace_guard
@@ -2702,31 +2697,18 @@ private:
 				auto &thiscontroller{*thisdeq->controller};
 				if (decision < 0)
 				{
-					if (++thiscontroller.front_block.curr_ptr == thiscontroller.front_block.end_ptr)
-					{
-						if (thiscontroller.front_block.curr_ptr != thiscontroller.back_block.curr_ptr)
-						{
-							thiscontroller.front_end_ptr = ((thiscontroller.front_block.curr_ptr = thiscontroller.front_block.begin_ptr = *++(thiscontroller.front_block.controller_block)) + block_size);
-						}
-					}
+					++thiscontroller.front_block.curr_ptr;
 				}
 				else if (0 < decision)
 				{
-					if (--thiscontroller.back_block.curr_ptr == thiscontroller.back_block.begin_ptr)
-					{
-						if (thiscontroller.back_block.curr_ptr != thiscontroller.front_block.curr_ptr)
-						{
-							thiscontroller.back_end_ptr = thiscontroller.back_block.curr_ptr =
-								((thiscontroller.back_block.begin_ptr = *--(thiscontroller.back_block.controller_block)) + block_size);
-						}
-					}
+					--thiscontroller.back_block.curr_ptr;
 				}
 				else
 				{
 					::std::size_t const distofront{
 						::fast_io::containers::details::deque_iter_difference_unsigned_common(retit.itercontent, thisdeq->controller.front_block)};
 					::std::size_t const deqsize{thisdeq->size()};
-					thisdeq->erase_no_destroy_common_impl(retit, distofront < static_cast<::std::size_t>(deqsize - distofront));
+					thisdeq->erase_unchecked_single_nodestroy_impl(retit, distofront < static_cast<::std::size_t>(deqsize - distofront));
 				}
 			}
 		}
@@ -2751,37 +2733,43 @@ private:
 		}
 		else if (idx == oldsize)
 		{
-			if (this->controller.back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
+			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
 			{
-				this->grow_back();
-			}
-			pointer retptr{this->controller.back_block.curr_ptr++};
-			if constexpr (isnothrow)
-			{
-				return retptr;
-			}
-			else
-			{
-				return emplace_index_decision{retptr, 1};
+				pointer retptr{this->controller.back_block.curr_ptr++};
+				if constexpr (isnothrow)
+				{
+					return retptr;
+				}
+				else
+				{
+					return emplace_index_decision{retptr, 1};
+				}
 			}
 		}
 		else if (!idx)
 		{
-			if (this->controller.front_block.curr_ptr == this->controller.front_begin_ptr) [[unlikely]]
+			if (this->controller.front_block.curr_ptr != this->controller.front_begin_ptr) [[likely]]
 			{
-				this->grow_front();
-			}
-			pointer retptr{--this->controller.front_block.curr_ptr};
-			if constexpr (isnothrow)
-			{
-				return retptr;
-			}
-			else
-			{
-				return emplace_index_decision{retptr, -1};
+				pointer retptr{--this->controller.front_block.curr_ptr};
+				if constexpr (isnothrow)
+				{
+					return retptr;
+				}
+				else
+				{
+					return emplace_index_decision{retptr, -1};
+				}
 			}
 		}
-		return this->emplace_index_impl(idx, oldsize);
+		auto retptr{this->emplace_index_impl(idx, oldsize).it.itercontent.curr_ptr};
+		if constexpr (isnothrow)
+		{
+			return retptr;
+		}
+		else
+		{
+			return emplace_index_decision{retptr, 0};
+		}
 	}
 
 	struct emplace_index_guard
@@ -2797,28 +2785,15 @@ private:
 				auto &thiscontroller{*thisdeq->controller};
 				if (decision < 0)
 				{
-					if (++thiscontroller.front_block.curr_ptr == thiscontroller.front_block.end_ptr)
-					{
-						if (thiscontroller.front_block.curr_ptr != thiscontroller.back_block.curr_ptr)
-						{
-							thiscontroller.front_end_ptr = ((thiscontroller.front_block.curr_ptr = thiscontroller.front_block.begin_ptr = *++(thiscontroller.front_block.controller_block)) + block_size);
-						}
-					}
+					++thiscontroller.front_block.curr_ptr;
 				}
 				else if (0 < decision)
 				{
-					if (--thiscontroller.back_block.curr_ptr == thiscontroller.back_block.begin_ptr)
-					{
-						if (thiscontroller.back_block.curr_ptr != thiscontroller.front_block.curr_ptr)
-						{
-							thiscontroller.back_end_ptr = thiscontroller.back_block.curr_ptr =
-								((thiscontroller.back_block.begin_ptr = *--(thiscontroller.back_block.controller_block)) + block_size);
-						}
-					}
+					--thiscontroller.back_block.curr_ptr;
 				}
 				else
 				{
-					thisdeq->erase_no_destroy_common_impl(
+					thisdeq->erase_unchecked_single_nodestroy_impl(
 						thisdeq->begin() + pos,
 						pos <= static_cast<::std::size_t>(oldsize - pos));
 				}
