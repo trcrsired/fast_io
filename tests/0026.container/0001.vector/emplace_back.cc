@@ -1,5 +1,4 @@
-﻿#include <cassert>
-#include <string>
+﻿#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -31,7 +30,11 @@ int main()
 	fast_io::vector<President> elections;
 	print("emplace_back:\n");
 	auto &ref = elections.emplace_back("Nelson Mandela", "South Africa", 1994);
-	assert(ref.year == 1994 && "uses a reference to the created object (C++17)");
+	// assert(ref.year == 1994 && "uses a reference to the created object (C++17)");
+	if (ref.year != 1994)
+	{
+		::fast_io::fast_terminate();
+	}
 
 	fast_io::vector<President> reElections;
 	print("\npush_back:\n");
