@@ -2106,7 +2106,7 @@ public:
 private:
 	struct emplace_front_guard
 	{
-		using handletype = ::fast_io::containers::details::deque_controller_block<value_type>;
+		using handletype = ::fast_io::containers::details::deque_controller<value_type>;
 		handletype *thisdeq;
 		explicit constexpr emplace_front_guard(handletype *other) noexcept : thisdeq{other}
 		{
@@ -2145,7 +2145,7 @@ public:
 		}
 		else
 		{
-			emplace_front_guard guard(this->controller);
+			emplace_front_guard guard(__builtin_addressof(this->controller));
 			front_curr_ptr = ::std::construct_at(front_curr_ptr - 1, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return *(controller.front_block.curr_ptr = front_curr_ptr);
@@ -2707,14 +2707,15 @@ private:
 					::std::size_t const distofront{
 						::fast_io::containers::details::deque_iter_difference_unsigned_common(retit.itercontent, thisdeq->controller.front_block)};
 					::std::size_t const deqsize{thisdeq->size()};
-					thisdeq->erase_unchecked_single_nodestroy_impl(retit, distofront < static_cast<::std::size_t>(deqsize - distofront));
+					thisdeq->erase_unchecked_single_nodestroy_impl(retit, static_cast<::std::size_t>(deqsize - distofront) < distofront);
 				}
 			}
 		}
 	};
 	struct emplace_index_decision
 	{
-		pointer retit;
+		pointer retptr;
+		iterator retit; // Only valid for decision == 0
 		::std::int_fast8_t decision;
 	};
 	template <bool isnothrow>
@@ -2741,7 +2742,7 @@ private:
 				}
 				else
 				{
-					return emplace_index_decision{retptr, 1};
+					return emplace_index_decision{retptr, {}, 1};
 				}
 			}
 		}
@@ -2756,25 +2757,26 @@ private:
 				}
 				else
 				{
-					return emplace_index_decision{retptr, -1};
+					return emplace_index_decision{retptr, {}, -1};
 				}
 			}
 		}
-		auto retptr{this->emplace_index_impl(idx, oldsize).it.itercontent.curr_ptr};
+		auto result{this->emplace_index_impl(idx, oldsize)};
+		pointer retptr{result.it.itercontent.curr_ptr};
 		if constexpr (isnothrow)
 		{
 			return retptr;
 		}
 		else
 		{
-			return emplace_index_decision{retptr, 0};
+			return emplace_index_decision{retptr, result.it, 0};
 		}
 	}
 
 	struct emplace_index_guard
 	{
 		deque *thisdeq;
-		::std::size_t pos;
+		iterator retit;
 		::std::size_t oldsize;
 		::std::int_fast8_t decision;
 		constexpr ~emplace_index_guard()
@@ -2792,9 +2794,13 @@ private:
 				}
 				else
 				{
+					::std::size_t const distofront{
+						::fast_io::containers::details::deque_iter_difference_unsigned_common(
+							retit.itercontent, thisdeq->controller.front_block)};
+					::std::size_t const deqsize{thisdeq->size()};
 					thisdeq->erase_unchecked_single_nodestroy_impl(
-						thisdeq->begin() + pos,
-						pos <= static_cast<::std::size_t>(oldsize - pos));
+						retit,
+						static_cast<::std::size_t>(deqsize - distofront) < distofront);
 				}
 			}
 		}
@@ -2836,8 +2842,8 @@ public:
 		}
 		else
 		{
-			auto [retptr, decision] = this->emplace_index_decision_common<false>(idx);
-			emplace_index_guard guard{this, idx, oldsize, decision};
+			auto [retptr, retit, decision] = this->emplace_index_decision_common<false>(idx);
+			emplace_index_guard guard{this, retit, oldsize, decision};
 			::std::construct_at(retptr, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return *retptr;
