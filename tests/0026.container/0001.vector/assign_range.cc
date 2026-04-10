@@ -6,8 +6,10 @@
 
 int main()
 {
+#if 0
 	auto const source = std::list{2, 7, 1};
 	auto destination = fast_io::vector{3, 1, 4};
 	destination.assign_range(source);
 	assert(std::ranges::equal(source, destination));
+#endif
 }

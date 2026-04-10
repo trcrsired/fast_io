@@ -12,9 +12,12 @@ struct Node2
 {
 	fast_io::vector<Base> subast;
 
-	Node2();
-	Node2(fast_io::vector<Base> sub);
-	~Node2();
+	constexpr Node2();
+	constexpr Node2(fast_io::vector<Base> sub);
+	constexpr ~Node2();
+
+	template <typename>
+	constexpr int a_method(int) const noexcept;
 };
 
 struct Base
@@ -30,10 +33,16 @@ struct Base
 	{}
 };
 
-Node2::Node2() = default;
-Node2::Node2(fast_io::vector<Base> sub) : subast(std::move(sub))
+constexpr Node2::Node2() = default;
+constexpr Node2::Node2(fast_io::vector<Base> sub) : subast(std::move(sub))
 {}
-Node2::~Node2() = default;
+constexpr Node2::~Node2() = default;
+
+template <typename>
+constexpr int Node2::a_method(int) const noexcept
+{
+	return 42;
+}
 
 using Ast = fast_io::vector<Base>;
 
@@ -58,6 +67,11 @@ int main()
 			}
 			else if constexpr (std::is_same_v<T, Node2>)
 			{
+				int const v{n.template a_method<int>(0)};
+				if (v != 42)
+				{
+					::fast_io::fast_terminate();
+				}
 			}
 			else if constexpr (std::is_same_v<T, Node3>)
 			{

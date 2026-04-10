@@ -10,7 +10,7 @@ void print_info(auto rem, fast_io::vector<int> const &c)
 
 int main()
 {
-	fast_io::vector<int> c = {1, 2, 3};
+	fast_io::vector<int> c{1, 2, 3};
 	print_info("The vector holds: ", c);
 
 	c.resize(5);

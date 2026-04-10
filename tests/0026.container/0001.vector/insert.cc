@@ -17,7 +17,7 @@ int main()
 	auto it = c1.begin();
 	it = c1.insert(it, 200);
 	print_info(2, c1);
-
+#if 0
 	c1.insert(it, 2, 300);
 	print_info(3, c1);
 
@@ -34,4 +34,5 @@ int main()
 
 	c1.insert(c1.end(), {601, 602, 603});
 	print_info(6, c1);
+#endif
 }

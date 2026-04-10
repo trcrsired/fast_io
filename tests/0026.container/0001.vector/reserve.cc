@@ -8,46 +8,60 @@ using namespace fast_io::mnp;
 // minimal allocator with debug output
 struct NAlloc
 {
-	static void *allocate(std::size_t n)
+	static void *allocate(std::size_t n) noexcept
 	{
 		void *p = ::operator new(n);
-		println("allocating ", n, " bytes @ ", pointervw(p));
 		return p;
 	}
-	static void deallocate_n(void *p, std::size_t n)
+	static void deallocate_n(void *p, std::size_t) noexcept
 	{
-		print("deallocating ", n, " bytes @ ", pointervw(p), "\n\n");
 		::operator delete(p);
 	}
-	constexpr bool operator==(NAlloc const &) const noexcept = default;
+	static void deallocate(void *p) noexcept
+	{
+		::operator delete(p);
+	}
+	constexpr bool operator==(::NAlloc const &) const noexcept = default;
 };
+
+using NAllocAdapter = fast_io::generic_allocator_adapter<NAlloc>;
 
 int main()
 {
 	constexpr int max_elements = 32;
 
-	print("using reserve: \n");
+	// using reserve
 	{
-		fast_io::vector<int, NAlloc> v1;
+		fast_io::vector<int, ::NAllocAdapter> v1;
 		v1.reserve(max_elements); // reserves at least max_elements * sizeof(int) bytes
 
 		for (int n = 0; n < max_elements; ++n)
 		{
 			v1.push_back(n);
 		}
+		for (int n = 0; n < max_elements; ++n)
+		{
+			int v{v1[n]};
+			if (v != n) {
+				::fast_io::fast_terminate();
+			}
+		}
 	}
 
-	print("not using reserve: \n");
+	// not using reserve
 	{
-		fast_io::vector<int, NAlloc> v1;
+		fast_io::vector<int, ::NAllocAdapter> v1;
 
 		for (int n = 0; n < max_elements; ++n)
 		{
-			if (v1.size() == v1.capacity())
-			{
-				println("size() == capacity() == ", v1.size());
-			}
 			v1.push_back(n);
+		}
+		for (int n = 0; n < max_elements; ++n)
+		{
+			int v{v1[n]};
+			if (v != n) {
+				::fast_io::fast_terminate();
+			}
 		}
 	}
 }
