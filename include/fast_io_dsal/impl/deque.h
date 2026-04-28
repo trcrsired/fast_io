@@ -458,9 +458,6 @@ inline constexpr void deque_destroy_trivial_common(controllerblocktype &controll
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_grow_to_new_blocks_count_impl(dequecontroltype &controller, ::std::size_t new_blocks_count_least) noexcept
 {
-#if 0
-	::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 	auto old_start_ptr{controller.controller_block.controller_start_ptr};
 
 	auto old_start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
@@ -505,13 +502,7 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(dequecontroltype &cont
 
 	::std::size_t const new_blocks_offset{static_cast<::std::size_t>(new_blocks_count - old_reserved_blocks_count) >> 1u};
 	--new_blocks_count;
-#if 0
-	::fast_io::iomnp::debug_println(::std::source_location::current(),"\n"
-		"\tnew_blocks_count=",new_blocks_count,"\n"
-		"\told_after_ptr_pos=",old_after_ptr_pos,"\n"
-		"\tnew_blocks_offset=",new_blocks_offset,"\n"
-		"\tpivot_diff=",pivot_diff);
-#endif
+
 	auto new_start_reserved_ptr{new_start_ptr + new_blocks_offset};
 	auto new_after_reserved_ptr{new_start_reserved_ptr + old_reserved_blocks_count};
 
@@ -556,9 +547,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 	auto const half_slots_count{static_cast<::std::size_t>(total_slots_count >> 1u)};
 	if (half_slots_count < used_blocks_count) // grow blocks
 	{
-#if 0
-		::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
 		constexpr ::std::size_t mxdv2m1{(mx >> 1u) - 1u};
 		if (mxdv2m1 < total_slots_count)
@@ -570,9 +558,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 	}
 	else
 	{
-#if 0
-		::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 		// balance blocks
 		auto start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
 		auto after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
@@ -587,10 +572,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 		if (used_blocks_pivot != reserved_pivot)
 		{
 			::std::ptrdiff_t diff{reserved_pivot - used_blocks_pivot};
-#if 0
-			::fast_io::iomnp::debug_println(::std::source_location::current(),
-			"\tdiff=",diff);
-#endif
 			auto rotate_pivot{diff < 0 ? start_reserved_ptr : after_reserved_ptr};
 			rotate_pivot -= diff;
 			::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr);
@@ -601,9 +582,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slots_count};
 		if (slots_pivot != reserved_pivot)
 		{
-#if 0
-			::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 			::std::ptrdiff_t diff{slots_pivot - reserved_pivot};
 			::fast_io::freestanding::overlapped_copy(start_reserved_ptr,
 													 after_reserved_ptr, start_reserved_ptr + diff);
@@ -2722,6 +2700,7 @@ private:
 										  pointer, emplace_index_decision>
 	emplace_index_decision_common(::std::size_t idx) noexcept
 	{
+
 		auto oldsize{this->size()};
 		if (oldsize < idx) [[unlikely]]
 		{
@@ -2730,6 +2709,7 @@ private:
 			[[unreachable]];
 #endif
 		}
+#if 0
 		else if (idx == oldsize)
 		{
 			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
@@ -2760,6 +2740,7 @@ private:
 				}
 			}
 		}
+#endif
 		auto result{this->emplace_index_impl(idx, oldsize)};
 		pointer retptr{result.it.itercontent.curr_ptr};
 		if constexpr (isnothrow)
