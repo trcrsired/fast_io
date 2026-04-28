@@ -2853,12 +2853,32 @@ public:
 	}
 
 #if 0
+/*
+Todo:
+*/
 	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
 	{
 	}
 	inline constexpr iterator insert_index(size_type idx, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
 	{
-		
+	}
+
+	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
+	{
+	}
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>) 
+	{
+	}
+	inline constexpr void shrink_to_fit() noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+	}
+	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
+	{
+	}
+	inline constexpr void resize(size_type count, const_reference value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
+	{
 	}
 #endif
 private:
@@ -2993,7 +3013,18 @@ public:
 	{
 		destroy_deque_controller(this->controller);
 	}
+
+	inline constexpr void swap(deque &rhs) noexcept
+	{
+		::std::swap(this->controller, rhs.controller);
+	}
 };
+
+template <typename T, typename allocator>
+inline constexpr void swap(::fast_io::containers::deque<T, allocator> &lhs, ::fast_io::containers::deque<T, allocator> &rhs) noexcept
+{
+	lhs.swap(rhs);
+}
 
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::equality_comparable<T>
