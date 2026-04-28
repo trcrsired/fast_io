@@ -1625,11 +1625,23 @@ public:
 		{
 			return *this;
 		}
-		deque temp(other);
-		destroy_deque_controller(this->controller);
-		this->controller = temp.controller;
-		temp.controller = {};
-		return *this;
+#if 0
+		if constexpr (::std::is_nothrow_copy_constructible_v<value_type> && 
+			::std::is_nothrow_copy_assignable_v<value_type>)
+		{
+// Path A: High-performance reuse of existing blocks
+			this->assign(other.begin(), other.end());
+		}
+		else
+#endif
+		{
+			// Path B: Strong Exception Guarantee via Creating a Temporary
+			deque temp(other);
+			destroy_deque_controller(this->controller);
+			this->controller = temp.controller;
+			temp.controller = {};
+			return *this;
+		}
 	}
 
 	inline constexpr deque(deque &&other) noexcept : controller(other.controller)
