@@ -2019,6 +2019,7 @@ public:
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr reference emplace_back(Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		if (controller.back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
 		{
@@ -2031,14 +2032,37 @@ public:
 	}
 
 	inline constexpr void push_back(value_type const &value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		this->emplace_back(value);
 	}
 
 	inline constexpr void push_back(value_type &&value) noexcept
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		this->emplace_back(::std::move(value));
 	}
+
+
+	inline constexpr reference emplace_back(value_type value) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
+	{
+		if (controller.back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
+		{
+			grow_back();
+		}
+		auto currptr{controller.back_block.curr_ptr};
+		::std::construct_at(currptr, value);
+		controller.back_block.curr_ptr = currptr + 1;
+		return *currptr;
+	}
+
+	inline constexpr void push_back(value_type value) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
+	{
+		this->emplace_back(value);
+	}
+
 	inline constexpr void pop_back() noexcept
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
@@ -2120,6 +2144,7 @@ public:
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr reference emplace_front(Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		if (controller.front_block.curr_ptr == controller.front_block.begin_ptr) [[unlikely]]
 		{
@@ -2140,13 +2165,32 @@ public:
 	}
 
 	inline constexpr void push_front(value_type const &value)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		this->emplace_front(value);
 	}
 
 	inline constexpr void push_front(value_type &&value) noexcept
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		this->emplace_front(::std::move(value));
+	}
+
+	inline constexpr reference emplace_front(value_type value) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
+	{
+		if (controller.front_block.curr_ptr == controller.front_block.begin_ptr) [[unlikely]]
+		{
+			grow_front();
+		}
+		auto front_curr_ptr{controller.front_block.curr_ptr};
+		return *(controller.front_block.curr_ptr = ::std::construct_at(front_curr_ptr - 1, value));
+	}
+
+	inline constexpr void push_front(value_type value) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
+	{
+		this->emplace_front(value);
 	}
 
 	inline constexpr void pop_front() noexcept
@@ -2793,7 +2837,9 @@ private:
 
 public:
 	template <typename... Args>
+		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr iterator emplace(const_iterator iter, Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
 		{
@@ -2811,7 +2857,9 @@ public:
 		}
 	}
 	template <typename... Args>
+		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr reference emplace_index(size_type idx, Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		// bounds checking && eh safety for being and end.
 		auto oldsize{this->size()};
@@ -2836,18 +2884,42 @@ public:
 	}
 
 	inline constexpr iterator insert(const_iterator iter, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		return this->emplace(iter, val);
 	}
 	inline constexpr iterator insert(const_iterator iter, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		return this->emplace(iter, ::std::move(val));
 	}
 	inline constexpr reference insert_index(size_type idx, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
 	{
 		return this->emplace_index(idx, val);
 	}
 	inline constexpr reference insert_index(size_type idx, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+		requires(!::fast_io::containers::details::register_passable<value_type>)
+	{
+		return this->emplace_index(idx, ::std::move(val));
+	}
+
+	inline constexpr reference emplace_index(size_type idx, value_type val) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
+	{
+		// bounds checking && eh safety for being and end.
+		auto oldsize{this->size()};
+		if (oldsize < idx) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		auto retptr = this->emplace_index_decision_common<true>(idx);
+		::std::construct_at(retptr, val);
+		return *retptr;
+	}
+
+	inline constexpr reference insert_index(size_type idx, value_type val) noexcept
+		requires(::fast_io::containers::details::register_passable<value_type>)
 	{
 		return this->emplace_index(idx, ::std::move(val));
 	}

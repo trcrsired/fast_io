@@ -16,6 +16,18 @@ using ::fast_io::containers::npos;
 
 namespace fast_io::containers::details
 {
+template <typename noref>
+concept register_passable =
+	::std::is_trivially_copy_constructible_v<noref> &&
+	(::std::is_scalar_v<noref> || ::std::is_aggregate_v<noref>) &&
+#if ((defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)) && \
+	(defined(__x86_64__) || defined(_M_AMD64) || defined(_M_ARM64EC) || defined(__arm64ec__))
+	sizeof(noref) <= 8u
+#else
+	sizeof(noref) <= (sizeof(::std::ptrdiff_t) * 2)
+#endif
+	;
+
 template <typename handle>
 concept is_trivally_stored_allocator_handle = ::fast_io::freestanding::is_zero_default_constructible_v<handle> &&
 											  ::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<handle> &&
