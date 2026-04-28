@@ -2730,7 +2730,6 @@ private:
 			[[unreachable]];
 #endif
 		}
-#if 1
 		else if (idx == oldsize)
 		{
 			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
@@ -2761,7 +2760,6 @@ private:
 				}
 			}
 		}
-#endif
 		auto result{this->emplace_index_impl(idx, oldsize)};
 		pointer retptr{result.it.itercontent.curr_ptr};
 		if constexpr (isnothrow)
