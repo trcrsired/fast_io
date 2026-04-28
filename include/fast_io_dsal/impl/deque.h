@@ -1630,7 +1630,7 @@ public:
 			::std::is_nothrow_copy_assignable_v<value_type>)
 		{
 // Path A: High-performance reuse of existing blocks
-			this->assign(other.begin(), other.end());
+			this->assign_range(other);
 		}
 		else
 #endif
