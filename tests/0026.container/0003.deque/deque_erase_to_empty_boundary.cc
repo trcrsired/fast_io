@@ -27,7 +27,7 @@ inline void test_deque(::std::uint_least8_t flag)
 	}
 	if (!::std::equal(deq.cbegin(), deq.cend(), ref.cbegin(), ref.cend()))
 	{
-		::fast_io::fast_terminate()();
+		::fast_io::fast_terminate();
 	}
 
 	using namespace ::fast_io::manipulators;
@@ -71,7 +71,7 @@ inline void test_deque(::std::uint_least8_t flag)
 
 	if (!::std::equal(deq.cbegin(), deq.cend(), ref.cbegin(), ref.cend()))
 	{
-		::fast_io::fast_terminate()();
+		::fast_io::fast_terminate();
 	}
 }
 } // namespace
