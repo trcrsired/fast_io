@@ -1121,6 +1121,15 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	{
 		controller.front_block = ::fast_io::containers::details::deque_copy_backward_impl(controller.front_block, first, last, blockbytes);
 		first = last;
+		if (controller.front_block.curr_ptr == back_block.curr_ptr && back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
+		{
+			auto back_begin_ptr{back_block.begin_ptr};
+			if (back_begin_ptr) [[likely]]
+			{
+				// erase after empty we should reset to middle
+				controller.front_block.curr_ptr = back_block.curr_ptr = back_begin_ptr + (blockbytes >> 1u);
+			}
+		}
 	}
 	else
 	{
@@ -1602,7 +1611,7 @@ private:
 public:
 	controller_type controller;
 	static inline constexpr size_type block_size{::fast_io::containers::details::deque_block_size<sizeof(value_type)>};
-	inline constexpr deque() noexcept
+	inline explicit constexpr deque() noexcept
 		: controller{}
 	{}
 
@@ -2709,7 +2718,7 @@ private:
 			[[unreachable]];
 #endif
 		}
-#if 0
+#if 1
 		else if (idx == oldsize)
 		{
 			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
@@ -2988,7 +2997,7 @@ public:
 
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::equality_comparable<T>
-inline constexpr bool operator==(deque<T, allocator1> const &lhs, deque<T, allocator2> const &rhs) noexcept
+inline constexpr bool operator==(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs) noexcept
 {
 	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
@@ -2997,7 +3006,7 @@ inline constexpr bool operator==(deque<T, allocator1> const &lhs, deque<T, alloc
 
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
-inline constexpr auto operator<=>(deque<T, allocator1> const &lhs, deque<T, allocator2> const &rhs) noexcept
+inline constexpr auto operator<=>(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs) noexcept
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
 }
