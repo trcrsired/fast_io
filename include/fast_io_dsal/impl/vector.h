@@ -904,6 +904,79 @@ public:
 	}
 
 private:
+	struct append_range_guard
+	{
+		vector *thisvec{};
+		size_type oldn{};
+		constexpr ~append_range_guard()
+		{
+			if (thisvec)
+			{
+				thisvec->erase(thisvec->cbegin() + oldn, thisvec->cend());
+			}
+		}
+	};
+
+public:
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr void append_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		if constexpr (::std::ranges::sized_range<R>)
+		{
+			size_type const rgsize{::std::ranges::size(rg)};
+			if (!rgsize)
+			{
+				return;
+			}
+			size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+			size_type const new_size{old_size + rgsize};
+			size_type const cap{static_cast<size_type>(imp.end_ptr - imp.begin_ptr)};
+			if (new_size > cap)
+			{
+				this->grow_to_size_impl(new_size);
+			}
+			if constexpr (::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+			{
+				for (auto &e : rg)
+				{
+					::std::construct_at(imp.curr_ptr, ::std::forward<decltype(e)>(e));
+					++imp.curr_ptr;
+				}
+			}
+			else
+			{
+				append_range_guard guard{this, old_size};
+				for (auto &e : rg)
+				{
+					::std::construct_at(imp.curr_ptr, ::std::forward<decltype(e)>(e));
+					++imp.curr_ptr;
+				}
+				guard.thisvec = nullptr;
+			}
+		}
+		else
+		{
+			if constexpr (::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+			{
+				for (auto &e : rg)
+				{
+					this->emplace_back(::std::forward<decltype(e)>(e));
+				}
+			}
+			else
+			{
+				append_range_guard guard{this, this->size()};
+				for (auto &e : rg)
+				{
+					this->emplace_back(::std::forward<decltype(e)>(e));
+				}
+				guard.thisvec = nullptr;
+			}
+		}
+	}
+
+private:
 	inline constexpr iterator insert_impl(pointer iter, value_type &&tmp) noexcept
 	{
 		auto ret = ::std::construct_at(this->move_backward_common_impl(iter), ::std::move(tmp));

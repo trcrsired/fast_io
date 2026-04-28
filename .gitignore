@@ -20,3 +20,6 @@ compile_commands.json
 # --- Exceptions ---
 # Allow documentation HTMLs
 !docs/**/*.html
+# Claw Code local artifacts
+.claude/settings.local.json
+.claude/sessions/

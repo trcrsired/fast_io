@@ -458,9 +458,6 @@ inline constexpr void deque_destroy_trivial_common(controllerblocktype &controll
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_grow_to_new_blocks_count_impl(dequecontroltype &controller, ::std::size_t new_blocks_count_least) noexcept
 {
-#if 0
-	::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 	auto old_start_ptr{controller.controller_block.controller_start_ptr};
 
 	auto old_start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
@@ -505,13 +502,7 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(dequecontroltype &cont
 
 	::std::size_t const new_blocks_offset{static_cast<::std::size_t>(new_blocks_count - old_reserved_blocks_count) >> 1u};
 	--new_blocks_count;
-#if 0
-	::fast_io::iomnp::debug_println(::std::source_location::current(),"\n"
-		"\tnew_blocks_count=",new_blocks_count,"\n"
-		"\told_after_ptr_pos=",old_after_ptr_pos,"\n"
-		"\tnew_blocks_offset=",new_blocks_offset,"\n"
-		"\tpivot_diff=",pivot_diff);
-#endif
+
 	auto new_start_reserved_ptr{new_start_ptr + new_blocks_offset};
 	auto new_after_reserved_ptr{new_start_reserved_ptr + old_reserved_blocks_count};
 
@@ -556,9 +547,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 	auto const half_slots_count{static_cast<::std::size_t>(total_slots_count >> 1u)};
 	if (half_slots_count < used_blocks_count) // grow blocks
 	{
-#if 0
-		::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
 		constexpr ::std::size_t mxdv2m1{(mx >> 1u) - 1u};
 		if (mxdv2m1 < total_slots_count)
@@ -570,9 +558,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 	}
 	else
 	{
-#if 0
-		::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 		// balance blocks
 		auto start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
 		auto after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
@@ -587,10 +572,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 		if (used_blocks_pivot != reserved_pivot)
 		{
 			::std::ptrdiff_t diff{reserved_pivot - used_blocks_pivot};
-#if 0
-			::fast_io::iomnp::debug_println(::std::source_location::current(),
-			"\tdiff=",diff);
-#endif
 			auto rotate_pivot{diff < 0 ? start_reserved_ptr : after_reserved_ptr};
 			rotate_pivot -= diff;
 			::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr);
@@ -601,9 +582,6 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slots_count};
 		if (slots_pivot != reserved_pivot)
 		{
-#if 0
-			::fast_io::iomnp::debug_println(::std::source_location::current());
-#endif
 			::std::ptrdiff_t diff{slots_pivot - reserved_pivot};
 			::fast_io::freestanding::overlapped_copy(start_reserved_ptr,
 													 after_reserved_ptr, start_reserved_ptr + diff);
@@ -1143,6 +1121,15 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	{
 		controller.front_block = ::fast_io::containers::details::deque_copy_backward_impl(controller.front_block, first, last, blockbytes);
 		first = last;
+		if (controller.front_block.curr_ptr == back_block.curr_ptr && back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
+		{
+			auto back_begin_ptr{back_block.begin_ptr};
+			if (back_begin_ptr) [[likely]]
+			{
+				// erase after empty we should reset to middle
+				controller.front_block.curr_ptr = back_block.curr_ptr = back_begin_ptr + (blockbytes >> 1u);
+			}
+		}
 	}
 	else
 	{
@@ -1624,7 +1611,7 @@ private:
 public:
 	controller_type controller;
 	static inline constexpr size_type block_size{::fast_io::containers::details::deque_block_size<sizeof(value_type)>};
-	inline constexpr deque() noexcept
+	inline explicit constexpr deque() noexcept
 		: controller{}
 	{}
 
@@ -2043,7 +2030,7 @@ public:
 		return *currptr;
 	}
 
-	inline constexpr void push_back(value_type const &value)
+	inline constexpr void push_back(value_type const &value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
 	{
 		this->emplace_back(value);
 	}
@@ -2052,7 +2039,6 @@ public:
 	{
 		this->emplace_back(::std::move(value));
 	}
-
 	inline constexpr void pop_back() noexcept
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
@@ -2107,7 +2093,7 @@ public:
 private:
 	struct emplace_front_guard
 	{
-		using handletype = ::fast_io::containers::details::deque_controller_block<value_type>;
+		using handletype = ::fast_io::containers::details::deque_controller<value_type>;
 		handletype *thisdeq;
 		explicit constexpr emplace_front_guard(handletype *other) noexcept : thisdeq{other}
 		{
@@ -2146,7 +2132,7 @@ public:
 		}
 		else
 		{
-			emplace_front_guard guard(this->controller);
+			emplace_front_guard guard(__builtin_addressof(this->controller));
 			front_curr_ptr = ::std::construct_at(front_curr_ptr - 1, ::std::forward<Args>(args)...);
 			guard.thisdeq = nullptr;
 			return *(controller.front_block.curr_ptr = front_curr_ptr);
@@ -2363,9 +2349,7 @@ private:
 		size_type pos;
 		iterator it;
 	};
-	template <::std::ranges::range R>
-		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_n_front_common_impl(size_type pos, size_type rgsize) noexcept
 	{
 		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
 																   alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2374,15 +2358,19 @@ private:
 		auto thisbgrgsize{thisbg - rgsize};
 		auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg,
 																			 posit, thisbgrgsize)};
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, thisbgrgsizenew);
-
 		this->controller.front_block = thisbgrgsize.itercontent;
 		this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
 		return {pos, thisbgrgsizenew};
 	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		auto ret{this->insert_n_front_common_impl(pos, rgsize)};
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		return ret;
+	}
+	inline constexpr insert_range_result insert_n_back_common_impl(size_type pos, size_type rgsize) noexcept
 	{
 		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
 																  alignof(value_type), sizeof(value_type), block_size>(this->controller, rgsize);
@@ -2391,7 +2379,6 @@ private:
 		auto thisendrgsize{thisend + rgsize};
 		::fast_io::freestanding::uninitialized_relocate_backward(posit,
 																 thisend, thisendrgsize);
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, posit);
 		if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
 		{
 			thisendrgsize.itercontent.curr_ptr =
@@ -2400,6 +2387,14 @@ private:
 		this->controller.back_block = thisendrgsize.itercontent;
 		this->controller.back_end_ptr = thisendrgsize.itercontent.begin_ptr + block_size;
 		return {pos, posit};
+	}
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
+	{
+		auto ret{this->insert_n_back_common_impl(pos, rgsize)};
+		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		return ret;
 	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
@@ -2413,14 +2408,17 @@ private:
 				return {pos, this->begin() + pos};
 			}
 			size_type const half_size{old_size >> 1u};
+			insert_range_result ret;
 			if (pos < half_size)
 			{
-				return this->insert_range_front_impl(pos, ::std::forward<R>(rg), rgsize);
+				ret = this->insert_n_front_common_impl(pos, rgsize);
 			}
 			else
 			{
-				return this->insert_range_back_impl(pos, ::std::forward<R>(rg), rgsize);
+				ret = this->insert_n_back_common_impl(pos, rgsize);
 			}
+			::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+			return ret;
 		}
 		else
 		{
@@ -2593,6 +2591,277 @@ public:
 	}
 
 private:
+	inline constexpr insert_range_result emplace_index_n_impl(size_type pos, size_type n, size_type old_size) noexcept
+	{
+		size_type const half_size{old_size >> 1u};
+		insert_range_result ret;
+		if (pos < half_size)
+		{
+			ret = this->insert_n_front_common_impl(pos, n);
+		}
+		else
+		{
+			ret = this->insert_n_back_common_impl(pos, n);
+		}
+		return ret;
+	}
+	inline constexpr insert_range_result emplace_index_impl(size_type pos, size_type n) noexcept
+	{
+		return this->emplace_index_n_impl(pos, 1u, n);
+	}
+	inline constexpr insert_range_result emplace_impl(size_type pos) noexcept
+	{
+		return this->emplace_index_impl(pos, this->size());
+	}
+
+	struct emplace_decision
+	{
+		::std::size_t pos;
+		::std::int_fast8_t decision;
+	};
+	template <bool isnothrow>
+	inline constexpr ::std::conditional_t<isnothrow,
+										  iterator, emplace_decision>
+	emplace_decision_common(const_iterator iter) noexcept
+	{
+		// eh safety for being and end.
+		auto iter_curr_ptr{iter.itercontent.curr_ptr};
+		if (iter_curr_ptr == this->controller.back_block.curr_ptr ||
+			this->controller.back_block.controller_ptr < iter.itercontent.controller_ptr)
+		{
+			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
+			{
+				iterator retit{this->controller.back_block.begin_ptr,
+							   this->controller.back_block.curr_ptr++,
+							   this->controller.back_block.controller_ptr};
+				if constexpr (isnothrow)
+				{
+					return retit;
+				}
+				else
+				{
+					return emplace_decision{retit, 1};
+				}
+			}
+		}
+		else if (iter_curr_ptr == this->controller.front_block.curr_ptr)
+		{
+			if (this->controller.front_block.curr_ptr != this->controller.front_block.begin_ptr) [[likely]]
+			{
+				iterator retit{this->controller.front_block.begin_ptr,
+							   --this->controller.front_block.curr_ptr,
+							   this->controller.front_block.controller_ptr};
+				if constexpr (isnothrow)
+				{
+					return retit;
+				}
+				else
+				{
+					return emplace_decision{retit, -1};
+				}
+			}
+		}
+		iterator retit{this->emplace_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block)).it};
+		if constexpr (isnothrow)
+		{
+			return retit;
+		}
+		else
+		{
+			return emplace_decision{retit, 0};
+		}
+	}
+	struct emplace_guard
+	{
+		deque *thisdeq;
+		iterator retit;
+		::std::int_fast8_t decision;
+		constexpr ~emplace_guard()
+		{
+			if (thisdeq) [[unlikely]]
+			{
+				auto &thiscontroller{thisdeq->controller};
+				if (decision < 0)
+				{
+					++thiscontroller.front_block.curr_ptr;
+				}
+				else if (0 < decision)
+				{
+					--thiscontroller.back_block.curr_ptr;
+				}
+				else
+				{
+					::std::size_t const distofront{
+						::fast_io::containers::details::deque_iter_difference_unsigned_common(retit.itercontent, thisdeq->controller.front_block)};
+					::std::size_t const deqsize{thisdeq->size()};
+					thisdeq->erase_unchecked_single_nodestroy_impl(retit, static_cast<::std::size_t>(deqsize - distofront) < distofront);
+				}
+			}
+		}
+	};
+	struct emplace_index_decision
+	{
+		pointer retptr;
+		::std::int_fast8_t decision;
+	};
+	template <bool isnothrow>
+	inline constexpr ::std::conditional_t<isnothrow,
+										  pointer, emplace_index_decision>
+	emplace_index_decision_common(::std::size_t idx) noexcept
+	{
+
+		auto oldsize{this->size()};
+		if (oldsize < idx) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+#if __has_cpp_attribute(unreachable)
+			[[unreachable]];
+#endif
+		}
+#if 1
+		else if (idx == oldsize)
+		{
+			if (this->controller.back_block.curr_ptr != controller.back_end_ptr) [[likely]]
+			{
+				pointer retptr{this->controller.back_block.curr_ptr++};
+				if constexpr (isnothrow)
+				{
+					return retptr;
+				}
+				else
+				{
+					return emplace_index_decision{retptr, 1};
+				}
+			}
+		}
+		else if (!idx)
+		{
+			if (this->controller.front_block.curr_ptr != this->controller.front_block.begin_ptr) [[likely]]
+			{
+				pointer retptr{--this->controller.front_block.curr_ptr};
+				if constexpr (isnothrow)
+				{
+					return retptr;
+				}
+				else
+				{
+					return emplace_index_decision{retptr, -1};
+				}
+			}
+		}
+#endif
+		auto result{this->emplace_index_impl(idx, oldsize)};
+		pointer retptr{result.it.itercontent.curr_ptr};
+		if constexpr (isnothrow)
+		{
+			return retptr;
+		}
+		else
+		{
+			return emplace_index_decision{retptr, 0};
+		}
+	}
+
+	struct emplace_index_guard
+	{
+		deque *thisdeq;
+		::std::size_t pos;
+		::std::size_t oldsize;
+		::std::int_fast8_t decision;
+		constexpr ~emplace_index_guard()
+		{
+			if (thisdeq) [[unlikely]]
+			{
+				auto &thiscontroller{thisdeq->controller};
+				if (decision < 0)
+				{
+					++thiscontroller.front_block.curr_ptr;
+				}
+				else if (0 < decision)
+				{
+					--thiscontroller.back_block.curr_ptr;
+				}
+				else
+				{
+					thisdeq->erase_unchecked_single_nodestroy_impl(
+						thisdeq->begin() + static_cast<::std::ptrdiff_t>(pos),
+						static_cast<::std::size_t>(oldsize - pos) <= pos);
+				}
+			}
+		}
+	};
+
+public:
+	template <typename... Args>
+	inline constexpr iterator emplace(const_iterator iter, Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+	{
+		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
+		{
+			auto retit = this->emplace_decision_common<true>(iter);
+			::std::construct_at(retit.itercontent.curr_ptr, ::std::forward<Args>(args)...);
+			return retit;
+		}
+		else
+		{
+			auto [retit, decision] = this->emplace_decision_common<false>(iter);
+			emplace_guard guard{this, retit, decision};
+			::std::construct_at(retit.itercontent.curr_ptr, ::std::forward<Args>(args)...);
+			guard.thisdeq = nullptr;
+			return retit;
+		}
+	}
+	template <typename... Args>
+	inline constexpr reference emplace_index(size_type idx, Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
+	{
+		// bounds checking && eh safety for being and end.
+		auto oldsize{this->size()};
+		if (oldsize < idx) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
+		{
+			auto retptr = this->emplace_index_decision_common<true>(idx);
+			::std::construct_at(retptr, ::std::forward<Args>(args)...);
+			return *retptr;
+		}
+		else
+		{
+			auto [retptr, decision] = this->emplace_index_decision_common<false>(idx);
+			emplace_index_guard guard{this, idx, oldsize, decision};
+			::std::construct_at(retptr, ::std::forward<Args>(args)...);
+			guard.thisdeq = nullptr;
+			return *retptr;
+		}
+	}
+
+	inline constexpr iterator insert(const_iterator iter, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		return this->emplace(iter, val);
+	}
+	inline constexpr iterator insert(const_iterator iter, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		return this->emplace(iter, ::std::move(val));
+	}
+	inline constexpr reference insert_index(size_type idx, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		return this->emplace_index(idx, val);
+	}
+	inline constexpr reference insert_index(size_type idx, value_type &&val) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		return this->emplace_index(idx, ::std::move(val));
+	}
+
+#if 0
+	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+	}
+	inline constexpr iterator insert_index(size_type idx, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		
+	}
+#endif
+private:
 	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		::fast_io::containers::details::deque_control_block<value_type> back_block;
@@ -2642,12 +2911,8 @@ private:
 		}
 		return this->erase_no_destroy_common_impl(first, last, moveleft);
 	}
-	inline constexpr iterator erase_unchecked_single_impl(iterator pos, bool moveleft) noexcept
+	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft) noexcept
 	{
-		if constexpr (!::std::is_trivially_destructible_v<value_type>)
-		{
-			::std::destroy(pos.itercontent.curr_ptr);
-		}
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
 		{
 			if !consteval
@@ -2673,6 +2938,14 @@ private:
 		++posp1;
 		return this->erase_no_destroy_common_impl(pos, posp1, moveleft);
 	}
+	inline constexpr iterator erase_unchecked_single_impl(iterator pos, bool moveleft) noexcept
+	{
+		if constexpr (!::std::is_trivially_destructible_v<value_type>)
+		{
+			::std::destroy(pos.itercontent.curr_ptr);
+		}
+		return this->erase_unchecked_single_nodestroy_impl(pos, moveleft);
+	}
 
 public:
 	inline constexpr iterator erase(const_iterator first, const_iterator last) noexcept
@@ -2697,11 +2970,11 @@ public:
 
 	inline constexpr iterator erase(const_iterator first) noexcept
 	{
-		auto firstp1{first};
-		++firstp1;
+		::std::size_t const n{this->size()};
+		::std::size_t const distofront{
+			::fast_io::containers::details::deque_iter_difference_unsigned_common(first.itercontent, this->controller.front_block)};
 		return this->erase_unchecked_single_impl(iterator{first.itercontent},
-												 static_cast<size_type>(first - this->cbegin()) <
-													 static_cast<size_type>(this->cend() - firstp1));
+												 distofront < static_cast<::std::size_t>(n - distofront));
 	}
 
 	inline constexpr size_type erase_index(size_type firstidx) noexcept
@@ -2712,7 +2985,7 @@ public:
 			::fast_io::fast_terminate();
 		}
 		this->erase_unchecked_single_impl(this->begin() + firstidx,
-										  firstidx < static_cast<size_type>(n - static_cast<size_type>(firstidx + 1u)));
+										  firstidx < static_cast<size_type>(n - firstidx));
 		return firstidx;
 	}
 
@@ -2724,7 +2997,7 @@ public:
 
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::equality_comparable<T>
-inline constexpr bool operator==(deque<T, allocator1> const &lhs, deque<T, allocator2> const &rhs) noexcept
+inline constexpr bool operator==(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs) noexcept
 {
 	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
@@ -2733,7 +3006,7 @@ inline constexpr bool operator==(deque<T, allocator1> const &lhs, deque<T, alloc
 
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
-inline constexpr auto operator<=>(deque<T, allocator1> const &lhs, deque<T, allocator2> const &rhs) noexcept
+inline constexpr auto operator<=>(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs) noexcept
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
 }
