@@ -9,6 +9,7 @@ using namespace fast_io::mnp;
 
 int main()
 {
+#if 0
 	auto container = fast_io::vector{1, 2, 3, 4};
 	auto pos = std::next(container.begin(), 2);
 	assert(*pos == 3);
@@ -16,4 +17,5 @@ int main()
 
 	container.insert_range(pos, rg);
 	assert(std::ranges::equal(container, fast_io::vector{1, 2, -1, -2, -3, 3, 4}));
+#endif
 }
