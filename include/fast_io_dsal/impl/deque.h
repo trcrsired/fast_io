@@ -2871,7 +2871,7 @@ private:
 		{
 			if (thisdeq) [[unlikely]]
 			{
-				thisdeq->erase_index(pos, pos + count);
+				thisdeq->erase_unchecked_nodestroy_for_insert_counts_impl(pos, count);
 			}
 		}
 	};
@@ -2950,16 +2950,9 @@ private:
 		this->controller.back_end_ptr = back_block.begin_ptr + block_size;
 		return first;
 	}
-	inline constexpr iterator erase_unchecked_impl(iterator first, iterator last, bool moveleft) noexcept
+
+	inline constexpr iterator erase_unchecked_nodestroy_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
-		if (first == last)
-		{
-			return first;
-		}
-		if constexpr (!::std::is_trivially_destructible_v<value_type>)
-		{
-			this->destroy_elements_range(first, last);
-		}
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
 		{
 			if !consteval
@@ -2974,6 +2967,34 @@ private:
 			}
 		}
 		return this->erase_no_destroy_common_impl(first, last, moveleft);
+	}
+	inline constexpr void erase_unchecked_nodestroy_for_insert_counts_impl(iterator first, ::std::size_t count) noexcept
+	{
+		if (!count)
+		{
+			return;
+		}
+
+		::std::size_t const distofront{
+			::fast_io::containers::details::deque_iter_difference_unsigned_common(first, this->controller.front_block)};
+
+		auto last{first + count};
+		::std::size_t const distoback{
+			::fast_io::containers::details::deque_iter_difference_unsigned_common(this->controller.last_block, last)};
+
+		this->erase_unchecked_nodestroy_impl(first, last, distofront < distoback);
+	}
+	inline constexpr iterator erase_unchecked_impl(iterator first, iterator last, bool moveleft) noexcept
+	{
+		if (first == last)
+		{
+			return first;
+		}
+		if constexpr (!::std::is_trivially_destructible_v<value_type>)
+		{
+			this->destroy_elements_range(first, last);
+		}
+		this->erase_unchecked_nodestroy_impl(first, last, moveleft);
 	}
 	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft) noexcept
 	{
