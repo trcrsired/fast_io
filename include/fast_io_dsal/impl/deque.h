@@ -778,13 +778,14 @@ inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, :
 		{
 			allocator::deallocate_aligned_n(*start_reserved, align, block_bytes);
 		}
+		cb.controller_start_reserved_ptr = front_ptr;
 		// it is safe to start from back_ptr + 1 because if we are here,
 		// back_ptr must be within [start_ptr, after_ptr - 1]
 		for (auto it{back_ptr + 1}; it != after_reserved; ++it)
 		{
 			allocator::deallocate_aligned_n(*it, align, block_bytes);
 		}
-		back_ptr[1] = nullptr;
+		*(cb.controller_after_reserved_ptr = back_ptr + 1) = nullptr;
 	}
 
 	// 2. Controller Shrink Check
@@ -821,10 +822,11 @@ inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, :
 		cb.controller_start_reserved_ptr = new_start_ptr;
 		cb.controller_after_reserved_ptr = new_start_ptr + used_blocks_count;
 		cb.controller_after_ptr = new_start_ptr + new_actual_count - 1u;
-	}
 
-	// 5. Set Sentinel
-	*(cb.controller_after_reserved_ptr) = nullptr;
+
+		// 5. Set Sentinel
+		*(cb.controller_after_reserved_ptr) = nullptr;
+	}
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t blockbytes, typename dequecontroltype>
