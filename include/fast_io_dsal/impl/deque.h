@@ -798,34 +798,33 @@ inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, :
 		return;
 	}
 
-	if constexpr (false)
+	if constexpr (true)
 	{
 		// 3. Reallocate Controller
 		::std::size_t const new_controller_size_least{used_blocks_count + 1u};
+		// 3. Manually Reallocate and Move Controller Array
 		using block_ptr_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 
-		// Note: reallocate_at_least_aligned_n might copy old pointers for us
-		auto [new_start_ptr, new_actual_count] = block_ptr_allocator::reallocate_n_at_least(
-			start_ptr,
-			current_controller_size,
-			new_controller_size_least);
+		// Allocate new, smaller controller array
+		auto [new_start_ptr, new_actual_count] = block_ptr_allocator::allocate_at_least(new_controller_size_least);
 
-		// 4. Pointer Patching (The Safe Way)
-		// We want the new reserved range to start at the very beginning of the new allocation
-		// Therefore, the front_block.controller_ptr is just new_start_ptr
-		// The back_block.controller_ptr is new_start_ptr + (used_blocks_count - 1)
+		// Move the pointers (non-overlapped because it's a new allocation)
+		::fast_io::freestanding::non_overlapped_copy_n(front_ptr, used_blocks_count, new_start_ptr);
 
-		controller.front_block.controller_ptr = new_start_ptr;
-		controller.back_block.controller_ptr = new_start_ptr + (used_blocks_count - 1u);
-
+		// 4. Update controller metadata and pointers
+		// We align the new reserved range to the start of the new allocation
 		cb.controller_start_ptr = new_start_ptr;
 		cb.controller_start_reserved_ptr = new_start_ptr;
 		cb.controller_after_reserved_ptr = new_start_ptr + used_blocks_count;
 		cb.controller_after_ptr = new_start_ptr + new_actual_count - 1u;
 
+		// Patch the front and back block references
+		controller.front_block.controller_ptr = new_start_ptr;
+		controller.back_block.controller_ptr = new_start_ptr + (used_blocks_count - 1u);
 
-		// 5. Set Sentinel
+		// 5. Set sentinel and clean up old controller
 		*(cb.controller_after_reserved_ptr) = nullptr;
+		block_ptr_allocator::deallocate_n(start_ptr, current_controller_size);
 	}
 }
 
