@@ -2721,7 +2721,6 @@ private:
 										  pointer, emplace_index_decision>
 	emplace_index_decision_common(::std::size_t idx) noexcept
 	{
-
 		auto oldsize{this->size()};
 		if (oldsize < idx) [[unlikely]]
 		{
@@ -2862,17 +2861,52 @@ public:
 		return this->emplace_index(idx, ::std::move(val));
 	}
 
-#if 0
-/*
-Todo:
-*/
-	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+
+private:
+	struct insert_index_guard
 	{
-	}
-	inline constexpr iterator insert_index(size_type idx, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+		deque *thisdeq;
+		size_type pos, count;
+		constexpr ~insert_index_guard()
+		{
+			if (thisdeq) [[unlikely]]
+			{
+				thisdeq->erase_index(pos, pos + count);
+			}
+		}
+	};
+
+	inline constexpr insert_range_result insert_index_impl(size_type idx, size_type count, const_reference val, size_type oldn) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
 	{
+		insert_range_result res{this->emplace_index_n_impl(idx, count, oldn)};
+		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
+		{
+			::fast_io::freestanding::uninitialized_fill_n(res.it, count, val);
+		}
+		else
+		{
+			insert_index_guard g{this, res.pos, count};
+			::fast_io::freestanding::uninitialized_fill_n(res.it, count, val);
+			g.thisdeq = nullptr;
+		}
+		return res;
 	}
 
+public:
+	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		return this->insert_index_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block), count, val, this->size()).it;
+	}
+	inline constexpr size_type insert_index(size_type idx, size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		size_type const n{this->size()};
+		if (n < idx) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		return this->insert_index_impl(idx, count, val, n).pos;
+	}
+#if 0
 	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
 	{
 	}
