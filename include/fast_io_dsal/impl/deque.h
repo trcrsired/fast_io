@@ -784,6 +784,7 @@ inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, :
 		{
 			allocator::deallocate_aligned_n(*it, align, block_bytes);
 		}
+		back_ptr[1] = nullptr;
 	}
 
 	// 2. Controller Shrink Check
@@ -796,28 +797,31 @@ inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, :
 		return;
 	}
 
-	// 3. Reallocate Controller
-	::std::size_t const new_controller_size_least{used_blocks_count + 1u};
-	using block_ptr_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
+	if constexpr (false)
+	{
+		// 3. Reallocate Controller
+		::std::size_t const new_controller_size_least{used_blocks_count + 1u};
+		using block_ptr_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 
-	// Note: reallocate_at_least_aligned_n might copy old pointers for us
-	auto [new_start_ptr, new_actual_count] = block_ptr_allocator::reallocate_n_at_least(
-		start_ptr,
-		current_controller_size,
-		new_controller_size_least);
+		// Note: reallocate_at_least_aligned_n might copy old pointers for us
+		auto [new_start_ptr, new_actual_count] = block_ptr_allocator::reallocate_n_at_least(
+			start_ptr,
+			current_controller_size,
+			new_controller_size_least);
 
-	// 4. Pointer Patching (The Safe Way)
-	// We want the new reserved range to start at the very beginning of the new allocation
-	// Therefore, the front_block.controller_ptr is just new_start_ptr
-	// The back_block.controller_ptr is new_start_ptr + (used_blocks_count - 1)
+		// 4. Pointer Patching (The Safe Way)
+		// We want the new reserved range to start at the very beginning of the new allocation
+		// Therefore, the front_block.controller_ptr is just new_start_ptr
+		// The back_block.controller_ptr is new_start_ptr + (used_blocks_count - 1)
 
-	controller.front_block.controller_ptr = new_start_ptr;
-	controller.back_block.controller_ptr = new_start_ptr + (used_blocks_count - 1u);
+		controller.front_block.controller_ptr = new_start_ptr;
+		controller.back_block.controller_ptr = new_start_ptr + (used_blocks_count - 1u);
 
-	cb.controller_start_ptr = new_start_ptr;
-	cb.controller_start_reserved_ptr = new_start_ptr;
-	cb.controller_after_reserved_ptr = new_start_ptr + used_blocks_count;
-	cb.controller_after_ptr = new_start_ptr + new_actual_count - 1u;
+		cb.controller_start_ptr = new_start_ptr;
+		cb.controller_start_reserved_ptr = new_start_ptr;
+		cb.controller_after_reserved_ptr = new_start_ptr + used_blocks_count;
+		cb.controller_after_ptr = new_start_ptr + new_actual_count - 1u;
+	}
 
 	// 5. Set Sentinel
 	*(cb.controller_after_reserved_ptr) = nullptr;
