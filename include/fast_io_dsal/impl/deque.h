@@ -745,6 +745,90 @@ inline constexpr void deque_init_space_common(dequecontroltype &controller, ::st
 	back_curr_ptr += offset_for_back;
 }
 
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_shrink_to_fit_common(dequecontroltype &controller, ::std::size_t align, ::std::size_t block_bytes) noexcept
+{
+	if (controller.front_block.curr_ptr == controller.back_block.curr_ptr)
+	{
+		if (controller.front_block.curr_ptr == nullptr)
+		{
+			return;
+		}
+		::fast_io::containers::details::deque_destroy_trivial_common_align<allocator>(controller.controller_block, align, block_bytes);
+		controller = dequecontroltype{};
+		return;
+	}
+
+	auto &cb{controller.controller_block};
+	auto start_reserved{cb.controller_start_reserved_ptr};
+	auto const after_reserved{cb.controller_after_reserved_ptr};
+	auto const front_ptr{controller.front_block.controller_ptr};
+	auto const back_ptr{controller.back_block.controller_ptr};
+
+	auto const start_ptr{cb.controller_start_ptr};
+	auto const after_ptr{cb.controller_after_ptr + 1};
+
+	// 1. Check if deallocation is needed for data blocks
+	// We use after_reserved vs back_ptr + 1 safely by checking boundaries
+	bool const needs_block_shrink = (start_reserved != front_ptr) || (after_reserved != (back_ptr + 1));
+
+	if (needs_block_shrink)
+	{
+		for (; start_reserved != front_ptr; ++start_reserved)
+		{
+			allocator::deallocate_aligned_n(*start_reserved, align, block_bytes);
+		}
+		// it is safe to start from back_ptr + 1 because if we are here,
+		// back_ptr must be within [start_ptr, after_ptr - 1]
+		for (auto it{back_ptr + 1}; it != after_reserved; ++it)
+		{
+			allocator::deallocate_aligned_n(*it, align, block_bytes);
+		}
+	}
+
+	// 2. Controller Shrink Check
+	// If blocks were already tight AND the controller array is already tight, return
+	::std::size_t const used_blocks_count{static_cast<::std::size_t>(back_ptr + 1 - front_ptr)};
+	::std::size_t const current_controller_size{static_cast<::std::size_t>(after_ptr - start_ptr)};
+
+	if (!needs_block_shrink && current_controller_size <= (used_blocks_count + 1u))
+	{
+		return;
+	}
+
+	// 3. Reallocate Controller
+	::std::size_t const new_controller_size_least{used_blocks_count + 1u};
+	using block_ptr_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
+
+	// Note: reallocate_at_least_aligned_n might copy old pointers for us
+	auto [new_start_ptr, new_actual_count] = block_ptr_allocator::reallocate_n_at_least(
+		start_ptr,
+		current_controller_size,
+		new_controller_size_least);
+
+	// 4. Pointer Patching (The Safe Way)
+	// We want the new reserved range to start at the very beginning of the new allocation
+	// Therefore, the front_block.controller_ptr is just new_start_ptr
+	// The back_block.controller_ptr is new_start_ptr + (used_blocks_count - 1)
+
+	controller.front_block.controller_ptr = new_start_ptr;
+	controller.back_block.controller_ptr = new_start_ptr + (used_blocks_count - 1u);
+
+	cb.controller_start_ptr = new_start_ptr;
+	cb.controller_start_reserved_ptr = new_start_ptr;
+	cb.controller_after_reserved_ptr = new_start_ptr + used_blocks_count;
+	cb.controller_after_ptr = new_start_ptr + new_actual_count - 1u;
+
+	// 5. Set Sentinel
+	*(cb.controller_after_reserved_ptr) = nullptr;
+}
+
+template <typename allocator, ::std::size_t align, ::std::size_t blockbytes, typename dequecontroltype>
+inline constexpr void deque_shrink_to_fit_impl(dequecontroltype &controller) noexcept
+{
+	::fast_io::containers::details::deque_shrink_to_fit_common<allocator>(controller, align, blockbytes);
+}
+
 template <typename ToIter>
 struct uninitialized_copy_n_for_deque_guard
 {
@@ -2906,6 +2990,18 @@ public:
 		}
 		return this->insert_index_impl(idx, count, val, n).pos;
 	}
+	inline constexpr void shrink_to_fit() noexcept(::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		if consteval
+		{
+			::fast_io::containers::details::deque_shrink_to_fit_impl<allocator, alignof(value_type), block_size * sizeof(value_type)>(this->controller);
+		}
+		else
+		{
+			::fast_io::containers::details::deque_shrink_to_fit_impl<allocator, alignof(value_type), block_size * sizeof(value_type)>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(__builtin_addressof(
+				this->controller)));
+		}
+	}
 #if 0
 	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
 	{
@@ -2913,9 +3009,6 @@ public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>) 
-	{
-	}
-	inline constexpr void shrink_to_fit() noexcept(::std::is_nothrow_move_constructible_v<value_type>)
 	{
 	}
 	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
