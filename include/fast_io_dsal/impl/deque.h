@@ -2994,7 +2994,7 @@ private:
 		{
 			this->destroy_elements_range(first, last);
 		}
-		this->erase_unchecked_nodestroy_impl(first, last, moveleft);
+		return this->erase_unchecked_nodestroy_impl(first, last, moveleft);
 	}
 	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft) noexcept
 	{
