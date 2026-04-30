@@ -17,7 +17,7 @@ int main()
 	::std::size_t sum{};
 	{
 		fast_io::timer tm1(u8"loop");
-		for (::std::size_t i{}, n{deq.segments_count()}; i != n; ++i)
+		for (::std::size_t i{}, segs{deq.segments_count()}; i != segs; ++i)
 		{
 			for (auto const e : deq.const_nth_segment(i))
 			{
