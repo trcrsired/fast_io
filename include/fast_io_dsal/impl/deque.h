@@ -3292,27 +3292,36 @@ public:
 	}
 	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
 	{
-		::std::size_t sz{this->size()};
-		::std::size_t backcap{this->back_capacity()};
-		::std::size_t new_blocks_count_least_p1;
-#if (defined(__GNUC__) || defined(__clang__))
-		if constexpr(true)
+		size_type oldsz{this->size()};
+		if (count == oldsz)
 		{
-			if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
-			{
-				::fast_io::fast_terminate();
-			}
+			return;
+		}
+		iterator newed{this->end()};
+		if (count < oldsz)
+		{
+			auto ed{newed};
+			newed-=static_cast<size_type>(oldsz-count);
+			newed = this->erase(newed, ed);
 		}
 		else
-#endif
 		{
-			constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-			new_blocks_count_least_p1 = new_blocks_count_least;
-			if (mx == new_blocks_count_least)
+			size_type backcap{this->back_capacity()};
+			if (backup < count)
 			{
-				::fast_io::fast_terminate();
+				this->reserve_back(count);
 			}
+			ed = newed;
+			newed = ed+count;
+			::fast_io::freestanding::uninitialized_default_construct(ed, newed);
 		}
+		if (newed.curr_ptr == newed.begin_ptr)
+		{
+			newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr=*--newed.itercontent.controller_ptr) + block_size;
+		}
+		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
+		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
+		this->controller.back_block.curr_ptr = newed.itercontent.curr_ptr;
 	}
 	inline constexpr void resize(size_type count, const_reference value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
 	{
