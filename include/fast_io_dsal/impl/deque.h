@@ -470,21 +470,27 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(dequecontroltype &cont
 
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 
-#if (defined(__GNUC__) || defined(__clang__))
 	::std::size_t new_blocks_count_least_p1;
-	if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
+#if (defined(__GNUC__) || defined(__clang__))
+	if constexpr (true)
 	{
-		::fast_io::fast_terminate();
+		if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
 	}
-#else
-	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-	::std::size_t new_blocks_count_least_p1{new_blocks_count_least};
-	if (mx == new_blocks_count_least)
-	{
-		::fast_io::fast_terminate();
-	}
-	++new_blocks_count_least_p1;
+	else
 #endif
+	{
+		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+		new_blocks_count_least_p1 = new_blocks_count_least;
+		if (mx == new_blocks_count_least)
+		{
+			::fast_io::fast_terminate();
+		}
+		++new_blocks_count_least_p1;
+	}
+
 	auto [new_start_ptr, new_blocks_count] = block_typed_allocator::allocate_at_least(new_blocks_count_least_p1);
 
 	auto const old_reserved_blocks_count{
@@ -597,21 +603,26 @@ template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltype &controller, ::std::size_t align, ::std::size_t bytes,
 																 ::std::size_t initial_allocated_block_counts) noexcept
 {
-#if (defined(__GNUC__) || defined(__clang__))
 	::std::size_t initial_allocated_block_counts_with_sentinel;
-	if (__builtin_add_overflow(initial_allocated_block_counts, 1u,
-							   __builtin_addressof(initial_allocated_block_counts_with_sentinel)))
+#if (defined(__GNUC__) || defined(__clang__))
+	if constexpr (true)
 	{
-		::fast_io::fast_terminate();
+		if (__builtin_add_overflow(initial_allocated_block_counts, 1u,
+								   __builtin_addressof(initial_allocated_block_counts_with_sentinel)))
+		{
+			::fast_io::fast_terminate();
+		}
 	}
-#else
-	constexpr ::std::size_t maxval{::std::numeric_limits<::std::size_t>::max()};
-	if (initial_allocated_block_counts == maxval) [[unlikely]]
-	{
-		::fast_io::fast_terminate();
-	}
-	::std::size_t initial_allocated_block_counts_with_sentinel{initial_allocated_block_counts + 1u};
+	else
 #endif
+	{
+		constexpr ::std::size_t maxval{::std::numeric_limits<::std::size_t>::max()};
+		if (initial_allocated_block_counts == maxval) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+		initial_allocated_block_counts_with_sentinel = initial_allocated_block_counts + 1u;
+	}
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 	auto [allocated_blocks_ptr, allocated_blocks_count] = block_typed_allocator::allocate_at_least(initial_allocated_block_counts_with_sentinel);
 
@@ -1252,50 +1263,60 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 	auto const total_slots_count{
 		static_cast<::std::size_t>(controller.controller_block.controller_after_ptr - controller.controller_block.controller_start_ptr)};
 	auto const half_slots_count{static_cast<::std::size_t>(total_slots_count >> 1u)};
-#if defined(__GNUC__) || defined(__clang__)
 	::std::size_t new_used_blocks_count;
-	if (__builtin_add_overflow(used_blocks_count, extrablocks, __builtin_addressof(new_used_blocks_count))) [[unlikely]]
-	{
-		::fast_io::fast_terminate();
-	}
-#else
-	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-	::std::size_t const mx_sub_extrablocks{mx - extrablocks};
-	if (mx_sub_extrablocks < used_blocks_count)
-	{
-		::fast_io::fast_terminate();
-	}
 
-	auto const new_used_blocks_count{used_blocks_count + extrablocks};
+#if (defined(__GNUC__) || defined(__clang__))
+	if constexpr (true)
+	{
+		if (__builtin_add_overflow(used_blocks_count, extrablocks, __builtin_addressof(new_used_blocks_count))) [[unlikely]]
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	else
 #endif
+	{
+		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+		::std::size_t const mx_sub_extrablocks{mx - extrablocks};
+		if (mx_sub_extrablocks < used_blocks_count)
+		{
+			::fast_io::fast_terminate();
+		}
+		new_used_blocks_count = used_blocks_count + extrablocks;
+	}
 
 	if (half_slots_count < new_used_blocks_count) // grow blocks
 	{
-#if defined(__GNUC__) || defined(__clang__)
 		::std::size_t doubleslotsextra;
-		if (__builtin_add_overflow(total_slots_count, extrablocks, __builtin_addressof(doubleslotsextra)))
+#if (defined(__GNUC__) || defined(__clang__))
+		if constexpr (true)
 		{
-			::fast_io::fast_terminate();
+			if (__builtin_add_overflow(total_slots_count, extrablocks, __builtin_addressof(doubleslotsextra)))
+			{
+				::fast_io::fast_terminate();
+			}
+			if (__builtin_add_overflow(doubleslotsextra, doubleslotsextra, __builtin_addressof(doubleslotsextra)))
+			{
+				::fast_io::fast_terminate();
+			}
 		}
-		if (__builtin_add_overflow(doubleslotsextra, doubleslotsextra, __builtin_addressof(doubleslotsextra)))
-		{
-			::fast_io::fast_terminate();
-		}
-#else
-		::std::size_t mx_total_slots{mx - extrablocks};
-		if (mx_total_slots < total_slots_count)
-		{
-			::fast_io::fast_terminate();
-		}
-		::std::size_t doubleslotsextra{extrablocks + total_slots_count};
-		constexpr ::std::size_t mxdv2m1{(mx >> 1u)};
-		if (mxdv2m1 < doubleslotsextra)
-		{
-			::fast_io::fast_terminate();
-		}
-		doubleslotsextra <<= 1u;
+		else
 #endif
-
+		{
+			constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+			::std::size_t mx_total_slots{mx - extrablocks};
+			if (mx_total_slots < total_slots_count)
+			{
+				::fast_io::fast_terminate();
+			}
+			doubleslotsextra = extrablocks + total_slots_count;
+			constexpr ::std::size_t mxdv2m1{(mx >> 1u)};
+			if (mxdv2m1 < doubleslotsextra)
+			{
+				::fast_io::fast_terminate();
+			}
+			doubleslotsextra <<= 1u;
+		}
 		::fast_io::containers::details::deque_grow_to_new_blocks_count_impl<allocator>(controller, doubleslotsextra);
 	}
 	else
@@ -3271,10 +3292,35 @@ public:
 	}
 	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
 	{
+		::std::size_t sz{this->size()};
+		::std::size_t backcap{this->back_capacity()};
+		::std::size_t new_blocks_count_least_p1;
+#if (defined(__GNUC__) || defined(__clang__))
+		if constexpr(true)
+		{
+			if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+		else
+#endif
+		{
+			constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+			new_blocks_count_least_p1 = new_blocks_count_least;
+			if (mx == new_blocks_count_least)
+			{
+				::fast_io::fast_terminate();
+			}
+		}
 	}
 	inline constexpr void resize(size_type count, const_reference value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
 	{
 	}
+#if 0
+	inline constexpr void resize(size_type count, ::fast_io::for_overwrite_t) noexcept(::fast_io::freestanding::is_zero_default_constructible_v<value_type> ||
+																					  ::std::is_nothrow_default_constructible_v<value_type>)
+#endif
 #endif
 private:
 	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft) noexcept
