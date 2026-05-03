@@ -1641,7 +1641,7 @@ inline constexpr void deque_grow_front_common(dequecontroltype &controller) noex
 template <typename dequecontroltype>
 inline constexpr ::std::size_t deque_get_front_capacity_bytes_impl(dequecontroltype const &controller, ::std::size_t block_bytes) noexcept
 {
-	return block_bytes * static_cast<::std::size_t>(controller.back_block.controller_ptr - controller.controller_start_reserved_ptr) +
+	return block_bytes * static_cast<::std::size_t>(controller.back_block.controller_ptr - controller.controller_block.controller_start_reserved_ptr) +
 		   static_cast<::std::size_t>(controller.back_block.curr_ptr - controller.back_block.begin_ptr);
 }
 
@@ -1659,7 +1659,7 @@ inline constexpr ::std::size_t deque_get_front_capacity(dequecontroltype const &
 template <typename dequecontroltype>
 inline constexpr ::std::size_t deque_get_back_capacity_bytes_impl(dequecontroltype const &controller, ::std::size_t block_bytes) noexcept
 {
-	return block_bytes * static_cast<::std::size_t>(controller.controller_after_reserved_ptr - controller.front_block.controller_ptr) -
+	return block_bytes * static_cast<::std::size_t>(controller.controller_block.controller_after_reserved_ptr - controller.front_block.controller_ptr) -
 		   static_cast<::std::size_t>(controller.front_block.curr_ptr - controller.front_block.begin_ptr);
 }
 
@@ -1677,7 +1677,7 @@ inline constexpr ::std::size_t deque_get_back_capacity(dequecontroltype const &c
 template <typename dequecontroltype>
 inline constexpr ::std::size_t deque_get_capacity_bytes_impl(dequecontroltype &controller, ::std::size_t block_bytes) noexcept
 {
-	return block_bytes * static_cast<::std::size_t>(controller.controller_after_reserved_ptr - controller.controller_start_reserved_ptr);
+	return block_bytes * static_cast<::std::size_t>(controller.controller_block.controller_after_reserved_ptr - controller.controller_start_reserved_ptr);
 }
 
 template <::std::size_t sz, ::std::size_t block_bytes, typename dequecontroltype>
