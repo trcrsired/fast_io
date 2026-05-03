@@ -1677,7 +1677,7 @@ inline constexpr ::std::size_t deque_get_back_capacity(dequecontroltype const &c
 template <typename dequecontroltype>
 inline constexpr ::std::size_t deque_get_capacity_bytes_impl(dequecontroltype &controller, ::std::size_t block_bytes) noexcept
 {
-	return block_bytes * static_cast<::std::size_t>(controller.controller_block.controller_after_reserved_ptr - controller.controller_start_reserved_ptr);
+	return block_bytes * static_cast<::std::size_t>(controller.controller_block.controller_after_reserved_ptr - controller.controller_block.controller_start_reserved_ptr);
 }
 
 template <::std::size_t sz, ::std::size_t block_bytes, typename dequecontroltype>
@@ -1815,16 +1815,37 @@ inline constexpr ::fast_io::containers::details::deque_nth_element_result<typena
 	return ::fast_io::containers::details::deque_nth_element_common_impl(controller, pos, block_size);
 }
 
+template <typename T>
+inline constexpr ::std::size_t deque_itercontent_diff_bytes_impl(T const &a, T const &b, ::std::size_t blockbytes)
+{
+	::std::size_t controllerdiff{static_cast<::std::size_t>(a.controller_ptr - b.controller_ptr)};
+	return controllerdiff * blockbytes + static_cast<::std::size_t>((a.curr_ptr - a.begin_ptr) + (b.begin_ptr - b.curr_ptr));
+}
+
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_reserve_back_impl(dequecontroltype &controller, ::std::size_t newbackcap, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size) noexcept
 {
-	::std::size_t const backcap{::fast_io::containers::details::deque_get_back_capacity_bytes_impl(controller, block_size * sz) / sz};
-	if (newbackcap <= backcap) [[unlikely]]
+	::std::size_t const deqsz{::fast_io::containers::details::deque_itercontent_diff_bytes_impl(controller.back_block, controller.front_block, block_size * sz) / sz};
+
+	::std::size_t toaddedsz;
+#if defined(__GNUC__) || defined(__clang__)
+	if constexpr (true)
 	{
-		return;
+		if (__builtin_sub_overflow(newbackcap, deqsz, __builtin_addressof(toaddedsz)))
+		{
+			return;
+		}
 	}
-	::fast_io::containers::details::deque_reserve_back_spaces_impl<allocator>(controller,
-																			  static_cast<::std::size_t>(newbackcap - backcap), align, sz, block_size);
+	else
+#endif
+	{
+		if (newbackcap <= deqsz) [[unlikely]]
+		{
+			return;
+		}
+		toaddedsz = static_cast<::std::size_t>(newbackcap - deqsz);
+	}
+	::fast_io::containers::details::deque_reserve_back_spaces_impl<allocator>(controller, toaddedsz, align, sz, block_size);
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
@@ -1836,13 +1857,27 @@ inline constexpr void deque_reserve_back_common(dequecontroltype &controller, ::
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_reserve_front_impl(dequecontroltype &controller, ::std::size_t newfrontcap, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size) noexcept
 {
-	::std::size_t const frontcap{::fast_io::containers::details::deque_get_front_capacity_bytes_impl(controller, block_size * sz) / sz};
-	if (newfrontcap <= frontcap) [[unlikely]]
+	::std::size_t const deqsz{::fast_io::containers::details::deque_itercontent_diff_bytes_impl(controller.back_block, controller.front_block, block_size * sz) / sz};
+
+	::std::size_t toaddedsz;
+#if defined(__GNUC__) || defined(__clang__)
+	if constexpr (true)
 	{
-		return;
+		if (__builtin_sub_overflow(newfrontcap, deqsz, __builtin_addressof(toaddedsz)))
+		{
+			return;
+		}
 	}
-	::fast_io::containers::details::deque_reserve_front_spaces_impl<allocator>(controller,
-																			   static_cast<::std::size_t>(newfrontcap - frontcap), align, sz, block_size);
+	else
+#endif
+	{
+		if (newfrontcap <= deqsz) [[unlikely]]
+		{
+			return;
+		}
+		toaddedsz = static_cast<::std::size_t>(newfrontcap - deqsz);
+	}
+	::fast_io::containers::details::deque_reserve_front_spaces_impl<allocator>(controller, toaddedsz, align, sz, block_size);
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
@@ -2556,7 +2591,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_front_capacity<sizeof(value_type), block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(__builtin_addressof(this->controller)));
 		}
 	}
 
@@ -2608,7 +2643,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_capacity<sizeof(value_type), block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(__builtin_addressof(this->controller)));
 		}
 	}
 

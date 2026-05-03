@@ -1,12 +1,21 @@
 #include <fast_io.h>
 #include <fast_io_dsal/deque.h>
 
+template <typename T>
+inline void logging(T const &deq, ::std::source_location src = ::std::source_location::current())
+{
+	::fast_io::io::print(src,
+						 "\n\tdeq.front_capacity()=", deq.front_capacity(),
+						 "\n\tdeq.back_capacity()=", deq.back_capacity(),
+						 "\n\tdeq.capacity()=", deq.capacity(),
+						 "\n\tdeq.size()=", deq.size(), "\n\n");
+}
+
 int main()
 {
 	::fast_io::deque<::std::size_t> deq;
-	::fast_io::io::println(::std::source_location::current(), " ", deq.back_capacity(), " ", deq.size());
 	deq.push_back(30);
-	::fast_io::io::println(::std::source_location::current(), " ", deq.back_capacity(), " ", deq.size());
+	logging(deq);
 	deq.reserve_back(6000);
-	::fast_io::io::println(::std::source_location::current(), " ", deq.back_capacity(), " ", deq.size());
+	logging(deq);
 }
