@@ -1456,8 +1456,8 @@ inline constexpr void deque_grow_back_common(dequecontroltype &controller) noexc
 	::fast_io::containers::details::deque_grow_back_common_impl<allocator>(controller, align, blockbytes);
 }
 
-template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
-inline constexpr void deque_reserve_back_spaces(dequecontroltype &controller, ::std::size_t n)
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_reserve_back_spaces_impl(dequecontroltype &controller, ::std::size_t n, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size)
 {
 	if (!n)
 	{
@@ -1484,11 +1484,17 @@ inline constexpr void deque_reserve_back_spaces(dequecontroltype &controller, ::
 	}
 	else
 	{
-		constexpr ::std::size_t block_bytes{block_size * sz};
+		::std::size_t const block_bytes{block_size * sz};
 		::fast_io::containers::details::deque_reserve_back_blocks_impl<allocator>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
 																					  __builtin_addressof(controller)),
 																				  toallocate, align, block_bytes);
 	}
+}
+
+template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
+inline constexpr void deque_reserve_back_spaces(dequecontroltype &controller, ::std::size_t n)
+{
+	::fast_io::containers::details::deque_reserve_back_spaces_impl<allocator>(controller, n, align, sz, block_size);
 }
 
 template <typename allocator, typename dequecontroltype>
@@ -1566,9 +1572,10 @@ inline constexpr bool deque_reserve_front_blocks_impl(dequecontroltype &controll
 	return true;
 }
 
-template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
-inline constexpr void deque_reserve_front_spaces(dequecontroltype &controller, ::std::size_t n)
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_reserve_front_spaces_impl(dequecontroltype &controller, ::std::size_t n, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size)
 {
+
 	if (!n)
 	{
 		return;
@@ -1594,11 +1601,17 @@ inline constexpr void deque_reserve_front_spaces(dequecontroltype &controller, :
 	}
 	else
 	{
-		constexpr ::std::size_t block_bytes{block_size * sz};
+		::std::size_t const block_bytes{block_size * sz};
 		::fast_io::containers::details::deque_reserve_front_blocks_impl<allocator>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
 																					   __builtin_addressof(controller)),
 																				   toallocate, align, block_bytes);
 	}
+}
+
+template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
+inline constexpr void deque_reserve_front_spaces(dequecontroltype &controller, ::std::size_t n)
+{
+	::fast_io::containers::details::deque_reserve_front_spaces_impl<allocator>(controller, n, align, sz, block_size);
 }
 
 template <typename allocator, typename dequecontroltype>
@@ -1626,16 +1639,16 @@ inline constexpr void deque_grow_front_common(dequecontroltype &controller) noex
 }
 
 template <typename dequecontroltype>
-inline constexpr ::std::size_t deque_get_front_capacity_bytes_impl(dequecontroltype &controller, ::std::size_t block_bytes) noexcept
+inline constexpr ::std::size_t deque_get_front_capacity_bytes_impl(dequecontroltype const &controller, ::std::size_t block_bytes) noexcept
 {
 	return block_bytes * static_cast<::std::size_t>(controller.back_block.controller_ptr - controller.controller_start_reserved_ptr) +
 		   static_cast<::std::size_t>(controller.back_block.curr_ptr - controller.back_block.begin_ptr);
 }
 
 template <::std::size_t sz, ::std::size_t block_bytes, typename dequecontroltype>
-inline constexpr ::std::size_t deque_get_front_capacity(dequecontroltype &controller) noexcept
+inline constexpr ::std::size_t deque_get_front_capacity(dequecontroltype const &controller) noexcept
 {
-	auto ret{::fast_io::containers::details::deque_get_front_capacity_bytes_impl(controller, sz, block_bytes)};
+	auto ret{::fast_io::containers::details::deque_get_front_capacity_bytes_impl(controller, block_bytes)};
 	if constexpr (sz != 1u)
 	{
 		ret /= sz;
@@ -1644,16 +1657,16 @@ inline constexpr ::std::size_t deque_get_front_capacity(dequecontroltype &contro
 }
 
 template <typename dequecontroltype>
-inline constexpr ::std::size_t deque_get_back_capacity_bytes_impl(dequecontroltype &controller, ::std::size_t block_bytes) noexcept
+inline constexpr ::std::size_t deque_get_back_capacity_bytes_impl(dequecontroltype const &controller, ::std::size_t block_bytes) noexcept
 {
 	return block_bytes * static_cast<::std::size_t>(controller.controller_after_reserved_ptr - controller.front_block.controller_ptr) -
 		   static_cast<::std::size_t>(controller.front_block.curr_ptr - controller.front_block.begin_ptr);
 }
 
 template <::std::size_t sz, ::std::size_t block_bytes, typename dequecontroltype>
-inline constexpr ::std::size_t deque_get_back_capacity(dequecontroltype &controller) noexcept
+inline constexpr ::std::size_t deque_get_back_capacity(dequecontroltype const &controller) noexcept
 {
-	auto ret{::fast_io::containers::details::deque_get_back_capacity_bytes_impl(controller, sz, block_bytes)};
+	auto ret{::fast_io::containers::details::deque_get_back_capacity_bytes_impl(controller, block_bytes)};
 	if constexpr (sz != 1u)
 	{
 		ret /= sz;
@@ -1670,7 +1683,7 @@ inline constexpr ::std::size_t deque_get_capacity_bytes_impl(dequecontroltype &c
 template <::std::size_t sz, ::std::size_t block_bytes, typename dequecontroltype>
 inline constexpr ::std::size_t deque_get_capacity(dequecontroltype &controller) noexcept
 {
-	auto ret{::fast_io::containers::details::deque_get_capacity_bytes_impl(controller, sz, block_bytes)};
+	auto ret{::fast_io::containers::details::deque_get_capacity_bytes_impl(controller, block_bytes)};
 	if constexpr (sz != 1u)
 	{
 		ret /= sz;
@@ -1800,6 +1813,42 @@ template <::std::size_t block_size, typename dequecontroltype>
 inline constexpr ::fast_io::containers::details::deque_nth_element_result<typename dequecontroltype::controlreplacetype> deque_nth_element_common(dequecontroltype &controller, ::std::size_t pos) noexcept
 {
 	return ::fast_io::containers::details::deque_nth_element_common_impl(controller, pos, block_size);
+}
+
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_reserve_back_impl(dequecontroltype &controller, ::std::size_t newbackcap, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size) noexcept
+{
+	::std::size_t const backcap{::fast_io::containers::details::deque_get_back_capacity_bytes_impl(controller, block_size * sz) / sz};
+	if (newbackcap <= backcap) [[unlikely]]
+	{
+		return;
+	}
+	::fast_io::containers::details::deque_reserve_back_spaces_impl<allocator>(controller,
+																			  static_cast<::std::size_t>(newbackcap - backcap), align, sz, block_size);
+}
+
+template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
+inline constexpr void deque_reserve_back_common(dequecontroltype &controller, ::std::size_t newbackcap) noexcept
+{
+	::fast_io::containers::details::deque_reserve_back_impl<allocator>(controller, newbackcap, align, sz, block_size);
+}
+
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_reserve_front_impl(dequecontroltype &controller, ::std::size_t newfrontcap, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size) noexcept
+{
+	::std::size_t const frontcap{::fast_io::containers::details::deque_get_front_capacity_bytes_impl(controller, block_size * sz) / sz};
+	if (newfrontcap <= frontcap) [[unlikely]]
+	{
+		return;
+	}
+	::fast_io::containers::details::deque_reserve_front_spaces_impl<allocator>(controller,
+																			   static_cast<::std::size_t>(newfrontcap - frontcap), align, sz, block_size);
+}
+
+template <typename allocator, ::std::size_t align, ::std::size_t sz, ::std::size_t block_size, typename dequecontroltype>
+inline constexpr void deque_reserve_front_common(dequecontroltype &controller, ::std::size_t newfrontcap) noexcept
+{
+	::fast_io::containers::details::deque_reserve_front_impl<allocator>(controller, newfrontcap, align, sz, block_size);
 }
 
 } // namespace details
@@ -2494,7 +2543,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_front_capacity<1u, block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
 		}
 	}
 
@@ -2507,7 +2556,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_front_capacity<sizeof(value_type), block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
 		}
 	}
 
@@ -2520,7 +2569,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_back_capacity<1u, block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
 		}
 	}
 
@@ -2533,7 +2582,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_back_capacity<sizeof(value_type), block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(__builtin_addressof(this->controller)));
 		}
 	}
 
@@ -2546,7 +2595,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_capacity<1u, block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
 		}
 	}
 
@@ -2559,7 +2608,7 @@ public:
 		else
 		{
 			return ::fast_io::containers::details::deque_get_capacity<sizeof(value_type), block_size * sizeof(value_type)>(
-				*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(this->controller));
+				*reinterpret_cast<::fast_io::containers::details::deque_controller_common const *>(this->controller));
 		}
 	}
 
@@ -3281,6 +3330,14 @@ public:
 				this->controller)));
 		}
 	}
+	inline constexpr void reserve_back(size_type backcap) noexcept
+	{
+		::fast_io::containers::details::deque_reserve_back_common<allocator, alignof(value_type), sizeof(value_type), block_size>(this->controller, backcap);
+	}
+	inline constexpr void reserve_front(size_type frontcap) noexcept
+	{
+		::fast_io::containers::details::deque_reserve_front_common<allocator, alignof(value_type), sizeof(value_type), block_size>(this->controller, frontcap);
+	}
 #if 0
 	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
 	{
@@ -3306,11 +3363,7 @@ public:
 		}
 		else
 		{
-			size_type backcap{this->back_capacity()};
-			if (backup < count)
-			{
-				this->reserve_back(count);
-			}
+			this->reserve_back(count);
 			ed = newed;
 			newed = ed+count;
 			::fast_io::freestanding::uninitialized_default_construct(ed, newed);
