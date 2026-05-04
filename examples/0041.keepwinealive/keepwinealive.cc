@@ -7,6 +7,6 @@
 
 int main()
 {
-	::fast_io::io::perr("keep wine alive: ", utc(::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::realtime)));
+	::fast_io::io::perrln("keep wine alive: ", utc(::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::realtime)));
 	WaitForSingleObject(GetCurrentProcess(), INFINITE);
 }
