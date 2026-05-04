@@ -4,11 +4,11 @@
 template <typename T>
 inline void logging(T const &deq, ::std::source_location src = ::std::source_location::current())
 {
-	::fast_io::io::print(src,
-						 "\n\tdeq.front_capacity()=", deq.front_capacity(),
-						 "\n\tdeq.back_capacity()=", deq.back_capacity(),
-						 "\n\tdeq.capacity()=", deq.capacity(),
-						 "\n\tdeq.size()=", deq.size(), "\n\n");
+	::fast_io::io::perr(src,
+						"\n\tdeq.front_capacity()=", deq.front_capacity(),
+						"\n\tdeq.back_capacity()=", deq.back_capacity(),
+						"\n\tdeq.capacity()=", deq.capacity(),
+						"\n\tdeq.size()=", deq.size(), "\n\n");
 }
 
 int main()
