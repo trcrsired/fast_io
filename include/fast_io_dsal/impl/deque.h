@@ -3382,26 +3382,21 @@ public:
 	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>) 
 	{
 	}
-	inline constexpr void resize(size_type count, const_reference value) noexcept(::std::is_nothrow_copy_constructible_v<value_type>&&::std::is_nothrow_move_constructible_v<value_type>)
-	{
-	}
-#if 0
-	inline constexpr void resize(size_type count, ::fast_io::for_overwrite_t) noexcept(::fast_io::freestanding::is_zero_default_constructible_v<value_type> ||
-																					  ::std::is_nothrow_default_constructible_v<value_type>)
-#endif
+
 #endif
 
-	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type> && ::std::is_nothrow_move_constructible_v<value_type>)
+private:
+	inline constexpr void resize_impl(size_type count, T const *pval) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
 	{
 		size_type oldsz{this->size()};
 		if (count == oldsz)
 		{
 			return;
 		}
-		iterator newed{this->end()};
+		iterator newed;
 		if (count < oldsz)
 		{
-			auto ed{newed};
+			auto ed{this->end()};
 			newed -= static_cast<size_type>(oldsz - count);
 			newed = this->erase(newed, ed);
 		}
@@ -3410,7 +3405,14 @@ public:
 			this->reserve_back(count);
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
-			::fast_io::freestanding::uninitialized_default_construct(ed, newed);
+			if (pval)
+			{
+				::fast_io::freestanding::uninitialized_fill(ed, newed, *pval);
+			}
+			else
+			{
+				::fast_io::freestanding::uninitialized_default_construct(ed, newed);
+			}
 		}
 		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
 		{
@@ -3419,6 +3421,24 @@ public:
 		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
 		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
 		this->controller.back_block.curr_ptr = newed.itercontent.curr_ptr;
+	}
+
+public:
+	inline constexpr void resize(size_type count) noexcept(::std::is_nothrow_default_constructible_v<value_type> && ::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		this->resize_impl(count, nullptr);
+	}
+	inline constexpr void resize(size_type count, ::fast_io::for_overwrite_t) noexcept(::fast_io::freestanding::is_zero_default_constructible_v<value_type> ||
+																					   ::std::is_nothrow_default_constructible_v<value_type>)
+	{
+		/*
+		Todo
+		*/
+		this->resize(count);
+	}
+	inline constexpr void resize(size_type count, const_reference value) noexcept(::std::is_nothrow_copy_constructible_v<value_type> && ::std::is_nothrow_move_constructible_v<value_type>)
+	{
+		this->resize_impl(count, __builtin_addressof(value));
 	}
 
 private:
