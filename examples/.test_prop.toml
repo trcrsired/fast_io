@@ -43,5 +43,8 @@ ignore = true
 ["0040.wifianalyzer"]
 ignore = true
 
+["0041.keepwinealive"]
+ignore = true
+
 ["0042.scn_ip_port"]
 interactive = true
