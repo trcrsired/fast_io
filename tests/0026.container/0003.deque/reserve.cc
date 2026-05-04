@@ -16,6 +16,10 @@ int main()
 	::fast_io::deque<::std::size_t> deq;
 	deq.push_back(30);
 	logging(deq);
+	deq.reserve_back(265);
+	logging(deq);
 	deq.reserve_back(6000);
+	logging(deq);
+	deq.reserve_back(6401);
 	logging(deq);
 }
