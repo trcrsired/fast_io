@@ -48,3 +48,6 @@ ignore = true
 
 ["0042.scn_ip_port"]
 interactive = true
+
+["0043.scanwinprocesspasswords"]
+ignore = true
