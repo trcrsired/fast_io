@@ -61,7 +61,7 @@ public:
 
 	template <::std::ranges::contiguous_range rg>
 		requires(::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
-				 !::std::is_rvalue_reference_v<rg>)
+				 !::std::is_rvalue_reference_v<rg &&>)
 	inline explicit constexpr basic_cstring_view(::fast_io::containers::null_terminated_t, ::fast_io::freestanding::from_range_t, rg &&r) noexcept
 		: string_view_type(::fast_io::freestanding::from_range, ::std::forward<rg>(r))
 	{
@@ -70,7 +70,7 @@ public:
 		requires(requires(rg r) {
 			{ r.c_str() } -> ::std::convertible_to<const_pointer>;
 		} && ::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
-				 !::std::is_rvalue_reference_v<rg>)
+				 !::std::is_rvalue_reference_v<rg &&>)
 	inline explicit constexpr basic_cstring_view(::fast_io::freestanding::from_range_t, rg &&r) noexcept
 		: string_view_type(::fast_io::freestanding::from_range, ::std::forward<rg>(r))
 	{
