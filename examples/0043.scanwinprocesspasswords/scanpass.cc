@@ -42,8 +42,7 @@
 /**
  * Prints a sanitized snippet of memory around a discovered match.
  */
-template <typename T>
-inline void PrintSnippet(T &outstm, ::fast_io::string_view buffer, size_t offset, size_t contextSize = 100)
+inline void PrintSnippet(auto &outstm, ::fast_io::string_view buffer, size_t offset, size_t contextSize = 100)
 {
 	using namespace ::fast_io::io;
 	size_t start = (offset > contextSize) ? offset - contextSize : 0;
@@ -69,8 +68,7 @@ inline void PrintSnippet(T &outstm, ::fast_io::string_view buffer, size_t offset
 	print(outstm, "]\n");
 }
 
-template <typename T>
-inline void ScanProcessMemory(T &outstm, DWORD pid, ::fast_io::string_view target)
+inline void ScanProcessMemory(auto &outstm, DWORD pid, ::fast_io::string_view target)
 {
 	using namespace ::fast_io::io;
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
