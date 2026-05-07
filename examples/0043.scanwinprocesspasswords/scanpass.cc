@@ -132,7 +132,7 @@ inline void ScanProcessMemory(T &outstm, DWORD pid, ::fast_io::string_view targe
 	print(outstm, "[+] Scan finished.\n");
 }
 
-inline void FindAndScanProcesses(auto &obf, ::fast_io::u16string_view processName, ::fast_io::string_view target)
+inline void FindAndScanProcesses(auto &obf, ::fast_io::u16cstring_view processName, ::fast_io::string_view target)
 {
 	using namespace ::fast_io::io;
 
@@ -154,7 +154,7 @@ inline void FindAndScanProcesses(auto &obf, ::fast_io::u16string_view processNam
 	do
 	{
 		// Convert WCHAR to a comparable format
-		::fast_io::u16string_view current_name(::fast_io::mnp::os_c_str(reinterpret_cast<char16_t const *>(pe32.szExeFile)));
+		::fast_io::u16string_view current_name(::fast_io::mnp::os_c_str(reinterpret_cast<char16_t const *>(pe32.szExeFile), processName.size()));
 
 		// Use a wide search or conversion if necessary; here we do a simple match
 		// Note: For Edge, you'll see many "msedge.exe" entries
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 
 		println(obf, "[*] Searching for all instances of: ", procName);
 		::fast_io::u16string uProcName(::fast_io::u16concat_fast_io(::fast_io::mnp::code_cvt(procName)));
-		FindAndScanProcesses(obf, ::fast_io::u16string_view(::std::from_range, uProcName), searchTerm);
+		FindAndScanProcesses(obf, ::fast_io::u16cstring_view(uProcName), searchTerm);
 		println(obf, "[*] All scans complete.");
 	}
 	catch (::fast_io::error e)
