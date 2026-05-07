@@ -84,13 +84,13 @@ inline void ScanProcessMemory(T &outstm, DWORD pid, ::fast_io::string_view targe
 	GetSystemInfo(__builtin_addressof(si));
 
 	MEMORY_BASIC_INFORMATION mbi;
-	unsigned char *addr = (unsigned char *)si.lpMinimumApplicationAddress;
+	auto addr{reinterpret_cast<::std::byte *>(si.lpMinimumApplicationAddress)};
 	// Pre-initialize the Boyer-Moore searcher if a target is provided
 	::std::boyer_moore_horspool_searcher searcher(target.cbegin(), target.cend());
 
 	print(outstm, "[+] Scanning PID ", pid, "...\n");
 
-	while (addr < (unsigned char *)si.lpMaximumApplicationAddress)
+	while (addr < reinterpret_cast<::std::byte *>(si.lpMaximumApplicationAddress))
 	{
 		if (VirtualQueryEx(hProcess, addr, ::std::addressof(mbi), sizeof(mbi)) == sizeof(mbi))
 		{
