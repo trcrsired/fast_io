@@ -71,7 +71,7 @@ public:
 			{ r.c_str() } -> ::std::convertible_to<const_pointer>;
 		} && ::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
 				 !::std::is_rvalue_reference_v<rg>)
-	inline explicit constexpr basic_cstring_view(rg &&r) noexcept
+	inline explicit constexpr basic_cstring_view(::fast_io::freestanding::from_range_t, rg &&r) noexcept
 		: string_view_type(::fast_io::freestanding::from_range, ::std::forward<rg>(r))
 	{
 	}

@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 
 		println(obf, "[*] Searching for all instances of: ", procName);
 		::fast_io::u16string uProcName(::fast_io::u16concat_fast_io(::fast_io::mnp::code_cvt(procName)));
-		FindAndScanProcesses(obf, ::fast_io::u16cstring_view(uProcName), searchTerm);
+		FindAndScanProcesses(obf, ::fast_io::u16cstring_view(::std::from_range, uProcName), searchTerm);
 		println(obf, "[*] All scans complete.");
 	}
 	catch (::fast_io::error e)
