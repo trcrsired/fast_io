@@ -153,8 +153,14 @@ inline void FindAndScanProcesses(auto &obf, ::fast_io::u16cstring_view processNa
 
 	do
 	{
-		// Convert WCHAR to a comparable format
-		::fast_io::u16string_view current_name(::fast_io::mnp::os_c_str(reinterpret_cast<char16_t const *>(pe32.szExeFile), processName.size()));
+		// Convert WCHAR to a comparable format.
+		// Prevent strict aliasing violation with [[__gnu__::__may_alias__]] attribute
+		using char16_const_may_alias_ptr
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+			[[__gnu__::__may_alias__]]
+#endif
+			= char16_t const *;
+		::fast_io::u16string_view current_name(::fast_io::mnp::os_c_str(reinterpret_cast<char16_const_may_alias_ptr>(pe32.szExeFile), processName.size()));
 
 		// Use a wide search or conversion if necessary; here we do a simple match
 		// Note: For Edge, you'll see many "msedge.exe" entries
