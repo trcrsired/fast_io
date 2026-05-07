@@ -43,8 +43,9 @@ public:
 		: ptr{::std::to_address(first)}, n{static_cast<size_type>(snt - first)}
 	{}
 	template <::std::ranges::contiguous_range R>
-		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> && !::std::same_as<::std::remove_cvref_t<R>, ::fast_io::containers::span<element_type>>)
-	inline constexpr explicit span(R &&range) noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range)))
+		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> &&
+				 !::std::is_rvalue_reference_v<rg &&>)
+	inline constexpr explicit span(::fast_io::freestanding::from_range_t, R &&range) noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range)))
 		: ptr{::std::ranges::data(range)}, n{::std::ranges::size(range)}
 	{}
 
