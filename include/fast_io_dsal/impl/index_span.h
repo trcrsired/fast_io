@@ -46,8 +46,9 @@ public:
 		: ptr{::std::to_address(first)}
 	{}
 	template <::std::ranges::contiguous_range R>
-		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>>)
-	inline explicit constexpr index_span(::fast_io::containers::index_unchecked_t, R &&range) noexcept(noexcept(::std::ranges::data(range)))
+		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> &&
+				 !::std::is_rvalue_reference_v<R &&>)
+	inline explicit constexpr index_span(::fast_io::containers::index_unchecked_t, ::fast_io::freestanding::from_range_t, R &&range) noexcept(noexcept(::std::ranges::data(range)))
 		: ptr{::std::ranges::data(range)}
 	{}
 	template <::std::ranges::contiguous_range R>

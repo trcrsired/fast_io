@@ -336,7 +336,7 @@ inline constexpr ::fast_io::containers::span<::std::byte> as_writable_bytes(::fa
 }
 
 template <::std::ranges::contiguous_range R>
-span(R &&r) -> span<::std::remove_reference_t<::std::ranges::range_reference_t<R>>>;
+span(::fast_io::freestanding::from_range_t, R &&r) -> span<::std::remove_reference_t<::std::ranges::range_reference_t<R>>>;
 
 template <typename T>
 	requires ::std::equality_comparable<T>
