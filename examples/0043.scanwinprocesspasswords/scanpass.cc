@@ -146,7 +146,7 @@ inline void FindAndScanProcesses(auto &obf, ::fast_io::u16cstring_view processNa
 	PROCESSENTRY32W pe32;
 	pe32.dwSize = sizeof(PROCESSENTRY32W);
 
-	if (!Process32FirstW(hSnap, &pe32))
+	if (!Process32FirstW(hSnap, ::std::addressof(pe32)))
 	{
 		return;
 	}
