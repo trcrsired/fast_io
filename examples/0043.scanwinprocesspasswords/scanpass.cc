@@ -60,7 +60,7 @@ inline void PrintSnippet(auto &outstm, ::fast_io::string_view buffer, size_t off
 		auto chval{static_cast<char8_t>(buffer[i])};
 		print(outstm, ::fast_io::mnp::chvw(::fast_io::char_category::is_c_graph(chval) ? chval : u8'.'));
 
-		if (i == offset + contextSize / 2)
+		if (i == offset + (contextSize >> 1u))
 		{
 			print(outstm, "<< ");
 		}
@@ -105,7 +105,7 @@ inline void ScanProcessMemory(auto &outstm, DWORD pid, ::fast_io::string_view ta
 
 				if (ReadProcessMemory(hProcess, addr, buffer.data(), mbi.RegionSize, __builtin_addressof(bytesRead)))
 				{
-					auto it = std::search(buffer.begin(), buffer.begin() + bytesRead, searcher);
+					auto it = ::std::search(buffer.begin(), buffer.begin() + bytesRead, searcher);
 
 					while (it != (buffer.begin() + bytesRead))
 					{
@@ -173,7 +173,7 @@ inline void FindAndScanProcesses(auto &obf, ::fast_io::u16cstring_view processNa
 				println(obf, "[-] Failed: ", e);
 			}
 		}
-	} while (Process32NextW(hSnap, &pe32));
+	} while (Process32NextW(hSnap, ::std::addressof(pe32)));
 }
 
 int main(int argc, char *argv[])
