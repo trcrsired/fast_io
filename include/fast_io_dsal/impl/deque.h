@@ -2709,12 +2709,12 @@ public:
 		if consteval
 		{
 			auto [start_ptr, end_ptr] = ::fast_io::containers::details::deque_nth_element_common<block_size>(this->controller, pos);
-			return ::fast_io::containers::span<value_type>(start_ptr, static_cast<size_type>(end_ptr - start_ptr));
+			return ::fast_io::containers::span<value_type>(start_ptr, end_ptr);
 		}
 		else
 		{
 			auto [start_ptr, end_ptr] = ::std::bit_cast<::fast_io::containers::details::deque_nth_element_result<pointer>>(::fast_io::containers::details::deque_nth_element_common<block_size * sizeof(value_type)>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(__builtin_addressof(this->controller)), pos));
-			return ::fast_io::containers::span<value_type>(start_ptr, static_cast<size_type>(end_ptr - start_ptr));
+			return ::fast_io::containers::span<value_type>(start_ptr, end_ptr);
 		}
 	}
 	inline constexpr ::fast_io::containers::span<value_type const> const_nth_segment(size_type pos) const noexcept
@@ -2722,14 +2722,14 @@ public:
 		if consteval
 		{
 			auto [start_ptr, end_ptr] = ::fast_io::containers::details::deque_nth_element_common<block_size>(this->controller, pos);
-			return ::fast_io::containers::span<value_type const>(start_ptr, static_cast<size_type>(end_ptr - start_ptr));
+			return ::fast_io::containers::span<value_type const>(start_ptr, end_ptr);
 		}
 		else
 		{
 			auto [start_ptr, end_ptr] = ::std::bit_cast<::fast_io::containers::details::deque_nth_element_result<const_pointer>>(::fast_io::containers::details::deque_nth_element_common<block_size * sizeof(value_type)>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
 																																																							   const_cast<controller_type *>(__builtin_addressof(this->controller))),
 																																																						   pos));
-			return ::fast_io::containers::span<value_type const>(start_ptr, static_cast<size_type>(end_ptr - start_ptr));
+			return ::fast_io::containers::span<value_type const>(start_ptr, end_ptr);
 		}
 	}
 	inline constexpr ::fast_io::containers::span<value_type const> nth_segment(size_type pos) const noexcept
