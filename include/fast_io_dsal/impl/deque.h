@@ -1523,10 +1523,7 @@ inline constexpr bool deque_reserve_front_blocks_impl(dequecontroltype &controll
 			controller.controller_block.controller_start_reserved_ptr);
 	if (diff_to_start_ptr < nb)
 	{
-		if (diff_to_start_ptr)
-		{
-			nb -= diff_to_start_ptr;
-		}
+		nb -= diff_to_start_ptr;
 		::std::size_t distance_front_to_start{
 			static_cast<::std::size_t>(controller.front_block.controller_ptr -
 									   controller.controller_block.controller_start_ptr)};
