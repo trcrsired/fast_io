@@ -628,10 +628,13 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 
 	// we need a null terminator as sentinel like c style string does
 	--allocated_blocks_count;
+	auto &controller_block{controller.controller_block};
+	auto &front_block{controller.front_block};
+	auto &back_block{controller.back_block};
 
 	using begin_ptrtype = typename dequecontroltype::replacetype *;
 
-	controller.controller_block.controller_after_ptr = (controller.controller_block.controller_start_ptr = allocated_blocks_ptr) + allocated_blocks_count;
+	controller_block.controller_after_ptr = (controller_block.controller_start_ptr = allocated_blocks_ptr) + allocated_blocks_count;
 
 
 	::std::size_t const allocated_blocks_count_half{allocated_blocks_count >> 1u};
@@ -647,8 +650,8 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 		::std::construct_at(i, static_cast<begin_ptrtype>(allocator::allocate_aligned(align, bytes)));
 	}
 	*end_block_ptr = nullptr;
-	controller.controller_block.controller_start_reserved_ptr = start_block_ptr;
-	controller.controller_block.controller_after_reserved_ptr = end_block_ptr;
+	controller_block.controller_start_reserved_ptr = start_block_ptr;
+	controller_block.controller_after_reserved_ptr = end_block_ptr;
 
 	begin_ptrtype begin_ptr;
 	if (position < 0)
