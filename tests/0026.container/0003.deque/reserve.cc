@@ -17,6 +17,9 @@ inline void logging(T const &deq, ::std::source_location src = ::std::source_loc
 int main()
 {
 	::fast_io::deque<::std::size_t> deq;
+	deq.reserve_back(10000000);
+	logging(deq);
+	deq.clear_destroy();
 	deq.push_back(30);
 	logging(deq);
 	deq.reserve_back(265);
