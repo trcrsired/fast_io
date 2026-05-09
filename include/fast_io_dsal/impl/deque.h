@@ -628,9 +628,6 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 
 	// we need a null terminator as sentinel like c style string does
 	--allocated_blocks_count;
-	auto &controller_block{controller.controller_block};
-	auto &front_block{controller.front_block};
-	auto &back_block{controller.back_block};
 
 	using begin_ptrtype = typename dequecontroltype::replacetype *;
 
