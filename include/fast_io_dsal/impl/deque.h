@@ -3538,14 +3538,17 @@ public:
 #if 0
 	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
 	{
+		deque temp(count,val);
+		this->swap(temp);
 	}
+#endif
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>) 
+	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
 	{
+		deque temp(::fast_io::freestanding::from_range, ::std::forward<R>(rg));
+		this->swap(temp);
 	}
-
-#endif
 
 private:
 	inline constexpr void resize_impl(size_type count, T const *pval) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
