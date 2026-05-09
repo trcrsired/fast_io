@@ -38,4 +38,15 @@ int main()
 	logging(deq);
 	deq.reserve_front(6401);
 	logging(deq);
+	deq.clear_destroy();
+	logging(deq);
+	deq.reserve_front(512);
+	logging(deq);
+	deq.push_front(30);
+	deq.pop_back();
+	logging(deq);
+	for (auto e : deq)
+	{
+		::fast_io::io::println(e);
+	}
 }

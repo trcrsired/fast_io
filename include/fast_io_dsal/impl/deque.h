@@ -603,10 +603,22 @@ template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltype &controller, ::std::size_t initial_allocated_block_counts, ::std::size_t align, ::std::size_t bytes,
 																 int position) noexcept
 {
+	constexpr bool rightaddone{false};
 	::std::size_t initial_allocated_block_counts_with_sentinel;
 #if (defined(__GNUC__) || defined(__clang__))
 	if constexpr (true)
 	{
+		if constexpr (rightaddone)
+		{
+			if (0 < position)
+			{
+				if (__builtin_add_overflow(initial_allocated_block_counts, 1u,
+										   __builtin_addressof(initial_allocated_block_counts)))
+				{
+					::fast_io::fast_terminate();
+				}
+			}
+		}
 		if (__builtin_add_overflow(initial_allocated_block_counts, 1u,
 								   __builtin_addressof(initial_allocated_block_counts_with_sentinel)))
 		{
@@ -617,6 +629,17 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 #endif
 	{
 		constexpr ::std::size_t maxval{::std::numeric_limits<::std::size_t>::max()};
+		if constexpr (rightaddone)
+		{
+			if (0 < position)
+			{
+				if (initial_allocated_block_counts == maxval)
+				{
+					::fast_io::fast_terminate();
+				}
+				++initial_allocated_block_counts;
+			}
+		}
 		if (initial_allocated_block_counts == maxval) [[unlikely]]
 		{
 			::fast_io::fast_terminate();
@@ -654,40 +677,68 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 	controller_block.controller_after_reserved_ptr = end_block_ptr;
 
 	begin_ptrtype begin_ptr;
-	if (position < 0)
+	if constexpr (rightaddone)
 	{
-		// place logical cursor at the first reserved block (front side)
-		auto first_block_ptr{start_block_ptr};
-		begin_ptr = *first_block_ptr;
+		if (position == 0)
+		{
+			// place logical cursor in the middle block, middle of that block
+			auto mid_block_ptr{allocated_mid_block};
+			begin_ptr = *mid_block_ptr;
+			auto mid_ptr{begin_ptr + (bytes >> 1u)};
 
-		front_block.controller_ptr = first_block_ptr;
-		back_block.controller_ptr = first_block_ptr;
+			front_block.controller_ptr = mid_block_ptr;
+			back_block.controller_ptr = mid_block_ptr;
 
-		front_block.curr_ptr = back_block.curr_ptr = begin_ptr;
-	}
-	else if (position == 0)
-	{
-		// place logical cursor in the middle block, middle of that block
-		auto mid_block_ptr{allocated_mid_block};
-		begin_ptr = *mid_block_ptr;
-		auto mid_ptr{begin_ptr + (bytes >> 1u)};
+			front_block.curr_ptr = back_block.curr_ptr = mid_ptr;
+		}
+		else
+		{
+			// place logical cursor at the first reserved block (front side)
+			auto first_block_ptr{start_block_ptr};
+			begin_ptr = *first_block_ptr;
 
-		front_block.controller_ptr = mid_block_ptr;
-		back_block.controller_ptr = mid_block_ptr;
+			front_block.controller_ptr = first_block_ptr;
+			back_block.controller_ptr = first_block_ptr;
 
-		front_block.curr_ptr = back_block.curr_ptr = mid_ptr;
+			front_block.curr_ptr = back_block.curr_ptr = begin_ptr;
+		}
 	}
 	else
 	{
-		// place logical cursor at the last reserved block (back side)
-		auto last_block_ptr{end_block_ptr - 1};
-		begin_ptr = *last_block_ptr;
+		if (position < 0)
+		{
+			// place logical cursor at the first reserved block (front side)
+			auto first_block_ptr{start_block_ptr};
+			begin_ptr = *first_block_ptr;
 
-		front_block.controller_ptr = last_block_ptr;
-		back_block.controller_ptr = last_block_ptr;
-		front_block.curr_ptr = back_block.curr_ptr = begin_ptr + bytes;
+			front_block.controller_ptr = first_block_ptr;
+			back_block.controller_ptr = first_block_ptr;
+
+			front_block.curr_ptr = back_block.curr_ptr = begin_ptr;
+		}
+		else if (position == 0)
+		{
+			// place logical cursor in the middle block, middle of that block
+			auto mid_block_ptr{allocated_mid_block};
+			begin_ptr = *mid_block_ptr;
+			auto mid_ptr{begin_ptr + (bytes >> 1u)};
+
+			front_block.controller_ptr = mid_block_ptr;
+			back_block.controller_ptr = mid_block_ptr;
+
+			front_block.curr_ptr = back_block.curr_ptr = mid_ptr;
+		}
+		else
+		{
+			// place logical cursor at the last reserved block (back side)
+			auto last_block_ptr{end_block_ptr - 1};
+			begin_ptr = *last_block_ptr;
+
+			front_block.controller_ptr = last_block_ptr;
+			back_block.controller_ptr = last_block_ptr;
+			front_block.curr_ptr = back_block.curr_ptr = begin_ptr + bytes;
+		}
 	}
-
 	front_block.begin_ptr = back_block.begin_ptr = begin_ptr;
 	controller.front_end_ptr = controller.back_end_ptr = begin_ptr + bytes;
 }
@@ -3584,7 +3635,8 @@ private:
 				::fast_io::freestanding::uninitialized_default_construct(ed, newed);
 			}
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
+		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr &&
+			newed.itercontent.controller_ptr != this->controller.front_block.controller_ptr)
 		{
 			newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
 		}
@@ -3617,7 +3669,8 @@ private:
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
+		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr &&
+			newed.itercontent.controller_ptr != this->controller.front_block.controller_ptr)
 		{
 			newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
 		}
