@@ -1659,14 +1659,14 @@ inline constexpr void deque_reserve_front_spaces_impl(dequecontroltype &controll
 	if consteval
 	{
 		::fast_io::containers::details::deque_reserve_front_blocks_impl<allocator>(controller,
-																				   toallocate, align, block_size, true);
+																				   toallocate, align, block_size);
 	}
 	else
 	{
 		::std::size_t const block_bytes{block_size * sz};
 		::fast_io::containers::details::deque_reserve_front_blocks_impl<allocator>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
 																					   __builtin_addressof(controller)),
-																				   toallocate, align, block_bytes, true);
+																				   toallocate, align, block_bytes);
 	}
 }
 
