@@ -854,7 +854,7 @@ public:
 			else if constexpr (::fast_io::details::has_allocate_at_least_impl<alloc> ||
 							   ::fast_io::details::has_allocate_zero_at_least_impl<alloc>)
 			{
-				return ::fast_io::details::allocator_pointer_aligned_at_least_impl<alloc, false>(alignment, n);
+				return ::fast_io::details::allocator_pointer_aligned_at_least_impl<alloc>(alignment, n, false);
 			}
 			else
 			{
@@ -1480,7 +1480,7 @@ public:
 					return generic_allocator_adapter::reallocate_n_at_least(p, oldn, n);
 				}
 			}
-			auto newres{::fast_io::details::allocator_pointer_aligned_at_least_impl<alloc, false>(alignment, n)};
+			auto newres{::fast_io::details::allocator_pointer_aligned_at_least_impl<alloc>(alignment, n, false)};
 			auto newptr{newres.ptr};
 			if (p != nullptr)
 			{
