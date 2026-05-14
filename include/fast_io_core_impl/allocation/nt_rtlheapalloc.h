@@ -90,16 +90,9 @@ public:
 #if __has_cpp_attribute(__gnu__::__malloc__)
 	[[__gnu__::__malloc__]]
 #endif
-	static inline void *allocate(::std::size_t n) noexcept
+	static inline void *allocate_conditional_zero(::std::size_t n, bool zero) noexcept
 	{
-		return ::fast_io::details::nt_rtlallocate_heap_common_impl(n, 0u);
-	}
-#if __has_cpp_attribute(__gnu__::__malloc__)
-	[[__gnu__::__malloc__]]
-#endif
-	static inline void *allocate_zero(::std::size_t n) noexcept
-	{
-		return ::fast_io::details::nt_rtlallocate_heap_common_impl(n, 0x00000008u);
+		return ::fast_io::details::nt_rtlallocate_heap_common_impl(n, zero ? 0x00000008u : 0u);
 	}
 	static inline void *reallocate(void *addr, ::std::size_t n) noexcept
 	{
