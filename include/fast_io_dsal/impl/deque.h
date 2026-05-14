@@ -2335,6 +2335,29 @@ public:
 		this->construct_deque_common_impl(ilist.begin(), ilist.end());
 	}
 
+	inline explicit constexpr deque(size_type n, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
+		{
+			this->reserve_back(n);
+			auto bg{this->begin()};
+			auto ed{bg + n};
+			::fast_io::freestanding::uninitialized_fill(bg, ed, val);
+			this->set_newed_common(ed.itercontent);
+		}
+		else
+		{
+			deque d;
+			d.reserve_back(n);
+			auto bg{d.begin()};
+			auto ed{bg + n};
+			::fast_io::freestanding::uninitialized_fill(bg, ed, val);
+			d.set_newed_common(ed.itercontent);
+			this->controller = d.controller;
+			d.controller = {};
+		}
+	}
+
 private:
 	template <typename Iter, typename Sentinel>
 	inline constexpr void construct_deque_common_impl(Iter first, Sentinel last)
@@ -3597,14 +3620,50 @@ public:
 		}
 	}
 
-public:
-#if 0
-	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>) 
+	inline constexpr void set_newed_common(::fast_io::containers::details::deque_control_block<value_type> newed) noexcept
 	{
-		deque temp(count,val);
-		this->swap(temp);
+		if (newed.curr_ptr == newed.begin_ptr)
+		{
+			if (newed.controller_ptr == this->controller.front_block.controller_ptr)
+			{
+				this->controller.front_block.curr_ptr = newed.curr_ptr = newed.begin_ptr + (block_size >> 1u);
+			}
+			else
+			{
+				newed.curr_ptr = (newed.begin_ptr = *--newed.controller_ptr) + block_size;
+			}
+		}
+		this->controller.back_block.controller_ptr = newed.controller_ptr;
+		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.begin_ptr) + block_size;
+		this->controller.back_block.curr_ptr = newed.curr_ptr;
 	}
-#endif
+
+public:
+	inline constexpr void assign(size_type count, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+	{
+		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
+		{
+			if constexpr (!::std::is_trivially_destructible_v<value_type>)
+			{
+				this->clear();
+			}
+			if (!count)
+			{
+				return;
+			}
+			this->reserve_back(count);
+			auto bg{this->begin()};
+			auto newed{bg + count};
+			::fast_io::freestanding::uninitialized_fill(bg, newed, val);
+			this->set_newed_common(newed.itercontent);
+		}
+		else
+		{
+			deque d(count, val);
+			this->controller = d.controller;
+			d.controller = {};
+		}
+	}
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void assign_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<value_type, ::std::ranges::range_value_t<R>>)
@@ -3616,26 +3675,17 @@ public:
 private:
 	inline constexpr void resize_impl(size_type count, T const *pval) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
 	{
-#if 0
-		::fast_io::io::debug_print(::std::source_location::current(), " debugresize\n");
-#endif
 		size_type oldsz{this->size()};
 		if (count == oldsz)
 		{
 			return;
 		}
 		iterator newed;
-#if 0
-		::fast_io::io::debug_println(::std::source_location::current(), " debugresize\tcount=",count, " oldsz=",oldsz);
-#endif
 		if (count < oldsz)
 		{
 			auto ed{this->end()};
 			newed = ed;
 			newed -= static_cast<size_type>(oldsz - count);
-#if 0
-		::fast_io::io::debug_println(::std::source_location::current(), " debugresize\tcount=",count, " oldsz=",oldsz, " newed.itercontent.curr_ptr=", ::fast_io::mnp::pointervw(newed.itercontent.curr_ptr));
-#endif
 			if constexpr (!::std::is_trivially_destructible_v<value_type>)
 			{
 				this->destroy_elements_range(newed, ed);
@@ -3643,26 +3693,11 @@ private:
 		}
 		else
 		{
-#if 0
-			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity(),
-				" oldsz=",oldsz,"\n",
-				::fast_io::mnp::debug_view(*this));
-#endif
+
 			this->reserve_back(count);
-#if 0
-			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity(),
-				" oldsz=",oldsz,"\n",
-				::fast_io::mnp::debug_view(*this));
-#endif
+
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
-#if 0
-			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity(),
-				" oldsz=",oldsz,
-				" ed.itercontent.curr_ptr=", ::fast_io::mnp::pointervw(ed.itercontent.curr_ptr),
-				" newed.itercontent.curr_ptr=", ::fast_io::mnp::pointervw(newed.itercontent.curr_ptr),"\n",
-				::fast_io::mnp::debug_view(*this));
-#endif
 			if (pval)
 			{
 				::fast_io::freestanding::uninitialized_fill(ed, newed, *pval);
@@ -3671,27 +3706,8 @@ private:
 			{
 				::fast_io::freestanding::uninitialized_default_construct(ed, newed);
 			}
-#if 0
-			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity());
-#endif
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
-		{
-			if (newed.itercontent.controller_ptr == this->controller.front_block.controller_ptr)
-			{
-				this->controller.front_block.curr_ptr = newed.itercontent.curr_ptr = newed.itercontent.begin_ptr + (block_size >> 1u);
-			}
-			else
-			{
-				newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
-			}
-		}
-		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
-		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
-		this->controller.back_block.curr_ptr = newed.itercontent.curr_ptr;
-#if 0
-		::fast_io::io::debug_println(::std::source_location::current()," ", ::fast_io::mnp::debug_view(*this));
-#endif
+		this->set_newed_common(newed.itercontent);
 	}
 	inline constexpr void resize_for_overwrite_impl(size_type count) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
 	{
@@ -3718,20 +3734,7 @@ private:
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
-		{
-			if (newed.itercontent.controller_ptr == this->controller.front_block.controller_ptr)
-			{
-				this->controller.front_block.curr_ptr = newed.itercontent.curr_ptr = newed.itercontent.begin_ptr + (block_size >> 1u);
-			}
-			else
-			{
-				newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
-			}
-		}
-		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
-		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
-		this->controller.back_block.curr_ptr = newed.itercontent.curr_ptr;
+		this->set_newed_common(newed.itercontent);
 	}
 
 public:
@@ -3780,19 +3783,8 @@ private:
 		{
 			back_block = ::fast_io::freestanding::uninitialized_relocate(last, this->end(), first).itercontent;
 		}
-		if (back_block.begin_ptr == back_block.curr_ptr)
-		{
-			if (this->controller.front_block.controller_ptr == back_block.controller_ptr)
-			{
-				this->controller.front_block.curr_ptr = back_block.curr_ptr = back_block.begin_ptr + (block_size >> 1u);
-			}
-			else
-			{
-				back_block.curr_ptr = ((back_block.begin_ptr = (*--back_block.controller_ptr)) + block_size);
-			}
-		}
-		this->controller.back_block = back_block;
-		this->controller.back_end_ptr = back_block.begin_ptr + block_size;
+
+		this->set_newed_common(back_block);
 		return first;
 	}
 
