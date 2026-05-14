@@ -20,7 +20,7 @@ int main()
 		for (auto const e : deq)
 		{
 			sum += e;
-		}		
+		}
 	}
-	::fast_io::io::perrln("sum=",sum);
+	::fast_io::io::perrln("sum=", sum);
 }
