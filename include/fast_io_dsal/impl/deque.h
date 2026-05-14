@@ -1676,7 +1676,7 @@ inline constexpr void deque_reserve_front_blocks_impl(dequecontroltype &controll
 	{
 		::fast_io::containers::details::deque_allocate_on_empty_common_with_n_impl<allocator>(
 			controller, nb, align, blockbytes);
-		auto controllerptr{controller.controller_block.after_reserved_ptr - 1};
+		auto controllerptr{controller.controller_block.controller_after_reserved_ptr - 1};
 		controller.front_block.controller_ptr = controller.back_block.controller_ptr = controllerptr;
 		auto begin_ptr{*controllerptr};
 		controller.front_block.begin_ptr = controller.back_block.begin_ptr = begin_ptr;
