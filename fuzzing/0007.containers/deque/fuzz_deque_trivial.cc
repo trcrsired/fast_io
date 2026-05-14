@@ -314,12 +314,18 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 	}
 
 	// Final iterator validation
-	for (auto it1 = dq.begin(), it2 = ref.begin(), e1 = dq.end(), e2 = ref.end();
-		 it1 != e1 && it2 != e2; ++it1, ++it2)
 	{
-		if (*it1 != *it2)
+		auto it1 = dq.begin();
+		auto it2 = ref.begin();
+		auto e1 = dq.end();
+		auto e2 = ref.end();
+		for (;
+			 it1 != e1 && it2 != e2; ++it1, ++it2)
 		{
-			__builtin_trap();
+			if (*it1 != *it2)
+			{
+				__builtin_trap();
+			}
 		}
 	}
 
