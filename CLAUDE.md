@@ -70,6 +70,18 @@ The library uses a layered architecture:
 - `fast_io_i18n.h` — Internationalization/locale
 - `fast_io_legacy.h` — Legacy C/C++ stream compatibility
 
+### fast_io's 6 layers of files from bottom to top
+- wine_file
+- nt_file
+- win32_file
+- posix_file
+- c_file
+- filebuf_file
+
+From bottom to top we do a move.
+From top to bottom we do a static cast to the
+lower level of io_observer.
+
 ## Testing
 
 - Tests are organized into numbered categories under `tests/`
