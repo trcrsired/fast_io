@@ -34,7 +34,7 @@ inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_alloc
 	// n is not possible to SIZE_MAX since that would overflow the memory which is not possible
 	::std::size_t const np1{static_cast<::std::size_t>(n + 1u)};
 	auto [ptr, allocn]{typed_allocator_type::allocate_at_least(np1)};
-	*::fast_io::freestanding::non_overlapped_copy_n(first, n, ptr) = 0;
+	::std::construct_at(::fast_io::freestanding::non_overlapped_copy_n(first, n, ptr), chtype{});
 	return {ptr, static_cast<::std::size_t>(allocn - 1u)};
 }
 
@@ -118,7 +118,7 @@ private:
 			using untyped_allocator_type = generic_allocator_adapter<allocator_type>;
 			using typed_allocator_type = typed_generic_allocator_adapter<untyped_allocator_type, chtype>;
 			auto [ptr, cap]{typed_allocator_type::allocate_at_least(2)};
-			*ptr = 0;
+			::std::construct_at(ptr, char_type{});
 			this->imp = {ptr, ptr, ptr + static_cast<size_type>(cap - 1u)};
 		}
 		else
