@@ -193,11 +193,11 @@ public:
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 					{
-						return allocator_type::allocate_aligned_zero(n, default_alignment);
+						return allocator_type::allocate_aligned_zero(default_alignment, n);
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_zero_at_least_impl<alloc>)
 					{
-						return allocator_type::allocate_aligned_zero_at_least(n, default_alignment).ptr;
+						return allocator_type::allocate_aligned_zero_at_least(default_alignment, n).ptr;
 					}
 				}
 				else if constexpr (has_none_zero_ops && !has_zero_ops)
@@ -213,11 +213,11 @@ public:
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 					{
-						ptr = allocator_type::allocate_aligned(n, default_alignment);
+						ptr = allocator_type::allocate_aligned(default_alignment, n);
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_at_least_impl<alloc>)
 					{
-						ptr = allocator_type::allocate_aligned_at_least(n, default_alignment).ptr;
+						ptr = allocator_type::allocate_aligned_at_least(default_alignment, n).ptr;
 					}
 					if (zero)
 					{
@@ -240,11 +240,11 @@ public:
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 						{
-							ptr = allocator_type::allocate_aligned_zero(n, default_alignment);
+							ptr = allocator_type::allocate_aligned_zero(default_alignment, n);
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_zero_at_least_impl<alloc>)
 						{
-							ptr = allocator_type::allocate_aligned_zero_at_least(n, default_alignment).ptr;
+							ptr = allocator_type::allocate_aligned_zero_at_least(default_alignment, n).ptr;
 						}
 						else
 						{
@@ -263,11 +263,11 @@ public:
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 						{
-							ptr = allocator_type::allocate_aligned(n, default_alignment);
+							ptr = allocator_type::allocate_aligned(default_alignment, n);
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_at_least_impl<alloc>)
 						{
-							ptr = allocator_type::allocate_aligned_at_least(n, default_alignment).ptr;
+							ptr = allocator_type::allocate_aligned_at_least(default_alignment, n).ptr;
 						}
 						else
 						{
@@ -1006,11 +1006,11 @@ public:
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_zero_at_least_impl<alloc>)
 					{
-						return allocator_type::allocate_aligned_zero_at_least(n, default_alignment);
+						return allocator_type::allocate_aligned_zero_at_least(default_alignment, n);
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 					{
-						return {allocator_type::allocate_aligned_zero(n, default_alignment), n};
+						return {allocator_type::allocate_aligned_zero(default_alignment, n), n};
 					}
 				}
 				else if constexpr (has_none_zero_ops && !has_zero_ops)
@@ -1026,11 +1026,11 @@ public:
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_at_least_impl<alloc>)
 					{
-						res = allocator_type::allocate_aligned_at_least(n, default_alignment);
+						res = allocator_type::allocate_aligned_at_least(default_alignment, n);
 					}
 					else if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 					{
-						res = {allocator_type::allocate_aligned(n, default_alignment), n};
+						res = {allocator_type::allocate_aligned(default_alignment, n), n};
 					}
 					if (zero)
 					{
@@ -1053,11 +1053,11 @@ public:
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_at_least_impl<alloc>)
 						{
-							res = allocator_type::allocate_aligned_at_least(n, default_alignment);
+							res = allocator_type::allocate_aligned_at_least(default_alignment, n);
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 						{
-							res = {allocator_type::allocate_aligned(n, default_alignment), n};
+							res = {allocator_type::allocate_aligned(default_alignment, n), n};
 						}
 						else
 						{
@@ -1076,11 +1076,11 @@ public:
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_zero_at_least_impl<alloc>)
 						{
-							res = allocator_type::allocate_aligned_zero_at_least(n, default_alignment);
+							res = allocator_type::allocate_aligned_zero_at_least(default_alignment, n);
 						}
 						else if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 						{
-							res = {allocator_type::allocate_aligned_zero(n, default_alignment), n};
+							res = {allocator_type::allocate_aligned_zero(default_alignment, n), n};
 						}
 						else
 						{
