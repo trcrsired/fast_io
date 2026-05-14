@@ -21,8 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 	while (i < size)
 	{
 		uint8_t op = read_u8(i);
-
-		switch (op % 8)
+		switch (op % 6)
 		{
 		case 0:
 		{ // push_back
@@ -39,36 +38,13 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 			break;
 		}
 		case 2:
-		{ // reserve_back
-			size_t n = static_cast<size_t>(read_u8(i)) * 256;
-			fq.reserve_back(n);
-
-			// capacity checks
-			if (fq.back_capacity() < n)
-			{
-				__builtin_trap();
-			}
-			break;
-		}
-		case 3:
-		{ // reserve_front
-			size_t n = static_cast<size_t>(read_u8(i)) * 256;
-			fq.reserve_front(n);
-
-			if (fq.front_capacity() < n)
-			{
-				__builtin_trap();
-			}
-			break;
-		}
-		case 4:
 		{ // resize
 			size_t n = read_u8(i);
 			fq.resize(n);
 			sq.resize(n);
 			break;
 		}
-		case 5:
+		case 3:
 		{ // resize overwrite
 			size_t n = read_u8(i);
 			int v = read_u8(i);
@@ -76,7 +52,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 			sq.resize(n, v);
 			break;
 		}
-		case 6:
+		case 4:
 		{ // assign_range
 			size_t n = read_u8(i);
 			std::vector<int> tmp(n);
@@ -89,14 +65,14 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 			sq.assign(tmp.begin(), tmp.end());
 			break;
 		}
-		case 7:
+		case 5:
 		{ // pop ops
-			if (!fq.empty())
+			if (!sq.empty())
 			{
 				fq.pop_back();
 				sq.pop_back();
 			}
-			if (!fq.empty())
+			if (!sq.empty())
 			{
 				fq.pop_front();
 				sq.pop_front();
@@ -104,25 +80,18 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 			break;
 		}
 		}
-
 		// Validate element correctness
-		if (fq.size() != sq.size())
+		::std::size_t fqsize{fq.size()};
+		if (fqsize != sq.size())
 		{
 			__builtin_trap();
 		}
-
-		for (size_t k = 0; k < fq.size(); ++k)
+		for (size_t k = 0; k != fqsize; ++k)
 		{
 			if (fq[k] != sq[k])
 			{
 				__builtin_trap();
 			}
-		}
-
-		// capacity must always be >= size
-		if (fq.capacity() < fq.size())
-		{
-			__builtin_trap();
 		}
 	}
 

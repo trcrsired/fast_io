@@ -1244,7 +1244,11 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	}
 	if (back_block.begin_ptr == back_block.curr_ptr)
 	{
-		if (controller.front_block.controller_ptr != back_block.controller_ptr)
+		if (controller.front_block.controller_ptr == back_block.controller_ptr)
+		{
+			controller.front_block.curr_ptr = back_block.curr_ptr = (back_block.begin_ptr) + (blockbytes >> 1u);
+		}
+		else
 		{
 			back_block.curr_ptr = ((back_block.begin_ptr = (*--back_block.controller_ptr)) + blockbytes);
 		}
@@ -1584,11 +1588,9 @@ inline constexpr void deque_reserve_back_spaces_impl(dequecontroltype &controlle
 	else
 	{
 		::std::size_t const block_bytes{block_size * sz};
-#if 1
 		::fast_io::containers::details::deque_reserve_back_blocks_impl<allocator>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
 																					  __builtin_addressof(controller)),
 																				  toallocate, align, block_bytes, sz);
-#endif
 	}
 }
 
@@ -2569,6 +2571,10 @@ public:
 		{
 			::std::destroy_at(controller.back_block.curr_ptr - 1);
 		}
+#if 0
+		::fast_io::io::debug_println(::std::source_location::current(), "\n",
+		::fast_io::mnp::debug_view(*this));
+#endif
 		if (--controller.back_block.curr_ptr == controller.back_block.begin_ptr) [[unlikely]]
 		{
 			this->back_backspace();
@@ -3610,21 +3616,29 @@ public:
 private:
 	inline constexpr void resize_impl(size_type count, T const *pval) noexcept(::std::is_nothrow_move_constructible_v<value_type>)
 	{
+#if 0
+		::fast_io::io::debug_print(::std::source_location::current(), " debugresize\n");
+#endif
 		size_type oldsz{this->size()};
 		if (count == oldsz)
 		{
 			return;
 		}
 		iterator newed;
+#if 0
+		::fast_io::io::debug_println(::std::source_location::current(), " debugresize\tcount=",count, " oldsz=",oldsz);
+#endif
 		if (count < oldsz)
 		{
 			auto ed{this->end()};
 			newed = ed;
 			newed -= static_cast<size_type>(oldsz - count);
+#if 0
+		::fast_io::io::debug_println(::std::source_location::current(), " debugresize\tcount=",count, " oldsz=",oldsz, " newed.itercontent.curr_ptr=", ::fast_io::mnp::pointervw(newed.itercontent.curr_ptr));
+#endif
 			if constexpr (!::std::is_trivially_destructible_v<value_type>)
 			{
-				this->erase(newed, ed);
-				return;
+				this->destroy_elements_range(newed, ed);
 			}
 		}
 		else
@@ -3637,7 +3651,8 @@ private:
 			this->reserve_back(count);
 #if 0
 			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity(),
-				" oldsz=",oldsz);
+				" oldsz=",oldsz,"\n",
+				::fast_io::mnp::debug_view(*this));
 #endif
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
@@ -3660,13 +3675,16 @@ private:
 			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity());
 #endif
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr &&
-			newed.itercontent.controller_ptr != this->controller.front_block.controller_ptr)
+		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
 		{
-#if 0
-			::fast_io::io::debug_println(::std::source_location::current()," count=",count," back_capacity=",this->back_capacity());
-#endif
-			newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
+			if (newed.itercontent.controller_ptr == this->controller.front_block.controller_ptr)
+			{
+				this->controller.front_block.curr_ptr = newed.itercontent.curr_ptr = newed.itercontent.begin_ptr + (block_size >> 1u);
+			}
+			else
+			{
+				newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
+			}
 		}
 		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
 		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
@@ -3700,10 +3718,16 @@ private:
 			auto ed{this->end()};
 			newed = ed + static_cast<size_type>(count - oldsz);
 		}
-		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr &&
-			newed.itercontent.controller_ptr != this->controller.front_block.controller_ptr)
+		if (newed.itercontent.curr_ptr == newed.itercontent.begin_ptr)
 		{
-			newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
+			if (newed.itercontent.controller_ptr == this->controller.front_block.controller_ptr)
+			{
+				this->controller.front_block.curr_ptr = newed.itercontent.curr_ptr = newed.itercontent.begin_ptr + (block_size >> 1u);
+			}
+			else
+			{
+				newed.itercontent.curr_ptr = (newed.itercontent.begin_ptr = *--newed.itercontent.controller_ptr) + block_size;
+			}
 		}
 		this->controller.back_block.controller_ptr = newed.itercontent.controller_ptr;
 		this->controller.back_end_ptr = (this->controller.back_block.begin_ptr = newed.itercontent.begin_ptr) + block_size;
@@ -3758,7 +3782,11 @@ private:
 		}
 		if (back_block.begin_ptr == back_block.curr_ptr)
 		{
-			if (this->controller.front_block.controller_ptr != back_block.controller_ptr)
+			if (this->controller.front_block.controller_ptr == back_block.controller_ptr)
+			{
+				this->controller.front_block.curr_ptr = back_block.curr_ptr_ptr = back_block.begin_ptr + (block_size >> 1u);
+			}
+			else
 			{
 				back_block.curr_ptr = ((back_block.begin_ptr = (*--back_block.controller_ptr)) + block_size);
 			}
