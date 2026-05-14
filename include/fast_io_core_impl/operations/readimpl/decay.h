@@ -4,7 +4,6 @@ namespace fast_io::operations::decay
 {
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::readable<instmtype>)
 inline constexpr typename instmtype::input_char_type *
 read_some_decay(instmtype insm, typename instmtype::input_char_type *first, typename instmtype::input_char_type *last)
 {
@@ -12,7 +11,6 @@ read_some_decay(instmtype insm, typename instmtype::input_char_type *first, type
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::readable<instmtype>)
 inline constexpr void read_all_decay(instmtype insm, typename instmtype::input_char_type *first,
 									 typename instmtype::input_char_type *last)
 {
@@ -20,21 +18,18 @@ inline constexpr void read_all_decay(instmtype insm, typename instmtype::input_c
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype>)
 inline constexpr ::std::byte *read_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last)
 {
 	return ::fast_io::details::read_some_bytes_impl(insm, first, last);
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype>)
 inline constexpr void read_all_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last)
 {
 	::fast_io::details::read_all_bytes_impl(insm, first, last);
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::readable<instmtype>)
 inline constexpr io_scatter_status_t
 scatter_read_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						::std::size_t n)
@@ -43,7 +38,6 @@ scatter_read_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::i
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype>)
 inline constexpr io_scatter_status_t scatter_read_some_bytes_decay(instmtype insm, io_scatter_t const *pscatters,
 																   ::std::size_t n)
 {
@@ -51,7 +45,6 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_decay(instmtype ins
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::readable<instmtype>)
 inline constexpr void scatter_read_all_decay(instmtype insm,
 											 basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											 ::std::size_t n)
@@ -60,14 +53,12 @@ inline constexpr void scatter_read_all_decay(instmtype insm,
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype>)
 inline constexpr void scatter_read_all_bytes_decay(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n)
 {
 	::fast_io::details::scatter_read_all_bytes_impl(insm, pscatters, n);
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::preadable<instmtype>)
 inline constexpr typename instmtype::input_char_type *
 pread_some_decay(instmtype insm, typename instmtype::input_char_type *first, typename instmtype::input_char_type *last,
 				 ::fast_io::intfpos_t off)
@@ -76,7 +67,6 @@ pread_some_decay(instmtype insm, typename instmtype::input_char_type *first, typ
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::preadable<instmtype>)
 inline constexpr void pread_all_decay(instmtype insm, typename instmtype::input_char_type *first,
 									  typename instmtype::input_char_type *last, ::fast_io::intfpos_t off)
 {
@@ -84,7 +74,6 @@ inline constexpr void pread_all_decay(instmtype insm, typename instmtype::input_
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
 inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
 													 ::fast_io::intfpos_t off)
 {
@@ -92,7 +81,6 @@ inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
 inline constexpr void pread_all_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
 											 ::fast_io::intfpos_t off)
 {
@@ -100,7 +88,6 @@ inline constexpr void pread_all_bytes_decay(instmtype insm, ::std::byte *first, 
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::preadable<instmtype>)
 inline constexpr io_scatter_status_t
 scatter_pread_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						 ::std::size_t n, ::fast_io::intfpos_t off)
@@ -109,7 +96,6 @@ scatter_pread_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_decay(instmtype insm, io_scatter_t const *pscatters,
 																		::std::size_t n, ::fast_io::intfpos_t off)
 {
@@ -117,7 +103,6 @@ inline constexpr io_scatter_status_t scatter_pread_some_bytes_decay(instmtype in
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::preadable<instmtype>)
 inline constexpr void scatter_pread_all_decay(instmtype insm,
 											  basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											  ::std::size_t n, ::fast_io::intfpos_t off)
@@ -126,7 +111,6 @@ inline constexpr void scatter_pread_all_decay(instmtype insm,
 }
 
 template <typename instmtype>
-	requires(::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
 inline constexpr void scatter_pread_all_bytes_decay(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
 														::fast_io::intfpos_t off)
 {

@@ -4,7 +4,6 @@ namespace fast_io::operations::decay
 {
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::writable<outstmtype>)
 inline constexpr typename outstmtype::output_char_type const *
 write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				 typename outstmtype::output_char_type const *last)
@@ -13,7 +12,6 @@ write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::writable<outstmtype>)
 inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									  typename outstmtype::output_char_type const *last)
 {
@@ -21,7 +19,6 @@ inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::out
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype>)
 inline constexpr ::std::byte const *write_some_bytes_decay(outstmtype outsm, ::std::byte const *first,
 														   ::std::byte const *last)
 {
@@ -29,14 +26,12 @@ inline constexpr ::std::byte const *write_some_bytes_decay(outstmtype outsm, ::s
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype>)
 inline constexpr void write_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
 {
 	::fast_io::details::write_all_bytes_impl(outsm, first, last);
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::writable<outstmtype>)
 inline constexpr io_scatter_status_t
 scatter_write_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n)
@@ -45,7 +40,6 @@ scatter_write_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype>)
 inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
 																		::std::size_t n)
 {
@@ -53,7 +47,6 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype o
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::writable<outstmtype>)
 inline constexpr void
 scatter_write_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						::std::size_t n)
@@ -62,14 +55,12 @@ scatter_write_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype>)
 inline constexpr void scatter_write_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n)
 {
 	::fast_io::details::scatter_write_all_bytes_impl(outsm, pscatters, n);
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::pwritable<outstmtype>)
 inline constexpr typename outstmtype::output_char_type const *
 pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				  typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t off)
@@ -78,7 +69,6 @@ pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const 
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::pwritable<outstmtype>)
 inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									   typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t off)
 {
@@ -86,7 +76,6 @@ inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::ou
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
 inline constexpr ::std::byte const *pwrite_some_bytes_decay(outstmtype outsm, ::std::byte const *first,
 															::std::byte const *last, ::fast_io::intfpos_t off)
 {
@@ -94,7 +83,6 @@ inline constexpr ::std::byte const *pwrite_some_bytes_decay(outstmtype outsm, ::
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
 inline constexpr void pwrite_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::byte const *last,
 											 ::fast_io::intfpos_t off)
 {
@@ -102,7 +90,6 @@ inline constexpr void pwrite_all_bytes_decay(outstmtype outsm, ::std::byte const
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::pwritable<outstmtype>)
 inline constexpr io_scatter_status_t
 scatter_pwrite_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						  ::std::size_t n, ::fast_io::intfpos_t off)
@@ -111,7 +98,6 @@ scatter_pwrite_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmty
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
 																		 ::std::size_t n, ::fast_io::intfpos_t off)
 {
@@ -119,7 +105,6 @@ inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype 
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::pwritable<outstmtype>)
 inline constexpr void
 scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n, ::fast_io::intfpos_t off)
@@ -128,7 +113,6 @@ scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
 inline constexpr void scatter_pwrite_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n,
 													 ::fast_io::intfpos_t off)
 {
@@ -136,7 +120,6 @@ inline constexpr void scatter_pwrite_all_bytes_decay(outstmtype outsm, io_scatte
 }
 
 template <typename outstmtype>
-	requires(::fast_io::operations::decay::defines::writable<outstmtype>)
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 [[__gnu__::__always_inline__]]
 #elif __has_cpp_attribute(msvc::forceinline)
