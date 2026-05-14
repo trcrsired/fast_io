@@ -3784,7 +3784,7 @@ private:
 		{
 			if (this->controller.front_block.controller_ptr == back_block.controller_ptr)
 			{
-				this->controller.front_block.curr_ptr = back_block.curr_ptr_ptr = back_block.begin_ptr + (block_size >> 1u);
+				this->controller.front_block.curr_ptr = back_block.curr_ptr = back_block.begin_ptr + (block_size >> 1u);
 			}
 			else
 			{
