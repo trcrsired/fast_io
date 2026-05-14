@@ -3688,7 +3688,7 @@ private:
 			newed -= static_cast<size_type>(oldsz - count);
 			if constexpr (!::std::is_trivially_destructible_v<value_type>)
 			{
-				this->destroy_elements_range(newed, ed);
+				this->destroy_elements_range(newed.itercontent, ed.itercontent);
 			}
 		}
 		else
@@ -3829,7 +3829,7 @@ private:
 		}
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
 		{
-			this->destroy_elements_range(first, last);
+			this->destroy_elements_range(first.itercontent, last.itercontent);
 		}
 		return this->erase_unchecked_nodestroy_impl(first, last, moveleft);
 	}
@@ -3864,7 +3864,7 @@ private:
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
 		{
-			::std::destroy(pos.itercontent.curr_ptr);
+			::std::destroy_at(pos.itercontent.curr_ptr);
 		}
 		return this->erase_unchecked_single_nodestroy_impl(pos, moveleft);
 	}
