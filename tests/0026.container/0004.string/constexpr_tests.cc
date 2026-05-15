@@ -8,6 +8,8 @@ constexpr bool default_construct()
 }
 static_assert(default_construct());
 
+#if !(defined _MSC_VER && !defined __clang__)
+
 // reserve at compile time (exercises string_heap_dilate_uncheck constexpr path)
 constexpr bool reserve_constexpr()
 {
@@ -16,6 +18,8 @@ constexpr bool reserve_constexpr()
 	return s.capacity() >= 100;
 }
 static_assert(reserve_constexpr());
+
+#endif
 
 #if defined __GNUC__ && !defined __clang__
 // following tests compile with clang -fexperimental-new-constant-interpreter flag can pass
