@@ -3565,10 +3565,7 @@ public:
 	{
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
-			if constexpr (!::std::is_trivially_destructible_v<value_type>)
-			{
-				this->clear();
-			}
+			this->clear();
 			if (!count)
 			{
 				return;
