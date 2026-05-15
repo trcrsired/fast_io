@@ -1495,10 +1495,23 @@ inline constexpr void deque_reserve_back_spaces_impl(dequecontroltype &controlle
 	}
 	::std::size_t nmblocksn{n - blocksn};
 	::std::size_t back_more_blocks{nmblocksn / block_size};
-	::std::size_t const back_more_blocks_mod{nmblocksn % block_size};
 	::std::size_t toallocate{back_more_blocks};
-	if (back_more_blocks_mod)
+#if defined(__GNUC__) || defined(__clang__)
+	if constexpr (true)
 	{
+		if (__builtin_add_overflow(toallocate, 1u, __builtin_addressof(toallocate)))
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	else
+#endif
+	{
+		constexpr ::std::size_t mxval{::std::numeric_limits<::std::size_t>::max()};
+		if (toallocate == mxval)
+		{
+			::fast_io::fast_terminate();
+		}
 		++toallocate;
 	}
 
@@ -1628,8 +1641,22 @@ inline constexpr void deque_reserve_front_spaces_impl(dequecontroltype &controll
 	::std::size_t front_more_blocks{nmblocksn / block_size};
 	::std::size_t const front_more_blocks_mod{nmblocksn % block_size};
 	::std::size_t toallocate{front_more_blocks};
-	if (front_more_blocks_mod)
+#if defined(__GNUC__) || defined(__clang__)
+	if constexpr (true)
 	{
+		if (__builtin_add_overflow(toallocate, 1u, __builtin_addressof(toallocate)))
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	else
+#endif
+	{
+		constexpr ::std::size_t mxval{::std::numeric_limits<::std::size_t>::max()};
+		if (toallocate == mxval)
+		{
+			::fast_io::fast_terminate();
+		}
 		++toallocate;
 	}
 	if consteval
@@ -2516,10 +2543,6 @@ public:
 		{
 			::std::destroy_at(controller.back_block.curr_ptr - 1);
 		}
-#if 0
-		::fast_io::io::debug_println(::std::source_location::current(), "\n",
-		::fast_io::mnp::debug_view(*this));
-#endif
 		if (--controller.back_block.curr_ptr == controller.back_block.begin_ptr) [[unlikely]]
 		{
 			this->back_backspace();
@@ -3600,6 +3623,7 @@ private:
 			return;
 		}
 		iterator newed;
+
 		if (count < oldsz)
 		{
 			auto ed{this->end()};
@@ -3612,7 +3636,6 @@ private:
 		}
 		else
 		{
-
 			this->reserve_back(count);
 
 			auto ed{this->end()};
