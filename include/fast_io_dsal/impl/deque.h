@@ -594,7 +594,7 @@ inline constexpr void deque_rebalance_or_grow_2x_after_blocks_impl(dequecontrolt
 			controller.front_block.controller_ptr += diff;
 			controller.back_block.controller_ptr += diff;
 			controller.controller_block.controller_start_reserved_ptr += diff;
-			*(controller.controller_block.controller_after_reserved_ptr += diff) = nullptr;
+			::std::construct_at(controller.controller_block.controller_after_reserved_ptr += diff, nullptr);
 		}
 	}
 }
@@ -1257,81 +1257,7 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	controller.back_end_ptr = back_block.begin_ptr + blockbytes;
 	return first;
 }
-#if 0
-template <typename allocator, typename dequecontroltype>
-inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype &controller, ::std::size_t extrablocks) noexcept
-{
-	auto const used_blocks_count{
-		static_cast<::std::size_t>(controller.back_block.controller_ptr - controller.front_block.controller_ptr) + 1zu};
-	
-	// total_slots_count is the distance (after - start). 
-	// If start=0 and after=47, total_slots_count is 47, but there are 48 physical slots (0-47).
-	auto const total_slots_count{
-		static_cast<::std::size_t>(controller.controller_block.controller_after_ptr - controller.controller_block.controller_start_ptr)};
-	
-	// We MUST leave one slot for the nullptr sentinel.
-	// Usable capacity for pointers is exactly total_slots_count.
-	auto const usable_ptr_capacity{total_slots_count}; 
 
-	::std::size_t new_used_blocks_count;
-#if (defined(__GNUC__) || defined(__clang__))
-	if (__builtin_add_overflow(used_blocks_count, extrablocks, __builtin_addressof(new_used_blocks_count))) [[unlikely]]
-	{
-		::fast_io::fast_terminate();
-	}
-#else
-	if (::std::numeric_limits<::std::size_t>::max() - extrablocks < used_blocks_count)
-	{
-		::fast_io::fast_terminate();
-	}
-	new_used_blocks_count = used_blocks_count + extrablocks;
-#endif
-
-	// Heuristic: If we are using more than half the map, grow it.
-	// This ensures we aren't rebalancing too frequently.
-	if ((total_slots_count >> 1u) < new_used_blocks_count) 
-	{
-		::std::size_t doubleslotsextra;
-		// ... (Keep your existing overflow-safe doubling logic here) ...
-		::fast_io::containers::details::deque_grow_to_new_blocks_count_impl<allocator>(controller, doubleslotsextra);
-	}
-	else
-	{
-		// BALANCE BLOCKS: The single-shift strategy
-		auto const cb_start{controller.controller_block.controller_start_ptr};
-		auto const old_front{controller.front_block.controller_ptr};
-		auto const old_back_plus_one{controller.back_block.controller_ptr + 1};
-
-		/* To center the used blocks:
-		   Target Offset = (Total Usable Slots - Blocks to fit) / 2
-		   We use (usable_ptr_capacity - used_blocks_count) because index total_slots_count 
-		   is reserved for the nullptr sentinel.
-		*/
-		::std::size_t const target_offset{(usable_ptr_capacity - used_blocks_count) >> 1u};
-		auto const new_front{cb_start + target_offset};
-
-		if (new_front != old_front)
-		{
-			// 1. Move only the actual block pointers to the new centered location
-			::fast_io::freestanding::overlapped_copy(old_front, old_back_plus_one, new_front);
-
-			// 2. Calculate the pointer diff to update the controller state
-			::std::ptrdiff_t const diff{new_front - old_front};
-
-			controller.front_block.controller_ptr += diff;
-			controller.back_block.controller_ptr += diff;
-			
-			// 3. Update the reserved range tracking
-			controller.controller_block.controller_start_reserved_ptr = new_front;
-			controller.controller_block.controller_after_reserved_ptr = new_front + used_blocks_count;
-			
-			// 4. THE FIX: Safely write the sentinel. 
-			// Because of target_offset math, this is guaranteed to be <= controller_after_ptr.
-			*(controller.controller_block.controller_after_reserved_ptr) = nullptr;
-		}
-	}
-}
-#else
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype &controller, ::std::size_t extrablocks) noexcept
 {
@@ -1419,7 +1345,6 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 			controller.front_block.controller_ptr += diff;
 			controller.back_block.controller_ptr += diff;
 		}
-#if 0
 		auto const half_slotsextra_count{static_cast<::std::size_t>((total_slots_count + extrablocks) >> 1u)};
 		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slotsextra_count};
 		if (slots_pivot != reserved_pivot)
@@ -1430,12 +1355,10 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 			controller.front_block.controller_ptr += diff;
 			controller.back_block.controller_ptr += diff;
 			controller.controller_block.controller_start_reserved_ptr += diff;
-			*(controller.controller_block.controller_after_reserved_ptr += diff) = nullptr;
+			::std::construct_at(controller.controller_block.controller_after_reserved_ptr += diff, nullptr);
 		}
-#endif
 	}
 }
-#endif
 
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype &controller, ::std::size_t nb, ::std::size_t align, ::std::size_t blockbytes) noexcept
@@ -1493,11 +1416,10 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 			{
 				::std::construct_at(pos, static_cast<begin_ptrtype>(allocator::allocate_aligned(align, blockbytes)));
 			}
-			*pos = nullptr;
+			::std::construct_at(pos, nullptr);
 			controller.controller_block.controller_after_reserved_ptr = pos;
 		}
 	}
-
 	if (controller.back_block.controller_ptr == controller.front_block.controller_ptr && controller.front_block.curr_ptr == controller.front_end_ptr)
 	{
 		auto front_block_controller_ptr{controller.front_block.controller_ptr + 1};
@@ -1655,7 +1577,7 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(dequecontroltyp
 			::fast_io::freestanding::non_overlapped_copy_n(new_controller_after_reserved_ptr,
 														   back_borrowed_blocks_count,
 														   new_controller_start_reserved_ptr);
-			*(controller.controller_block.controller_after_reserved_ptr = new_controller_after_reserved_ptr) = nullptr;
+			::std::construct_at(controller.controller_block.controller_after_reserved_ptr = new_controller_after_reserved_ptr, nullptr);
 			// after this line Todo
 
 			auto ed{new_controller_start_reserved_ptr};
