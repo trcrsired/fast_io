@@ -1,3 +1,4 @@
+#include <fast_io.h>
 #include <fast_io_dsal/deque.h>
 #include <deque>
 #include <cstddef>
@@ -64,7 +65,6 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 	while (i < size)
 	{
 		uint8_t op = read_u8(i);
-
 		switch (op % 20u)
 		{
 		case 0:
