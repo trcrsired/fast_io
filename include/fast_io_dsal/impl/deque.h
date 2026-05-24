@@ -1283,10 +1283,24 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 	::std::size_t to_allocated_blocks_least_p1{::fast_io::containers::details::deque_new_blocks_count_compute_impl(new_blocks_count_least,
 																												   old_blocks_count, (no_space_at_back ? static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_start_reserved_ptr) : static_cast<::std::size_t>(old_after_reserved_ptr - old_front_block_controller_ptr)))};
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
-	auto [new_start_ptr, allocated_blocks_p1] = block_typed_allocator::allocate_at_least(to_allocated_blocks_least_p1);
+	decltype(old_start_ptr) new_start_ptr;
+	::std::size_t allocated_blocks;
 
-	::std::size_t allocated_blocks{allocated_blocks_p1};
-	--allocated_blocks;
+	::std::size_t old_allocated_sz{static_cast<::std::size_t>(old_after_ptr - old_start_ptr)};
+	::std::size_t old_allocated_sz_p1{old_allocated_sz + 1zu};
+	bool is_allocating_new_block{old_allocated_sz_p1 < to_allocated_blocks_least_p1};
+	if (is_allocating_new_block)
+	{
+		auto allocate_result = block_typed_allocator::allocate_at_least(to_allocated_blocks_least_p1);
+		new_start_ptr = allocate_result.ptr;
+		allocated_blocks = allocate_result.count;
+		--allocated_blocks;
+	}
+	else
+	{
+		new_start_ptr = old_start_ptr;
+		allocated_blocks = old_allocated_sz;
+	}
 	::std::size_t new_start_reserved_ptr_pos;
 	if (no_space_at_back)
 	{
@@ -1297,7 +1311,7 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 		new_start_reserved_ptr_pos = new_blocks_count_least - static_cast<::std::size_t>(old_back_block_controller_pos - old_start_reserved_pos);
 	}
 	auto new_start_reserved_ptr{new_start_ptr + new_start_reserved_ptr_pos};
-	auto ed{::fast_io::freestanding::non_overlapped_copy(old_start_ptr + old_start_reserved_pos, old_start_ptr + old_after_reserved_pos, new_start_reserved_ptr)};
+	auto ed{::fast_io::freestanding::overlapped_copy(old_start_ptr + old_start_reserved_pos, old_start_ptr + old_after_reserved_pos, new_start_reserved_ptr)};
 	::std::construct_at(ed, nullptr);
 
 	controller.controller_block.controller_start_ptr = new_start_ptr;
@@ -1306,9 +1320,10 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 	controller.controller_block.controller_after_reserved_ptr = ed;
 	controller.front_block.controller_ptr = new_start_reserved_ptr + static_cast<::std::size_t>(old_front_block_controller_pos - old_start_reserved_pos);
 	controller.back_block.controller_ptr = new_start_reserved_ptr + static_cast<::std::size_t>(old_back_block_controller_pos - old_start_reserved_pos);
-
-	block_typed_allocator::deallocate_n(old_start_ptr,
-										static_cast<::std::size_t>(static_cast<::std::size_t>(old_after_ptr - old_start_ptr) + 1zu));
+	if (is_allocating_new_block)
+	{
+		block_typed_allocator::deallocate_n(old_start_ptr, old_allocated_sz_p1);
+	}
 }
 
 template <typename allocator, typename dequecontroltype>
