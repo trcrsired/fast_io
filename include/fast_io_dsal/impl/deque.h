@@ -3218,7 +3218,6 @@ public:
 			{
 				return;
 			}
-			::fast_io::io::debug_println(::std::source_location::current(), " rgsize=", rgsize);
 			this->insert_range_front_impl(0, ::std::forward<R>(rg), rgsize);
 		}
 		else
