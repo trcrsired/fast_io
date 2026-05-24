@@ -1203,89 +1203,116 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	return first;
 }
 
-template <typename allocator, typename dequecontroltype>
-inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontroltype &controller, ::std::size_t new_blocks_count_least, bool toleft) noexcept
+inline constexpr ::std::size_t deque_new_blocks_count_compute_impl(::std::size_t new_blocks_count_least, ::std::size_t blocks, ::std::size_t reserved_space_at_opposite_direction) noexcept
 {
-	auto old_start_ptr{controller.controller_block.controller_start_ptr};
-#if __has_cpp_attribute(assume)
-	[[assume(old_start_ptr!=nullptr)]];
-#endif
-	auto old_start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
-	auto old_after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
-
-	::std::size_t const old_start_reserved_ptr_pos{static_cast<::std::size_t>(old_start_reserved_ptr - old_start_ptr)};
-	::std::size_t const old_after_ptr_pos{static_cast<::std::size_t>(controller.controller_block.controller_after_ptr - old_start_ptr)};
-	auto old_front_block_controller_ptr{controller.front_block.controller_ptr};
-	::std::size_t const old_front_block_ptr_pos{static_cast<::std::size_t>(old_front_block_controller_ptr - old_start_ptr)};
-	auto old_back_block_controller_ptr{controller.back_block.controller_ptr};
-	::std::size_t const old_back_block_ptr_pos{static_cast<::std::size_t>(old_back_block_controller_ptr - old_start_ptr)};
-
-	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
-
-	::std::size_t new_blocks_count_least_p1;
 #if (defined(__GNUC__) || defined(__clang__))
 	if constexpr (true)
 	{
-		if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
+		::std::size_t blocksx2;
+		if (__builtin_add_overflow(blocks, blocks, __builtin_addressof(blocksx2)))
 		{
 			::fast_io::fast_terminate();
 		}
+		if (reserved_space_at_opposite_direction < blocksx2)
+		{
+			reserved_space_at_opposite_direction = blocksx2;
+		}
+		if (__builtin_add_overflow(new_blocks_count_least, reserved_space_at_opposite_direction, __builtin_addressof(reserved_space_at_opposite_direction)))
+		{
+			::fast_io::fast_terminate();
+		}
+		if (__builtin_add_overflow(reserved_space_at_opposite_direction, 1u, __builtin_addressof(reserved_space_at_opposite_direction)))
+		{
+			::fast_io::fast_terminate();
+		}
+		return reserved_space_at_opposite_direction;
 	}
 	else
 #endif
 	{
-		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-		if (mx == new_blocks_count_least)
+		::std::size_t blocksx2{blocks + blocks};
+		if (blocksx2 < blocks)
 		{
 			::fast_io::fast_terminate();
 		}
-		new_blocks_count_least_p1 = new_blocks_count_least + 1u;
+		if (reserved_space_at_opposite_direction < blocksx2)
+		{
+			reserved_space_at_opposite_direction = blocksx2;
+		}
+		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+		::std::size_t const mxm{mx - new_blocks_count_least};
+		if (mxm < reserved_space_at_opposite_direction)
+		{
+			::fast_io::fast_terminate();
+		}
+		reserved_space_at_opposite_direction += new_blocks_count_least;
+		if (mx == reserved_space_at_opposite_direction)
+		{
+			::fast_io::fast_terminate();
+		}
+		++reserved_space_at_opposite_direction;
+		return reserved_space_at_opposite_direction;
 	}
-
-	auto [new_start_ptr, new_blocks_count_p1] = block_typed_allocator::allocate_at_least(new_blocks_count_least_p1);
-	::std::size_t new_blocks_count{static_cast<::std::size_t>(new_blocks_count_p1-1zu)};
-	auto new_end_ptr{new_start_ptr + new_blocks_count};
-
-	decltype(new_end_ptr) destit;
-	decltype(destit) new_start_reserved_ptr;
-	decltype(destit) new_end_reserved_ptr;
-	decltype(destit) new_front_controller_ptr;
-	decltype(destit) new_back_controller_ptr;
-	if (toleft)
-	{
-		::std::size_t diff{static_cast<::std::size_t>(old_after_reserved_ptr - old_start_reserved_ptr)};
-		auto start_from_ptr{old_back_block_ptr_pos-diff};
-		new_start_reserved_ptr = start_from_ptr;
-		new_end_reserved_ptr = new_end_ptr;
-		new_back_controller_ptr = new_end_ptr - 1;
-		new_front_controller_ptr = new_back_controller_ptr - static_cast<::std::size_t>(old_back_block_ptr_pos - old_front_block_ptr_pos);
-		start_from_ptr = ::fast_io::freestanding::non_overlapped_copy(old_back_block_controller_ptr + 1,
-			old_after_reserved_ptr, start_from_ptr);
-		destit = ::fast_io::freestanding::non_overlapped_copy(old_start_reserved_ptr, old_back_block_controller_ptr + 1, start_from_ptr);
-	}
-	else
-	{
-		destit = new_start_ptr;
-		destit = ::fast_io::freestanding::non_overlapped_copy(old_front_block_controller_ptr,
-			old_after_reserved_ptr, destit);
-		destit = ::fast_io::freestanding::non_overlapped_copy(old_start_reserved_ptr,
-			old_front_block_controller_ptr, destit);
-		new_start_reserved_ptr = new_start_ptr;
-		new_front_controller_ptr = new_start_ptr;
-		new_back_controller_ptr = new_start_ptr + static_cast<::std::size_t>(old_back_block_ptr_pos - old_front_block_ptr_pos);
-		new_end_reserved_ptr = destit;
-	}
-	::std::construct_at(destit, nullptr);
-	controller.controller_block.controller_start_ptr = new_start_ptr;
-	controller.controller_block.controller_end_ptr = new_start_ptr + new_blocks_count;
-	controller.controller_block.controller_start_reserved_ptr = new_start_reserved_ptr;
-	controller.controller_block.controller_end_reserved_ptr = new_end_reserved_ptr;
-	controller.front_block.controller_ptr = new_front_controller_ptr;
-	controller.back_block.controller_ptr = new_back_controller_ptr;
 }
 
 template <typename allocator, typename dequecontroltype>
-inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(dequecontroltype &controller, ::std::size_t extrablocks, bool toleft) noexcept
+inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontroltype &controller, ::std::size_t new_blocks_count_least, bool no_space_at_back) noexcept
+{
+	auto old_start_ptr{controller.controller_block.controller_start_ptr};
+#if __has_cpp_attribute(assume)
+	[[assume(old_start_ptr != nullptr)]];
+#endif
+	auto old_after_ptr{controller.controller_block.controller_after_ptr};
+	auto old_start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
+	auto old_after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
+	auto old_front_block_controller_ptr{controller.front_block.controller_ptr};
+	auto old_back_block_controller_ptr{controller.back_block.controller_ptr};
+	auto old_back_block_controller_ptr_p1{old_back_block_controller_ptr + 1};
+
+	::std::size_t old_start_reserved_pos{
+		static_cast<::std::size_t>(old_start_reserved_ptr - old_start_ptr)};
+	::std::size_t old_after_reserved_pos{
+		static_cast<::std::size_t>(old_after_reserved_ptr - old_start_ptr)};
+
+	::std::size_t old_front_block_controller_pos{
+		static_cast<::std::size_t>(old_front_block_controller_ptr - old_start_ptr)};
+	::std::size_t old_back_block_controller_pos{
+		static_cast<::std::size_t>(old_back_block_controller_ptr - old_start_ptr)};
+
+	::std::size_t old_blocks_count{static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_front_block_controller_ptr)};
+	::std::size_t to_allocated_blocks_least_p1{::fast_io::containers::details::deque_new_blocks_count_compute_impl(new_blocks_count_least,
+																												   old_blocks_count, (no_space_at_back ? static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_start_reserved_ptr) : static_cast<::std::size_t>(old_after_reserved_ptr - old_front_block_controller_ptr)))};
+	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
+	auto [new_start_ptr, allocated_blocks_p1] = block_typed_allocator::allocate_at_least(to_allocated_blocks_least_p1);
+
+	::std::size_t allocated_blocks{allocated_blocks_p1};
+	--allocated_blocks;
+	::std::size_t new_start_reserved_ptr_pos;
+	if (no_space_at_back)
+	{
+		new_start_reserved_ptr_pos = allocated_blocks - new_blocks_count_least - static_cast<::std::size_t>(old_front_block_controller_pos - old_start_reserved_pos);
+	}
+	else
+	{
+		new_start_reserved_ptr_pos = new_blocks_count_least - static_cast<::std::size_t>(old_back_block_controller_pos - old_start_reserved_pos);
+	}
+	auto new_start_reserved_ptr{new_start_ptr + new_start_reserved_ptr_pos};
+	auto ed{::fast_io::freestanding::non_overlapped_copy(old_start_ptr + old_start_reserved_pos, old_start_ptr + old_after_reserved_pos, new_start_reserved_ptr)};
+	::std::construct_at(ed, nullptr);
+
+	controller.controller_block.controller_start_ptr = new_start_ptr;
+	controller.controller_block.controller_after_ptr = new_start_ptr + allocated_blocks;
+	controller.controller_block.controller_start_reserved_ptr = new_start_reserved_ptr;
+	controller.controller_block.controller_after_reserved_ptr = ed;
+	controller.front_block.controller_ptr = new_start_reserved_ptr + static_cast<::std::size_t>(old_front_block_controller_pos - old_start_reserved_pos);
+	controller.back_block.controller_ptr = new_start_reserved_ptr + static_cast<::std::size_t>(old_back_block_controller_pos - old_start_reserved_pos);
+
+	block_typed_allocator::deallocate_n(old_start_ptr,
+										static_cast<::std::size_t>(static_cast<::std::size_t>(old_after_ptr - old_start_ptr) + 1zu));
+}
+
+template <typename allocator, typename dequecontroltype>
+inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(dequecontroltype &controller, ::std::size_t extrablocks, bool no_space_at_back) noexcept
 {
 	auto old_front_controller_ptr{controller.front_block.controller_ptr};
 	auto old_back_controller_ptr{controller.back_block.controller_ptr};
@@ -1314,71 +1341,14 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(dequeco
 	}
 	auto start_ptr{controller.controller_block.controller_start_ptr};
 	auto after_ptr{controller.controller_block.controller_after_ptr};
-	::std::size_t const capacity_blocks_count_direction{
-		toleft? static_cast<::std::size_t>(old_back_after_controller_ptr - start_ptr):
-		static_cast<::std::size_t>(after_ptr - old_front_controller_ptr)};
-	if (capacity_blocks_count < new_elements_blocks_count)
-	{
-		::std::size_t double_capacity_blocks_count{capacity_blocks_count};
-		if ((new_elements_blocks_count>>1u) < double_capacity_blocks_count)
-		{
-#if (defined(__GNUC__) || defined(__clang__))
-			if constexpr (true)
-			{
-				if (__builtin_add_overflow(double_capacity_blocks_count, double_capacity_blocks_count, __builtin_addressof(double_capacity_blocks_count))) [[unlikely]]
-				{
-					::fast_io::fast_terminate();
-				}
-			}
-			else
-#endif
-			{
-				constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-				::std::size_t const mx_sub_extrablocks{mx - double_capacity_blocks_count};
-				if (mx_sub_extrablocks < double_capacity_blocks_count)
-				{
-					::fast_io::fast_terminate();
-				}
-				double_capacity_blocks_count<<=1u;
-			}
-			new_elements_blocks_count = double_capacity_blocks_count;
-		}
-		::fast_io::containers::details::deque_grow_to_new_blocks_count_direction_impl<allocator>(controller, new_elements_blocks_count, toleft);
-		return;
-	}
-	else
-	{
-		auto start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
-		auto after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
-		auto rotate_pivot{toleft? old_front_controller_ptr :  old_back_controller_ptr + 1};
-		::std::size_t reservedcount{static_cast<::std::size_t>(after_reserved_ptr-start_reserved_ptr)};
-		auto copy_pivot{toleft? start_ptr :  after_ptr-reservedcount};
-		auto new_front_ptr{::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr)};
-		::std::construct_at(::fast_io::freestanding::overlapped_copy(start_reserved_ptr,after_reserved_ptr,copy_pivot), nullptr);
+	::std::size_t capacity_blocks_count_direction{
+		no_space_at_back ? static_cast<::std::size_t>(after_ptr - old_front_controller_ptr) : static_cast<::std::size_t>(old_back_after_controller_ptr - start_ptr)};
 
-		controller.controller_block.controller_start_reserved_ptr = copy_pivot;
-		controller.controller_block.controller_after_reserved_ptr = copy_pivot + reservedcount;
-		controller.front_block.controller_ptr = new_front_ptr;
-		controller.back_block.controller_ptr = new_front_ptr + old_elements_blocks_count;
-	}
-}
-
-template <typename allocator, typename dequecontroltype>
-inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype &controller, ::std::size_t extrablocks) noexcept
-{
-	// ignore overchecked first
-	auto const used_blocks_count{
-		static_cast<::std::size_t>(controller.back_block.controller_ptr - controller.front_block.controller_ptr) + 1zu};
-	auto start_ptr{controller.controller_block.controller_start_ptr};
-	auto const total_slots_count{
-		static_cast<::std::size_t>(controller.controller_block.controller_after_ptr - start_ptr)};
-	auto const half_slots_count{static_cast<::std::size_t>(total_slots_count >> 1u)};
-	::std::size_t new_used_blocks_count;
-
+	::std::size_t doubleslotsextra{capacity_blocks_count_direction};
 #if (defined(__GNUC__) || defined(__clang__))
 	if constexpr (true)
 	{
-		if (__builtin_add_overflow(used_blocks_count, extrablocks, __builtin_addressof(new_used_blocks_count))) [[unlikely]]
+		if (__builtin_add_overflow(capacity_blocks_count_direction, capacity_blocks_count_direction, __builtin_addressof(capacity_blocks_count_direction)))
 		{
 			::fast_io::fast_terminate();
 		}
@@ -1387,95 +1357,19 @@ inline constexpr void deque_rebalance_or_grow_insertation_impl(dequecontroltype 
 #endif
 	{
 		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-		::std::size_t const mx_sub_extrablocks{mx - extrablocks};
-		if (mx_sub_extrablocks < used_blocks_count)
+		constexpr ::std::size_t mxdv2m1{(mx >> 1u)};
+		if (mxdv2m1 < capacity_blocks_count_direction)
 		{
 			::fast_io::fast_terminate();
 		}
-		new_used_blocks_count = used_blocks_count + extrablocks;
+		capacity_blocks_count_direction <<= 1u;
 	}
-	auto start_reserved_ptr{controller.controller_block.controller_start_reserved_ptr};
-	auto after_reserved_ptr{controller.controller_block.controller_after_reserved_ptr};
-	auto const reserved_count{
-		static_cast<::std::size_t>(after_reserved_ptr - start_reserved_ptr)};
-	if (new_used_blocks_count < reserved_count)
+	if (capacity_blocks_count_direction < new_elements_blocks_count)
 	{
-		new_used_blocks_count = reserved_count;
+		capacity_blocks_count_direction = new_elements_blocks_count;
 	}
-	if (half_slots_count < new_used_blocks_count) // grow blocks
-	{
-		::std::size_t doubleslotsextra{new_used_blocks_count};
-#if (defined(__GNUC__) || defined(__clang__))
-		if constexpr (true)
-		{
-			if (__builtin_add_overflow(doubleslotsextra, doubleslotsextra, __builtin_addressof(doubleslotsextra)))
-			{
-				::fast_io::fast_terminate();
-			}
-		}
-		else
-#endif
-		{
-			constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-			constexpr ::std::size_t mxdv2m1{(mx >> 1u)};
-			if (mxdv2m1 < doubleslotsextra)
-			{
-				::fast_io::fast_terminate();
-			}
-			doubleslotsextra <<= 1u;
-		}
-		::fast_io::containers::details::deque_grow_to_new_blocks_count_impl<allocator>(controller, doubleslotsextra);
-	}
-	else
-	{
-#if 1
-		// balance blocks
-		auto const half_reserved_blocks_count{
-			static_cast<::std::size_t>(reserved_blocks_count >> 1u)};
-		auto reserved_pivot{start_reserved_ptr + half_reserved_blocks_count};
-		auto const half_used_blocks_count{
-			static_cast<::std::size_t>(used_blocks_count >> 1u)}; // this place needs to deal with extra block
-		auto used_blocks_pivot{controller.front_block.controller_ptr + half_used_blocks_count};
-		if (used_blocks_pivot != reserved_pivot)
-		{
-			::std::ptrdiff_t diff{reserved_pivot - used_blocks_pivot};
-			auto rotate_pivot{diff < 0 ? start_reserved_ptr : after_reserved_ptr};
-			rotate_pivot -= diff;
-			::std::rotate(start_reserved_ptr, rotate_pivot, after_reserved_ptr);
-			controller.front_block.controller_ptr += diff;
-			controller.back_block.controller_ptr += diff;
-		}
-		auto const half_slotsextra_count{static_cast<::std::size_t>((total_slots_count + extrablocks) >> 1u)};
-		auto slots_pivot{controller.controller_block.controller_start_ptr + half_slotsextra_count};
-		if (slots_pivot != reserved_pivot)
-		{
-			::std::ptrdiff_t diff{slots_pivot - reserved_pivot};
-			::fast_io::freestanding::overlapped_copy(start_reserved_ptr,
-													 after_reserved_ptr, start_reserved_ptr + diff);
-			controller.front_block.controller_ptr += diff;
-			controller.back_block.controller_ptr += diff;
-			controller.controller_block.controller_start_reserved_ptr += diff;
-			::std::construct_at(controller.controller_block.controller_after_reserved_ptr += diff, nullptr);
-		}
-#else
-		::std::size_t extra_reserved_count{reserved_count};
-		::std::size_t half_extra_reserved_count{extra_reserved_count>>1u};
-		::std::size_t start_reserved_pos{static_cast<::std::size_t>(start_reserved_ptr-start_ptr)};
-		::std::ptrdiff_t reserved_pivot{static_cast<::std::ptrdiff_t>(start_reserved_pos+half_extra_reserved_count)};
-		::std::ptrdiff_t pivot{static_cast<::std::ptrdiff_t>(half_slots_count)};
-		::std::ptrdiff_t diff{pivot - reserved_pivot};
-		if(diff)
-		{
-			::fast_io::freestanding::overlapped_copy(start_reserved_ptr,
-													 after_reserved_ptr, start_reserved_ptr + diff);
-			controller.front_block.controller_ptr += diff;
-			controller.back_block.controller_ptr += diff;
-			controller.controller_block.controller_start_reserved_ptr += diff;
-			::std::construct_at(controller.controller_block.controller_after_reserved_ptr += diff, nullptr);
-		}
 
-#endif
-	}
+	return ::fast_io::containers::details::deque_grow_to_new_blocks_count_direction_impl<allocator, dequecontroltype>(controller, capacity_blocks_count_direction, no_space_at_back);
 }
 
 template <typename allocator, typename dequecontroltype>
@@ -1499,7 +1393,7 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 									   controller.back_block.controller_ptr)};
 		if (distance_back_to_after <= nb)
 		{
-			::fast_io::containers::details::deque_rebalance_or_grow_insertation_impl<allocator>(controller, nb);
+			::fast_io::containers::details::deque_rebalance_or_grow_insertation_direction_impl<allocator>(controller, nb, true);
 		}
 		::std::size_t diff_to_after_ptr2 =
 			static_cast<::std::size_t>(
@@ -1529,7 +1423,7 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 																 front_borrowed_blocks_count,
 																 pos);
 			controller.controller_block.controller_start_reserved_ptr =
-				controller_start_reserved_ptr + front_borrowed_blocks_count; g
+				controller_start_reserved_ptr + front_borrowed_blocks_count;
 			for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
 			{
 				::std::construct_at(pos, static_cast<begin_ptrtype>(allocator::allocate_aligned(align, blockbytes)));
@@ -1671,7 +1565,7 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(dequecontroltyp
 									   controller.controller_block.controller_start_ptr)};
 		if (distance_front_to_start < nb)
 		{
-			::fast_io::containers::details::deque_rebalance_or_grow_insertation_impl<allocator>(controller, nb);
+			::fast_io::containers::details::deque_rebalance_or_grow_insertation_direction_impl<allocator>(controller, nb, false);
 		}
 		::std::size_t diff_to_start_ptr2 =
 			static_cast<::std::size_t>(
@@ -3309,7 +3203,7 @@ public:
 			{
 				return;
 			}
-			::fast_io::io::debug_println(::std::source_location::current(), " rgsize=",rgsize);
+			::fast_io::io::debug_println(::std::source_location::current(), " rgsize=", rgsize);
 			this->insert_range_front_impl(0, ::std::forward<R>(rg), rgsize);
 		}
 		else
