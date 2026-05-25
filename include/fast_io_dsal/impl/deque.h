@@ -1421,7 +1421,7 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 
 			if (to_allocate_blocks < front_reserved_blocks)
 			{
-				front_borrowed_blocks_count = nb;
+				front_borrowed_blocks_count = to_allocate_blocks;
 				to_allocate_blocks = 0u;
 			}
 			else
