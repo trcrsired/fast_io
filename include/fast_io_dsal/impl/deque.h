@@ -1289,6 +1289,7 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 	::std::size_t old_allocated_sz{static_cast<::std::size_t>(old_after_ptr - old_start_ptr)};
 	::std::size_t old_allocated_sz_p1{old_allocated_sz + 1zu};
 	bool is_allocating_new_block{old_allocated_sz_p1 < to_allocated_blocks_least_p1};
+
 	if (is_allocating_new_block)
 	{
 		auto allocate_result = block_typed_allocator::allocate_at_least(to_allocated_blocks_least_p1);
@@ -1399,10 +1400,6 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 			controller.back_block.controller_ptr);
 	if (diff_to_after_ptr <= nb)
 	{
-		if (1u < diff_to_after_ptr)
-		{
-			nb -= static_cast<::std::size_t>(diff_to_after_ptr - 1u);
-		}
 		::std::size_t distance_back_to_after{
 			static_cast<::std::size_t>(controller.controller_block.controller_after_ptr -
 									   controller.back_block.controller_ptr)};
@@ -1420,7 +1417,8 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 				static_cast<::std::size_t>(controller.front_block.controller_ptr - controller.controller_block.controller_start_reserved_ptr)};
 
 			::std::size_t front_borrowed_blocks_count{front_reserved_blocks};
-			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb)};
+			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb - diff_to_after_ptr2 - 1zu)};
+
 			if (to_allocate_blocks < front_reserved_blocks)
 			{
 				front_borrowed_blocks_count = nb;
@@ -1574,7 +1572,6 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(dequecontroltyp
 			controller.controller_block.controller_start_reserved_ptr);
 	if (diff_to_start_ptr < nb)
 	{
-		nb -= diff_to_start_ptr;
 		::std::size_t distance_front_to_start{
 			static_cast<::std::size_t>(controller.front_block.controller_ptr -
 									   controller.controller_block.controller_start_ptr)};
@@ -1593,7 +1590,7 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(dequecontroltyp
 										   controller.back_block.controller_ptr - 1)};
 
 			::std::size_t back_borrowed_blocks_count{back_reserved_blocks};
-			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb)};
+			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb - diff_to_start_ptr2)};
 			if (to_allocate_blocks < back_reserved_blocks)
 			{
 				back_borrowed_blocks_count = nb;

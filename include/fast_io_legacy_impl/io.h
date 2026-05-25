@@ -217,7 +217,7 @@ template <typename... Args>
 }
 
 // Allow debug print
-#ifndef FAST_IO_DISABLE_DEBUG_PRINT
+#if FAST_IO_DISABLE_DEBUG_PRINT == 0
 // With debugging. We output to POSIX fd or Win32 Handle directly instead of C's stdout.
 template <typename T, typename... Args>
 inline constexpr void debug_print(T &&t, Args &&...args)
