@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io::operations::decay
 {
@@ -41,7 +41,7 @@ scatter_write_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 
 template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
-																	::std::size_t n)
+																		::std::size_t n)
 {
 	return ::fast_io::details::scatter_write_some_bytes_impl(outsm, pscatters, n);
 }
@@ -99,7 +99,7 @@ scatter_pwrite_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmty
 
 template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
-																	 ::std::size_t n, ::fast_io::intfpos_t off)
+																		 ::std::size_t n, ::fast_io::intfpos_t off)
 {
 	return ::fast_io::details::scatter_pwrite_some_bytes_impl(outsm, pscatters, n, off);
 }

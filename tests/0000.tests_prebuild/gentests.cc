@@ -7,7 +7,7 @@
 
 #include <string>
 #include <string_view>
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <fast_io.h>
 #include <fast_io_device.h>
@@ -77,17 +77,17 @@ inline constexpr file_entry_t operator|(file_entry_t const &lhs, file_entry_t co
 		.will_fail = lhs.will_fail | rhs.will_fail,
 		.platform = lhs.platform | rhs.platform};
 }
-using file_property_t = std::unordered_map<std::u8string, file_entry_t>;
+using file_property_t = std::map<std::u8string, file_entry_t>;
 
 inline platform_t global_platform;
 inline bool msvc{};
 
 inline void parse_prop_files(fast_io::native_file_loader &&file, file_property_t &file_properties)
 {
-	std::unordered_map<std::u8string, std::unordered_map<std::u8string, std::u8string>> file_contents;
+	std::map<std::u8string, std::map<std::u8string, std::u8string>> file_contents;
 
 	fast_io::u8ibuffer_view u8fv{reinterpret_cast<char8_t *>(file.begin()), reinterpret_cast<char8_t *>(file.end())};
-	std::unordered_map<std::u8string, std::u8string> *curr_entry{};
+	std::map<std::u8string, std::u8string> *curr_entry{};
 	for (std::u8string line; scan<true>(u8fv, fast_io::mnp::line_get<char8_t>(line));)
 	{
 		std::u8string_view linevw{line};

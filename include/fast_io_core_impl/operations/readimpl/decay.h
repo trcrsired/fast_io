@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io::operations::decay
 {
@@ -82,7 +82,7 @@ inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte
 
 template <typename instmtype>
 inline constexpr void pread_all_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
-											::fast_io::intfpos_t off)
+											 ::fast_io::intfpos_t off)
 {
 	::fast_io::details::pread_all_bytes_impl(insm, first, last, off);
 }
@@ -97,7 +97,7 @@ scatter_pread_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::
 
 template <typename instmtype>
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_decay(instmtype insm, io_scatter_t const *pscatters,
-																	::std::size_t n, ::fast_io::intfpos_t off)
+																		::std::size_t n, ::fast_io::intfpos_t off)
 {
 	return ::fast_io::details::scatter_pread_some_bytes_impl(insm, pscatters, n, off);
 }
@@ -112,7 +112,7 @@ inline constexpr void scatter_pread_all_decay(instmtype insm,
 
 template <typename instmtype>
 inline constexpr void scatter_pread_all_bytes_decay(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
-													::fast_io::intfpos_t off)
+														::fast_io::intfpos_t off)
 {
 	::fast_io::details::scatter_pread_all_bytes_impl(insm, pscatters, n, off);
 }

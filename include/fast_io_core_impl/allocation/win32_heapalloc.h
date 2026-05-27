@@ -142,21 +142,6 @@ public:
 #if __has_cpp_attribute(__gnu__::__malloc__)
 	[[__gnu__::__malloc__]]
 #endif
-	static inline void *allocate(::std::size_t n) noexcept
-	{
-		return ::fast_io::details::win32_heapalloc_common_impl(n, 0u);
-	}
-
-#if __has_cpp_attribute(__gnu__::__malloc__)
-	[[__gnu__::__malloc__]]
-#endif
-	static inline void *allocate_zero(::std::size_t n) noexcept
-	{
-		return ::fast_io::details::win32_heapalloc_common_impl(n, 0x00000008u);
-	}
-#if __has_cpp_attribute(__gnu__::__malloc__)
-	[[__gnu__::__malloc__]]
-#endif
 	static inline void *allocate_conditional_zero(::std::size_t n, bool zeroing) noexcept
 	{
 		return ::fast_io::details::win32_heapalloc_common_impl(n, zeroing ? 0x00000008u : 0u);

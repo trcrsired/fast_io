@@ -5,7 +5,7 @@
 int main()
 {
 	::fast_io::array<::std::size_t, 40> arr{4, 6, 7};
-	::fast_io::index_span<::std::size_t, 5> sp(arr);
+	::fast_io::index_span<::std::size_t, 5> sp(::fast_io::freestanding::from_range, arr);
 	for (auto const &e : sp)
 	{
 		::fast_io::io::println(e);
