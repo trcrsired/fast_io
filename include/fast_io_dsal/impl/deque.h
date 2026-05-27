@@ -1376,7 +1376,6 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(dequeco
 	::std::size_t capacity_blocks_count_direction{
 		no_space_at_back ? static_cast<::std::size_t>(after_ptr - old_front_controller_ptr) : static_cast<::std::size_t>(old_back_after_controller_ptr - start_ptr)};
 
-	::std::size_t doubleslotsextra{capacity_blocks_count_direction};
 #if (defined(__GNUC__) || defined(__clang__))
 	if constexpr (true)
 	{
