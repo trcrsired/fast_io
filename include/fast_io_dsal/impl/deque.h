@@ -1697,7 +1697,6 @@ inline constexpr void deque_reserve_front_spaces_impl(dequecontroltype &controll
 	}
 	::std::size_t nmblocksn{n - blocksn};
 	::std::size_t front_more_blocks{nmblocksn / block_size};
-	::std::size_t const front_more_blocks_mod{nmblocksn % block_size};
 	::std::size_t toallocate{front_more_blocks};
 #if defined(__GNUC__) || defined(__clang__)
 	if constexpr (true)
