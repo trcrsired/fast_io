@@ -3775,10 +3775,16 @@ private:
 		::fast_io::containers::details::deque_control_block<value_type> back_block;
 		if (moveleft)
 		{
-			this->controller.front_block = ::fast_io::freestanding::uninitialized_relocate_backward(this->begin(), first, last).itercontent;
-			this->controller.front_end_ptr = this->controller.front_block.begin_ptr + block_size;
-			first = last;
+			auto ed{this->end()};
+			auto front_block{::fast_io::freestanding::uninitialized_relocate_backward(this->begin(), first, last).itercontent};
 			back_block = this->controller.back_block;
+			if (last == ed)
+			{
+				front_block = back_block;
+			}
+			this->controller.front_block = front_block;
+			this->controller.front_end_ptr = front_block.begin_ptr + block_size;
+			first = last;
 		}
 		else
 		{
