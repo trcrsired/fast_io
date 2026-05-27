@@ -1165,6 +1165,7 @@ deque_erase_common_trivial_impl(::fast_io::containers::details::deque_controller
 	if (moveleft)
 	{
 		controller.front_block = ::fast_io::containers::details::deque_copy_backward_impl(controller.front_block, first, last, blockbytes);
+		controller.front_end_ptr = controller.front_block.begin_ptr + blockbytes;
 		first = last;
 		if (controller.front_block.curr_ptr == back_block.curr_ptr && back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
 		{
@@ -3775,6 +3776,7 @@ private:
 		if (moveleft)
 		{
 			this->controller.front_block = ::fast_io::freestanding::uninitialized_relocate_backward(this->begin(), first, last).itercontent;
+			this->controller.front_end_ptr = this->controller.front_block.begin_ptr + block_size;
 			first = last;
 			back_block = this->controller.back_block;
 		}
@@ -3789,7 +3791,7 @@ private:
 
 	inline constexpr iterator erase_unchecked_nodestroy_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
-		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
+		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && 0)
 		{
 			if !consteval
 			{

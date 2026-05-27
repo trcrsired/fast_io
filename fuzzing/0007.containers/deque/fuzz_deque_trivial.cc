@@ -1,4 +1,7 @@
 #include <fast_io.h>
+#if FAST_IO_FUZZ_DEBUG != 0
+#include <fast_io_dsal/impl/debug/deque.h>
+#endif
 #include <fast_io_dsal/deque.h>
 #include <deque>
 #include <cstddef>
@@ -65,6 +68,9 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 	while (i < size)
 	{
 		uint8_t op = read_u8(i);
+#if FAST_IO_FUZZ_DEBUG != 0
+		::fast_io::io::debug_perrln(::std::source_location::current(), " op%20=", op % 20, " ", ::fast_io::mnp::debug_view(dq));
+#endif
 		switch (op % 20u)
 		{
 		case 0:
@@ -309,8 +315,13 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size)
 			break;
 		}
 		}
-
+#if FAST_IO_FUZZ_DEBUG != 0
+		::fast_io::io::debug_perrln(::std::source_location::current(), " op%20=", op % 20, " ", ::fast_io::mnp::debug_view(dq));
+#endif
 		validate();
+#if FAST_IO_FUZZ_DEBUG != 0
+		::fast_io::io::debug_perrln(::std::source_location::current(), " op%20=", op % 20, " ", ::fast_io::mnp::debug_view(dq));
+#endif
 	}
 
 	// Final iterator validation
