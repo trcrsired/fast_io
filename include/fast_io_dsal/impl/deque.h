@@ -1280,6 +1280,18 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 		static_cast<::std::size_t>(old_back_block_controller_ptr - old_start_ptr)};
 
 	::std::size_t old_blocks_count{static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_front_block_controller_ptr)};
+#if 0
+	::fast_io::io::debug_perr(::std::source_location::current(), "\n"
+	"old_start_ptr=",::fast_io::mnp::pointervw(old_start_ptr),"\n"
+	"old_after_pos=",old_after_ptr-old_start_ptr,"\n"
+	"old_start_reserved_pos=",old_start_reserved_pos,"\n"
+	"old_after_reserved_pos=",old_after_reserved_pos,"\n"
+	"old_front_block_controller_pos=",old_front_block_controller_pos,"\n"
+	"old_back_block_controller_pos=",old_back_block_controller_pos,"\n"
+	"old_blocks_count=",old_blocks_count,"\n"
+	"new_blocks_count_least=",new_blocks_count_least,"\n\n"
+	);
+#endif
 	::std::size_t to_allocated_blocks_least_p1{::fast_io::containers::details::deque_new_blocks_count_compute_impl(new_blocks_count_least,
 																												   old_blocks_count, (no_space_at_back ? static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_start_reserved_ptr) : static_cast<::std::size_t>(old_after_reserved_ptr - old_front_block_controller_ptr)))};
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
@@ -1289,7 +1301,10 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(dequecontrol
 	::std::size_t old_allocated_sz{static_cast<::std::size_t>(old_after_ptr - old_start_ptr)};
 	::std::size_t old_allocated_sz_p1{old_allocated_sz + 1zu};
 	bool is_allocating_new_block{old_allocated_sz_p1 < to_allocated_blocks_least_p1};
-
+#if 0
+	::fast_io::io::debug_perrln(::std::source_location::current(), "\tto_allocated_blocks_least_p1=", to_allocated_blocks_least_p1,
+	"\tnew_blocks_count_least=",new_blocks_count_least);
+#endif
 	if (is_allocating_new_block)
 	{
 		auto allocate_result = block_typed_allocator::allocate_at_least(to_allocated_blocks_least_p1);
@@ -1384,7 +1399,6 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(dequeco
 	{
 		capacity_blocks_count_direction = new_elements_blocks_count;
 	}
-
 	return ::fast_io::containers::details::deque_grow_to_new_blocks_count_direction_impl<allocator, dequecontroltype>(controller, capacity_blocks_count_direction, no_space_at_back);
 }
 
@@ -1398,6 +1412,11 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 		static_cast<::std::size_t>(
 			controller.controller_block.controller_after_reserved_ptr -
 			controller.back_block.controller_ptr);
+#if 0
+	::fast_io::io::debug_perr(::std::source_location::current(),
+		"\ndiff_to_after_ptr=",diff_to_after_ptr,
+		"\nnb=",nb,"\n\n");
+#endif
 	if (diff_to_after_ptr <= nb)
 	{
 		::std::size_t distance_back_to_after{
@@ -1417,9 +1436,14 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 				static_cast<::std::size_t>(controller.front_block.controller_ptr - controller.controller_block.controller_start_reserved_ptr)};
 
 			::std::size_t front_borrowed_blocks_count{front_reserved_blocks};
-			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb - diff_to_after_ptr2 - 1zu)};
-
-			if (to_allocate_blocks < front_reserved_blocks)
+			::std::size_t to_allocate_blocks{static_cast<::std::size_t>(nb - (diff_to_after_ptr2 ? diff_to_after_ptr2 - 1zu : 0zu))};
+#if 0
+			::fast_io::io::debug_perrln(::std::source_location::current(),
+				"\nto_allocate_blocks=",to_allocate_blocks,
+				"\tnb=",nb,
+				"\tcontroller.front_block.controller_ptr-controller.controller_block.controller_start_ptr=",controller.front_block.controller_ptr-controller.controller_block.controller_start_ptr);
+#endif
+			if (to_allocate_blocks < front_borrowed_blocks_count)
 			{
 				front_borrowed_blocks_count = to_allocate_blocks;
 				to_allocate_blocks = 0u;
@@ -1437,6 +1461,16 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 																 pos);
 			controller.controller_block.controller_start_reserved_ptr =
 				controller_start_reserved_ptr + front_borrowed_blocks_count;
+#if 0
+			::fast_io::io::debug_perrln(::std::source_location::current(),"\n"
+				"pos-controller.controller_block.controller_start_ptr=",
+				pos-controller.controller_block.controller_start_ptr,"\n"
+				"pos + to_allocate_blocks - controller.controller_block.controller_start_ptr=",
+				pos + to_allocate_blocks - controller.controller_block.controller_start_ptr,"\n"
+				"controller.controller_block.controller_after_ptr-controller.controller_block.controller_start_ptr=",
+				controller.controller_block.controller_after_ptr-controller.controller_block.controller_start_ptr,"\n"
+				"to_allocate_blocks=",to_allocate_blocks);
+#endif
 			for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
 			{
 				::std::construct_at(pos, static_cast<begin_ptrtype>(allocator::allocate_aligned(align, blockbytes)));
