@@ -52,7 +52,6 @@ using ::fast_io::open_mode;
 using ::fast_io::basic_io_lockable;
 using ::fast_io::basic_io_lockable_nonmovable;
 
-#if !defined(__clang__) // The gcc and msvc module does not support non-exported functions adl matching
 using ::fast_io::input_stream_ref_define;
 using ::fast_io::output_stream_ref_define;
 using ::fast_io::io_stream_ref_define;
@@ -123,7 +122,6 @@ using ::fast_io::io_stream_require_secure_clear_define;
 // using ::fast_io::input_stream_buffer_flush_define;
 using ::fast_io::output_stream_buffer_flush_define;
 using ::fast_io::io_stream_buffer_flush_define;
-#endif
 
 namespace manipulators
 {
