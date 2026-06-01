@@ -34,7 +34,7 @@ inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_alloc
 	// n is not possible to SIZE_MAX since that would overflow the memory which is not possible
 	::std::size_t const np1{static_cast<::std::size_t>(n + 1u)};
 	auto [ptr, allocn]{typed_allocator_type::allocate_at_least(np1)};
-	::std::construct_at(::fast_io::freestanding::non_overlapped_copy_n(first, n, ptr), chtype{});
+	*::fast_io::freestanding::non_overlapped_copy_n(first, n, ptr) = 0;
 	return {ptr, static_cast<::std::size_t>(allocn - 1u)};
 }
 
@@ -54,17 +54,36 @@ inline constexpr void string_heap_dilate_uncheck(::fast_io::containers::details:
 	{
 		beginptr = nullptr;
 	}
-	if constexpr (typed_allocator_type::has_reallocate)
+#if __cpp_constexpr_dynamic_alloc >= 201907L
+	if consteval
 	{
-		auto [newptr, newcap] = typed_allocator_type::reallocate_at_least(beginptr, rsize + 1u);
+		auto [newptr, newcap] = typed_allocator_type::allocate_at_least(rsize + 1u);
+		if (beginptr != nullptr)
+		{
+			for (::std::size_t i{}; i != strsize; ++i)
+			{
+				::std::construct_at(newptr + i, beginptr[i]);
+			}
+			typed_allocator_type::deallocate_n(beginptr, bfsize);
+		}
 		ptr = newptr;
 		rsize = newcap - 1u;
 	}
 	else
+#endif
 	{
-		auto [newptr, newcap] = typed_allocator_type::reallocate_n_at_least(beginptr, bfsize, rsize + 1u);
-		ptr = newptr;
-		rsize = newcap - 1u;
+		if constexpr (typed_allocator_type::has_reallocate)
+		{
+			auto [newptr, newcap] = typed_allocator_type::reallocate_at_least(beginptr, rsize + 1u);
+			ptr = newptr;
+			rsize = newcap - 1u;
+		}
+		else
+		{
+			auto [newptr, newcap] = typed_allocator_type::reallocate_n_at_least(beginptr, bfsize, rsize + 1u);
+			ptr = newptr;
+			rsize = newcap - 1u;
+		}
 	}
 	imp = {ptr, ptr + strsize, ptr + rsize};
 }
