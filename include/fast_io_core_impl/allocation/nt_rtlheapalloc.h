@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "nt_preliminary_definition.h"
 
@@ -19,9 +19,7 @@ inline void *nt_rtlallocate_heap_handle_common_impl(void *heaphandle, ::std::siz
 	}
 	auto p{::fast_io::win32::nt::RtlAllocateHeap(heaphandle, flag, n)};
 	if (p == nullptr)
-#if __has_cpp_attribute(unlikely)
 		[[unlikely]]
-#endif
 	{
 		::fast_io::fast_terminate();
 	}
@@ -38,9 +36,7 @@ inline void *nt_rtlreallocate_heap_handle_common_impl(void *heaphandle, void *ad
 		n = 1;
 	}
 	if (addr == nullptr)
-#if __has_cpp_attribute(unlikely)
 		[[unlikely]]
-#endif
 	{
 		return ::fast_io::details::nt_rtlallocate_heap_handle_common_impl(heaphandle, n, flag);
 	}

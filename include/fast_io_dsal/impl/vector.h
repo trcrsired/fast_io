@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 namespace fast_io
 {
 
@@ -892,9 +892,7 @@ public:
 	inline constexpr reference emplace_back(Args &&...args) noexcept(::std::is_nothrow_constructible_v<value_type, Args...>)
 	{
 		if (imp.curr_ptr == imp.end_ptr)
-#if __has_cpp_attribute(unlikely)
 			[[unlikely]]
-#endif
 		{
 			grow_twice_impl();
 		}
