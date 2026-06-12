@@ -30,14 +30,14 @@ int main()
 	static_assert(::std::same_as<deque_type::iterator::reference, ::std::size_t &>);
 	static_assert(::std::same_as<deque_type::iterator::pointer, ::std::size_t *>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::iterator>::iterator_category,
-		::std::random_access_iterator_tag>);
+				  ::std::iterator_traits<deque_type::iterator>::iterator_category,
+				  ::std::random_access_iterator_tag>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::iterator>::value_type,
-		deque_type::value_type>);
+				  ::std::iterator_traits<deque_type::iterator>::value_type,
+				  deque_type::value_type>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::iterator>::difference_type,
-		deque_type::difference_type>);
+				  ::std::iterator_traits<deque_type::iterator>::difference_type,
+				  deque_type::difference_type>);
 
 	// --- const_iterator ---
 	static_assert(::std::same_as<deque_type::const_iterator::value_type, ::std::size_t>);
@@ -45,32 +45,32 @@ int main()
 	static_assert(::std::same_as<deque_type::const_iterator::reference, ::std::size_t const &>);
 	static_assert(::std::same_as<deque_type::const_iterator::pointer, ::std::size_t const *>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::const_iterator>::iterator_category,
-		::std::random_access_iterator_tag>);
+				  ::std::iterator_traits<deque_type::const_iterator>::iterator_category,
+				  ::std::random_access_iterator_tag>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::const_iterator>::value_type,
-		deque_type::value_type>);
+				  ::std::iterator_traits<deque_type::const_iterator>::value_type,
+				  deque_type::value_type>);
 	static_assert(::std::same_as<
-		::std::iterator_traits<deque_type::const_iterator>::difference_type,
-		deque_type::difference_type>);
+				  ::std::iterator_traits<deque_type::const_iterator>::difference_type,
+				  deque_type::difference_type>);
 
 	// --- difference_type consistency across iterator and const_iterator ---
 	static_assert(::std::same_as<
-		deque_type::difference_type,
-		::std::iterator_traits<deque_type::iterator>::difference_type>);
+				  deque_type::difference_type,
+				  ::std::iterator_traits<deque_type::iterator>::difference_type>);
 	static_assert(::std::same_as<
-		deque_type::difference_type,
-		::std::iterator_traits<deque_type::const_iterator>::difference_type>);
+				  deque_type::difference_type,
+				  ::std::iterator_traits<deque_type::const_iterator>::difference_type>);
 
 	// --- reverse_iterator ---
 	static_assert(::std::same_as<
-		deque_type::reverse_iterator,
-		::std::reverse_iterator<deque_type::iterator>>);
+				  deque_type::reverse_iterator,
+				  ::std::reverse_iterator<deque_type::iterator>>);
 
 	// --- const_reverse_iterator ---
 	static_assert(::std::same_as<
-		deque_type::const_reverse_iterator,
-		::std::reverse_iterator<deque_type::const_iterator>>);
+				  deque_type::const_reverse_iterator,
+				  ::std::reverse_iterator<deque_type::const_iterator>>);
 
 	// --- mutable to const iterator conversion ---
 	static_assert(::std::convertible_to<deque_type::iterator, deque_type::const_iterator>);

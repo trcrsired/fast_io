@@ -8,7 +8,8 @@ struct MoveOnly
 {
 	::std::size_t value;
 
-	explicit MoveOnly(::std::size_t v) : value(v) {}
+	explicit MoveOnly(::std::size_t v) : value(v)
+	{}
 
 	MoveOnly(MoveOnly const &) = delete;
 	MoveOnly &operator=(MoveOnly const &) = delete;

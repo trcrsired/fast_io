@@ -79,7 +79,7 @@ inline void test_copy_backward()
 			dq.push_back(i);
 		}
 
-			dq.resize(110u);
+		dq.resize(110u);
 		::std::copy_backward(dq.cbegin(), dq.cbegin() + 100, dq.end());
 
 		// First 10 elements unchanged (still 0..9)

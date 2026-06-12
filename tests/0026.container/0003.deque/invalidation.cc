@@ -17,8 +17,8 @@ inline void test_pop_front_invalidation()
 
 	while (dq.size() > 1u)
 	{
-		auto it1 = dq.begin() + 1;   // second element
-		auto it2 = dq.end() - 1;     // last element
+		auto it1 = dq.begin() + 1; // second element
+		auto it2 = dq.end() - 1;   // last element
 		::std::size_t val1 = *it1;
 		::std::size_t val2 = *it2;
 
@@ -60,8 +60,8 @@ inline void test_pop_back_invalidation()
 
 	while (dq.size() > 1u)
 	{
-		auto it1 = dq.begin();       // first element
-		auto it2 = dq.end() - 2;     // second-to-last element
+		auto it1 = dq.begin();   // first element
+		auto it2 = dq.end() - 2; // second-to-last element
 		::std::size_t val1 = *it1;
 		::std::size_t val2 = *it2;
 
@@ -101,8 +101,8 @@ inline void test_erase_single_invalidation()
 			dq.push_back(i);
 		}
 
-		auto it1 = dq.begin() + 1;   // element 1
-		auto it2 = dq.end() - 1;     // last element
+		auto it1 = dq.begin() + 1; // element 1
+		auto it2 = dq.end() - 1;   // last element
 
 		dq.erase(dq.begin());
 
@@ -126,8 +126,8 @@ inline void test_erase_single_invalidation()
 			dq.push_back(i);
 		}
 
-		auto it1 = dq.begin();       // first element
-		auto it2 = dq.end() - 2;     // second-to-last
+		auto it1 = dq.begin();   // first element
+		auto it2 = dq.end() - 2; // second-to-last
 
 		dq.erase(dq.end() - 1);
 
