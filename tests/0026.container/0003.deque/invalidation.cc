@@ -101,9 +101,6 @@ inline void test_erase_single_invalidation()
 			dq.push_back(i);
 		}
 
-		auto it1 = dq.begin() + 1; // element 1
-		auto it2 = dq.end() - 1;   // last element
-
 		dq.erase(dq.begin());
 
 		// After erasing first element, it1 should still be valid and point to what was index 1
@@ -125,9 +122,6 @@ inline void test_erase_single_invalidation()
 		{
 			dq.push_back(i);
 		}
-
-		auto it1 = dq.begin();   // first element
-		auto it2 = dq.end() - 2; // second-to-last
 
 		dq.erase(dq.end() - 1);
 
@@ -158,9 +152,6 @@ inline void test_erase_range_invalidation()
 		}
 
 		::std::size_t num = 5u;
-		auto it_beyond = dq.begin() + num; // first element after erased range
-		auto it_end = dq.end() - 1;        // last element
-
 		dq.erase(dq.begin(), dq.begin() + num);
 
 		// Elements after the erased range should have been moved down, but iterators
@@ -185,9 +176,6 @@ inline void test_erase_range_invalidation()
 		}
 
 		::std::size_t num = 5u;
-		auto it_first = dq.begin();
-		auto it_before = dq.end() - num - 1;
-
 		dq.erase(dq.end() - num, dq.end());
 
 		if (*dq.begin() != 0u)
