@@ -688,7 +688,11 @@ public:
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_delete)
 			__builtin_operator_delete(p);
+#else
+			::operator delete(p);
+#endif
 		}
 		else
 #endif
@@ -710,7 +714,11 @@ public:
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_delete)
 			__builtin_operator_delete(p);
+#else
+			::operator delete(p);
+#endif
 		}
 		else
 #endif
