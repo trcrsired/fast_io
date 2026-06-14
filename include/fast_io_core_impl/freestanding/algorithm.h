@@ -301,7 +301,8 @@ inline constexpr output_iter overlapped_copy_trivial(input_iter first, ::std::si
 	{
 		tempbufferptr[i] = first[i];
 	}
-	if (__builtin_is_constant_evaluated())
+#if __cpp_if_consteval >= 202106L
+	if consteval
 	{
 		for (::std::size_t i{}; i != n; ++i)
 		{
@@ -309,6 +310,7 @@ inline constexpr output_iter overlapped_copy_trivial(input_iter first, ::std::si
 		}
 	}
 	else
+#endif
 	{
 		for (::std::size_t i{}; i != n; ++i)
 		{
