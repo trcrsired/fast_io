@@ -1,4 +1,5 @@
-﻿#include <string>
+#include <cassert>
+#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -11,6 +12,10 @@ int main()
 	letters.push_back("abc");
 	std::string s{"def"};
 	letters.push_back(std::move(s));
+
+	assert(letters.size() == 2);
+	assert(letters[0] == "abc");
+	assert(letters[1] == "def");
 
 	print("std::vector letters holds: ");
 	for (auto &&e : letters)

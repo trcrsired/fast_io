@@ -1,4 +1,5 @@
-﻿#include <string>
+#include <cassert>
+#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -18,6 +19,11 @@ int main()
 	};
 
 	characters.assign(5, 'a');
+	assert(characters.size() == 5);
+	for (char c : characters)
+	{
+		assert(c == 'a');
+	}
 	print_vector();
 
 #if 0

@@ -1,4 +1,5 @@
-﻿#include <algorithm>
+#include <cassert>
+#include <algorithm>
 #include <numeric>
 #include <string>
 #include <fast_io.h>
@@ -17,17 +18,20 @@ int main()
 	print("\n");
 
 	// Sums all integers in the vector nums (if any), printing only the result.
-	println("Sum of nums: ",
-			std::accumulate(nums.begin(), nums.end(), 0));
+	auto const sum = std::accumulate(nums.begin(), nums.end(), 0);
+	println("Sum of nums: ", sum);
+	assert(sum == 31);
 
 	// Prints the first fruit in the vector fruits, checking if there is any.
 	if (!fruits.empty())
 	{
 		println("First fruit: ", *fruits.begin());
+		assert(*fruits.begin() == "orange");
 	}
 
 	if (empty.begin() == empty.end())
 	{
 		print("vector 'empty' is indeed empty.\n");
 	}
+	assert(empty.begin() == empty.end());
 }

@@ -1,4 +1,5 @@
-﻿#include <fast_io.h>
+#include <cassert>
+#include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
 using namespace fast_io::mnp;
@@ -11,12 +12,18 @@ void print_container(fast_io::vector<int> const &c)
 int main()
 {
 	fast_io::vector<int> c{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	assert(c.size() == 10);
 	print_container(c);
 
 	c.erase(c.begin());
+	assert(c.size() == 9);
+	assert(c[0] == 1);
 	print_container(c);
 
 	c.erase(c.begin() + 2, c.begin() + 5);
+	// Before: [1,2,3,4,5,6,7,8,9]; erase indices 2-4 (values 3,4,5)
+	assert(c.size() == 6);
+	assert(c[0] == 1 && c[1] == 2 && c[2] == 6 && c[3] == 7 && c[4] == 8 && c[5] == 9);
 	print_container(c);
 
 	// Erase all even numbers
@@ -31,5 +38,8 @@ int main()
 			++it;
 		}
 	}
+	// After erasing evens from [1,2,6,7,8,9]: [1,7,9]
+	assert(c.size() == 3);
+	assert(c[0] == 1 && c[1] == 7 && c[2] == 9);
 	print_container(c);
 }

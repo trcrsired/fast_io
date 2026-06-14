@@ -1,4 +1,5 @@
-﻿#include <iterator>
+#include <cassert>
+#include <iterator>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -13,9 +14,14 @@ int main()
 {
 	fast_io::vector<int> c1(3, 100);
 	print_info(1, c1);
+	assert(c1.size() == 3);
+	assert(c1[0] == 100 && c1[1] == 100 && c1[2] == 100);
 
 	auto it = c1.begin();
 	it = c1.insert(it, 200);
+	assert(*it == 200);
+	assert(c1.size() == 4);
+	assert(c1[0] == 200);
 	print_info(2, c1);
 #if 0
 	c1.insert(it, 2, 300);

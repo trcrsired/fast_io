@@ -1,4 +1,5 @@
-﻿#include <fast_io.h>
+#include <cassert>
+#include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
 using namespace fast_io::mnp;
@@ -9,6 +10,7 @@ int main()
 
 	if (!letters.empty())
 	{
-		print("The first character is '", chvw(letters.back()), "'.\n");
+		print("The last character is '", chvw(letters.back()), "'.\n");
 	}
+	assert(letters.back() == 'f');
 }

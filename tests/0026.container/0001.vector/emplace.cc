@@ -1,4 +1,5 @@
-﻿#include <algorithm>
+#include <cassert>
+#include <algorithm>
 #include <ranges>
 #include <string>
 #include <fast_io.h>
@@ -62,4 +63,8 @@ int main()
 	container.emplace(container.end(), std::move(three));
 
 	println("content:\n ", rgvw(container | std::views::transform([](auto const &a) { return a.s; }), " "));
+	assert(container.size() == 3);
+	assert(container[0].s == "one");
+	assert(container[1].s == "two");
+	assert(container[2].s == "three");
 }

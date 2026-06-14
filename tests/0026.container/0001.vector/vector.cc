@@ -1,4 +1,5 @@
-﻿#include <string>
+#include <cassert>
+#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -9,6 +10,12 @@ int main()
 	// C++11 initializer list syntax:
 	fast_io::vector<std::string> words1{"the", "frogurt", "is", "also", "cursed"};
 	print("1: {", rgvw(words1, ", "), "}\n");
+	assert(words1.size() == 5);
+	assert(words1[0] == "the");
+	assert(words1[1] == "frogurt");
+	assert(words1[2] == "is");
+	assert(words1[3] == "also");
+	assert(words1[4] == "cursed");
 #if 0
 	// words2 == words1
 	fast_io::vector<std::string> words2(::std::from_range, words1);
@@ -17,10 +24,13 @@ int main()
 	// words3 == words1
 	fast_io::vector<std::string> words3(words1);
 	print("3: {", rgvw(words3, ", "), "}\n");
+	assert(words3 == words1);
 
 	// words4 is {"Mo", "Mo", "Mo", "Mo", "Mo"}
 	fast_io::vector<std::string> words4(5, "Mo");
 	print("4: {", rgvw(words4, ", "), "}\n");
+	assert(words4.size() == 5);
+	for (auto const &w : words4) assert(w == "Mo");
 #if 0
 	auto const rg = {"cat", "cow", "crow"};
 	fast_io::vector<std::string> words5(::std::from_range, rg); // overload (11)
