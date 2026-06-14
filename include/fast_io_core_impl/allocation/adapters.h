@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // To make a constexpr allocator, we need ::std::allocator. Because only new expression and
 // ::std::allocator<T>::allocate are allowed in constexpr functions. See https://github.com/microsoft/STL/issues/1532
@@ -145,10 +145,10 @@ public:
 		if (false)
 #endif
 		{
-			auto p{::operator new(n)};
+			auto p{__builtin_operator_new(n)};
 			if (zero)
 			{
-				::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(p), n);
+				::fast_io::freestanding::bytes_clear_n(static_cast<::std::byte *>(p), n);
 			}
 			return p;
 		}
@@ -682,7 +682,7 @@ public:
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
-			::operator delete(p);
+			__builtin_operator_delete(p);
 		}
 		else
 #endif
@@ -704,7 +704,7 @@ public:
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
-			::operator delete(p);
+			__builtin_operator_delete(p);
 		}
 		else
 #endif
@@ -747,10 +747,10 @@ public:
 		if (false)
 #endif
 		{
-			auto p{::operator new(n)};
+			auto p{__builtin_operator_new(n)};
 			if (zero)
 			{
-				::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(p), n);
+				::fast_io::freestanding::bytes_clear_n(static_cast<::std::byte *>(p), n);
 			}
 			return p;
 		}
@@ -847,7 +847,7 @@ public:
 		if (false)
 #endif
 		{
-			return ::operator new(n);
+			return __builtin_operator_new(n);
 		}
 		if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 		{
@@ -874,7 +874,7 @@ public:
 		if (false)
 #endif
 		{
-			return ::operator new(n);
+			return __builtin_operator_new(n);
 		}
 		if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 		{
@@ -904,7 +904,7 @@ public:
 		if (false)
 #endif
 		{
-			return {::operator new(n), n};
+			return {__builtin_operator_new(n), n};
 		}
 		else
 		{
@@ -931,7 +931,7 @@ public:
 		if (false)
 #endif
 		{
-			return {::operator new(n), n};
+			return {__builtin_operator_new(n), n};
 		}
 		else
 		{
@@ -2062,7 +2062,7 @@ public:
 		if (false)
 #endif
 		{
-			return ::operator new(n);
+			return static_cast<void *>(::fast_io::freestanding::allocator<::std::byte>{}.allocate(n));
 		}
 		else
 		{

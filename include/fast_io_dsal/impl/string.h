@@ -85,7 +85,9 @@ inline constexpr void string_heap_dilate_uncheck(::fast_io::containers::details:
 			rsize = newcap - 1u;
 		}
 	}
-	imp = {ptr, ptr + strsize, ptr + rsize};
+	imp.begin_ptr = ptr;
+	imp.curr_ptr = ptr + strsize;
+	imp.end_ptr = ptr + rsize;
 }
 
 template <typename allocator_type, ::std::integral chtype>
@@ -138,13 +140,17 @@ private:
 			using typed_allocator_type = typed_generic_allocator_adapter<untyped_allocator_type, chtype>;
 			auto [ptr, cap]{typed_allocator_type::allocate_at_least(2)};
 			::std::construct_at(ptr, char_type{});
-			this->imp = {ptr, ptr, ptr + static_cast<size_type>(cap - 1u)};
+			this->imp.begin_ptr = ptr;
+			this->imp.curr_ptr = ptr;
+			this->imp.end_ptr = ptr + static_cast<size_type>(cap - 1u);
 		}
 		else
 #endif
 		{
 			char_type *const ncstr{const_cast<char_type *>(null_terminated_c_str_v<char_type>)};
-			this->imp = {ncstr, ncstr, ncstr};
+			this->imp.begin_ptr = ncstr;
+			this->imp.curr_ptr = ncstr;
+			this->imp.end_ptr = ncstr;
 		}
 	}
 
