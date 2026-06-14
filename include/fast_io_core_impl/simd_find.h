@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io::details
 {
@@ -444,9 +444,7 @@ inline constexpr char_type const *find_simd_constant_common_cold_impl(char_type 
 		{
 			::std::size_t diff{static_cast<::std::size_t>(last - first)};
 			if (diff == 0)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				return first;
 			}
@@ -507,9 +505,7 @@ find_simd_small_optimization_common_impl(char_type const *first, char_type const
 			--diff;
 		}
 		if (diff)
-#if __has_cpp_attribute(likely)
 			[[likely]]
-#endif
 		{
 			return first;
 		}

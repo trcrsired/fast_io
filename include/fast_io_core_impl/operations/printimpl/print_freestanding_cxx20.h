@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -435,9 +435,7 @@ inline constexpr void print_control_single(output outstm, T t)
 				bool smaller{static_cast<::std::ptrdiff_t>(size) < diff};
 				::fast_io::details::local_operator_new_array_ptr<char_type> newptr;
 				if (!smaller)
-#if __has_cpp_attribute(unlikely)
 					[[unlikely]]
-#endif
 				{
 					newptr.ptr = toptr = ::fast_io::details::allocate_iobuf_space<
 						char_type,
@@ -456,9 +454,7 @@ inline constexpr void print_control_single(output outstm, T t)
 					obuffer_set_curr(outstm, it);
 				}
 				else
-#if __has_cpp_attribute(unlikely)
 					[[unlikely]]
-#endif
 				{
 					::fast_io::operations::decay::write_all_decay(outstm, toptr, it);
 				}
@@ -532,9 +528,7 @@ inline constexpr void print_control_single(output outstm, T t)
 				auto bcurr{obuffer_curr(outstm)};
 				auto bed{obuffer_end(outstm)};
 				if (bed <= bcurr)
-#if __has_cpp_attribute(unlikely)
 					[[unlikely]]
-#endif
 				{
 					if constexpr (minimum_buffer_output_stream_require_size_impl<output, reserved_size>)
 					{
@@ -548,9 +542,7 @@ inline constexpr void print_control_single(output outstm, T t)
 						bcurr = obuffer_curr(outstm);
 						bed = obuffer_end(outstm);
 						if (bed - bcurr < reserved_size_no_line)
-#if __has_cpp_attribute(unlikely)
 							[[unlikely]]
-#endif
 						{
 							char_type buffer[reserved_size];
 							char_type *buffered{buffer + reserved_size_no_line};
@@ -588,9 +580,7 @@ inline constexpr void print_control_single(output outstm, T t)
 					auto [resit, done] = st.print_context_define(t, bcurr, bed);
 					obuffer_set_curr(outstm, resit);
 					if (done)
-#if __has_cpp_attribute(likely)
 						[[likely]]
-#endif
 					{
 						if constexpr (line)
 						{
@@ -1406,7 +1396,7 @@ template <bool line, typename outputstmtype, typename... Args>
 #endif
 inline constexpr decltype(auto) print_freestanding_decay_cold(outputstmtype optstm, Args... args)
 {
-#if !__has_cpp_attribute(__gnu__::__cold__) && __has_cpp_attribute(unlikely)
+#if !__has_cpp_attribute(__gnu__::__cold__)
 	if (true) [[unlikely]]
 #endif
 		return ::fast_io::operations::decay::print_freestanding_decay<line>(optstm, args...);
