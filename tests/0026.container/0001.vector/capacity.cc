@@ -1,4 +1,3 @@
-#include <cassert>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -11,8 +10,8 @@ int main()
 
 	auto cap = v.capacity();
 	println("Initial size: ", v.size(), ", capacity: ", cap);
-	assert(v.size() == 0);
-	assert(v.capacity() == 0);
+	if (!(v.size() == 0)) ::fast_io::fast_terminate();
+	if (!(v.capacity() == 0)) ::fast_io::fast_terminate();
 
 	print("\nDemonstrate the capacity'\''s growth policy."
 		  "\nSize:  Capacity:  Ratio:\n");
@@ -22,11 +21,11 @@ int main()
 		if (cap != v.capacity())
 		{
 			println(left(v.size(), 7), left(v.capacity(), 11), left(float(v.capacity()) / static_cast<float>(cap), 10));
-			assert(v.capacity() > cap);
+			if (!(v.capacity() > cap)) ::fast_io::fast_terminate();
 			cap = v.capacity();
 		}
 	}
 
 	println("\nFinal size: ", v.size(), ", capacity: ", v.capacity());
-	assert(v.size() == 100);
+	if (!(v.size() == 100)) ::fast_io::fast_terminate();
 }

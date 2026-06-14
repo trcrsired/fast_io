@@ -1,4 +1,3 @@
-#include <cassert>
 #include <string_view>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
@@ -14,10 +13,10 @@ int main()
 {
 	fast_io::vector<int> container{1, 2, 3};
 	print_info("Before clear: ", container);
-	assert(!container.empty());
-	assert(container.size() == 3);
+	if (!(!container.empty())) ::fast_io::fast_terminate();
+	if (!(container.size() == 3)) ::fast_io::fast_terminate();
 	container.clear();
 	print_info("After clear: ", container);
-	assert(container.empty());
-	assert(container.size() == 0);
+	if (!(container.empty())) ::fast_io::fast_terminate();
+	if (!(container.size() == 0)) ::fast_io::fast_terminate();
 }

@@ -1,4 +1,3 @@
-#include <cassert>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -12,5 +11,5 @@ int main()
 	{
 		print("The last character is '", chvw(letters.back()), "'.\n");
 	}
-	assert(letters.back() == 'f');
+	if (!(letters.back() == 'f')) ::fast_io::fast_terminate();
 }

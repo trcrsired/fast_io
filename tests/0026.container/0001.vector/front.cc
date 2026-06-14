@@ -1,4 +1,3 @@
-#include <cassert>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -12,5 +11,5 @@ int main()
 	{
 		print("The first character is '", chvw(letters.front()), "'.\n");
 	}
-	assert(letters.front() == 'a');
+	if (!(letters.front() == 'a')) ::fast_io::fast_terminate();
 }

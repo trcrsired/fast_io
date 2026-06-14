@@ -1,4 +1,3 @@
-#include <cassert>
 #include <algorithm>
 #include <numeric>
 #include <string>
@@ -20,18 +19,18 @@ int main()
 	// Sums all integers in the vector nums (if any), printing only the result.
 	auto const sum = std::accumulate(nums.begin(), nums.end(), 0);
 	println("Sum of nums: ", sum);
-	assert(sum == 31);
+	if (!(sum == 31)) ::fast_io::fast_terminate();
 
 	// Prints the first fruit in the vector fruits, checking if there is any.
 	if (!fruits.empty())
 	{
 		println("First fruit: ", *fruits.begin());
-		assert(*fruits.begin() == "orange");
+		if (!(*fruits.begin() == "orange")) ::fast_io::fast_terminate();
 	}
 
 	if (empty.begin() == empty.end())
 	{
 		print("vector 'empty' is indeed empty.\n");
 	}
-	assert(empty.begin() == empty.end());
+	if (!(empty.begin() == empty.end())) ::fast_io::fast_terminate();
 }

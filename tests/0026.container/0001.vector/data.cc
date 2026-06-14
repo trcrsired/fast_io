@@ -1,4 +1,3 @@
-#include <cassert>
 #include <cstddef>
 #include <span>
 #include <fast_io.h>
@@ -31,8 +30,8 @@ int main()
 	// std::span (C++20) is a safer alternative to separated pointer/size.
 	span_func({container.data(), container.size()});
 
-	assert(container.data()[0] == 1);
-	assert(container.data()[1] == 2);
-	assert(container.data()[2] == 3);
-	assert(container.data()[3] == 4);
+	if (!(container.data()[0] == 1)) ::fast_io::fast_terminate();
+	if (!(container.data()[1] == 2)) ::fast_io::fast_terminate();
+	if (!(container.data()[2] == 3)) ::fast_io::fast_terminate();
+	if (!(container.data()[3] == 4)) ::fast_io::fast_terminate();
 }
