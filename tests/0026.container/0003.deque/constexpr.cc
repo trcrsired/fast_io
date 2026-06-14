@@ -2,6 +2,8 @@
 #include <fast_io_dsal/deque.h>
 #include <utility>
 
+#if (defined(__GNUC__) && __GNUC__ >= 15) || (defined(__clang_major__) && __clang_major__ >= 22)
+
 namespace
 {
 
@@ -273,6 +275,8 @@ constexpr bool test_iterators()
 static_assert(test_iterators());
 
 } // namespace
+
+#endif
 
 int main()
 {
