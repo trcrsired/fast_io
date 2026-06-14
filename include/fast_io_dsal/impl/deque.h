@@ -441,7 +441,11 @@ inline constexpr void deque_destroy_trivial_common_align(controllerblocktype &co
 		}
 		for (auto i{controller.controller_start_reserved_ptr}, e{controller.controller_after_reserved_ptr}; i != e; ++i)
 		{
-			delete[] *i;
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_delete)
+			__builtin_operator_delete(*i);
+#else
+			::operator delete(*i);
+#endif
 		}
 		using controller_replacetype = typename controllerblocktype::replacetype;
 		::std::size_t const element_count{static_cast<::std::size_t>(controller.controller_after_ptr - controller.controller_start_ptr + 1)};
@@ -607,11 +611,17 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(dequecontroltyp
 
 	auto end_block_ptr{start_block_ptr + initial_allocated_block_counts};
 #if __cpp_if_consteval >= 202106L
-	if consteval
+		if consteval
 	{
 		for (auto i{start_block_ptr}; i != end_block_ptr; ++i)
 		{
-			::std::construct_at(i, new replacetype[bytes]);
+			::std::construct_at(i, static_cast<begin_ptrtype>(
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(bytes * sizeof(replacetype))
+#else
+				::operator new(bytes * sizeof(replacetype))
+#endif
+			));
 		}
 	}
 	else
@@ -705,7 +715,13 @@ inline constexpr void deque_allocate_init_blocks_dezeroing_impl(dequecontroltype
 	{
 		for (auto it{reserve_start}, ed{reserve_after}; it != ed; ++it)
 		{
-			::std::construct_at(it, new replacetype[blockbytes]);
+			::std::construct_at(it, static_cast<begin_ptrtype>(
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(blockbytes * sizeof(replacetype))
+#else
+				::operator new(blockbytes * sizeof(replacetype))
+#endif
+			));
 		}
 	}
 	else
@@ -1530,7 +1546,13 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(dequecontroltype
 		{
 			for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
 			{
-				::std::construct_at(pos, new replacetype[blockbytes]);
+				::std::construct_at(pos, static_cast<begin_ptrtype>(
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+					__builtin_operator_new(blockbytes * sizeof(replacetype))
+#else
+					::operator new(blockbytes * sizeof(replacetype))
+#endif
+				));
 			}
 		}
 		else
@@ -1724,7 +1746,13 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(dequecontroltyp
 		{
 			for (auto i{new_controller_start_reserved_ptr}; i != ed; ++i)
 			{
-				::std::construct_at(i, new replacetype[blockbytes]);
+				::std::construct_at(i, static_cast<begin_ptrtype>(
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+					__builtin_operator_new(blockbytes * sizeof(replacetype))
+#else
+					::operator new(blockbytes * sizeof(replacetype))
+#endif
+				));
 			}
 		}
 		else
