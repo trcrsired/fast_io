@@ -2228,7 +2228,7 @@ private:
 			pointer lastblockbegin;
 			if (front_controller_ptr == back_controller_ptr)
 			{
-				lastblockbegin = controller.front_block.curr_ptr;
+				lastblockbegin = fromcontroller.front_block.curr_ptr;
 			}
 			else
 			{
@@ -2342,7 +2342,12 @@ public:
 	}
 
 	inline explicit constexpr deque(size_type n, const_reference val) noexcept(::std::is_nothrow_copy_constructible_v<value_type>)
+		: controller{}
 	{
+		if (!n)
+		{
+			return;
+		}
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
 			this->reserve_back(n);
@@ -3303,7 +3308,7 @@ private:
 
 	struct emplace_decision
 	{
-		::std::size_t pos;
+		iterator pos;
 		::std::int_fast8_t decision;
 	};
 	template <bool isnothrow>
