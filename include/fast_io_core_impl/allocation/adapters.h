@@ -145,7 +145,13 @@ public:
 		if (false)
 #endif
 		{
-			auto p{__builtin_operator_new(n)};
+			auto p{
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+			};
 			if (zero)
 			{
 				::fast_io::freestanding::bytes_clear_n(static_cast<::std::byte *>(p), n);
@@ -747,7 +753,13 @@ public:
 		if (false)
 #endif
 		{
-			auto p{__builtin_operator_new(n)};
+			auto p{
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+			};
 			if (zero)
 			{
 				::fast_io::freestanding::bytes_clear_n(static_cast<::std::byte *>(p), n);
@@ -847,7 +859,13 @@ public:
 		if (false)
 #endif
 		{
-			return __builtin_operator_new(n);
+			return
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+				;
 		}
 		if constexpr (::fast_io::details::has_allocate_aligned_impl<alloc>)
 		{
@@ -874,7 +892,13 @@ public:
 		if (false)
 #endif
 		{
-			return __builtin_operator_new(n);
+			return
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+				;
 		}
 		if constexpr (::fast_io::details::has_allocate_aligned_zero_impl<alloc>)
 		{
@@ -904,7 +928,13 @@ public:
 		if (false)
 #endif
 		{
-			return {__builtin_operator_new(n), n};
+			return {
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+				, n};
 		}
 		else
 		{
@@ -931,7 +961,13 @@ public:
 		if (false)
 #endif
 		{
-			return {__builtin_operator_new(n), n};
+			return {
+#if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
+				__builtin_operator_new(n)
+#else
+				::operator new(n)
+#endif
+				, n};
 		}
 		else
 		{
