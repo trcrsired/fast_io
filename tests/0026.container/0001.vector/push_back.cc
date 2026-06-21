@@ -1,4 +1,4 @@
-﻿#include <string>
+#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -11,6 +11,10 @@ int main()
 	letters.push_back("abc");
 	std::string s{"def"};
 	letters.push_back(std::move(s));
+
+	if (!(letters.size() == 2)) ::fast_io::fast_terminate();
+	if (!(letters[0] == "abc")) ::fast_io::fast_terminate();
+	if (!(letters[1] == "def")) ::fast_io::fast_terminate();
 
 	print("std::vector letters holds: ");
 	for (auto &&e : letters)

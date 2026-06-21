@@ -1,4 +1,4 @@
-﻿#include <fast_io.h>
+#include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
 using namespace fast_io::mnp;
@@ -8,10 +8,13 @@ int main()
 	fast_io::vector<int> numbers{2, 4, 6, 8};
 
 	print("Second element: ", numbers[1], "\n");
+	if (!(numbers[1] == 4)) ::fast_io::fast_terminate();
 
 	numbers[0] = 5;
+	if (!(numbers[0] == 5)) ::fast_io::fast_terminate();
 
 	println("All numbers: ", rgvw(numbers, " "));
+	if (!(numbers[0] == 5 && numbers[1] == 4 && numbers[2] == 6 && numbers[3] == 8)) ::fast_io::fast_terminate();
 }
 
 // Gets the sum of all primes in [0, N) using sieve of Eratosthenes
