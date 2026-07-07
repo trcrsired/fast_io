@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -11,7 +11,7 @@ inline constexpr ::std::byte *read_some_bytes_decay(instmtype insm, ::std::byte 
 
 template <typename instmtype>
 inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
-														  ::fast_io::intfpos_t);
+													 ::fast_io::intfpos_t);
 
 } // namespace operations::decay
 
@@ -160,9 +160,7 @@ scatter_read_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::in
 		{
 			auto [base, len] = *i;
 			if (len < buffptrdiff)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				::fast_io::details::non_overlapped_copy_n(curr, len, base);
 				curr += len;
@@ -175,9 +173,7 @@ scatter_read_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::in
 		}
 		ibuffer_set_curr(insm, curr);
 		if (i != e)
-#if __has_cpp_attribute(unlikely)
 			[[unlikely]]
-#endif
 		{
 			auto ret{::fast_io::details::scatter_read_some_cold_impl(insm, i, static_cast<::std::size_t>(e - i))};
 			ret.position += static_cast<::std::size_t>(i - pscatters);
@@ -311,9 +307,7 @@ inline constexpr void scatter_read_all_impl(instmtype insm,
 		{
 			auto [base, len] = *i;
 			if (len < buffptrdiff)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				::fast_io::details::non_overlapped_copy_n(curr, len, base);
 				curr += len;
@@ -326,9 +320,7 @@ inline constexpr void scatter_read_all_impl(instmtype insm,
 		}
 		ibuffer_set_curr(insm, curr);
 		if (i != e)
-#if __has_cpp_attribute(unlikely)
 			[[unlikely]]
-#endif
 		{
 			return ::fast_io::details::scatter_read_all_cold_impl(insm, i, static_cast<::std::size_t>(e - i));
 		}

@@ -1,4 +1,4 @@
-﻿namespace fast_io
+namespace fast_io
 {
 
 namespace details
@@ -120,9 +120,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_impl(outstmtype ou
 		{
 			auto [base, len] = *i;
 			if (len < buffptrdiff)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				using char_type_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -140,9 +138,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_impl(outstmtype ou
 		}
 		obuffer_set_curr(outsm, curr);
 		if (i != e)
-#if __has_cpp_attribute(unlikely)
 			[[unlikely]]
-#endif
 		{
 			auto ret{
 				::fast_io::details::scatter_write_some_bytes_cold_impl(outsm, i, static_cast<::std::size_t>(e - i))};
@@ -287,9 +283,7 @@ inline constexpr void scatter_write_all_bytes_impl(outstmtype outsm, io_scatter_
 		{
 			auto [base, len] = *i;
 			if (len < buffptrdiff)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				using char_type_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -307,9 +301,7 @@ inline constexpr void scatter_write_all_bytes_impl(outstmtype outsm, io_scatter_
 		}
 		obuffer_set_curr(outsm, curr);
 		if (i != e)
-#if __has_cpp_attribute(unlikely)
 			[[unlikely]]
-#endif
 		{
 			return ::fast_io::details::scatter_write_all_bytes_cold_impl(outsm, i, static_cast<::std::size_t>(e - i));
 		}

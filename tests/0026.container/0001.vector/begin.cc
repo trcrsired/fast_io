@@ -1,4 +1,4 @@
-﻿#include <algorithm>
+#include <algorithm>
 #include <numeric>
 #include <string>
 #include <fast_io.h>
@@ -17,17 +17,20 @@ int main()
 	print("\n");
 
 	// Sums all integers in the vector nums (if any), printing only the result.
-	println("Sum of nums: ",
-			std::accumulate(nums.begin(), nums.end(), 0));
+	auto const sum = std::accumulate(nums.begin(), nums.end(), 0);
+	println("Sum of nums: ", sum);
+	if (!(sum == 31)) ::fast_io::fast_terminate();
 
 	// Prints the first fruit in the vector fruits, checking if there is any.
 	if (!fruits.empty())
 	{
 		println("First fruit: ", *fruits.begin());
+		if (!(*fruits.begin() == "orange")) ::fast_io::fast_terminate();
 	}
 
 	if (empty.begin() == empty.end())
 	{
 		print("vector 'empty' is indeed empty.\n");
 	}
+	if (!(empty.begin() == empty.end())) ::fast_io::fast_terminate();
 }

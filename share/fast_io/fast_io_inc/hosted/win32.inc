@@ -60,5 +60,5 @@ export namespace fast_io
 
     using ::fast_io::data_sync_flags;
     using ::fast_io::data_sync;
-u   using ::fast_io::flush;
+    using ::fast_io::flush;
 }

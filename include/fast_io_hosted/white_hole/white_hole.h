@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 #include "rtl_gen_random.h"
 #include "win32_crypt_gen_random.h"
@@ -156,9 +156,7 @@ struct basic_white_hole_engine
 			::std::size_t diff{static_cast<::std::size_t>(edptr - currptr)};
 			constexpr ::std::size_t objsz{sizeof(result_type)};
 			if (diff < objsz)
-#if __has_cpp_attribute(unlikely)
 				[[unlikely]]
-#endif
 			{
 				ibuffer_minimum_size_underflow_all_prepare_define(instmref);
 				currptr = ibuffer_curr(instmref);
