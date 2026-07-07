@@ -14,7 +14,7 @@ struct swiss_table_str_imp_common
 {
 	::std::uint_least8_t *controls;
 	::std::size_t cap;
-	::fast_io::details::associative_string *slots;
+	::fast_io::details::associative_string<chtype> *slots;
 };
 
 inline constexpr ::std::uint_least64_t swiss_table_hash_h1(::std::uint_least64_t hash) noexcept
@@ -34,7 +34,7 @@ inline constexpr ::std::uint_least8_t swiss_table_hash_h2(::std::uint_least64_t 
 	return static_cast<::std::uint_least8_t>(hash & 0x7F);
 }
 
-template <typename imptype, typename keytype, bool ismap>
+template <typename imptype, typename keytype>
 inline constexpr ::std::size_t swiss_table_find_common(imptype const &imp,
 													   keytype key, ::std::uint_least64_t hash) noexcept
 {
@@ -51,7 +51,7 @@ inline constexpr ::std::size_t swiss_table_find_common(imptype const &imp,
 		{
 			return pos;
 		}
-		if (controlspos == ::fast_io::details::swiss_table_ctrl::empty)
+		if (controlspos == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty))
 		{
 			return ::fast_io::containers::npos;
 		}

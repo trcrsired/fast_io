@@ -28,7 +28,6 @@ inline ::std::uint_least64_t xxh3_read64_fio(void const *p) noexcept
 	::std::memcpy
 #endif
 		(__builtin_addressof(v), p, sizeof(v));
-#endif
 	return v;
 }
 
@@ -61,6 +60,7 @@ inline ::std::uint_least64_t xxh3_64bits_fio(void const *data, ::std::size_t len
 	acc ^= acc >> 29;
 	acc *= 0x165667B19E3779F9ULL;
 	acc ^= acc >> 32;
+	return acc;
 }
 
 } // namespace details

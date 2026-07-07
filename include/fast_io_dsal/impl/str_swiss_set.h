@@ -1,6 +1,6 @@
 #pragma once
 
-namespace fast_io::containers::details
+namespace fast_io::details
 {
 
 struct str_swiss_table_insert_pos_result
@@ -78,7 +78,8 @@ inline constexpr bool str_swiss_table_insert_key_cold(
 	}
 	else
 	{
-		newcap = oldcap * 2;
+		// add overflow trapping here
+		newcap = oldcap << 1u;
 	}
 
 	auto newcontrols{typed_ctrl_allocator_type::allocate(newcap)};
@@ -176,7 +177,7 @@ inline constexpr void str_swiss_table_destroy_impl(
 	}
 }
 
-} // namespace fast_io::containers::details
+} // namespace fast_io::details
 
 namespace fast_io
 {
@@ -194,7 +195,7 @@ public:
 	using size_type = ::std::size_t;
 	using difference_type = ::std::ptrdiff_t;
 
-	::fast_io::details::swiss_table_str_imp_common<char_type> imp;
+	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
 
 	constexpr basic_str_swiss_set() noexcept = default;
 
@@ -204,38 +205,36 @@ public:
 	constexpr basic_str_swiss_set(basic_str_swiss_set &&other) noexcept
 		: imp{other.imp}
 	{
-		other.imp.controls = nullptr;
-		other.imp.cap = 0;
-		other.imp.slots = nullptr;
+		other.imp = {};
 	}
 
 	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set &&other) noexcept
 	{
 		if (this != ::std::addressof(other))
 		{
-			::fast_io::containers::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
+			::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
 			this->imp = other.imp;
-			other.imp.controls = nullptr;
-			other.imp.cap = 0;
-			other.imp.slots = nullptr;
+			other.imp = {};
 		}
 		return *this;
 	}
 
 	constexpr ~basic_str_swiss_set()
 	{
-		::fast_io::containers::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
 	}
 
 	constexpr bool insert_key(string_view_type key) noexcept
 	{
+
 		auto const hash{::fast_io::details::xxh3_64bits_fio(key.data(), key.size_bytes())};
 		if (this->imp.cap == 0) [[unlikely]]
 		{
-			return ::fast_io::containers::details::str_swiss_table_insert_key_cold<allocator_type, char_type>(
+			return ::fast_io::details::str_swiss_table_insert_key_cold<allocator_type, char_type>(
 				this->imp, key.ptr, key.n, hash);
 		}
-		auto result{::fast_io::containers::details::str_swiss_table_find_insert_position<char_type>(
+#if 0
+		auto result{::fast_io::details::str_swiss_table_find_insert_position<char_type>(
 			this->imp, key.ptr, key.n, hash)};
 		if (result.found)
 		{
@@ -243,12 +242,14 @@ public:
 		}
 		if (result.pos == ::fast_io::containers::npos) [[unlikely]]
 		{
-			return ::fast_io::containers::details::str_swiss_table_insert_key_cold<allocator_type, char_type>(
+			return ::fast_io::details::str_swiss_table_insert_key_cold<allocator_type, char_type>(
 				this->imp, key.ptr, key.n, hash);
 		}
 		auto h2{::fast_io::details::swiss_table_hash_h2(hash)};
 		this->imp.controls[result.pos] = h2;
 		this->imp.slots[result.pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(key.ptr, key.n);
+
+#endif
 		return true;
 	}
 	constexpr bool contains(string_view_type key) const noexcept
@@ -257,7 +258,7 @@ public:
 		{
 			return false;
 		}
-		return ::fast_io::containers::details::str_swiss_table_find_common_with_str<char_type>(
+		return ::fast_io::details::swiss_table_find_common_with_str<char_type>(
 				   this->imp, key.ptr, key.n,
 				   ::fast_io::details::xxh3_64bits_fio(key.data(), key.size_bytes())) != ::fast_io::containers::npos;
 	}

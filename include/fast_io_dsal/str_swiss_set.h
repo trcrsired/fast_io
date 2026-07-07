@@ -36,12 +36,12 @@
 
 namespace fast_io
 {
-#if 0
+
 template <::std::integral T, typename Alloc = ::fast_io::native_global_allocator>
 using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Alloc>;
 
 using str_swiss_set = ::fast_io::basic_str_swiss_set<char>;
-
+#if 0
 
 using wstr_swiss_set = ::fast_io::basic_str_swiss_set<wchar_t>;
 using u8str_swiss_set = ::fast_io::basic_str_swiss_set<char8_t>;
@@ -73,9 +73,9 @@ using u8str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char8_t>;
 using u16str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char16_t>;
 using u32str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char32_t>;
 } // namespace tlc
-
-} // namespace fast_io
 #endif
+} // namespace fast_io
+
 #endif
 
 #include "impl/misc/pop_macros.h"
