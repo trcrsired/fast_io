@@ -79,6 +79,12 @@ inline constexpr bool str_swiss_table_insert_key_cold(
 	else
 	{
 		// add overflow trapping here
+		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+		constexpr ::std::size_t mxdv2{mx >> 1u};
+		if (mxdv2 < oldcap)
+		{
+			::fast_io::fast_terminate();
+		}
 		newcap = oldcap << 1u;
 	}
 
@@ -171,9 +177,7 @@ inline constexpr void str_swiss_table_destroy_impl(
 		}
 		typed_ctrl_allocator_type::deallocate_n(controls, cap);
 		typed_slot_allocator_type::deallocate_n(slots, cap);
-		imp.controls = nullptr;
-		imp.cap = 0;
-		imp.slots = nullptr;
+		imp = {};
 	}
 }
 
