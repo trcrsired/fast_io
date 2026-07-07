@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -59,9 +59,7 @@ inline void *win32_heaprealloc_handle_common_impl(void *heaphandle, void *addr, 
 		n = 1;
 	}
 	if (addr == nullptr)
-#if __has_cpp_attribute(unlikely)
 		[[unlikely]]
-#endif
 	{
 		return win32_heapalloc_handle_common_impl(heaphandle, n, flag);
 	}

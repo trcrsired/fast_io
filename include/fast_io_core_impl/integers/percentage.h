@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -270,9 +270,7 @@ inline constexpr chartype *prrsv_percentage_main_common_impl(chartype *iter, T n
 			bool denominatoriseven{!(denominator & 1u)};
 			unsigned quotientmod100;
 			if (numerator10000high == 0u)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 			{
 				auto quotient{numerator10000low / denominator};
 				auto remainder{numerator10000low % denominator};
