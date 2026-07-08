@@ -48,7 +48,7 @@ rapidhash_read32_fio(void const *p) noexcept
 inline ::std::uint_least64_t
 rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 {
-	auto p{reinterpret_cast<::std::byte const *>(data)};
+	auto p{reinterpret_cast<char unsigned const *>(data)};
 	::std::uint_least64_t seed{};
 
 	// Seed initialization
