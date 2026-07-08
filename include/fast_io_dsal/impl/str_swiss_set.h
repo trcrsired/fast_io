@@ -87,11 +87,14 @@ inline constexpr bool str_swiss_table_need_grow(
 	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp) noexcept
 {
 	::std::size_t deleted_count{};
-	for (::std::size_t i{}; i != imp.cap; ++i)
+	if constexpr (false)
 	{
-		if (imp.controls[i] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
+		for (::std::size_t i{}; i != imp.cap; ++i)
 		{
-			++deleted_count;
+			if (imp.controls[i] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
+			{
+				++deleted_count;
+			}
 		}
 	}
 	::std::size_t const occupied{imp.counts + deleted_count};
