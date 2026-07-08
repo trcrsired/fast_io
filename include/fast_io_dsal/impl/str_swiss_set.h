@@ -204,14 +204,8 @@ public:
 				return false;
 			}
 			pos = result.pos;
-			if (this->imp.controls[pos] != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty))
-			{
-				need_grow = true;
-			}
-			else if (::fast_io::details::str_swiss_table_need_grow(this->imp))
-			{
-				need_grow = true;
-			}
+			need_grow = this->imp.controls[pos] != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) ||
+						::fast_io::details::str_swiss_table_need_grow(this->imp);
 		}
 		if (need_grow) [[unlikely]]
 		{
