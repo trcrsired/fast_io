@@ -193,6 +193,11 @@ public:
 		::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
 	}
 
+	constexpr size_type size() const noexcept
+	{
+		return this->imp.counts;
+	}
+
 	constexpr bool insert_key(string_view_type key) noexcept
 	{
 		auto const hash{::fast_io::details::rapidhash_64bits_fio(key.data(), key.size_bytes())};
