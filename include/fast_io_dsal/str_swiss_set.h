@@ -27,7 +27,6 @@
 #include "string_view.h"
 #include "impl/associative_string.h"
 #include "impl/swiss_table_common.h"
-#include "../fast_io_crypto/hash/xxh3.h"
 #include "../fast_io_crypto/hash/rapidhash.h"
 #include "impl/str_swiss_set.h"
 
