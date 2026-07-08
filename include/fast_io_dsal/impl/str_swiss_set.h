@@ -7,9 +7,8 @@ template <typename allocator_type, ::std::integral chtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr bool str_swiss_table_insert_key_cold(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
-	chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
+inline constexpr void str_swiss_table_grow(
+	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -81,24 +80,6 @@ inline constexpr bool str_swiss_table_insert_key_cold(
 		typed_ctrl_allocator_type::deallocate_n(oldcontrols, oldcap);
 		typed_slot_allocator_type::deallocate_n(oldslots, oldcap);
 	}
-
-	// Now insert the new key
-	auto h1{::fast_io::details::swiss_table_hash_h1(hash)};
-	auto h2{::fast_io::details::swiss_table_hash_h2(hash)};
-	auto pos{h1 & newcap};
-	for (;;)
-	{
-		if (newcontrols[pos] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty))
-		{
-			newcontrols[pos] = h2;
-			newslots[pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
-			return true;
-		}
-		if ((++pos) == newcap) [[unlikely]]
-		{
-			pos = 0;
-		}
-	}
 }
 
 template <::std::integral chtype>
@@ -121,7 +102,7 @@ inline constexpr bool str_swiss_table_need_grow(
 }
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr void str_swiss_table_insert_key_hot(
+inline constexpr void str_swiss_table_insert_key(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
 	::std::uint_least64_t hash) noexcept
@@ -234,10 +215,13 @@ public:
 		}
 		if (need_grow) [[unlikely]]
 		{
-			return ::fast_io::details::str_swiss_table_insert_key_cold<allocator_type, char_type>(
-				this->imp, key.ptr, key.n, hash);
+			::fast_io::details::str_swiss_table_grow<allocator_type, char_type>(
+				this->imp);
+			pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
+					  this->imp, key.ptr, key.n, hash)
+					  .pos;
 		}
-		::fast_io::details::str_swiss_table_insert_key_hot<allocator_type, char_type>(
+		::fast_io::details::str_swiss_table_insert_key<allocator_type, char_type>(
 			this->imp, pos, key.ptr, key.n, hash);
 		return true;
 	}
