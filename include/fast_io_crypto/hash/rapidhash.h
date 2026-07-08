@@ -51,11 +51,11 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 	auto p{reinterpret_cast<char unsigned const *>(data)};
 	::std::uint_least64_t seed{};
 
-	// Seed initialization
 	seed ^= rapidhash_mix_fio(seed ^ rapidhash_secret_fio[2],
 							  rapidhash_secret_fio[1]);
 
 	::std::uint_least64_t a{}, b{};
+	auto i{len};
 
 	if (len <= 16)
 	{
@@ -81,9 +81,6 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 	}
 	else
 	{
-		auto i{len};
-
-		// Long input: 7 parallel accumulators, 112-byte stride
 		if (i > 112)
 		{
 			auto s1{seed}, s2{seed}, s3{seed}, s4{seed}, s5{seed}, s6{seed};
@@ -114,7 +111,6 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 			seed ^= s2;
 		}
 
-		// Medium input: cascading mix chain
 		if (i > 16)
 		{
 			seed = rapidhash_mix_fio(rapidhash_read64_fio(p) ^ rapidhash_secret_fio[2],
@@ -146,19 +142,16 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 			}
 		}
 
-		// Tail
 		a = rapidhash_read64_fio(p + i - 16) ^ i;
 		b = rapidhash_read64_fio(p + i - 8);
 	}
 
-	// Final avalanche
 	a ^= rapidhash_secret_fio[1];
 	b ^= seed;
 	::std::uint_least64_t high;
 	a = ::fast_io::intrinsics::umul(a, b, high);
-	b = high;
 	return rapidhash_mix_fio(a ^ rapidhash_secret_fio[7],
-							 b ^ rapidhash_secret_fio[1] ^ len);
+							 high ^ rapidhash_secret_fio[1] ^ i);
 }
 
 } // namespace details
