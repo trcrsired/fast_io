@@ -1,4 +1,9 @@
 #pragma once
+
+
+/*
+https://discourse.llvm.org/t/adding-a-size-based-vector-to-libc-s-unstable-abi/86306
+*/
 namespace fast_io
 {
 
