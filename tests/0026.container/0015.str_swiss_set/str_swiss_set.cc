@@ -5,5 +5,6 @@ int main()
 {
 	::fast_io::str_swiss_set sset;
 	sset.insert_key("abcd");
-	::fast_io::io::println(sset.contains("abcd"));
+	sset.insert_key("abcde");
+	::fast_io::io::println(sset.contains("abcde"));
 }
