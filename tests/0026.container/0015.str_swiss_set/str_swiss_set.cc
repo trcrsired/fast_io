@@ -70,11 +70,11 @@ int main()
 						 "\nto_insert:\n");
 	for (auto e : to_insert)
 	{
-		::fast_io::io::println(e, "? ", sset.contains(e));
+		::fast_io::io::println(e, " ", sset.contains(e));
 	}
 	::fast_io::io::print("not_to_insert:\n");
 	for (auto e : not_to_insert)
 	{
-		::fast_io::io::println(e, "? ", sset.contains(e));
+		::fast_io::io::println(e, " ", sset.contains(e));
 	}
 }
