@@ -1,101 +1,80 @@
 #include <fast_io.h>
 #include <fast_io_dsal/str_swiss_set.h>
+#include <fast_io_dsal/string_view.h>
 
 int main()
 {
+	static constexpr ::fast_io::cstring_view to_insert[]{
+		::fast_io::cstring_view("hello"),
+		::fast_io::cstring_view("world"),
+		::fast_io::cstring_view("foo"),
+		::fast_io::cstring_view("bar"),
+		::fast_io::cstring_view("baz"),
+		::fast_io::cstring_view("quux"),
+		::fast_io::cstring_view("corge"),
+		::fast_io::cstring_view("grault"),
+#if 1
+
+		::fast_io::cstring_view("garply"),
+		::fast_io::cstring_view("waldo"),
+		::fast_io::cstring_view("fred"),
+		::fast_io::cstring_view("plugh"),
+		::fast_io::cstring_view("xyzzy"),
+		::fast_io::cstring_view("thud"),
+		::fast_io::cstring_view("abcdefghijklmnop"),
+		::fast_io::cstring_view("the quick brown fox jumps over the lazy dog"),
+		::fast_io::cstring_view("lorem ipsum dolor sit amet consectetur adipiscing elit"),
+		::fast_io::cstring_view("a"),
+		::fast_io::cstring_view("ab"),
+		::fast_io::cstring_view("abc"),
+		::fast_io::cstring_view("abcd"),
+		::fast_io::cstring_view("abcde"),
+		::fast_io::cstring_view("abcdef"),
+		::fast_io::cstring_view("abcdefg"),
+		::fast_io::cstring_view("abcdefgh"),
+		::fast_io::cstring_view("abcdefghi"),
+		::fast_io::cstring_view("abcdefghij"),
+		::fast_io::cstring_view("abcdefghijk"),
+		::fast_io::cstring_view("abcdefghijkl"),
+		::fast_io::cstring_view("abcdefghijklm"),
+		::fast_io::cstring_view("abcdefghijklmn"),
+		::fast_io::cstring_view("abcdefghijklmno"),
+		::fast_io::cstring_view("1234567890"),
+		::fast_io::cstring_view("0987654321"),
+		::fast_io::cstring_view("test"),
+		::fast_io::cstring_view("testing"),
+		::fast_io::cstring_view("tester"),
+		::fast_io::cstring_view("tested"),
+		::fast_io::cstring_view("testes")
+#endif
+	};
+	// These should NOT be found
+	static constexpr ::fast_io::cstring_view not_to_insert[]{
+		::fast_io::cstring_view("notinserted"),
+		::fast_io::cstring_view(""),
+		::fast_io::cstring_view("hell"),
+		::fast_io::cstring_view("helloo"),
+		::fast_io::cstring_view("hello world"),
+		::fast_io::cstring_view("foobar"),
+		::fast_io::cstring_view("tes"),
+		::fast_io::cstring_view("testin"),
+		::fast_io::cstring_view("xyz"),
+		::fast_io::cstring_view("THUD")};
 	::fast_io::str_swiss_set sset;
 
-	sset.insert_key("hello");
-	sset.insert_key("world");
-	sset.insert_key("foo");
-	sset.insert_key("bar");
-	sset.insert_key("baz");
-	sset.insert_key("quux");
-	sset.insert_key("corge");
-	sset.insert_key("grault");
-	sset.insert_key("garply");
-	sset.insert_key("waldo");
-	sset.insert_key("fred");
-	sset.insert_key("plugh");
-	sset.insert_key("xyzzy");
-	sset.insert_key("thud");
-	sset.insert_key("abcdefghijklmnop");
-	sset.insert_key("the quick brown fox jumps over the lazy dog");
-	sset.insert_key("lorem ipsum dolor sit amet consectetur adipiscing elit");
-	sset.insert_key("a");
-	sset.insert_key("ab");
-	sset.insert_key("abc");
-	sset.insert_key("abcd");
-	sset.insert_key("abcde");
-	sset.insert_key("abcdef");
-	sset.insert_key("abcdefg");
-	sset.insert_key("abcdefgh");
-	sset.insert_key("abcdefghi");
-	sset.insert_key("abcdefghij");
-	sset.insert_key("abcdefghijk");
-	sset.insert_key("abcdefghijkl");
-	sset.insert_key("abcdefghijklm");
-	sset.insert_key("abcdefghijklmn");
-	sset.insert_key("abcdefghijklmno");
-	sset.insert_key("1234567890");
-	sset.insert_key("0987654321");
-	sset.insert_key("test");
-	sset.insert_key("testing");
-	sset.insert_key("tester");
-	sset.insert_key("tested");
-	sset.insert_key("testes");
-
-	::fast_io::io::println("size: ", sset.size());
-
-	::fast_io::io::println(sset.contains("hello"));
-	::fast_io::io::println(sset.contains("world"));
-	::fast_io::io::println(sset.contains("foo"));
-	::fast_io::io::println(sset.contains("bar"));
-	::fast_io::io::println(sset.contains("baz"));
-	::fast_io::io::println(sset.contains("quux"));
-	::fast_io::io::println(sset.contains("corge"));
-	::fast_io::io::println(sset.contains("grault"));
-	::fast_io::io::println(sset.contains("garply"));
-	::fast_io::io::println(sset.contains("waldo"));
-	::fast_io::io::println(sset.contains("fred"));
-	::fast_io::io::println(sset.contains("plugh"));
-	::fast_io::io::println(sset.contains("xyzzy"));
-	::fast_io::io::println(sset.contains("thud"));
-	::fast_io::io::println(sset.contains("abcdefghijklmnop"));
-	::fast_io::io::println(sset.contains("the quick brown fox jumps over the lazy dog"));
-	::fast_io::io::println(sset.contains("lorem ipsum dolor sit amet consectetur adipiscing elit"));
-	::fast_io::io::println(sset.contains("a"));
-	::fast_io::io::println(sset.contains("ab"));
-	::fast_io::io::println(sset.contains("abc"));
-	::fast_io::io::println(sset.contains("abcd"));
-	::fast_io::io::println(sset.contains("abcde"));
-	::fast_io::io::println(sset.contains("abcdef"));
-	::fast_io::io::println(sset.contains("abcdefg"));
-	::fast_io::io::println(sset.contains("abcdefgh"));
-	::fast_io::io::println(sset.contains("abcdefghi"));
-	::fast_io::io::println(sset.contains("abcdefghij"));
-	::fast_io::io::println(sset.contains("abcdefghijk"));
-	::fast_io::io::println(sset.contains("abcdefghijkl"));
-	::fast_io::io::println(sset.contains("abcdefghijklm"));
-	::fast_io::io::println(sset.contains("abcdefghijklmn"));
-	::fast_io::io::println(sset.contains("abcdefghijklmno"));
-	::fast_io::io::println(sset.contains("1234567890"));
-	::fast_io::io::println(sset.contains("0987654321"));
-	::fast_io::io::println(sset.contains("test"));
-	::fast_io::io::println(sset.contains("testing"));
-	::fast_io::io::println(sset.contains("tester"));
-	::fast_io::io::println(sset.contains("tested"));
-	::fast_io::io::println(sset.contains("testes"));
-
-	// These should NOT be found
-	::fast_io::io::println(sset.contains("notinserted"));
-	::fast_io::io::println(sset.contains(""));
-	::fast_io::io::println(sset.contains("hell"));
-	::fast_io::io::println(sset.contains("helloo"));
-	::fast_io::io::println(sset.contains("hello world"));
-	::fast_io::io::println(sset.contains("foobar"));
-	::fast_io::io::println(sset.contains("tes"));
-	::fast_io::io::println(sset.contains("testin"));
-	::fast_io::io::println(sset.contains("xyz"));
-	::fast_io::io::println(sset.contains("THUD"));
+	for (auto e : to_insert)
+	{
+		sset.insert_key(e);
+	}
+	::fast_io::io::print("::fast_io::str_swiss_set size: ", sset.size(),
+						 "\nto_insert:\n");
+	for (auto e : to_insert)
+	{
+		::fast_io::io::println(e, "? ", sset.contains(e));
+	}
+	::fast_io::io::print("not_to_insert:\n");
+	for (auto e : not_to_insert)
+	{
+		::fast_io::io::println(e, "? ", sset.contains(e));
+	}
 }

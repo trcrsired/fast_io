@@ -22,18 +22,18 @@ inline constexpr void str_swiss_table_grow(
 	::std::size_t newcap;
 	if (oldcap == 0)
 	{
-		newcap = 7;
+		newcap = 8;
 	}
 	else
 	{
 		// add overflow trapping here
 		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-		constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
+		constexpr ::std::size_t mxdv2{(mx) >> 1u};
 		if (mxdv2 < oldcap)
 		{
 			::fast_io::fast_terminate();
 		}
-		newcap = (oldcap << 1u) + 1u;
+		newcap = (oldcap << 1u);
 	}
 
 	auto newcontrols{typed_ctrl_allocator_type::allocate(newcap)};
@@ -51,6 +51,7 @@ inline constexpr void str_swiss_table_grow(
 	// Rehash existing entries
 	if (oldcap != 0)
 	{
+		::std::size_t newcapm1{static_cast<::std::size_t>(newcap - 1u)};
 		for (::std::size_t i{}; i != oldcap; ++i)
 		{
 			auto oldctrl{oldcontrols[i]};
@@ -61,7 +62,7 @@ inline constexpr void str_swiss_table_grow(
 				auto const oldhash{::fast_io::details::rapidhash_64bits_fio(oldslot.ptr, oldslot.n * sizeof(char_type))};
 				auto h1{::fast_io::details::swiss_table_hash_h1(oldhash)};
 				auto h2{::fast_io::details::swiss_table_hash_h2(oldhash)};
-				auto pos{h1 & newcap};
+				auto pos{h1 & newcapm1};
 				for (;;)
 				{
 					if (newcontrols[pos] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty))
@@ -86,22 +87,11 @@ template <::std::integral chtype>
 inline constexpr bool str_swiss_table_need_grow(
 	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp) noexcept
 {
-	::std::size_t deleted_count{};
-	if constexpr (false)
-	{
-		for (::std::size_t i{}; i != imp.cap; ++i)
-		{
-			if (imp.controls[i] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
-			{
-				++deleted_count;
-			}
-		}
-	}
-	::std::size_t const occupied{imp.counts + deleted_count};
+	::std::size_t const counts{imp.counts};
 	::std::size_t high;
-	auto const low{::fast_io::intrinsics::umul(occupied, static_cast<::std::size_t>(7), high)};
+	auto const low{::fast_io::intrinsics::umul(imp.cap, static_cast<::std::size_t>(7), high)};
 	constexpr auto shift{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - 3u)};
-	return ((high << shift) | (low >> 3u)) >= imp.cap;
+	return ((high << shift) | (low >> 3u)) <= counts;
 }
 
 template <typename allocator_type, ::std::integral chtype>
@@ -212,8 +202,15 @@ public:
 				return false;
 			}
 			pos = result.pos;
-			need_grow = this->imp.controls[pos] != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) ||
-						::fast_io::details::str_swiss_table_need_grow(this->imp);
+			if constexpr (false)
+			{
+				need_grow = this->imp.controls[pos] != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) ||
+							::fast_io::details::str_swiss_table_need_grow(this->imp);
+			}
+			else
+			{
+				need_grow = ::fast_io::details::str_swiss_table_need_grow(this->imp);
+			}
 		}
 		if (need_grow) [[unlikely]]
 		{

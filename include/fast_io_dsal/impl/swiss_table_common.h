@@ -47,11 +47,12 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 																					 keytype key, ::std::uint_least64_t hash) noexcept
 {
 	::std::size_t const cap{imp.cap};
+	::std::size_t const capm1{static_cast<::std::size_t>(cap - 1u)};
 	auto controls{imp.controls};
 	auto slots{imp.slots};
 	auto h1{::fast_io::details::swiss_table_hash_h1(hash)};
 	auto h2{::fast_io::details::swiss_table_hash_h2(hash)};
-	::std::size_t pos{h1 & cap};
+	::std::size_t pos{h1 & capm1};
 	for (;;)
 	{
 		auto controlspos{controls[pos]};
