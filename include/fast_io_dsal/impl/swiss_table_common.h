@@ -8,6 +8,10 @@ struct swiss_table_imp_common
 	::std::uint_least8_t *controls;
 	::std::size_t cap;
 	::std::size_t counts;
+	::std::size_t leftmost;
+#if 0
+	::std::size_t rightmost;
+#endif
 };
 
 template <::std::integral chtype>
@@ -16,6 +20,10 @@ struct swiss_table_str_imp_common
 	::std::uint_least8_t *controls;
 	::std::size_t cap;
 	::std::size_t counts;
+	::std::size_t leftmost;
+#if 0
+	::std::size_t rightmost;
+#endif
 	::fast_io::details::associative_string<chtype> *slots;
 };
 
@@ -29,6 +37,7 @@ enum class swiss_table_ctrl : ::std::uint_least8_t
 	empty = 0b10000000,
 	deleted = 0b11111110,
 	sentinel = 0b11111111
+	//	full = 0
 };
 
 inline constexpr ::std::uint_least8_t swiss_table_hash_h2(::std::uint_least64_t hash) noexcept
@@ -78,6 +87,23 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 {
 	::fast_io::basic_string_view<chtype> key(keybase, keylen);
 	return ::fast_io::details::swiss_table_find_common(imp, key, hash);
+}
+
+template <bool isprev>
+inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
+{
+	do
+	{
+		if constexpr (isprev)
+		{
+			--controlpos;
+		}
+		else
+		{
+			++controlpos;
+		}
+	} while ((*controlpos >> 7u));
+	return controlpos;
 }
 
 } // namespace fast_io::details

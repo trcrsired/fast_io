@@ -77,4 +77,10 @@ int main()
 	{
 		::fast_io::io::println(e, " ", sset.contains(e));
 	}
+
+	::fast_io::io::print("::fast_io::str_swiss_set iteration:\n");
+	for (auto e : sset)
+	{
+		::fast_io::io::println(e);
+	}
 }

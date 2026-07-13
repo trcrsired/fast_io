@@ -3,6 +3,57 @@
 namespace fast_io::details
 {
 
+template <::std::integral chtype>
+struct str_swiss_set_iterator
+{
+	using value_type = ::fast_io::containers::basic_cstring_view<chtype>;
+	using iterator_tag = ::std::bidirectional_iterator_tag;
+	using difference_type = ::std::ptrdiff_t;
+	::std::uint_least8_t const *controlpos{};
+	::std::uint_least8_t const *controls{};
+	::fast_io::details::associative_string<chtype> const *slots{};
+	constexpr value_type operator*() const noexcept
+	{
+		return slots[static_cast<::std::size_t>(controlpos - controls)].strvw();
+	}
+	constexpr str_swiss_set_iterator &operator++() noexcept
+	{
+		this->controlpos = ::fast_io::details::swiss_table_iterator_common<false>(this->controlpos);
+		return *this;
+	}
+	constexpr str_swiss_set_iterator operator++(int) noexcept
+	{
+		auto temp{*this};
+		++*this;
+		return temp;
+	}
+	constexpr str_swiss_set_iterator &operator--() noexcept
+	{
+		this->controlpos = ::fast_io::details::swiss_table_iterator_common<true>(this->controlpos);
+		return *this;
+	}
+	constexpr str_swiss_set_iterator operator--(int) noexcept
+	{
+		auto temp{*this};
+		--*this;
+		return temp;
+	}
+};
+
+template <::std::integral chtype>
+inline constexpr bool operator==(::fast_io::details::str_swiss_set_iterator<chtype> a,
+								 ::fast_io::details::str_swiss_set_iterator<chtype> b) noexcept
+{
+	return a.controlpos == b.controlpos;
+}
+
+template <::std::integral chtype>
+inline constexpr bool operator!=(::fast_io::details::str_swiss_set_iterator<chtype> a,
+								 ::fast_io::details::str_swiss_set_iterator<chtype> b) noexcept
+{
+	return !(a == b);
+}
+
 template <typename allocator_type, ::std::integral chtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
@@ -28,7 +79,7 @@ inline constexpr void str_swiss_table_grow(
 	{
 		// add overflow trapping here
 		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-		constexpr ::std::size_t mxdv2{(mx) >> 1u};
+		constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
 		if (mxdv2 < oldcap)
 		{
 			::fast_io::fast_terminate();
@@ -36,21 +87,34 @@ inline constexpr void str_swiss_table_grow(
 		newcap = (oldcap << 1u);
 	}
 
-	auto newcontrols{typed_ctrl_allocator_type::allocate(newcap)};
+	auto newcontrols{typed_ctrl_allocator_type::allocate(newcap + 1u)};
 	auto newslots{typed_slot_allocator_type::allocate(newcap)};
 
-	for (::std::size_t i{}; i != newcap; ++i)
+	auto newcontrols_ed{newcontrols + newcap};
+	for (auto i{newcontrols}; i != newcontrols_ed; ++i)
 	{
-		newcontrols[i] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
+		*i = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
 	}
+	*newcontrols_ed = 0u;
 
 	imp.controls = newcontrols;
 	imp.cap = newcap;
 	imp.slots = newslots;
 
 	// Rehash existing entries
-	if (oldcap != 0)
+	if (oldcap == 0)
 	{
+		imp.leftmost = 0;
+#if 0
+		imp.rightmost = 0;
+#endif
+	}
+	else
+	{
+		::std::size_t leftmost{newcap};
+#if 0
+		::std::size_t rightmost{};
+#endif
 		::std::size_t newcapm1{static_cast<::std::size_t>(newcap - 1u)};
 		for (::std::size_t i{}; i != oldcap; ++i)
 		{
@@ -76,9 +140,23 @@ inline constexpr void str_swiss_table_grow(
 						pos = 0;
 					}
 				}
+				if (pos < leftmost)
+				{
+					leftmost = pos;
+				}
+#if 0
+				if (rightmost < pos)
+				{
+					rightmost = pos;
+				}
+#endif
 			}
 		}
-		typed_ctrl_allocator_type::deallocate_n(oldcontrols, oldcap);
+		imp.leftmost = leftmost;
+#if 0
+		imp.rightmost = static_cast<::std::size_t>(rightmost + 1u);
+#endif
+		typed_ctrl_allocator_type::deallocate_n(oldcontrols, oldcap + 1u);
 		typed_slot_allocator_type::deallocate_n(oldslots, oldcap);
 	}
 }
@@ -104,9 +182,47 @@ inline constexpr void str_swiss_table_insert_key(
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
 	imp.controls[pos] = h2;
 	imp.slots[pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
+	auto newleftmost{pos};
+#if 0
+	auto newrightmost{static_cast<::std::size_t>(pos + 1u)};
+#endif
+	auto counts{imp.counts};
+	if (counts)
+	{
+		if (newleftmost < imp.leftmost)
+		{
+			imp.leftmost = newleftmost;
+		}
+#if 0
+		if (imp.leftmost < newrightmost)
+		{
+			imp.rightmost = newrightmost;
+		}
+#endif
+	}
+	else
+	{
+		imp.leftmost = newleftmost;
+#if 0
+		imp.rightmost = newrightmost;
+#endif
+	}
+	imp.counts = static_cast<::std::size_t>(counts + 1u);
+}
+#if 0
+template <typename allocator_type, ::std::integral chtype>
+inline constexpr void str_swiss_table_insert_key(
+	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
+	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
+	::std::uint_least64_t hash) noexcept
+{
+	using char_type = chtype;
+	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
+	imp.controls[pos] = h2;
+	imp.slots[pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
 	++imp.counts;
 }
-
+#endif
 template <typename allocator_type, ::std::integral chtype>
 inline constexpr void str_swiss_table_destroy_impl(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
@@ -153,6 +269,12 @@ public:
 	using allocator_type = Allocator;
 	using size_type = ::std::size_t;
 	using difference_type = ::std::ptrdiff_t;
+	using const_iterator = ::fast_io::details::str_swiss_set_iterator<chtype>;
+	using iterator = const_iterator;
+#if 0
+	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
+	using reverse_iterator = const_reverse_iterator;
+#endif
 
 	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
 
@@ -234,6 +356,45 @@ public:
 				   this->imp, key.ptr, key.n,
 				   ::fast_io::details::rapidhash_64bits_fio(key.data(), key.size_bytes()))
 			.found;
+	}
+	constexpr size_type count(string_view_type key) const noexcept
+	{
+		return this->contains(key);
+	}
+	constexpr bool is_empty() const noexcept
+	{
+		return !this->imp.counts;
+	}
+#if 0
+	constexpr size_type erase_key(string_view_type key) const noexcept
+	{
+		if (this->imp.cap == 0)
+		{
+			return 0;
+		}
+	}
+#endif
+	constexpr const_iterator cbegin() const noexcept
+	{
+		auto controls{this->imp.controls};
+		return {controls + this->imp.leftmost, controls, this->imp.slots};
+	}
+	constexpr const_iterator cend() const noexcept
+	{
+		auto controls{this->imp.controls};
+#if 0
+		return {controls + this->imp.rightmost, controls, this->imp.slots};
+#else
+		return {controls + this->imp.cap, controls, this->imp.slots};
+#endif
+	}
+	constexpr iterator begin() const noexcept
+	{
+		return this->cbegin();
+	}
+	constexpr iterator end() const noexcept
+	{
+		return this->cend();
 	}
 };
 } // namespace containers
