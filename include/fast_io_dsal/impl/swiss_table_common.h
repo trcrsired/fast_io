@@ -21,9 +21,9 @@ struct swiss_table_str_imp_common
 	::fast_io::details::associative_string<chtype> *slots;
 };
 
-inline constexpr ::std::uint_least64_t swiss_table_hash_h1(::std::uint_least64_t hash) noexcept
+inline constexpr ::std::size_t swiss_table_hash_h1(::std::uint_least64_t hash) noexcept
 {
-	return hash >> 7u;
+	return static_cast<::std::size_t>(hash >> 7u);
 }
 
 enum class swiss_table_ctrl : ::std::uint_least8_t
