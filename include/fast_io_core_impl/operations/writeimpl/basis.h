@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -509,9 +509,7 @@ inline constexpr void write_all_impl(outstmtype outsm, typename outstmtype::outp
 		::std::ptrdiff_t bfddiff{ed - curr};
 		::std::ptrdiff_t itdiff{last - first};
 		if (itdiff < bfddiff)
-#if __has_cpp_attribute(likely)
 			[[likely]]
-#endif
 		{
 			obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
 			return;
@@ -540,9 +538,7 @@ inline constexpr ::std::byte const *write_some_bytes_impl(outstmtype outsm, ::st
 		::std::ptrdiff_t bfddiff{ed - curr};
 		::std::ptrdiff_t itdiff{last - first};
 		if (itdiff < bfddiff)
-#if __has_cpp_attribute(likely)
 			[[likely]]
-#endif
 		{
 			using char_type_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -642,9 +638,7 @@ char_put_impl(outstm outsm, typename decltype(::fast_io::operations::output_stre
 				condition = curr != ed;
 			}
 			if (condition)
-#if __has_cpp_attribute(likely)
 				[[likely]]
-#endif
 
 			{
 				*curr = ch;

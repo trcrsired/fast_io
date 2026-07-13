@@ -1,4 +1,4 @@
-﻿#include <string>
+#include <string>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -18,6 +18,11 @@ int main()
 	};
 
 	characters.assign(5, 'a');
+	if (!(characters.size() == 5)) ::fast_io::fast_terminate();
+	for (char c : characters)
+	{
+		if (!(c == 'a')) ::fast_io::fast_terminate();
+	}
 	print_vector();
 
 #if 0

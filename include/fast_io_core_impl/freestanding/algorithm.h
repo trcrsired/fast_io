@@ -301,9 +301,21 @@ inline constexpr output_iter overlapped_copy_trivial(input_iter first, ::std::si
 	{
 		tempbufferptr[i] = first[i];
 	}
-	for (::std::size_t i{}; i != n; ++i)
+#if __cpp_if_consteval >= 202106L
+	if consteval
 	{
-		result[i] = ::std::move(tempbufferptr[i]);
+		for (::std::size_t i{}; i != n; ++i)
+		{
+			::std::construct_at(::std::addressof(result[i]), ::std::move(tempbufferptr[i]));
+		}
+	}
+	else
+#endif
+	{
+		for (::std::size_t i{}; i != n; ++i)
+		{
+			result[i] = ::std::move(tempbufferptr[i]);
+		}
 	}
 	return result + n;
 }

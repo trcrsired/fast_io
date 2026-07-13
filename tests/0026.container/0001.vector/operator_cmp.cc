@@ -1,4 +1,3 @@
-﻿#include <cassert>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
 using namespace fast_io::io;
@@ -12,7 +11,7 @@ int main()
 		b{1, 2, 3},
 		c{7, 8, 9, 10};
 
-	assert(""
+	if (!(""
 		   "Compare equal containers:" &&
 		   (a != b) == false &&
 		   (a == b) == true &&
@@ -40,5 +39,5 @@ int main()
 		   (a <=> c) < 0 &&
 		   (a <=> c) != 0 &&
 		   (a <=> c) <= 0 &&
-		   "");
+		   "")) ::fast_io::fast_terminate();
 }

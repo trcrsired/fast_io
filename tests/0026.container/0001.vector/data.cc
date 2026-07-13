@@ -1,4 +1,4 @@
-﻿#include <cstddef>
+#include <cstddef>
 #include <span>
 #include <fast_io.h>
 #include <fast_io_dsal/vector.h>
@@ -29,4 +29,9 @@ int main()
 
 	// std::span (C++20) is a safer alternative to separated pointer/size.
 	span_func({container.data(), container.size()});
+
+	if (!(container.data()[0] == 1)) ::fast_io::fast_terminate();
+	if (!(container.data()[1] == 2)) ::fast_io::fast_terminate();
+	if (!(container.data()[2] == 3)) ::fast_io::fast_terminate();
+	if (!(container.data()[3] == 4)) ::fast_io::fast_terminate();
 }
