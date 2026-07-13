@@ -26,6 +26,7 @@
 #include "mimalloc_driver.h"
 #endif
 
+#include "freestanding.h"
 #include "custom.h"
 #include "adapters.h"
 
@@ -63,7 +64,7 @@ using native_global_allocator = generic_allocator_adapter<
 #endif
 #endif
 #else
-	custom_global_allocator
+	freestanding_global_allocator
 #endif
 	>;
 
