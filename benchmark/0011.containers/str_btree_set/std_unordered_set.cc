@@ -1,19 +1,20 @@
 #include <unordered_set>
 #include <string>
+#include <string_view>
 #include <fast_io.h>
 #include <fast_io_driver/timer.h>
 #include "gentest.h"
 
 int main()
 {
-	auto vec{::gentest<std::string>()};
-	::fast_io::timer t(u8"str_btree_set");
+	auto vec{::gentest<::std::string>()};
+	::fast_io::timer t(u8"::std::unordered_set<::std::string>");
 	::std::unordered_set<::std::string> bset;
 	{
-		::fast_io::timer t(u8"insert");
+		::fast_io::timer t(u8"insert_key");
 		for (auto const &e : vec)
 		{
-			bset.insert(e);
+			bset.emplace(e);
 		}
 	}
 	{
@@ -26,5 +27,27 @@ int main()
 			}
 		}
 		::fast_io::io::perrln("count=", count);
+	}
+	{
+		::std::size_t total_size{};
+		{
+			::fast_io::timer t(u8"iteration");
+			for (auto const &e : bset)
+			{
+				total_size += e.size();
+			}
+		}
+		::fast_io::io::perrln("total_size=", total_size);
+	}
+	{
+		::std::size_t total_size{};
+		{
+			::fast_io::timer t(u8"reverse iteration (does not exist so we loop again)");
+			for (auto const &e : bset)
+			{
+				total_size += e.size();
+			}
+		}
+		::fast_io::io::perrln("total_size=", total_size);
 	}
 }
