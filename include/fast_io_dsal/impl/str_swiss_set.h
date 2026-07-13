@@ -19,11 +19,11 @@ struct str_swiss_set_iterator
 	{
 		auto oldcontrolpos{this->controlpos};
 		auto newcontrolpos{::fast_io::details::swiss_table_iterator_common<false>(oldcontrolpos)};
+		this->controlpos = newcontrolpos;
 		auto diff{newcontrolpos - oldcontrolpos};
 #if __has_cpp_attribute(assume)
 		[[assume(0 < diff)]];
 #endif
-		this->controlpos = newcontrolpos;
 		this->slots += static_cast<::std::size_t>(diff);
 		return *this;
 	}
@@ -37,11 +37,11 @@ struct str_swiss_set_iterator
 	{
 		auto oldcontrolpos{this->controlpos};
 		auto newcontrolpos{::fast_io::details::swiss_table_iterator_common<true>(oldcontrolpos)};
+		this->controlpos = newcontrolpos;
 		auto diff{oldcontrolpos - newcontrolpos};
 #if __has_cpp_attribute(assume)
 		[[assume(0 < diff)]];
 #endif
-		this->controlpos = newcontrolpos;
 		this->slots -= static_cast<::std::size_t>(diff);
 		return *this;
 	}
