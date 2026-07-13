@@ -219,7 +219,7 @@ inline constexpr void str_swiss_table_destroy_impl(
 				::fast_io::details::deallocate_associative_string<allocator_type, char_type>(slots[i].ptr, slots[i].n);
 			}
 		}
-		typed_ctrl_allocator_type::deallocate_n(controls, cap);
+		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + 1u));
 		typed_slot_allocator_type::deallocate_n(slots, cap);
 		imp = {};
 	}
