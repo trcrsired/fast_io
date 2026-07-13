@@ -10,15 +10,21 @@ struct str_swiss_set_iterator
 	using iterator_tag = ::std::bidirectional_iterator_tag;
 	using difference_type = ::std::ptrdiff_t;
 	::std::uint_least8_t const *controlpos{};
-	::std::uint_least8_t const *controls{};
 	::fast_io::details::associative_string<chtype> const *slots{};
 	constexpr value_type operator*() const noexcept
 	{
-		return slots[static_cast<::std::size_t>(controlpos - controls)].strvw();
+		return slots->strvw();
 	}
 	constexpr str_swiss_set_iterator &operator++() noexcept
 	{
-		this->controlpos = ::fast_io::details::swiss_table_iterator_common<false>(this->controlpos);
+		auto oldcontrolpos{this->controlpos};
+		auto newcontrolpos{::fast_io::details::swiss_table_iterator_common<false>(oldcontrolpos)};
+		auto diff{newcontrolpos - oldcontrolpos};
+#if __has_cpp_attribute(assume)
+		[[assume(0 < diff)]];
+#endif
+		this->controlpos = newcontrolpos;
+		this->slots += static_cast<::std::size_t>(diff);
 		return *this;
 	}
 	constexpr str_swiss_set_iterator operator++(int) noexcept
@@ -29,7 +35,14 @@ struct str_swiss_set_iterator
 	}
 	constexpr str_swiss_set_iterator &operator--() noexcept
 	{
-		this->controlpos = ::fast_io::details::swiss_table_iterator_common<true>(this->controlpos);
+		auto oldcontrolpos{this->controlpos};
+		auto newcontrolpos{::fast_io::details::swiss_table_iterator_common<true>(oldcontrolpos)};
+		auto diff{oldcontrolpos - newcontrolpos};
+#if __has_cpp_attribute(assume)
+		[[assume(0 < diff)]];
+#endif
+		this->controlpos = newcontrolpos;
+		this->slots -= static_cast<::std::size_t>(diff);
 		return *this;
 	}
 	constexpr str_swiss_set_iterator operator--(int) noexcept
@@ -347,13 +360,13 @@ public:
 #endif
 	constexpr const_iterator cbegin() const noexcept
 	{
-		auto controls{this->imp.controls};
-		return {controls + this->imp.leftmost, controls, this->imp.slots};
+		auto leftmost{this->imp.leftmost};
+		return {this->imp.controls + leftmost, this->imp.slots + leftmost};
 	}
 	constexpr const_iterator cend() const noexcept
 	{
-		auto controls{this->imp.controls};
-		return {controls + this->imp.cap, controls, this->imp.slots};
+		auto cap{this->imp.cap};
+		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
 	constexpr iterator begin() const noexcept
 	{
