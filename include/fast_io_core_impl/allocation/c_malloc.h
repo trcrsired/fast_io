@@ -100,17 +100,17 @@ public:
 		return p;
 	}
 #if (__has_include(<malloc.h>) || __has_include(<malloc_np.h>)) && !defined(__MSDOS__) && !defined(__LLVM_LIBC__)
-	static inline allocation_least_result allocate_at_least(::std::size_t n) noexcept
+	static inline ::fast_io::allocation_least_result allocate_at_least(::std::size_t n) noexcept
 	{
 		auto p{::fast_io::c_malloc_allocator::allocate(n)};
 		return {p, ::fast_io::details::c_malloc_usable_size_impl(p)};
 	}
-	static inline allocation_least_result allocate_zero_at_least(::std::size_t n) noexcept
+	static inline ::fast_io::allocation_least_result allocate_zero_at_least(::std::size_t n) noexcept
 	{
 		auto p{::fast_io::c_malloc_allocator::allocate_zero(n)};
 		return {p, ::fast_io::details::c_malloc_usable_size_impl(p)};
 	}
-	static inline allocation_least_result reallocate_at_least(void *oldp, ::std::size_t n) noexcept
+	static inline ::fast_io::allocation_least_result reallocate_at_least(void *oldp, ::std::size_t n) noexcept
 	{
 		auto p{::fast_io::c_malloc_allocator::reallocate(oldp, n)};
 		return {p, ::fast_io::details::c_malloc_usable_size_impl(p)};
