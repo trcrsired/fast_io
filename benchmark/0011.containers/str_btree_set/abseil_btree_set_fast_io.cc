@@ -9,7 +9,7 @@
 int main()
 {
 	auto vec{::gentest()};
-	::fast_io::timer t(u8"str_btree_set");
+	::fast_io::timer t(u8"::absl::btree_set<::fast_io::string>");
 	::absl::btree_set<::fast_io::string> bset;
 	{
 		::fast_io::timer t(u8"insert");
