@@ -9,9 +9,6 @@ struct swiss_table_imp_common
 	::std::size_t cap;
 	::std::size_t counts;
 	::std::size_t leftmost;
-#if 0
-	::std::size_t rightmost;
-#endif
 };
 
 template <::std::integral chtype>
@@ -21,9 +18,6 @@ struct swiss_table_str_imp_common
 	::std::size_t cap;
 	::std::size_t counts;
 	::std::size_t leftmost;
-#if 0
-	::std::size_t rightmost;
-#endif
 	::fast_io::details::associative_string<chtype> *slots;
 };
 

@@ -105,16 +105,10 @@ inline constexpr void str_swiss_table_grow(
 	if (oldcap == 0)
 	{
 		imp.leftmost = 0;
-#if 0
-		imp.rightmost = 0;
-#endif
 	}
 	else
 	{
 		::std::size_t leftmost{newcap};
-#if 0
-		::std::size_t rightmost{};
-#endif
 		::std::size_t newcapm1{static_cast<::std::size_t>(newcap - 1u)};
 		for (::std::size_t i{}; i != oldcap; ++i)
 		{
@@ -144,18 +138,9 @@ inline constexpr void str_swiss_table_grow(
 				{
 					leftmost = pos;
 				}
-#if 0
-				if (rightmost < pos)
-				{
-					rightmost = pos;
-				}
-#endif
 			}
 		}
 		imp.leftmost = leftmost;
-#if 0
-		imp.rightmost = static_cast<::std::size_t>(rightmost + 1u);
-#endif
 		typed_ctrl_allocator_type::deallocate_n(oldcontrols, oldcap + 1u);
 		typed_slot_allocator_type::deallocate_n(oldslots, oldcap);
 	}
@@ -183,9 +168,6 @@ inline constexpr void str_swiss_table_insert_key(
 	imp.controls[pos] = h2;
 	imp.slots[pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
 	auto newleftmost{pos};
-#if 0
-	auto newrightmost{static_cast<::std::size_t>(pos + 1u)};
-#endif
 	auto counts{imp.counts};
 	if (counts)
 	{
@@ -193,19 +175,10 @@ inline constexpr void str_swiss_table_insert_key(
 		{
 			imp.leftmost = newleftmost;
 		}
-#if 0
-		if (imp.leftmost < newrightmost)
-		{
-			imp.rightmost = newrightmost;
-		}
-#endif
 	}
 	else
 	{
 		imp.leftmost = newleftmost;
-#if 0
-		imp.rightmost = newrightmost;
-#endif
 	}
 	imp.counts = static_cast<::std::size_t>(counts + 1u);
 }
@@ -382,11 +355,7 @@ public:
 	constexpr const_iterator cend() const noexcept
 	{
 		auto controls{this->imp.controls};
-#if 0
-		return {controls + this->imp.rightmost, controls, this->imp.slots};
-#else
 		return {controls + this->imp.cap, controls, this->imp.slots};
-#endif
 	}
 	constexpr iterator begin() const noexcept
 	{
