@@ -83,4 +83,10 @@ int main()
 	{
 		::fast_io::io::println(e);
 	}
+
+	::fast_io::io::print("::fast_io::str_swiss_set reverse iteration:\n");
+	for (auto i{sset.crbegin()}, ed{sset.crend()}; i != ed; ++i)
+	{
+		::fast_io::io::println(*i);
+	}
 }

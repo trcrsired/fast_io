@@ -244,10 +244,8 @@ public:
 	using difference_type = ::std::ptrdiff_t;
 	using const_iterator = ::fast_io::details::str_swiss_set_iterator<chtype>;
 	using iterator = const_iterator;
-#if 0
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 	using reverse_iterator = const_reverse_iterator;
-#endif
 
 	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
 
@@ -364,6 +362,23 @@ public:
 	constexpr iterator end() const noexcept
 	{
 		return this->cend();
+	}
+	constexpr const_reverse_iterator crbegin() const noexcept
+	{
+		return const_reverse_iterator(cend());
+	}
+
+	constexpr const_reverse_iterator crend() const noexcept
+	{
+		return const_reverse_iterator(cbegin());
+	}
+	constexpr reverse_iterator rbegin() const noexcept
+	{
+		return this->crbegin();
+	}
+	constexpr reverse_iterator rend() const noexcept
+	{
+		return this->crend();
 	}
 };
 } // namespace containers
