@@ -506,6 +506,14 @@ public:
 			this->imp, pos, key.ptr, key.n, hash);
 		return true;
 	}
+	template <::std::ranges::range R>
+	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	{
+		for (auto const &e : rg)
+		{
+			this->insert_key(e);
+		}
+	}
 	constexpr bool contains(string_view_type key) const noexcept
 	{
 		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
