@@ -50,6 +50,10 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 																					 keytype key, ::std::uint_least64_t hash) noexcept
 {
 	::std::size_t const cap{imp.cap};
+	if (!cap)
+	{
+		return {0u, false};
+	}
 	::std::size_t const capm1{static_cast<::std::size_t>(cap - 1u)};
 	auto controls{imp.controls};
 	auto slots{imp.slots};
@@ -81,6 +85,15 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 {
 	::fast_io::basic_string_view<chtype> key(keybase, keylen);
 	return ::fast_io::details::swiss_table_find_common(imp, key, hash);
+}
+
+template <::std::integral chtype>
+inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str_hashfunc(
+	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp,
+	chtype const *keybase, ::std::size_t keylen) noexcept
+{
+	return ::fast_io::details::swiss_table_find_common_with_str(imp, keybase, keylen,
+																::fast_io::details::rapidhash_64bits_fio(keybase, keylen * sizeof(chtype)));
 }
 
 template <bool isprev>

@@ -89,4 +89,18 @@ int main()
 	{
 		::fast_io::io::println(*i);
 	}
+
+	sset.erase_key("grault");
+	::fast_io::io::print("::fast_io::str_swiss_set iteration after erase_key, size=", sset.size(), ":\n");
+	for (auto e : sset)
+	{
+		::fast_io::io::println(e);
+	}
+
+	auto s2(sset);
+	::fast_io::io::print("::fast_io::str_swiss_set clone, size=", sset.size(), ":\n");
+	for (auto e : s2)
+	{
+		::fast_io::io::println(e);
+	}
 }
