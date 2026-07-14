@@ -268,6 +268,73 @@ inline constexpr void str_swiss_table_destroy_impl(
 }
 
 template <typename allocator_type, ::std::integral chtype>
+inline constexpr ::std::size_t str_swiss_set_erase_rg(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
+{
+	if (first == last)
+	{
+		return first;
+	}
+	::std::size_t i{first};
+	::std::size_t counting{};
+	for (; i != last; ++counting)
+	{
+		auto si{imp.slots[i]};
+		::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
+		auto controls{imp.controls};
+		auto controlspos{controls + i};
+		*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
+		i = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
+	}
+	if (!(imp.counts -= counting) || imp.leftmost == first)
+	{
+		imp.leftmost = i;
+	}
+	return i;
+}
+
+template <bool compute_next, typename allocator_type, ::std::integral chtype>
+inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_set_erase(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t pos) noexcept
+{
+	auto si{imp.slots[pos]};
+	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
+	auto controls{imp.controls};
+	auto controlspos{controls + pos};
+	*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
+	if constexpr (compute_next)
+	{
+		::std::size_t next{imp.cap};
+		if (--imp.counts)
+		{
+			next = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
+			if (imp.leftmost == pos)
+			{
+				imp.leftmost = next;
+			}
+		}
+		else
+		{
+			imp.leftmost = next;
+		}
+		return next;
+	}
+	else
+	{
+		if (--imp.counts)
+		{
+			auto leftmost{imp.leftmost};
+			if (imp.leftmost == pos)
+			{
+				imp.leftmost = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
+			}
+		}
+		else
+		{
+			imp.leftmost = imp.cap;
+		}
+	}
+}
+
+template <typename allocator_type, ::std::integral chtype>
 inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn) noexcept
 {
 	using char_type = chtype;
@@ -281,23 +348,7 @@ inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_st
 	{
 		return false;
 	}
-	auto si{imp.slots[pos]};
-	::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ptr, si.n);
-	auto controls{imp.controls};
-	auto controlspos{controls + pos};
-	*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
-	if (--imp.counts)
-	{
-		auto leftmost{imp.leftmost};
-		if (imp.leftmost == pos)
-		{
-			imp.leftmost = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
-		}
-	}
-	else
-	{
-		imp.leftmost = imp.cap;
-	}
+	::fast_io::details::str_swiss_set_erase<false, allocator_type, chtype>(imp, pos);
 	return true;
 }
 
@@ -461,7 +512,7 @@ public:
 				   this->imp, key.ptr, key.n)
 			.found;
 	}
-	constexpr iterator find(string_view_type key) const noexcept
+	constexpr iterator find_key(string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
 			this->imp, key.ptr, key.n);
@@ -485,6 +536,17 @@ public:
 		return ::fast_io::details::str_swiss_set_erase_key<allocator_type>(this->imp, key.data(), key.size());
 	}
 
+	constexpr iterator erase(const_iterator iter) noexcept
+	{
+		auto next{::fast_io::details::str_swiss_set_erase<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(iter.controlpos - this->imp.controls))};
+		return {this->imp.controls + next, this->imp.slots + next};
+	}
+	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
+	{
+		auto controls{this->imp.controls};
+		auto next{::fast_io::details::str_swiss_set_erase_rg<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
+		return {this->imp.controls + next, this->imp.slots + next};
+	}
 	constexpr const_iterator cbegin() const noexcept
 	{
 		auto leftmost{this->imp.leftmost};
