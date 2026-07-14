@@ -595,7 +595,18 @@ public:
 	{
 		::fast_io::details::str_swiss_table_reserve<allocator_type, char_type>(this->imp, n);
 	}
+	constexpr void swap(basic_str_swiss_set &other) noexcept
+	{
+		::std::ranges::swap(this->imp, other.imp);
+	}
 };
+
+template <::std::integral chtype, typename Allocator>
+constexpr void swap(basic_str_swiss_set<chtype, Allocator> &a, basic_str_swiss_set<chtype, Allocator> &b) noexcept
+{
+	a.swap(b);
+}
+
 } // namespace containers
 
 } // namespace fast_io
