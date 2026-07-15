@@ -236,8 +236,8 @@ inline constexpr void str_swiss_table_insert_key_internal(
 	imp.counts = static_cast<::std::size_t>(counts + 1u);
 }
 
-template <typename allocator_type, ::std::integral chtype>
-inline constexpr void str_swiss_table_destroy_impl(
+template <bool needdestroy, typename allocator_type, ::std::integral chtype>
+inline constexpr void str_swiss_table_clear_impl(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
 {
 	using char_type = chtype;
@@ -260,11 +260,23 @@ inline constexpr void str_swiss_table_destroy_impl(
 		{
 			auto si{slots[i]};
 			::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ptr, si.n);
+			if constexpr(!needdestroy)
+			{
+				ci = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
+			}
 		}
 	}
-	typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + 1u));
-	typed_slot_allocator_type::deallocate_n(slots, cap);
-	imp = {};
+	if constexpr(needdestroy)
+	{
+		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + 1u));
+		typed_slot_allocator_type::deallocate_n(slots, cap);
+		imp = {};
+	}
+	else
+	{
+		imp.counts = 0u;
+		imp.leftmost = imp.cap;
+	}
 }
 
 template <typename allocator_type, ::std::integral chtype>
@@ -424,7 +436,7 @@ namespace fast_io
 
 namespace containers
 {
-template <::std::integral chtype, typename Allocator>
+template <::std::integral chtype, typename Hash, typename Allocator>
 class basic_str_swiss_set
 {
 public:
@@ -439,10 +451,22 @@ public:
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 	using reverse_iterator = const_reverse_iterator;
 	using insert_result_type = ::fast_io::details::str_swiss_table_insert_key_result<char_type>;
+	using hasher = Hash;
 
 	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
+#ifndef __INTELLISENSE__
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+	[[no_unique_address]]
+#endif
+#endif
+	hasher hash{};
 
 	constexpr basic_str_swiss_set() noexcept = default;
+
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher const & h) noexcept: hash(h)
+	{}
 
 	constexpr basic_str_swiss_set(basic_str_swiss_set const &other) noexcept : imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)) {};
 	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set const &other) noexcept
@@ -488,22 +512,27 @@ public:
 	{
 		if (this != ::std::addressof(other))
 		{
-			::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
+			::fast_io::details::str_swiss_table_destroy_impl<true, allocator_type, char_type>(this->imp);
 			this->imp = other.imp;
 			other.imp = {};
 		}
 		return *this;
 	}
 
+	constexpr void clear() noexcept
+	{
+		::fast_io::details::str_swiss_table_clear_impl<false, allocator_type, char_type>(this->imp);
+	}
+
 	constexpr void clear_destroy() noexcept
 	{
-		::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
 		this->imp = {};
 	}
 
 	constexpr ~basic_str_swiss_set()
 	{
-		::fast_io::details::str_swiss_table_destroy_impl<allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
 	}
 
 	constexpr size_type size() const noexcept
@@ -594,7 +623,6 @@ public:
 	{
 		return const_reverse_iterator(cend());
 	}
-
 	constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(cbegin());
@@ -622,6 +650,16 @@ template <::std::integral chtype, typename Allocator>
 constexpr void swap(basic_str_swiss_set<chtype, Allocator> &a, basic_str_swiss_set<chtype, Allocator> &b) noexcept
 {
 	a.swap(b);
+}
+
+template<::std::integral chtype, typename Allocator>
+constexpr bool operator==(basic_str_swiss_set<chtype, Allocator> const &lhs, basic_str_swiss_set<chtype, Allocator> const &rhs) noexcept
+{
+	if(lhs.size()!=rhs.size())
+	{
+		return false;
+	}
+	return ::std::is_permutation(a.cbegin(), a.cend(), b.cbegin(), b.cend());
 }
 
 } // namespace containers
