@@ -19,37 +19,61 @@ rapidhash_mix_fio(::std::uint_least64_t a, ::std::uint_least64_t b) noexcept
 	return low ^ high;
 }
 
-inline ::std::uint_least64_t
-rapidhash_read64_fio(void const *p) noexcept
+template <typename T>
+inline constexpr T rapidhash_generic_fio(::std::byte const *p) noexcept
 {
-	::std::uint_least64_t v;
-#if defined(__GNUC__) || defined(__clang__)
-	__builtin_memcpy
-#else
-	::std::memcpy
-#endif
-		(__builtin_addressof(v), p, sizeof(v));
+	constexpr unsigned digits{::std::numeric_limits<char unsigned>::digits};
+	T v{};
+	for (::std::size_t i{}; i != sizeof(v); ++i)
+	{
+		v = (v << digits) + static_cast<char unsigned>(p[i]);
+	}
 	return v;
 }
 
-inline ::std::uint_least32_t
-rapidhash_read32_fio(void const *p) noexcept
+inline constexpr ::std::uint_least64_t
+rapidhash_read64_fio(::std::byte const *p) noexcept
 {
-	::std::uint_least32_t v;
+	if consteval
+	{
+		return ::fast_io::details::rapidhash_generic_fio<::std::uint_least64_t>(p);
+	}
+	else
+	{
+		::std::uint_least64_t v;
 #if defined(__GNUC__) || defined(__clang__)
-	__builtin_memcpy
+		__builtin_memcpy
 #else
-	::std::memcpy
+		::std::memcpy
 #endif
-		(__builtin_addressof(v), p, sizeof(v));
-	return v;
+			(__builtin_addressof(v), p, sizeof(v));
+		return v;
+	}
+}
+
+inline constexpr ::std::uint_least32_t
+rapidhash_read32_fio(::std::byte const *p) noexcept
+{
+	if consteval
+	{
+		return ::fast_io::details::rapidhash_generic_fio<::std::uint_least32_t>(p);
+	}
+	else
+	{
+		::std::uint_least32_t v;
+#if defined(__GNUC__) || defined(__clang__)
+		__builtin_memcpy
+#else
+		::std::memcpy
+#endif
+			(__builtin_addressof(v), p, sizeof(v));
+		return v;
+	}
 }
 
 inline ::std::uint_least64_t
-rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
+rapidhash_64bits_with_seed_fio(::std::byte const *p, ::std::size_t len, ::std::uint_least64_t seed) noexcept
 {
-	auto p{reinterpret_cast<char unsigned const *>(data)};
-	::std::uint_least64_t seed{};
 
 	seed ^= rapidhash_mix_fio(seed ^ rapidhash_secret_fio[2],
 							  rapidhash_secret_fio[1]);
@@ -75,8 +99,8 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 		}
 		else if (len > 0)
 		{
-			a = (static_cast<::std::uint_least64_t>(p[0]) << 45) | p[len - 1];
-			b = p[len >> 1];
+			a = (static_cast<::std::uint_least64_t>(static_cast<char unsigned>(p[0])) << 45) | static_cast<char unsigned>(p[len - 1]);
+			b = static_cast<char unsigned>(p[len >> 1]);
 		}
 	}
 	else
@@ -154,6 +178,23 @@ rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
 							 high ^ rapidhash_secret_fio[1] ^ i);
 }
 
+inline ::std::uint_least64_t
+rapidhash_64bits_fio(void const *data, ::std::size_t len) noexcept
+{
+	return ::fast_io::details::rapidhash_64bits_with_seed_fio(reinterpret_cast<::std::byte const *>(data), len, 0u);
+}
+
 } // namespace details
+
+struct rapidhash64
+{
+	using digest_type = ::std::uint_least64_t;
+	using seed_type = ::std::uint_least64_t;
+	seed_type seed{};
+	inline constexpr digest_type do_hash(::std::byte const *blocks_start, ::std::byte const *blocks_last) const noexcept
+	{
+		return ::fast_io::details::rapidhash_64bits_with_seed_fio(blocks_start, static_cast<::std::size_t>(blocks_last - blocks_start), seed);
+	}
+};
 
 } // namespace fast_io

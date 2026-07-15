@@ -436,7 +436,7 @@ namespace fast_io
 
 namespace containers
 {
-template <::std::integral chtype, typename Hash, typename Allocator>
+template <::std::integral chtype,  typename Hash, typename Allocator>
 class basic_str_swiss_set
 {
 public:
@@ -465,7 +465,7 @@ public:
 
 	constexpr basic_str_swiss_set() noexcept = default;
 
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher const & h) noexcept: hash(h)
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher h) noexcept: hash(::std::move(h))
 	{}
 
 	constexpr basic_str_swiss_set(basic_str_swiss_set const &other) noexcept : imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)) {};
