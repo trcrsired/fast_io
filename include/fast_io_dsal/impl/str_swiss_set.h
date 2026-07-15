@@ -211,7 +211,7 @@ inline constexpr bool str_swiss_table_need_grow(
 }
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr void str_swiss_table_insert_key(
+inline constexpr void str_swiss_table_insert_key_internal(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
 	::std::uint_least64_t hash) noexcept
@@ -385,6 +385,38 @@ inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swis
 	return {controls, cap, other.counts, other.leftmost, slots};
 }
 
+
+template <::std::integral chtype>
+struct str_swiss_table_insert_key_result
+{
+	::fast_io::details::str_swiss_set_iterator<chtype> position;
+	bool inserted;
+};
+
+template <typename allocator_type, ::std::integral char_type>
+constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_swiss_table_insert_key(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn) noexcept
+{
+	auto const hash{::fast_io::details::rapidhash_64bits_fio(key, keyn * sizeof(char_type))};
+	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
+		imp, key, keyn, hash)};
+	::std::size_t pos{result.pos};
+	if (result.found)
+	{
+		return {{imp.controls + pos, imp.slots + pos}, false};
+	}
+	if (::fast_io::details::str_swiss_table_need_grow(imp))
+	{
+		::fast_io::details::str_swiss_table_grow<allocator_type, char_type>(
+			imp);
+		pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
+				  imp, key, keyn, hash)
+				  .pos;
+	}
+	::fast_io::details::str_swiss_table_insert_key_internal<allocator_type, char_type>(
+		imp, pos, key, keyn, hash);
+	return {{imp.controls + pos, imp.slots + pos}, true};
+}
+
 } // namespace fast_io::details
 
 namespace fast_io
@@ -406,6 +438,7 @@ public:
 	using iterator = const_iterator;
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 	using reverse_iterator = const_reverse_iterator;
+	using insert_result_type = ::fast_io::details::str_swiss_table_insert_key_result<char_type>;
 
 	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
 
@@ -478,34 +511,17 @@ public:
 		return this->imp.counts;
 	}
 
-	constexpr bool insert_key(string_view_type key) noexcept
+	constexpr size_type capacity() const noexcept
 	{
-		auto const hash{::fast_io::details::rapidhash_64bits_fio(key.data(), key.size_bytes())};
-		bool need_grow{this->imp.cap == 0};
-		::std::size_t pos{};
-		if (!need_grow)
-		{
-			auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
-				this->imp, key.ptr, key.n, hash)};
-			if (result.found)
-			{
-				return false;
-			}
-			pos = result.pos;
-			need_grow = ::fast_io::details::str_swiss_table_need_grow(this->imp);
-		}
-		if (need_grow) [[unlikely]]
-		{
-			::fast_io::details::str_swiss_table_grow<allocator_type, char_type>(
-				this->imp);
-			pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
-					  this->imp, key.ptr, key.n, hash)
-					  .pos;
-		}
-		::fast_io::details::str_swiss_table_insert_key<allocator_type, char_type>(
-			this->imp, pos, key.ptr, key.n, hash);
-		return true;
+		return this->imp.cap;
 	}
+
+	constexpr insert_result_type insert_key(string_view_type key) noexcept
+	{
+		return ::fast_io::details::str_swiss_table_insert_key<allocator_type, char_type>(
+			this->imp, key.ptr, key.n);
+	}
+
 	template <::std::ranges::range R>
 	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
 	{
@@ -514,6 +530,7 @@ public:
 			this->insert_key(e);
 		}
 	}
+
 	constexpr bool contains(string_view_type key) const noexcept
 	{
 		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
