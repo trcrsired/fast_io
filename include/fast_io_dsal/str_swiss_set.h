@@ -30,14 +30,17 @@
 #include "impl/swiss_table_common.h"
 #include "impl/str_swiss_set.h"
 
+namespace fast_io
+{
+using native_swiss_hasher = ::fast_io::rapidhash64;
+}
+
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES))
 
 namespace fast_io
 {
-
-using native_swiss_hasher = ::fast_io::rapidhash64;
 
 template <::std::integral T, typename Hash = ::fast_io::native_swiss_hasher, typename Alloc = ::fast_io::native_global_allocator>
 using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Hash, Alloc>;
@@ -66,7 +69,7 @@ basic_str_swiss_set(::std::from_range_t, R &&) -> basic_str_swiss_set<::std::ran
 
 namespace tlc
 {
-template <typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
+template <typename T, typename Hash = ::fast_io::native_swiss_hasher, typename Alloc = ::fast_io::native_thread_local_allocator>
 using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Alloc>;
 
 using str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char>;
