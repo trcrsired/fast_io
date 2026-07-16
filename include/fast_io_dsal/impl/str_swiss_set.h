@@ -60,16 +60,8 @@ inline constexpr bool operator==(::fast_io::details::str_swiss_set_iterator<chty
 	return a.controlpos == b.controlpos;
 }
 
-template <::std::integral chtype>
-inline constexpr bool operator!=(::fast_io::details::str_swiss_set_iterator<chtype> a,
-								 ::fast_io::details::str_swiss_set_iterator<chtype> b) noexcept
-{
-	return !(a == b);
-}
-
 template <typename allocator_type, typename hasher, ::std::integral chtype>
-	requires(!::std::integral<hasher>)
-inline constexpr void str_swiss_table_reserve_to_newcap(
+inline constexpr void str_swiss_set_reserve_to_newcap(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
 {
 	using char_type = chtype;
@@ -170,11 +162,10 @@ inline constexpr void str_swiss_table_reserve(
 	{
 		newcap = 8;
 	}
-	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
+	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
-	requires(!::std::integral<hasher>)
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
@@ -198,7 +189,7 @@ inline constexpr void str_swiss_table_grow(
 		}
 		newcap = (oldcap << 1u);
 	}
-	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
+	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
 
 template <::std::integral chtype>
@@ -560,7 +551,7 @@ public:
 		}
 		return *this;
 	}
-	constexpr hasher get_hasher() const noexcept
+	constexpr hasher hash_function() const noexcept
 	{
 		return hash;
 	}
