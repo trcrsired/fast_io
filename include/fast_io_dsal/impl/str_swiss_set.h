@@ -67,9 +67,10 @@ inline constexpr bool operator!=(::fast_io::details::str_swiss_set_iterator<chty
 	return !(a == b);
 }
 
-template <typename allocator_type, ::std::integral chtype>
+template <typename allocator_type, typename hasher, ::std::integral chtype>
+	requires(!::std::integral<hasher>)
 inline constexpr void str_swiss_table_reserve_to_newcap(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t newcap) noexcept
+	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -110,7 +111,7 @@ inline constexpr void str_swiss_table_reserve_to_newcap(
 				oldctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
 			{
 				auto const &oldslot{oldslots[i]};
-				auto const oldhash{::fast_io::details::rapidhash_64bits_fio(oldslot.ptr, oldslot.n * sizeof(char_type))};
+				auto const oldhash{hash.do_hash(reinterpret_cast<::std::byte const *>(oldslot.ptr), reinterpret_cast<::std::byte const *>(oldslot.ptr + oldslot.n))};
 				auto h1{::fast_io::details::swiss_table_hash_h1(oldhash)};
 				auto h2{::fast_io::details::swiss_table_hash_h2(oldhash)};
 				auto pos{h1 & newcapm1};
@@ -139,9 +140,9 @@ inline constexpr void str_swiss_table_reserve_to_newcap(
 	}
 }
 
-template <typename allocator_type, ::std::integral chtype>
+template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_table_reserve(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t n) noexcept
+	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
 	if (n <= imp.counts)
 	{
@@ -169,15 +170,16 @@ inline constexpr void str_swiss_table_reserve(
 	{
 		newcap = 8;
 	}
-	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, chtype>(imp, newcap);
+	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
 
-template <typename allocator_type, ::std::integral chtype>
+template <typename allocator_type, typename hasher, ::std::integral chtype>
+	requires(!::std::integral<hasher>)
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void str_swiss_table_grow(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
+	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, hasher hash) noexcept
 {
 	auto oldcap{imp.cap};
 	::std::size_t newcap;
@@ -196,7 +198,7 @@ inline constexpr void str_swiss_table_grow(
 		}
 		newcap = (oldcap << 1u);
 	}
-	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, chtype>(imp, newcap);
+	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
 
 template <::std::integral chtype>
@@ -254,19 +256,20 @@ inline constexpr void str_swiss_table_clear_impl(
 	auto slots{imp.slots};
 	for (::std::size_t i{}; i != cap; ++i)
 	{
-		auto ctrl{controls[i]};
+		auto &ci{controls[i]};
+		auto ctrl{ci};
 		if (ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
 			ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
 		{
 			auto si{slots[i]};
 			::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ptr, si.n);
-			if constexpr(!needdestroy)
+			if constexpr (!needdestroy)
 			{
 				ci = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
 			}
 		}
 	}
-	if constexpr(needdestroy)
+	if constexpr (needdestroy)
 	{
 		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + 1u));
 		typed_slot_allocator_type::deallocate_n(slots, cap);
@@ -346,16 +349,16 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 	}
 }
 
-template <typename allocator_type, ::std::integral chtype>
-inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn) noexcept
+template <typename allocator_type, typename hasher, ::std::integral chtype>
+inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
 	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
 	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
 
-	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
-		imp, str, strn);
+	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
+		imp, str, strn, hash);
 	if (!found)
 	{
 		return false;
@@ -405,12 +408,12 @@ struct str_swiss_table_insert_key_result
 	bool inserted;
 };
 
-template <typename allocator_type, ::std::integral char_type>
-constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_swiss_table_insert_key(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn) noexcept
+template <typename allocator_type, typename hasher, ::std::integral char_type>
+constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_swiss_table_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
 {
-	auto const hash{::fast_io::details::rapidhash_64bits_fio(key, keyn * sizeof(char_type))};
+	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
-		imp, key, keyn, hash)};
+		imp, key, keyn, hval)};
 	::std::size_t pos{result.pos};
 	if (result.found)
 	{
@@ -418,14 +421,14 @@ constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_s
 	}
 	if (::fast_io::details::str_swiss_table_need_grow(imp))
 	{
-		::fast_io::details::str_swiss_table_grow<allocator_type, char_type>(
-			imp);
+		::fast_io::details::str_swiss_table_grow<allocator_type, hasher, char_type>(
+			imp, hash);
 		pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
-				  imp, key, keyn, hash)
+				  imp, key, keyn, hval)
 				  .pos;
 	}
 	::fast_io::details::str_swiss_table_insert_key_internal<allocator_type, char_type>(
-		imp, pos, key, keyn, hash);
+		imp, pos, key, keyn, hval);
 	return {{imp.controls + pos, imp.slots + pos}, true};
 }
 
@@ -436,7 +439,7 @@ namespace fast_io
 
 namespace containers
 {
-template <::std::integral chtype,  typename Hash, typename Allocator>
+template <::std::integral chtype, typename Hash, typename Allocator>
 class basic_str_swiss_set
 {
 public:
@@ -465,10 +468,10 @@ public:
 
 	constexpr basic_str_swiss_set() noexcept = default;
 
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher h) noexcept: hash(::std::move(h))
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher h) noexcept : hash(h)
 	{}
 
-	constexpr basic_str_swiss_set(basic_str_swiss_set const &other) noexcept : imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)) {};
+	constexpr basic_str_swiss_set(basic_str_swiss_set const &other) noexcept : imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
 	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set const &other) noexcept
 	{
 		if (this != ::std::addressof(other))
@@ -476,22 +479,34 @@ public:
 			auto tmp = ::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp);
 			this->clear_destroy();
 			this->imp = tmp;
+			this->hash = other.hash;
 		}
 		return *this;
 	}
 
-	explicit constexpr basic_str_swiss_set(::std::initializer_list<string_view_type> ilist) noexcept
+private:
+	struct construct_range_destroyer
 	{
-		this->reserve(ilist.size());
-		for (auto const &e : ilist)
-		{
-			this->insert_key(e);
-		}
-	}
+		basic_str_swiss_set *ptr{};
+		explicit constexpr construct_range_destroyer(basic_str_swiss_set *p) noexcept
+			: ptr{p}
+		{}
 
+		construct_range_destroyer(construct_range_destroyer const &) = delete;
+		construct_range_destroyer &operator=(construct_range_destroyer const &) = delete;
+
+		constexpr ~construct_range_destroyer()
+		{
+			if (ptr)
+			{
+				ptr->clear_destroy();
+			}
+		}
+	};
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	constexpr void construct_with_range_common(R &&rg) noexcept
 	{
+		construct_range_destroyer des(this);
 		if constexpr (::std::ranges::sized_range<R>)
 		{
 			this->reserve(::std::ranges::size(rg));
@@ -500,10 +515,36 @@ public:
 		{
 			this->insert_key(e);
 		}
+		des.ptr = nullptr;
+	}
+
+public:
+	explicit constexpr basic_str_swiss_set(::std::initializer_list<string_view_type> ilist) noexcept
+	{
+		this->construct_with_range_common(ilist);
+	}
+
+	template <::std::ranges::range R>
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	{
+		this->construct_with_range_common(::std::forward<R>(rg));
+	}
+
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<string_view_type> ilist) noexcept
+		: hash(h)
+	{
+		this->construct_with_range_common(ilist);
+	}
+
+	template <::std::ranges::range R>
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+		: hash(h)
+	{
+		this->construct_with_range_common(::std::forward<R>(rg));
 	}
 
 	constexpr basic_str_swiss_set(basic_str_swiss_set &&other) noexcept
-		: imp{other.imp}
+		: imp{other.imp}, hash(::std::move(other.hash))
 	{
 		other.imp = {};
 	}
@@ -512,11 +553,16 @@ public:
 	{
 		if (this != ::std::addressof(other))
 		{
-			::fast_io::details::str_swiss_table_destroy_impl<true, allocator_type, char_type>(this->imp);
+			::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
 			this->imp = other.imp;
 			other.imp = {};
+			this->hash = ::std::move(other.hash);
 		}
 		return *this;
+	}
+	constexpr hasher get_hasher() const noexcept
+	{
+		return hash;
 	}
 
 	constexpr void clear() noexcept
@@ -547,8 +593,8 @@ public:
 
 	constexpr insert_result_type insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::details::str_swiss_table_insert_key<allocator_type, char_type>(
-			this->imp, key.ptr, key.n);
+		return ::fast_io::details::str_swiss_table_insert_key_with_hash<allocator_type, hasher, char_type>(
+			this->imp, key.ptr, key.n, hash);
 	}
 
 	template <::std::ranges::range R>
@@ -562,14 +608,14 @@ public:
 
 	constexpr bool contains(string_view_type key) const noexcept
 	{
-		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
-				   this->imp, key.ptr, key.n)
+		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
+				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
 	constexpr iterator find_key(string_view_type key) const noexcept
 	{
-		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc<char_type>(
-			this->imp, key.ptr, key.n);
+		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
+			this->imp, key.ptr, key.n, hash);
 		if (found)
 		{
 			return {this->imp.controls + pos, this->imp.slots + pos};
@@ -587,7 +633,7 @@ public:
 
 	constexpr size_type erase_key(string_view_type key) noexcept
 	{
-		return ::fast_io::details::str_swiss_set_erase_key<allocator_type>(this->imp, key.data(), key.size());
+		return ::fast_io::details::str_swiss_set_erase_key<allocator_type, hasher>(this->imp, key.data(), key.size(), hash);
 	}
 
 	constexpr iterator erase(const_iterator iter) noexcept
@@ -643,23 +689,24 @@ public:
 	constexpr void swap(basic_str_swiss_set &other) noexcept
 	{
 		::std::ranges::swap(this->imp, other.imp);
+		::std::ranges::swap(this->hash, other.hash);
 	}
 };
 
-template <::std::integral chtype, typename Allocator>
-constexpr void swap(basic_str_swiss_set<chtype, Allocator> &a, basic_str_swiss_set<chtype, Allocator> &b) noexcept
+template <::std::integral chtype, typename Hash, typename Allocator>
+constexpr void swap(basic_str_swiss_set<chtype, Hash, Allocator> &a, basic_str_swiss_set<chtype, Hash, Allocator> &b) noexcept
 {
 	a.swap(b);
 }
 
-template<::std::integral chtype, typename Allocator>
-constexpr bool operator==(basic_str_swiss_set<chtype, Allocator> const &lhs, basic_str_swiss_set<chtype, Allocator> const &rhs) noexcept
+template <::std::integral chtype, typename Hash, typename Allocator>
+constexpr bool operator==(basic_str_swiss_set<chtype, Hash, Allocator> const &lhs, basic_str_swiss_set<chtype, Hash, Allocator> const &rhs) noexcept
 {
-	if(lhs.size()!=rhs.size())
+	if (lhs.size() != rhs.size())
 	{
 		return false;
 	}
-	return ::std::is_permutation(a.cbegin(), a.cend(), b.cbegin(), b.cend());
+	return ::std::is_permutation(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 } // namespace containers

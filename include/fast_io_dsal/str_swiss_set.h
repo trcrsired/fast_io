@@ -37,8 +37,10 @@
 namespace fast_io
 {
 
-template <::std::integral T, typename Alloc = ::fast_io::native_global_allocator>
-using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Alloc>;
+using native_swiss_hasher = ::fast_io::rapidhash64;
+
+template <::std::integral T, typename Hash = ::fast_io::native_swiss_hasher, typename Alloc = ::fast_io::native_global_allocator>
+using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Hash, Alloc>;
 
 using str_swiss_set = ::fast_io::basic_str_swiss_set<char>;
 #if 0

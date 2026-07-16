@@ -96,6 +96,16 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 																::fast_io::details::rapidhash_64bits_fio(keybase, keylen * sizeof(chtype)));
 }
 
+template <::std::integral chtype, typename hasher>
+inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str_hashfunc_with_hasher(
+	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp,
+	chtype const *keybase, ::std::size_t keylen, hasher hash) noexcept
+{
+	return ::fast_io::details::swiss_table_find_common_with_str(imp, keybase, keylen,
+																hash.do_hash(reinterpret_cast<::std::byte const *>(keybase), reinterpret_cast<::std::byte const *>(keybase + keylen)));
+}
+
+
 template <bool isprev>
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
 {
