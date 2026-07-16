@@ -591,6 +591,12 @@ public:
 		return this->imp.cap;
 	}
 
+	static inline constexpr size_type max_size() noexcept
+	{
+		constexpr size_type val{static_cast<size_type>((::std::numeric_limits<size_type>::max() >> 1u)) / (sizeof(::fast_io::details::associative_string<chtype>) + 1u)};
+		return val;
+	}
+
 	constexpr insert_result_type insert_key(string_view_type key) noexcept
 	{
 		return ::fast_io::details::str_swiss_table_insert_key_with_hash<allocator_type, hasher, char_type>(
