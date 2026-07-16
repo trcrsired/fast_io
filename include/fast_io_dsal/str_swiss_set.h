@@ -46,31 +46,15 @@ template <::std::integral T, typename Hash = ::fast_io::native_swiss_hasher, typ
 using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Hash, Alloc>;
 
 using str_swiss_set = ::fast_io::basic_str_swiss_set<char>;
-#if 0
-
 using wstr_swiss_set = ::fast_io::basic_str_swiss_set<wchar_t>;
 using u8str_swiss_set = ::fast_io::basic_str_swiss_set<char8_t>;
 using u16str_swiss_set = ::fast_io::basic_str_swiss_set<char16_t>;
 using u32str_swiss_set = ::fast_io::basic_str_swiss_set<char32_t>;
 
-namespace containers
-{
-
-#if 0
-template <::std::input_iterator InputIt>
-basic_str_swiss_set(InputIt, InputIt) -> basic_str_swiss_set<typename ::std::iterator_traits<InputIt>::value_type, ::fast_io::native_global_allocator>;
-
-#ifdef __cpp_lib_containers_ranges
-template <::std::ranges::input_range R>
-basic_str_swiss_set(::std::from_range_t, R &&) -> basic_str_swiss_set<::std::ranges::range_value_t<R>, ::fast_io::native_global_allocator>;
-#endif
-#endif
-} // namespace containers
-
 namespace tlc
 {
 template <typename T, typename Hash = ::fast_io::native_swiss_hasher, typename Alloc = ::fast_io::native_thread_local_allocator>
-using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Alloc>;
+using basic_str_swiss_set = ::fast_io::containers::basic_str_swiss_set<T, Hash, Alloc>;
 
 using str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char>;
 using wstr_swiss_set = ::fast_io::tlc::basic_str_swiss_set<wchar_t>;
@@ -78,7 +62,6 @@ using u8str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char8_t>;
 using u16str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char16_t>;
 using u32str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char32_t>;
 } // namespace tlc
-#endif
 } // namespace fast_io
 
 #endif
