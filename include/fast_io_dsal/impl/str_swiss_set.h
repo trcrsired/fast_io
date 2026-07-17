@@ -230,7 +230,7 @@ inline constexpr void str_swiss_table_insert_key_internal(
 }
 
 template <bool needdestroy, typename allocator_type, ::std::integral chtype>
-inline constexpr void str_swiss_table_clear_impl(
+inline constexpr void str_swiss_set_clear_impl(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
 {
 	using char_type = chtype;
@@ -544,7 +544,7 @@ public:
 	{
 		if (this != ::std::addressof(other))
 		{
-			::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
+			::fast_io::details::str_swiss_set_clear_impl<true, allocator_type, char_type>(this->imp);
 			this->imp = other.imp;
 			other.imp = {};
 			this->hash = ::std::move(other.hash);
@@ -558,18 +558,18 @@ public:
 
 	constexpr void clear() noexcept
 	{
-		::fast_io::details::str_swiss_table_clear_impl<false, allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_set_clear_impl<false, allocator_type, char_type>(this->imp);
 	}
 
 	constexpr void clear_destroy() noexcept
 	{
-		::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_set_clear_impl<true, allocator_type, char_type>(this->imp);
 		this->imp = {};
 	}
 
 	constexpr ~basic_str_swiss_set()
 	{
-		::fast_io::details::str_swiss_table_clear_impl<true, allocator_type, char_type>(this->imp);
+		::fast_io::details::str_swiss_set_clear_impl<true, allocator_type, char_type>(this->imp);
 	}
 
 	constexpr size_type size() const noexcept
