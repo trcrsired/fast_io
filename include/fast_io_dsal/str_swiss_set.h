@@ -30,11 +30,6 @@
 #include "impl/swiss_table_common.h"
 #include "impl/str_swiss_set.h"
 
-namespace fast_io
-{
-using native_swiss_hasher = ::fast_io::rapidhash64;
-}
-
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES))

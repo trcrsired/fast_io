@@ -197,4 +197,5 @@ struct rapidhash64
 	}
 };
 
+using native_swiss_hasher = ::fast_io::rapidhash64;
 } // namespace fast_io

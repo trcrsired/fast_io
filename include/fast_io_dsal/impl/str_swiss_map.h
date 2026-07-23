@@ -1,6 +1,6 @@
 #pragma once
 
-namespace fast_io
+namespace fast_io::containers
 {
 template <::std::integral chtype, typename valtype>
 struct basic_str_swiss_map_key_mapped_pair
@@ -24,23 +24,38 @@ struct basic_str_swiss_map_key_mapped_pair
 	}
 };
 
-struct str_swiss_map_
-} // namespace fast_io
+} // namespace fast_io::containers
 
 namespace fast_io::details
 {
 
+template <::std::integral chtype, typename mappedtype>
+struct str_swiss_map_imp_common
+{
+	::std::uint_least8_t *controls;
+	::std::size_t cap;
+	::std::size_t counts;
+	::std::size_t leftmost;
+	::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> *slots;
+};
 
-template <::std::integral chtype, typename value_type, bool isconst>
+template <::std::integral chtype, typename mappedtype, bool isconst>
 struct str_swiss_map_iterator
 {
-	using value_type = ::fast_io::containers::str_swiss_map_key_mapped_pair<chtype, value_type>;
-	using reference = ::std::conditional_t<isconst, value_type const &, value_type>;
+	using value_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype>;
+	using const_reference = value_type const &;
+	using reference = ::std::conditional_t<isconst, const_reference, value_type &>;
 	using iterator_tag = ::std::bidirectional_iterator_tag;
 	using difference_type = ::std::ptrdiff_t;
+	using const_pointer = value_type const *;
+	using pointer = ::std::conditional_t<isconst, const_pointer, value_type *>;
 	::std::uint_least8_t const *controlpos{};
-	value_type const *slots{};
-	constexpr str_swiss_map_key_mapped_pair &operator*() const noexcept
+	pointer slots{};
+	constexpr const_reference operator*() const noexcept
+	{
+		return *slots;
+	}
+	constexpr reference operator*() noexcept
 	{
 		return *slots;
 	}
@@ -82,19 +97,28 @@ struct str_swiss_map_iterator
 	}
 };
 
-template <::std::integral chtype, typename value_type, bool isconst1, bool isconst2>
-inline constexpr bool operator==(::fast_io::details::str_swiss_map_iterator<chtype, value_type, isconst1> a,
-								 ::fast_io::details::str_swiss_map_iterator<chtype, value_type, isconst2> b) noexcept
+template <::std::integral chtype, typename mappedtype, bool isconst1, bool isconst2>
+inline constexpr bool operator==(::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, isconst1> a,
+								 ::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, isconst2> b) noexcept
 {
 	return a.controlpos == b.controlpos;
 }
 
-template <typename allocator_type, typename hasher, ::std::integral chtype>
+
+template <::std::integral chtype, typename mappedtype>
+struct str_swiss_map_insert_key_result
+{
+	::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, true> position;
+	bool inserted;
+};
+
+#if 0
+template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_table_reserve_to_newcap(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
+	::fast_io::details::swiss_table_str_imp_common<chtype, mappedtype> &imp, ::std::size_t newcap, hasher hash) noexcept
 {
 	using char_type = chtype;
-	using slot_type = ::fast_io::details::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
+	using slot_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
 	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
 	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
 
@@ -391,7 +415,8 @@ template <typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swiss_map_clone(::fast_io::details::swiss_table_str_imp_common<chtype> const &other) noexcept
 {
 	using char_type = chtype;
-	using slot_type = ::fast_io::details::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
+	using mapped_type = mappedtype;
+	using slot_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
 	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
 	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
 
@@ -420,16 +445,8 @@ inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swis
 	return {controls, cap, other.counts, other.leftmost, slots};
 }
 
-
-template <::std::integral chtype>
-struct str_swiss_table_insert_key_result
-{
-	::fast_io::details::str_swiss_map_iterator<chtype> position;
-	bool inserted;
-};
-
 template <typename allocator_type, typename hasher, ::std::integral char_type>
-constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_swiss_table_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
+constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type> str_swiss_map_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
@@ -451,7 +468,7 @@ constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_s
 		imp, pos, key, keyn, hval);
 	return {{imp.controls + pos, imp.slots + pos}, true};
 }
-
+#endif
 } // namespace fast_io::details
 
 namespace fast_io
@@ -459,24 +476,25 @@ namespace fast_io
 
 namespace containers
 {
-template <::std::integral chtype, typename Hash, typename Allocator>
+template <::std::integral chtype, ::std::movable mappedtype, typename Hash, typename Allocator>
 class basic_str_swiss_map
 {
 public:
 	using char_type = chtype;
-	using string_view_type = ::fast_io::containers::basic_string_view<char_type>;
-	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
+	using mapped_type = mappedtype;
+	using key_string_view_type = ::fast_io::containers::basic_string_view<char_type>;
+	using key_cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
 	using size_type = ::std::size_t;
 	using difference_type = ::std::ptrdiff_t;
-	using const_iterator = ::fast_io::details::str_swiss_map_iterator<chtype>;
-	using iterator = const_iterator;
+	using const_iterator = ::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, true>;
+	using iterator = ::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, false>;
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
-	using reverse_iterator = const_reverse_iterator;
-	using insert_result_type = ::fast_io::details::str_swiss_table_insert_key_result<char_type>;
+	using reverse_iterator = ::std::reverse_iterator<iterator>;
+	using insert_result_type = ::fast_io::details::str_swiss_map_insert_key_result<char_type, mapped_type>;
 	using hasher = Hash;
 
-	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
+	::fast_io::details::str_swiss_map_imp_common<char_type, mapped_type> imp{};
 #ifndef __INTELLISENSE__
 #if __has_cpp_attribute(msvc::no_unique_address)
 	[[msvc::no_unique_address]]
@@ -487,10 +505,10 @@ public:
 	hasher hash{};
 
 	constexpr basic_str_swiss_map() noexcept = default;
+#if 0
 
 	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_hasher_t, hasher h) noexcept : hash(h)
 	{}
-
 	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) noexcept : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
 	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map const &other) noexcept
 	{
@@ -619,7 +637,7 @@ public:
 
 	constexpr insert_result_type insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::details::str_swiss_table_insert_key_with_hash<allocator_type, hasher, char_type>(
+		return ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash);
 	}
 
@@ -673,6 +691,7 @@ public:
 		auto next{::fast_io::details::str_swiss_map_erase_rg<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
+#endif
 	constexpr const_iterator cbegin() const noexcept
 	{
 		auto leftmost{this->imp.leftmost};
@@ -683,14 +702,26 @@ public:
 		auto cap{this->imp.cap};
 		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
-	constexpr iterator begin() const noexcept
+	constexpr const_iterator begin() const noexcept
 	{
 		return this->cbegin();
 	}
-	constexpr iterator end() const noexcept
+	constexpr const_iterator end() const noexcept
 	{
 		return this->cend();
 	}
+	constexpr iterator begin() noexcept
+	{
+		auto leftmost{this->imp.leftmost};
+		return {this->imp.controls + leftmost, this->imp.slots + leftmost};
+	}
+	constexpr iterator end() noexcept
+	{
+		auto cap{this->imp.cap};
+		return {this->imp.controls + cap, this->imp.slots + cap};
+	}
+
+#if 0
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(cend());
@@ -707,11 +738,13 @@ public:
 	{
 		return this->crend();
 	}
-
+#if 0
 	constexpr size_type reserve(size_type n) noexcept
 	{
 		::fast_io::details::str_swiss_table_reserve<allocator_type, char_type>(this->imp, n);
 	}
+#endif
+#endif
 	constexpr void swap(basic_str_swiss_map &other) noexcept
 	{
 		::std::ranges::swap(this->imp, other.imp);
@@ -719,14 +752,14 @@ public:
 	}
 };
 
-template <::std::integral chtype, typename Hash, typename Allocator>
-constexpr void swap(basic_str_swiss_map<chtype, Hash, Allocator> &a, basic_str_swiss_map<chtype, Hash, Allocator> &b) noexcept
+template <::std::integral chtype, typename mappedtype, typename Hash, typename Allocator>
+constexpr void swap(basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> &a, basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> &b) noexcept
 {
 	a.swap(b);
 }
 
-template <::std::integral chtype, typename Hash, typename Allocator>
-constexpr bool operator==(basic_str_swiss_map<chtype, Hash, Allocator> const &lhs, basic_str_swiss_map<chtype, Hash, Allocator> const &rhs) noexcept
+template <::std::integral chtype, typename mappedtype, typename Hash, typename Allocator>
+constexpr bool operator==(basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> const &lhs, basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> const &rhs) noexcept
 {
 	if (lhs.size() != rhs.size())
 	{

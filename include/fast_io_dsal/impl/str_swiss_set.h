@@ -4,6 +4,9 @@ namespace fast_io::details
 {
 
 template <::std::integral chtype>
+using str_swiss_set_imp_common = ::fast_io::details::swiss_table_str_imp_common<chtype>;
+
+template <::std::integral chtype>
 struct str_swiss_set_iterator
 {
 	using value_type = ::fast_io::containers::basic_cstring_view<chtype>;
@@ -62,7 +65,7 @@ inline constexpr bool operator==(::fast_io::details::str_swiss_set_iterator<chty
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_reserve_to_newcap(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -134,7 +137,7 @@ inline constexpr void str_swiss_set_reserve_to_newcap(
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_reserve(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
 	if (n <= imp.counts)
 	{
@@ -170,7 +173,7 @@ template <typename allocator_type, typename hasher, ::std::integral chtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void str_swiss_set_grow(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, hasher hash) noexcept
 {
 	auto oldcap{imp.cap};
 	::std::size_t newcap;
@@ -194,7 +197,7 @@ inline constexpr void str_swiss_set_grow(
 
 template <::std::integral chtype>
 inline constexpr bool str_swiss_set_need_grow(
-	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> const &imp) noexcept
 {
 	::std::size_t const counts{imp.counts};
 	::std::size_t high;
@@ -205,7 +208,7 @@ inline constexpr bool str_swiss_set_need_grow(
 
 template <typename allocator_type, ::std::integral chtype>
 inline constexpr void str_swiss_set_insert_key_internal(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
 	::std::uint_least64_t hash) noexcept
 {
@@ -231,7 +234,7 @@ inline constexpr void str_swiss_set_insert_key_internal(
 
 template <bool needdestroy, typename allocator_type, ::std::integral chtype>
 inline constexpr void str_swiss_set_clear_impl(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -274,7 +277,7 @@ inline constexpr void str_swiss_set_clear_impl(
 }
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr ::std::size_t str_swiss_set_erase_rg(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
+inline constexpr ::std::size_t str_swiss_set_erase_rg(::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
 {
 	if (first == last)
 	{
@@ -299,7 +302,7 @@ inline constexpr ::std::size_t str_swiss_set_erase_rg(::fast_io::details::swiss_
 }
 
 template <bool compute_next, typename allocator_type, ::std::integral chtype>
-inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_set_erase(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t pos) noexcept
+inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_set_erase(::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t pos) noexcept
 {
 	auto si{imp.slots[pos]};
 	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
@@ -341,7 +344,7 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
-inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
+inline constexpr bool str_swiss_set_erase_key(::fast_io::details::str_swiss_set_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -359,7 +362,7 @@ inline constexpr bool str_swiss_set_erase_key(::fast_io::details::swiss_table_st
 }
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swiss_set_clone(::fast_io::details::swiss_table_str_imp_common<chtype> const &other) noexcept
+inline constexpr ::fast_io::details::str_swiss_set_imp_common<chtype> str_swiss_set_clone(::fast_io::details::str_swiss_set_imp_common<chtype> const &other) noexcept
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -400,7 +403,7 @@ struct str_swiss_set_insert_key_result
 };
 
 template <typename allocator_type, typename hasher, ::std::integral char_type>
-constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
+constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::str_swiss_set_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
@@ -435,8 +438,8 @@ class basic_str_swiss_set
 {
 public:
 	using char_type = chtype;
-	using string_view_type = ::fast_io::containers::basic_string_view<char_type>;
-	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
+	using key_string_view_type = ::fast_io::containers::basic_string_view<char_type>;
+	using key_cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 	using allocator_type = Allocator;
 	using size_type = ::std::size_t;
 	using difference_type = ::std::ptrdiff_t;
@@ -447,7 +450,7 @@ public:
 	using insert_result_type = ::fast_io::details::str_swiss_set_insert_key_result<char_type>;
 	using hasher = Hash;
 
-	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
+	::fast_io::details::str_swiss_set_imp_common<char_type> imp{};
 #ifndef __INTELLISENSE__
 #if __has_cpp_attribute(msvc::no_unique_address)
 	[[msvc::no_unique_address]]
@@ -510,25 +513,25 @@ private:
 	}
 
 public:
-	explicit constexpr basic_str_swiss_set(::std::initializer_list<string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_set(::std::initializer_list<key_string_view_type> ilist) noexcept
 	{
 		this->construct_with_range_common(ilist);
 	}
 
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
 
-	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<key_string_view_type> ilist) noexcept
 		: hash(h)
 	{
 		this->construct_with_range_common(ilist);
 	}
 
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 		: hash(h)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
@@ -588,14 +591,14 @@ public:
 		return val;
 	}
 
-	constexpr insert_result_type insert_key(string_view_type key) noexcept
+	constexpr insert_result_type insert_key(key_string_view_type key) noexcept
 	{
 		return ::fast_io::details::str_swiss_set_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash);
 	}
 
 	template <::std::ranges::range R>
-	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		for (auto const &e : rg)
 		{
@@ -603,13 +606,13 @@ public:
 		}
 	}
 
-	constexpr bool contains(string_view_type key) const noexcept
+	constexpr bool contains(key_string_view_type key) const noexcept
 	{
 		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
 				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
-	constexpr iterator find_key(string_view_type key) const noexcept
+	constexpr iterator find_key(key_string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
 			this->imp, key.ptr, key.n, hash);
@@ -619,7 +622,7 @@ public:
 		}
 		return cend();
 	}
-	constexpr size_type count(string_view_type key) const noexcept
+	constexpr size_type count(key_string_view_type key) const noexcept
 	{
 		return this->contains(key);
 	}
@@ -628,7 +631,7 @@ public:
 		return !this->imp.counts;
 	}
 
-	constexpr size_type erase_key(string_view_type key) noexcept
+	constexpr size_type erase_key(key_string_view_type key) noexcept
 	{
 		return ::fast_io::details::str_swiss_set_erase_key<allocator_type, hasher>(this->imp, key.data(), key.size(), hash);
 	}
