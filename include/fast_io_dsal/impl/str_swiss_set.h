@@ -133,7 +133,7 @@ inline constexpr void str_swiss_set_reserve_to_newcap(
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
-inline constexpr void str_swiss_table_reserve(
+inline constexpr void str_swiss_set_reserve(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
 	if (n <= imp.counts)
@@ -169,7 +169,7 @@ template <typename allocator_type, typename hasher, ::std::integral chtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr void str_swiss_table_grow(
+inline constexpr void str_swiss_set_grow(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp, hasher hash) noexcept
 {
 	auto oldcap{imp.cap};
@@ -193,7 +193,7 @@ inline constexpr void str_swiss_table_grow(
 }
 
 template <::std::integral chtype>
-inline constexpr bool str_swiss_table_need_grow(
+inline constexpr bool str_swiss_set_need_grow(
 	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp) noexcept
 {
 	::std::size_t const counts{imp.counts};
@@ -204,7 +204,7 @@ inline constexpr bool str_swiss_table_need_grow(
 }
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr void str_swiss_table_insert_key_internal(
+inline constexpr void str_swiss_set_insert_key_internal(
 	::fast_io::details::swiss_table_str_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
 	::std::uint_least64_t hash) noexcept
@@ -393,14 +393,14 @@ inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swis
 
 
 template <::std::integral chtype>
-struct str_swiss_table_insert_key_result
+struct str_swiss_set_insert_key_result
 {
 	::fast_io::details::str_swiss_set_iterator<chtype> position;
 	bool inserted;
 };
 
 template <typename allocator_type, typename hasher, ::std::integral char_type>
-constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_swiss_table_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
+constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::swiss_table_str_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
@@ -410,15 +410,15 @@ constexpr ::fast_io::details::str_swiss_table_insert_key_result<char_type> str_s
 	{
 		return {{imp.controls + pos, imp.slots + pos}, false};
 	}
-	if (::fast_io::details::str_swiss_table_need_grow(imp))
+	if (::fast_io::details::str_swiss_set_need_grow(imp))
 	{
-		::fast_io::details::str_swiss_table_grow<allocator_type, hasher, char_type>(
+		::fast_io::details::str_swiss_set_grow<allocator_type, hasher, char_type>(
 			imp, hash);
 		pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
 				  imp, key, keyn, hval)
 				  .pos;
 	}
-	::fast_io::details::str_swiss_table_insert_key_internal<allocator_type, char_type>(
+	::fast_io::details::str_swiss_set_insert_key_internal<allocator_type, char_type>(
 		imp, pos, key, keyn, hval);
 	return {{imp.controls + pos, imp.slots + pos}, true};
 }
@@ -444,7 +444,7 @@ public:
 	using iterator = const_iterator;
 	using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 	using reverse_iterator = const_reverse_iterator;
-	using insert_result_type = ::fast_io::details::str_swiss_table_insert_key_result<char_type>;
+	using insert_result_type = ::fast_io::details::str_swiss_set_insert_key_result<char_type>;
 	using hasher = Hash;
 
 	::fast_io::details::swiss_table_str_imp_common<char_type> imp{};
@@ -590,7 +590,7 @@ public:
 
 	constexpr insert_result_type insert_key(string_view_type key) noexcept
 	{
-		return ::fast_io::details::str_swiss_table_insert_key_with_hash<allocator_type, hasher, char_type>(
+		return ::fast_io::details::str_swiss_set_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash);
 	}
 
@@ -681,7 +681,7 @@ public:
 
 	constexpr size_type reserve(size_type n) noexcept
 	{
-		::fast_io::details::str_swiss_table_reserve<allocator_type, char_type>(this->imp, n);
+		::fast_io::details::str_swiss_set_reserve<allocator_type, char_type>(this->imp, n);
 	}
 	constexpr void swap(basic_str_swiss_set &other) noexcept
 	{
