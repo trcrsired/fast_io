@@ -5,11 +5,17 @@ int main()
 {
 	::fast_io::str_swiss_map<::std::size_t> mp;
 	mp.insert_key("hello", 40);
-	//	::fast_io::io::print("::fast_io::str_swiss_map<::std::size_t> size=", mp.size(), ":\n");
-#if 1
+	mp.insert_key("hello", 60);
+	mp.insert_key("helloworld", 60);
+	::fast_io::io::print("::fast_io::str_swiss_map<::std::size_t> insert_key size=", mp.size(), ":\n");
 	for (auto &e : mp)
 	{
 		::fast_io::io::println(e.key(), " ", e.mapped());
 	}
-#endif
+	mp.clear_destroy();
+	::fast_io::io::print("::fast_io::str_swiss_map<::std::size_t> clear_destroy size=", mp.size(), ":\n");
+	for (auto &e : mp)
+	{
+		::fast_io::io::println(e.key(), " ", e.mapped());
+	}
 }

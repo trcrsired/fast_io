@@ -279,15 +279,6 @@ inline constexpr void str_swiss_map_insert_key_internal(
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash,
 	mappedtype val) noexcept
 {
-#if 0
-	if constexpr(::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<mappedtype>)
-	{
-		if !consteval
-		{
-			::fast_io::details::str_swiss_map_insert_key_internal_trivial<allocator_type>();
-		}
-	}
-#endif
 	using char_type = chtype;
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
 	imp.controls[pos] = h2;
@@ -310,13 +301,12 @@ inline constexpr void str_swiss_map_insert_key_internal(
 	imp.counts = static_cast<::std::size_t>(counts + 1u);
 }
 
-#if 0
 template <bool needdestroy, typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_clear_impl(
-	::fast_io::details::swiss_table_str_imp_common<chtype> &imp) noexcept
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp) noexcept
 {
 	using char_type = chtype;
-	using slot_type = ::fast_io::details::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
+	using slot_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
 	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
 	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
 
@@ -334,8 +324,12 @@ inline constexpr void str_swiss_map_clear_impl(
 		if (ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
 			ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
 		{
-			auto si{slots[i]};
-			::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ptr, si.n);
+			auto &si{slots[i]};
+			::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ky.ptr, si.ky.n);
+			if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
+			{
+				::std::destroy_at(__builtin_addressof(si.val));
+			}
 			if constexpr (!needdestroy)
 			{
 				ci = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
@@ -354,6 +348,8 @@ inline constexpr void str_swiss_map_clear_impl(
 		imp.leftmost = imp.cap;
 	}
 }
+
+#if 0
 
 template <typename allocator_type, ::std::integral chtype>
 inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
@@ -380,11 +376,15 @@ inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::swiss_
 	return i;
 }
 
-template <bool compute_next, typename allocator_type, ::std::integral chtype>
+template <bool compute_next, typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_map_erase(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t pos) noexcept
 {
 	auto si{imp.slots[pos]};
-	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
+	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ky.ptr, si.ky.n);
+	if constexpr(!::std::is_trivially_destructible_v<mappedtype>)
+	{
+		::std::destroy_at(__builtin_addressof(si.val));
+	}
 	auto controls{imp.controls};
 	auto controlspos{controls + pos};
 	*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
@@ -439,9 +439,10 @@ inline constexpr bool str_swiss_map_erase_key(::fast_io::details::swiss_table_st
 	::fast_io::details::str_swiss_map_erase<false, allocator_type, chtype>(imp, pos);
 	return true;
 }
+#endif
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
-inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swiss_map_clone(::fast_io::details::swiss_table_str_imp_common<chtype> const &other) noexcept
+inline constexpr ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> str_swiss_map_clone(::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> const &other) noexcept
 {
 	using char_type = chtype;
 	using mapped_type = mappedtype;
@@ -467,13 +468,15 @@ inline constexpr ::fast_io::details::swiss_table_str_imp_common<chtype> str_swis
 		if (ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
 			ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
 		{
-			auto si{otherslots[i]};
-			slots[i] = ::fast_io::details::create_associative_string<allocator_type, char_type>(si.ptr, si.n);
+			auto &othersi{otherslots[i]};
+			auto &si{slots[i]};
+			si.kv = ::fast_io::details::create_associative_string<allocator_type, char_type>(othersi.kv.ptr, othersi.kv.n);
+			::std::construct_at(__builtin_addressof(si.val), othersi.val);
 		}
 	}
 	return {controls, cap, other.counts, other.leftmost, slots};
 }
-#endif
+
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash, mappedtype mapped) noexcept
 {
@@ -534,16 +537,15 @@ public:
 	hasher hash{};
 
 	constexpr basic_str_swiss_map() noexcept = default;
-#if 0
 
 	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_hasher_t, hasher h) noexcept : hash(h)
 	{}
-	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) noexcept : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
+	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) noexcept : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype, mappedtype>(other.imp)), hash(other.hash) {};
 	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map const &other) noexcept
 	{
 		if (this != ::std::addressof(other))
 		{
-			auto tmp = ::fast_io::details::str_swiss_map_clone<allocator_type, chtype>(other.imp);
+			auto tmp = ::fast_io::details::str_swiss_map_clone<allocator_type, chtype, mappedtype>(other.imp);
 			this->clear_destroy();
 			this->imp = tmp;
 			this->hash = other.hash;
@@ -570,6 +572,7 @@ private:
 			}
 		}
 	};
+#if 0
 	template <::std::ranges::range R>
 	constexpr void construct_with_range_common(R &&rg) noexcept
 	{
@@ -609,7 +612,8 @@ public:
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
-
+#endif
+public:
 	constexpr basic_str_swiss_map(basic_str_swiss_map &&other) noexcept
 		: imp{other.imp}, hash(::std::move(other.hash))
 	{
@@ -663,7 +667,7 @@ public:
 		constexpr size_type val{static_cast<size_type>((::std::numeric_limits<size_type>::max() >> 1u)) / (sizeof(::fast_io::details::associative_string<chtype>) + 1u)};
 		return val;
 	}
-#endif
+
 	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type mapval) noexcept
 	{
 		return ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
