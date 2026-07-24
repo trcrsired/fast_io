@@ -139,31 +139,15 @@ template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_reserve(
 	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
-	if (n <= imp.counts)
+	::std::size_t const counts{imp.counts};
+	if (n <= counts)
 	{
 		return;
 	}
-
-	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-	constexpr ::std::size_t mxfactor{mx / 5 * 4};
-	if (mxfactor < n)
+	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap(n)};
+	if (newcap <= imp.cap)
 	{
-		::fast_io::fast_terminate();
-	}
-	::std::size_t const counts{imp.counts};
-	::std::size_t high;
-	auto const low{::fast_io::intrinsics::umul(imp.cap, static_cast<::std::size_t>(5), high)};
-	constexpr unsigned shifter{2u};
-	constexpr auto highshifter{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - shifter)};
-	::std::size_t newcapnoceil{(high << highshifter) | (low >> shifter)};
-	::std::size_t newcap{::std::bit_ceil(newcapnoceil)};
-	if (!newcap)
-	{
-		::fast_io::fast_terminate();
-	}
-	if (newcap < 8)
-	{
-		newcap = 8;
+		return;
 	}
 	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
@@ -319,12 +303,7 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr bool str_swiss_set_erase_key(::fast_io::details::str_swiss_set_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
-	using char_type = chtype;
-	using slot_type = ::fast_io::details::associative_string<char_type>;
-	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
-	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
-
-	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
+	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<chtype>(
 		imp, str, strn, hash);
 	if (!found)
 	{
@@ -655,9 +634,9 @@ public:
 		return this->crend();
 	}
 
-	constexpr size_type reserve(size_type n) noexcept
+	constexpr void reserve(size_type n) noexcept
 	{
-		::fast_io::details::str_swiss_set_reserve<allocator_type, char_type>(this->imp, n);
+		::fast_io::details::str_swiss_set_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
 	constexpr void swap(basic_str_swiss_set &other) noexcept
 	{

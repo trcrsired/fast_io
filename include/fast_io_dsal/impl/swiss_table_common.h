@@ -137,6 +137,31 @@ inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t
 	return (oldcap << 1u);
 }
 
+inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::size_t n) noexcept
+{
+	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+	constexpr ::std::size_t mxfactor{mx / 5 * 4};
+	if (mxfactor < n)
+	{
+		::fast_io::fast_terminate();
+	}
+	::std::size_t high;
+	auto const low{::fast_io::intrinsics::umul(n, static_cast<::std::size_t>(5), high)};
+	constexpr unsigned shifter{2u};
+	constexpr auto highshifter{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - shifter)};
+	::std::size_t newcapnoceil{(high << highshifter) | (low >> shifter)};
+	::std::size_t newcap{::std::bit_ceil(newcapnoceil)};
+	if (!newcap)
+	{
+		::fast_io::fast_terminate();
+	}
+	if (newcap < 8)
+	{
+		newcap = 8;
+	}
+	return newcap;
+}
+
 template <bool isprev>
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
 {

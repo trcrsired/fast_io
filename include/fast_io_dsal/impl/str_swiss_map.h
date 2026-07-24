@@ -31,6 +31,36 @@ struct basic_str_swiss_map_key_mapped_pair
 	}
 };
 
+template <::std::integral chtype, typename mappedtype>
+struct basic_str_swiss_map_key_mapped_initializer_list_pair
+{
+	using char_type = chtype;
+	using key_type = ::fast_io::containers::basic_string_view<char_type>;
+	using mapped_type = mappedtype;
+
+	::fast_io::containers::basic_string_view<chtype> ky;
+#ifndef __INTELLISENSE__
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address) >= 201803
+	[[no_unique_address]]
+#endif
+#endif
+	mappedtype val;
+	constexpr key_type key() const noexcept
+	{
+		return ky;
+	}
+	constexpr mapped_type &mapped() noexcept
+	{
+		return val;
+	}
+	constexpr mapped_type const &mapped() const noexcept
+	{
+		return val;
+	}
+};
+
 } // namespace fast_io::containers
 
 namespace fast_io::details
@@ -191,42 +221,22 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 	}
 }
 
-#if 0
-
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
-inline constexpr void str_swiss_table_reserve(
+inline constexpr void str_swiss_map_reserve(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
-	if (n <= imp.counts)
+	::std::size_t const counts{imp.counts};
+	if (n <= counts)
 	{
 		return;
 	}
-
-	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-	constexpr ::std::size_t mxfactor{mx / 5 * 4};
-	if (mxfactor < n)
+	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap(n)};
+	if (newcap <= imp.cap)
 	{
-		::fast_io::fast_terminate();
+		return;
 	}
-	::std::size_t const counts{imp.counts};
-	::std::size_t high;
-	auto const low{::fast_io::intrinsics::umul(imp.cap, static_cast<::std::size_t>(5), high)};
-	constexpr unsigned shifter{2u};
-	constexpr auto highshifter{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - shifter)};
-	::std::size_t newcapnoceil{(high << highshifter) | (low >> shifter)};
-	::std::size_t newcap{::std::bit_ceil(newcapnoceil)};
-	if (!newcap)
-	{
-		::fast_io::fast_terminate();
-	}
-	if (newcap < 8)
-	{
-		newcap = 8;
-	}
-	::fast_io::details::str_swiss_table_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
+	::fast_io::details::str_swiss_map_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
 }
-
-#endif
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
@@ -235,8 +245,9 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 inline constexpr void str_swiss_map_grow(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) noexcept
 {
-	::fast_io::details::str_swiss_map_reserve_to_newcap<allocator_type, hasher, chtype>(imp,
-																						::fast_io::details::str_swiss_table_grow_compute_newcap(imp.cap), hash);
+	::fast_io::details::str_swiss_map_reserve_to_newcap<allocator_type, hasher, chtype>(
+		imp,
+		::fast_io::details::str_swiss_table_grow_compute_newcap(imp.cap), hash);
 }
 
 
@@ -349,10 +360,8 @@ inline constexpr void str_swiss_map_clear_impl(
 	}
 }
 
-#if 0
-
-template <typename allocator_type, ::std::integral chtype>
-inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
+template <typename allocator_type, ::std::integral chtype, typename mappedtype>
+inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t first, ::std::size_t last) noexcept
 {
 	if (first == last)
 	{
@@ -362,8 +371,13 @@ inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::swiss_
 	::std::size_t counting{};
 	for (; i != last; ++counting)
 	{
-		auto si{imp.slots[i]};
-		::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
+		auto &si{imp.slots[i]};
+		::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ky.ptr, si.ky.n);
+		if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
+		{
+			::std::destroy_at(__builtin_addressof(si.val));
+		}
+
 		auto controls{imp.controls};
 		auto controlspos{controls + i};
 		*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
@@ -377,11 +391,11 @@ inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::swiss_
 }
 
 template <bool compute_next, typename allocator_type, ::std::integral chtype, typename mappedtype>
-inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_map_erase(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, ::std::size_t pos) noexcept
+inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_map_erase(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t pos) noexcept
 {
 	auto si{imp.slots[pos]};
 	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ky.ptr, si.ky.n);
-	if constexpr(!::std::is_trivially_destructible_v<mappedtype>)
+	if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
 	{
 		::std::destroy_at(__builtin_addressof(si.val));
 	}
@@ -423,14 +437,9 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
-inline constexpr bool str_swiss_map_erase_key(::fast_io::details::swiss_table_str_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
+inline constexpr bool str_swiss_map_erase_key(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
-	using char_type = chtype;
-	using slot_type = ::fast_io::details::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
-	using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, slot_type>;
-	using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
-
-	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
+	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<chtype>(
 		imp, str, strn, hash);
 	if (!found)
 	{
@@ -439,7 +448,6 @@ inline constexpr bool str_swiss_map_erase_key(::fast_io::details::swiss_table_st
 	::fast_io::details::str_swiss_map_erase<false, allocator_type, chtype>(imp, pos);
 	return true;
 }
-#endif
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> str_swiss_map_clone(::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> const &other) noexcept
@@ -501,6 +509,19 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedt
 	return {{imp.controls + pos, imp.slots + pos}, true};
 }
 
+template <typename chtype, typename valtype, typename R>
+concept str_swiss_map_range_has_key_mapped_val = ::std::integral<chtype> &&
+												 ::std::ranges::range<R> &&
+												 requires(::std::ranges::range_value_t<R> rgval) {
+													 { rgval.key() } -> ::std::convertible_to<::fast_io::containers::basic_string_view<chtype>>;
+													 { rgval.mapped() } -> ::std::constructible_from<valtype>;
+												 };
+
+template <typename chtype, typename valtype, typename R>
+concept str_swiss_map_range_has_key_mapped_noexcept = str_swiss_map_range_has_key_mapped_val<chtype, valtype, R> &&
+													  ::std::is_nothrow_constructible_v<valtype, decltype(::std::declval<::std::ranges::range_value_t<R>>().mapped())> &&
+													  ::std::is_nothrow_constructible_v<::fast_io::containers::basic_string_view<chtype>, decltype(::std::declval<::std::ranges::range_value_t<R>>().key())>;
+
 } // namespace fast_io::details
 
 namespace fast_io
@@ -525,6 +546,7 @@ public:
 	using reverse_iterator = ::std::reverse_iterator<iterator>;
 	using insert_result_type = ::fast_io::details::str_swiss_map_insert_key_result<char_type, mapped_type>;
 	using hasher = Hash;
+	using initializer_list_pair_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_initializer_list_pair<char_type, mapped_type>;
 
 	::fast_io::details::str_swiss_map_imp_common<char_type, mapped_type> imp{};
 #ifndef __INTELLISENSE__
@@ -572,48 +594,66 @@ private:
 			}
 		}
 	};
-#if 0
-	template <::std::ranges::range R>
-	constexpr void construct_with_range_common(R &&rg) noexcept
+	template <::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+	constexpr void construct_range_common_with_n(Iter first, Sen last, ::std::size_t sz)
 	{
 		construct_range_destroyer des(this);
-		if constexpr (::std::ranges::sized_range<R>)
+		this->reserve(sz);
+		for (; first != last; ++first)
 		{
-			this->reserve(::std::ranges::size(rg));
+			this->insert_key(first->key(), first->mapped());
 		}
-		for (auto const &e : rg)
+		des.ptr = nullptr;
+	}
+	template <::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+	constexpr void construct_range_common(Iter first, Sen last)
+	{
+		construct_range_destroyer des(this);
+		for (; first != last; ++first)
 		{
-			this->insert_key(e);
+			this->insert_key(first->key(), first->mapped());
 		}
 		des.ptr = nullptr;
 	}
 
+	template <::std::ranges::range R>
+	constexpr void construct_with_range_common(R &&rg) noexcept
+	{
+		if constexpr (::std::ranges::sized_range<R>)
+		{
+			this->construct_range_common_with_n(::std::ranges::begin(rg),
+												::std::ranges::end(rg), ::std::ranges::size(rg));
+		}
+		else
+		{
+			this->construct_range_common(::std::ranges::begin(rg),
+										 ::std::ranges::end(rg));
+		}
+	}
+
 public:
-	explicit constexpr basic_str_swiss_map(::std::initializer_list<string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_map(::std::initializer_list<initializer_list_pair_type> ilist) noexcept
 	{
 		this->construct_with_range_common(ilist);
 	}
-
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
+	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R>)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
-
-	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<initializer_list_pair_type> ilist) noexcept
 		: hash(h)
 	{
 		this->construct_with_range_common(ilist);
 	}
-
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
+	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R>)
 		: hash(h)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
-#endif
-public:
 	constexpr basic_str_swiss_map(basic_str_swiss_map &&other) noexcept
 		: imp{other.imp}, hash(::std::move(other.hash))
 	{
@@ -673,23 +713,38 @@ public:
 		return ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash, ::std::move(mapval));
 	}
-#if 0
-	template <::std::ranges::range R>
-	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+
+private:
+	template <::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+	constexpr void insert_range_common(Iter first, Sen last)
 	{
-		for (auto const &e : rg)
+		for (; first != last; ++first)
 		{
-			this->insert_key(e);
+			this->insert_key(first->key(), first->mapped());
 		}
 	}
 
-	constexpr bool contains(string_view_type key) const noexcept
+public:
+	template <::std::ranges::range R>
+		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
+	constexpr void insert_range(R &&rg) noexcept(::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R>)
+	{
+		this->insert_range_common(::std::ranges::begin(rg), ::std::ranges::end(rg));
+	}
+
+	constexpr void insert_range(::std::initializer_list<initializer_list_pair_type> ilist) noexcept
+	{
+		this->insert_range_common(ilist.begin(), ilist.end());
+	}
+
+
+	constexpr bool contains(key_string_view_type key) const noexcept
 	{
 		return ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
 				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
-	constexpr iterator find_key(string_view_type key) const noexcept
+	constexpr iterator find_key(key_string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
 			this->imp, key.ptr, key.n, hash);
@@ -699,7 +754,7 @@ public:
 		}
 		return cend();
 	}
-	constexpr size_type count(string_view_type key) const noexcept
+	constexpr size_type count(key_string_view_type key) const noexcept
 	{
 		return this->contains(key);
 	}
@@ -707,12 +762,10 @@ public:
 	{
 		return !this->imp.counts;
 	}
-
-	constexpr size_type erase_key(string_view_type key) noexcept
+	constexpr size_type erase_key(key_string_view_type key) noexcept
 	{
 		return ::fast_io::details::str_swiss_map_erase_key<allocator_type, hasher>(this->imp, key.data(), key.size(), hash);
 	}
-
 	constexpr iterator erase(const_iterator iter) noexcept
 	{
 		auto next{::fast_io::details::str_swiss_map_erase<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(iter.controlpos - this->imp.controls))};
@@ -724,7 +777,6 @@ public:
 		auto next{::fast_io::details::str_swiss_map_erase_rg<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
-#endif
 	constexpr const_iterator cbegin() const noexcept
 	{
 		auto leftmost{this->imp.leftmost};
@@ -754,7 +806,6 @@ public:
 		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
 
-#if 0
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(cend());
@@ -771,13 +822,10 @@ public:
 	{
 		return this->crend();
 	}
-#if 0
-	constexpr size_type reserve(size_type n) noexcept
+	constexpr void reserve(size_type n) noexcept
 	{
-		::fast_io::details::str_swiss_table_reserve<allocator_type, char_type>(this->imp, n);
+		::fast_io::details::str_swiss_map_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
-#endif
-#endif
 	constexpr void swap(basic_str_swiss_map &other) noexcept
 	{
 		::std::ranges::swap(this->imp, other.imp);

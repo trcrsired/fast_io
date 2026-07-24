@@ -3,7 +3,11 @@
 
 int main()
 {
-	::fast_io::str_swiss_map<::std::size_t> mp;
+	::fast_io::str_swiss_map<::std::size_t> mp{{"helloaffa", 30},
+											   {"hellosf", 59},
+											   {"helloworld2", 20}};
+	mp.insert_range(
+		{{"dsagsdgasdgsadgdsagdsagsgdsg", 10235}});
 	mp.insert_key("hello", 40);
 	mp.insert_key("hello", 60);
 	mp.insert_key("helloworld", 60);
