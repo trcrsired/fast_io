@@ -175,35 +175,8 @@ template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_grow(
 	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, hasher hash) noexcept
 {
-	auto oldcap{imp.cap};
-	::std::size_t newcap;
-	if (oldcap == 0)
-	{
-		newcap = 8;
-	}
-	else
-	{
-		// add overflow trapping here
-		constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
-		constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
-		if (mxdv2 < oldcap)
-		{
-			::fast_io::fast_terminate();
-		}
-		newcap = (oldcap << 1u);
-	}
-	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp, newcap, hash);
-}
-
-template <::std::integral chtype>
-inline constexpr bool str_swiss_set_need_grow(
-	::fast_io::details::str_swiss_set_imp_common<chtype> const &imp) noexcept
-{
-	::std::size_t const counts{imp.counts};
-	::std::size_t high;
-	auto const low{::fast_io::intrinsics::umul(imp.cap, static_cast<::std::size_t>(7), high)};
-	constexpr auto shift{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - 3u)};
-	return ((high << shift) | (low >> 3u)) <= counts;
+	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp,
+																						::fast_io::details::str_swiss_table_grow_compute_newcap(imp.cap), hash);
 }
 
 template <typename allocator_type, ::std::integral chtype>
@@ -413,7 +386,7 @@ constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swi
 	{
 		return {{imp.controls + pos, imp.slots + pos}, false};
 	}
-	if (::fast_io::details::str_swiss_set_need_grow(imp))
+	if (::fast_io::details::str_swiss_table_need_grow(imp.counts, imp.cap))
 	{
 		::fast_io::details::str_swiss_set_grow<allocator_type, hasher, char_type>(
 			imp, hash);

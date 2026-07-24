@@ -11,6 +11,21 @@ struct swiss_table_imp_common
 	::std::size_t leftmost;
 };
 
+
+template <::std::integral chtype>
+struct
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+	[[__gnu__::__may_alias__]]
+#endif
+	swiss_table_str_type_erased_imp_common
+{
+	::std::uint_least8_t *controls;
+	::std::size_t cap;
+	::std::size_t counts;
+	::std::size_t leftmost;
+	void *slots;
+};
+
 template <::std::integral chtype>
 struct swiss_table_str_imp_common
 {
@@ -78,33 +93,49 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 	}
 }
 
-template <::std::integral chtype>
+template <::std::integral chtype, typename T>
 inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str(
-	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp,
+	T const &imp,
 	chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
 {
 	::fast_io::basic_string_view<chtype> key(keybase, keylen);
 	return ::fast_io::details::swiss_table_find_common(imp, key, hash);
 }
 
-template <::std::integral chtype>
-inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str_hashfunc(
-	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp,
-	chtype const *keybase, ::std::size_t keylen) noexcept
-{
-	return ::fast_io::details::swiss_table_find_common_with_str(imp, keybase, keylen,
-																::fast_io::details::rapidhash_64bits_fio(keybase, keylen * sizeof(chtype)));
-}
-
-template <::std::integral chtype, typename hasher>
+template <::std::integral chtype, typename hasher, typename T>
 inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str_hashfunc_with_hasher(
-	::fast_io::details::swiss_table_str_imp_common<chtype> const &imp,
+	T const &imp,
 	chtype const *keybase, ::std::size_t keylen, hasher hash) noexcept
 {
 	return ::fast_io::details::swiss_table_find_common_with_str(imp, keybase, keylen,
 																hash.do_hash(reinterpret_cast<::std::byte const *>(keybase), reinterpret_cast<::std::byte const *>(keybase + keylen)));
 }
 
+inline constexpr bool str_swiss_table_need_grow(
+	::std::size_t counts, ::std::size_t cap) noexcept
+{
+	::std::size_t high;
+	auto const low{::fast_io::intrinsics::umul(cap, static_cast<::std::size_t>(7), high)};
+	constexpr auto shift{static_cast<unsigned>(::std::numeric_limits<::std::size_t>::digits - 3u)};
+	return ((high << shift) | (low >> 3u)) <= counts;
+}
+
+inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t oldcap) noexcept
+{
+	if (oldcap == 0)
+	{
+		return 8u;
+	}
+
+	// add overflow trapping here
+	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
+	constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
+	if (mxdv2 < oldcap)
+	{
+		::fast_io::fast_terminate();
+	}
+	return (oldcap << 1u);
+}
 
 template <bool isprev>
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
