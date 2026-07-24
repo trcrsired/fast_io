@@ -61,6 +61,13 @@ struct basic_str_swiss_map_key_mapped_initializer_list_pair
 	}
 };
 
+template <::std::integral chtype, typename mappedtype>
+inline constexpr bool operator==(::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> const &a,
+								 ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> const &b) noexcept
+{
+	return a.key() == b.key() && a.mapped() == b.mapped();
+}
+
 } // namespace fast_io::containers
 
 namespace fast_io::details
@@ -131,6 +138,11 @@ struct str_swiss_map_iterator
 		auto temp{*this};
 		--*this;
 		return temp;
+	}
+	constexpr operator str_swiss_map_iterator<chtype, mappedtype, true>() const noexcept
+		requires(!isconst)
+	{
+		return {this->controlpos, this->slots};
 	}
 };
 
@@ -465,7 +477,7 @@ inline constexpr bool str_swiss_map_erase_key(::fast_io::details::str_swiss_map_
 }
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
-inline constexpr ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> str_swiss_map_clone(::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> const &other) noexcept
+inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> str_swiss_map_clone(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> const &other) noexcept
 {
 	using char_type = chtype;
 	using mapped_type = mappedtype;
@@ -493,7 +505,7 @@ inline constexpr ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chty
 		{
 			auto &othersi{otherslots[i]};
 			auto &si{slots[i]};
-			si.kv = ::fast_io::details::create_associative_string<allocator_type, char_type>(othersi.kv.ptr, othersi.kv.n);
+			si.ky = ::fast_io::details::create_associative_string<allocator_type, char_type>(othersi.ky.ptr, othersi.ky.n);
 			::std::construct_at(__builtin_addressof(si.val), othersi.val);
 		}
 	}
@@ -871,7 +883,7 @@ public:
 				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
-	constexpr iterator find_key(key_string_view_type key) const noexcept
+	constexpr const_iterator find_key(key_string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
 			this->imp, key.ptr, key.n, hash);
@@ -901,7 +913,7 @@ public:
 	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		auto controls{this->imp.controls};
-		auto next{::fast_io::details::str_swiss_map_erase_rg<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
+		auto next{::fast_io::details::str_swiss_map_erase_rg<allocator_type, char_type, mapped_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
 	constexpr const_iterator cbegin() const noexcept

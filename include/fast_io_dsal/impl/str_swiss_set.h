@@ -596,7 +596,7 @@ public:
 	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		auto controls{this->imp.controls};
-		auto next{::fast_io::details::str_swiss_set_erase_rg<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
+		auto next{::fast_io::details::str_swiss_set_erase_rg<allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
 	constexpr const_iterator cbegin() const noexcept
