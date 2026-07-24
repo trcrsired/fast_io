@@ -16,6 +16,13 @@ int main()
 	{
 		::fast_io::io::println(e.key(), " ", e.mapped());
 	}
+	mp.insert_key_or_assign("hello", 1000);
+	::fast_io::io::print("::fast_io::str_swiss_map<::std::size_t> insert_key_or_assign size=", mp.size(), ":\n");
+	for (auto &e : mp)
+	{
+		::fast_io::io::println(e.key(), " ", e.mapped());
+	}
+
 	mp.clear_destroy();
 	::fast_io::io::print("::fast_io::str_swiss_map<::std::size_t> clear_destroy size=", mp.size(), ":\n");
 	for (auto &e : mp)

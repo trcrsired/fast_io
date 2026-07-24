@@ -87,14 +87,14 @@ struct str_swiss_map_iterator
 	using const_pointer = value_type const *;
 	using pointer = ::std::conditional_t<isconst, const_pointer, value_type *>;
 	::std::uint_least8_t const *controlpos{};
-	pointer slots{};
-	constexpr const_reference operator*() const noexcept
+	value_type *slots{};
+	constexpr reference operator*() const noexcept
 	{
 		return *slots;
 	}
-	constexpr reference operator*() noexcept
+	constexpr pointer operator->() const noexcept
 	{
-		return *slots;
+		return slots;
 	}
 	constexpr str_swiss_map_iterator &operator++() noexcept
 	{
@@ -145,7 +145,7 @@ inline constexpr bool operator==(::fast_io::details::str_swiss_map_iterator<chty
 template <::std::integral chtype, typename mappedtype>
 struct str_swiss_map_insert_key_result
 {
-	::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, true> position;
+	::fast_io::details::str_swiss_map_iterator<chtype, mappedtype, false> position;
 	bool inserted;
 };
 
@@ -712,6 +712,16 @@ public:
 	{
 		return ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash, ::std::move(mapval));
+	}
+	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type mapval) noexcept
+	{
+		auto res = ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
+			this->imp, key.ptr, key.n, hash, ::std::move(mapval));
+		if (!res.inserted)
+		{
+			res.position.slots->val = ::std::move(mapval);
+		}
+		return res;
 	}
 
 private:
