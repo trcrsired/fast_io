@@ -420,7 +420,7 @@ inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::str_sw
 template <bool compute_next, typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swiss_map_erase(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t pos) noexcept
 {
-	auto si{imp.slots[pos]};
+	auto &si{imp.slots[pos]};
 	::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ky.ptr, si.ky.n);
 	if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
 	{
@@ -804,6 +804,7 @@ public:
 		{
 			auto res = ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
 				this->imp, key.ptr, key.n, hash);
+
 			if constexpr (::std::is_trivially_destructible_v<mapped_type>)
 			{
 				::std::construct_at(__builtin_addressof(res.position.slots->val), ::std::forward<Args>(args)...);
@@ -821,6 +822,7 @@ public:
 					::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
 				}
 			}
+
 			return res;
 		}
 		else
