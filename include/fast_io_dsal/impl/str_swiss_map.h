@@ -149,6 +149,14 @@ struct str_swiss_map_insert_key_result
 	bool inserted;
 };
 
+template <typename hvaltype, ::std::integral chtype, typename mappedtype>
+struct str_swiss_map_insert_key_result_with_hval
+{
+	hvaltype hval;
+	::std::size_t position;
+	bool inserted;
+};
+
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_reserve_to_newcap(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t newcap, hasher hash) noexcept
@@ -284,18 +292,17 @@ inline void str_swiss_map_insert_key_internal_trivial(
 	imp.counts = static_cast<::std::size_t>(counts + 1u);
 }
 #endif
+
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
-inline constexpr void str_swiss_map_insert_key_internal(
+inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
-	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash,
-	mappedtype val) noexcept
+	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash, ::std::uint_least8_t *pcontrol,
+	::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> *pslot) noexcept
 {
 	using char_type = chtype;
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
-	imp.controls[pos] = h2;
-	auto &slot{imp.slots[pos]};
-	slot.ky = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
-	::std::construct_at(__builtin_addressof(slot.val), ::std::move(val));
+	*pcontrol = h2;
+	pslot->ky = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
 	auto newleftmost{pos};
 	auto counts{imp.counts};
 	if (counts)
@@ -310,6 +317,14 @@ inline constexpr void str_swiss_map_insert_key_internal(
 		imp.leftmost = newleftmost;
 	}
 	imp.counts = static_cast<::std::size_t>(counts + 1u);
+}
+
+template <typename allocator_type, ::std::integral chtype, typename mappedtype>
+inline constexpr void str_swiss_map_insert_key_internal(
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
+	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
+{
+	::fast_io::details::str_swiss_map_insert_key_internal_computed_slot_controls<allocator_type>(imp, pos, keybase, keylen, hash, imp.controls + pos, imp.slots + pos);
 }
 
 template <bool needdestroy, typename allocator_type, ::std::integral chtype, typename mappedtype>
@@ -486,17 +501,14 @@ inline constexpr ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chty
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
-constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash, mappedtype mapped) noexcept
+constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename hasher::digest_type, char_type, mappedtype> str_swiss_map_insert_key_with_hash_no_insert(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
 		imp, key, keyn, hval)};
 	::std::size_t pos{result.pos};
-	if (result.found)
-	{
-		return {{imp.controls + pos, imp.slots + pos}, false};
-	}
-	if (::fast_io::details::str_swiss_table_need_grow(imp.counts, imp.cap))
+	bool inserted{!result.found};
+	if (inserted && ::fast_io::details::str_swiss_table_need_grow(imp.counts, imp.cap)) [[likely]]
 	{
 		::fast_io::details::str_swiss_map_grow<allocator_type, hasher, char_type>(
 			imp, hash);
@@ -504,9 +516,19 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedt
 				  imp, key, keyn, hval)
 				  .pos;
 	}
-	::fast_io::details::str_swiss_map_insert_key_internal<allocator_type, char_type>(
-		imp, pos, key, keyn, hval, ::std::move(mapped));
-	return {{imp.controls + pos, imp.slots + pos}, true};
+	return {hval, pos, inserted};
+}
+
+template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
+constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
+{
+	auto [hval, pos, inserted] = ::fast_io::details::str_swiss_map_insert_key_with_hash_no_insert<allocator_type, hasher, char_type>(imp, key, keyn, hash);
+	if (inserted)
+	{
+		::fast_io::details::str_swiss_map_insert_key_internal<allocator_type, char_type>(
+			imp, pos, key, keyn, hval);
+	}
+	return {{imp.controls + pos, imp.slots + pos}, inserted};
 }
 
 template <typename chtype, typename valtype, typename R>
@@ -530,6 +552,7 @@ namespace fast_io
 namespace containers
 {
 template <::std::integral chtype, ::std::movable mappedtype, typename Hash, typename Allocator>
+	requires(::std::is_nothrow_move_constructible_v<mappedtype>)
 class basic_str_swiss_map
 {
 public:
@@ -708,20 +731,114 @@ public:
 		return val;
 	}
 
-	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type mapval) noexcept
+private:
+	struct emplace_key_guard
 	{
-		return ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
-			this->imp, key.ptr, key.n, hash, ::std::move(mapval));
-	}
-	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type mapval) noexcept
+		::fast_io::details::str_swiss_map_imp_common<char_type, mapped_type> *pimp{};
+		::std::size_t oldleftmost;
+	};
+	template <typename... Args>
+		requires ::std::constructible_from<mapped_type, Args...>
+	constexpr insert_result_type emplace_key_common(char_type const *key, ::std::size_t keyn, Args &&...args) noexcept(::std::is_nothrow_constructible_v<mapped_type, Args...>)
 	{
-		auto res = ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
-			this->imp, key.ptr, key.n, hash, ::std::move(mapval));
-		if (!res.inserted)
+		if constexpr (::std::is_nothrow_constructible_v<mapped_type, Args...>)
 		{
-			res.position.slots->val = ::std::move(mapval);
+			auto res = ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
+				this->imp, key, keyn, hash);
+			if (res.inserted)
+			{
+				::std::construct_at(__builtin_addressof(res.position.slots->val), ::std::forward<Args>(args)...);
+			}
+			return res;
 		}
-		return res;
+		else
+		{
+			auto [hval, pos, inserted] = ::fast_io::details::str_swiss_map_insert_key_with_hash_no_insert<allocator_type, hasher, char_type>(
+				this->imp, key, keyn, hash);
+			auto ctrlptr{this->imp.controls + pos};
+			auto slotptr{this->imp.slots + pos};
+			if (inserted)
+			{
+				::std::construct_at(__builtin_addressof(slotptr->val), ::std::forward<Args>(args)...);
+				::fast_io::details::str_swiss_map_insert_key_internal_computed_slot_controls<allocator_type, char_type>(
+					this->imp, pos, key, keyn, hval, ctrlptr, slotptr);
+			}
+			return {{ctrlptr, slotptr}, inserted};
+		}
+	}
+
+public:
+	template <typename... Args>
+		requires ::std::constructible_from<mapped_type, Args...>
+	constexpr insert_result_type emplace_key(key_string_view_type key, Args &&...args) noexcept(::std::is_nothrow_constructible_v<mapped_type, Args...>)
+	{
+		return this->emplace_key_common(key.ptr, key.n, ::std::forward<Args>(args)...);
+	}
+
+	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type const &mapval) noexcept(::std::is_nothrow_copy_constructible_v<mapped_type>)
+	{
+		return this->emplace_key_common(key.ptr, key.n, mapval);
+	}
+	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type &&mapval) noexcept
+	{
+		return this->emplace_key_common(key.ptr, key.n, ::std::move(mapval));
+	}
+
+	template <typename... Args>
+		requires ::std::constructible_from<mapped_type, Args...>
+	constexpr insert_result_type emplace_key_or_assign(key_string_view_type key, Args &&...args) noexcept(::std::is_nothrow_copy_constructible_v<mapped_type>)
+	{
+		if constexpr (::std::is_nothrow_constructible_v<mapped_type, Args...>)
+		{
+			auto res = ::fast_io::details::str_swiss_map_insert_key_with_hash<allocator_type, hasher, char_type>(
+				this->imp, key.ptr, key.n, hash);
+			if constexpr (::std::is_trivially_destructible_v<mapped_type>)
+			{
+				::std::construct_at(__builtin_addressof(res.position.slots->val), ::std::forward<Args>(args)...);
+			}
+			else
+			{
+				bool inserted{res.inserted};
+				auto newptr{__builtin_addressof(res.position.slots->val)};
+				if (inserted)
+				{
+					::std::construct_at(newptr, ::std::forward<Args>(args)...);
+				}
+				else
+				{
+					::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
+				}
+			}
+			return res;
+		}
+		else
+		{
+			auto [hval, pos, inserted] = ::fast_io::details::str_swiss_map_insert_key_with_hash_no_insert<allocator_type, hasher, char_type>(
+				this->imp, key.ptr, key.n, hash);
+			auto ctrlptr{this->imp.controls + pos};
+			auto slotptr{this->imp.slots + pos};
+			auto newptr{__builtin_addressof(slotptr->val)};
+			if (inserted)
+			{
+				::std::construct_at(newptr, ::std::forward<Args>(args)...);
+				::fast_io::details::str_swiss_map_insert_key_internal_computed_slot_controls<allocator_type, char_type>(
+					this->imp, pos, key.ptr, key.n, hval, ctrlptr, slotptr);
+			}
+			else
+			{
+				::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
+			}
+			return {{ctrlptr, slotptr}, inserted};
+		}
+	}
+
+	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type const &mapval) noexcept(::std::is_nothrow_copy_constructible_v<mapped_type>)
+	{
+		return this->emplace_key_or_assign(key, mapval);
+	}
+	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type &&mapval) noexcept
+	{
+		return this->emplace_key_or_assign(key, ::std::move(mapval));
 	}
 
 private:
