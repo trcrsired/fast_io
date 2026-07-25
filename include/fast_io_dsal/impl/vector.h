@@ -33,16 +33,32 @@ inline void *grow_to_byte_size_iter_impl(vector_model &imp, void *iter, ::std::s
 	::std::size_t const old_size{static_cast<::std::size_t>(old_curr_ptr - old_begin_ptr)};
 	::std::size_t const old_capacity{static_cast<::std::size_t>(imp.end_ptr - old_begin_ptr)};
 
-	auto newres = allocator::allocate_aligned_at_least(alignment, newcap);
-	auto begin_ptr = reinterpret_cast<::std::byte *>(newres.ptr);
-	auto newiter = ::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(old_begin_ptr), reinterpret_cast<::std::byte const *>(iter),
-																	 reinterpret_cast<::std::byte *>(begin_ptr));
-	::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(iter), reinterpret_cast<::std::byte const *>(old_curr_ptr),
-													  reinterpret_cast<::std::byte *>(newiter + gap));
-	allocator::deallocate_aligned_n(old_begin_ptr, alignment, old_capacity);
+	::std::byte *begin_ptr;
+	::std::size_t newrescount;
+	::std::byte *newiter;
+#if 0
+	if (iter == old_curr_ptr)
+	{
+		auto newres = allocator::reallocate_aligned_n_at_least(old_begin_ptr, old_capacity, alignment, newcap);
+		begin_ptr = reinterpret_cast<::std::byte *>(newres.ptr);
+		newrescount = newres.count;
+		newiter = begin_ptr + old_size;
+	}
+	else
+#endif
+	{
+		auto newres = allocator::allocate_aligned_at_least(alignment, newcap);
+		begin_ptr = reinterpret_cast<::std::byte *>(newres.ptr);
+		newrescount = newres.count;
+		newiter = ::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(old_begin_ptr), reinterpret_cast<::std::byte const *>(iter),
+																	reinterpret_cast<::std::byte *>(begin_ptr));
+		::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(iter), reinterpret_cast<::std::byte const *>(old_curr_ptr),
+														  reinterpret_cast<::std::byte *>(newiter + gap));
+		allocator::deallocate_aligned_n(old_begin_ptr, alignment, old_capacity);
+	}
 	imp.begin_ptr = begin_ptr;
 	imp.curr_ptr = begin_ptr + old_size;
-	imp.end_ptr = begin_ptr + (newres.count / size * size);
+	imp.end_ptr = begin_ptr + (newrescount / size * size);
 	return newiter;
 }
 

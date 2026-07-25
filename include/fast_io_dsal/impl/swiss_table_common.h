@@ -3,6 +3,10 @@
 namespace fast_io::details
 {
 
+inline constexpr ::std::uint_fast8_t swiss_table_group_shifter{4u};
+inline constexpr ::std::size_t swiss_table_group_counts{16};
+static_assert(1 << swiss_table_group_shifter == swiss_table_group_counts);
+
 struct swiss_table_imp_common
 {
 	::std::uint_least8_t *controls;
@@ -155,9 +159,9 @@ inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::siz
 	{
 		::fast_io::fast_terminate();
 	}
-	if (newcap < 8)
+	if (newcap < ::fast_io::details::swiss_table_group_counts)
 	{
-		newcap = 8;
+		newcap = ::fast_io::details::swiss_table_group_counts;
 	}
 	return newcap;
 }
