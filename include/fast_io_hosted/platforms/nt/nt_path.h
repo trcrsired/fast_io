@@ -51,7 +51,7 @@ struct rtl_alloc_guard
 
 	char16_t *ptr{};
 	inline constexpr rtl_alloc_guard() noexcept = default;
-	inline constexpr rtl_alloc_guard(char16_t *ptr) noexcept : ptr{ptr}
+	inline constexpr rtl_alloc_guard(char16_t *pptr) noexcept : ptr{pptr}
 	{}
 
 	inline constexpr rtl_alloc_guard(rtl_alloc_guard const &) = delete;
