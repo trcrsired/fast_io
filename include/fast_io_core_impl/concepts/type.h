@@ -117,8 +117,10 @@ enum class seekdir : ::std::uint_least8_t
 	end = 2, // SEEK_END
 };
 
-using uintfpos_t = ::std::uintmax_t;
-using intfpos_t = ::std::intmax_t;
+using uintfpos_t = ::std::conditional_t<(sizeof(::std::size_t) < sizeof(::std::uint_fast64_t)), ::std::uint_fast64_t, ::std::size_t>;
+using intfpos_t = ::std::make_signed_t<uintfpos_t>;
+using uint32_size_based_t = ::std::conditional_t<(sizeof(::std::size_t) < sizeof(::std::uint_fast32_t)), ::std::size_t, ::std::uint_fast32_t>;
+using int32_size_based_t = ::std::make_signed_t<uint32_size_based_t>;
 
 struct io_construct_t
 {
