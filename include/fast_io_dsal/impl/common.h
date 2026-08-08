@@ -100,6 +100,27 @@ inline constexpr auto operator==(handle_holder<handle> left, handle_holder<handl
 	return left.get() == right.get();
 }
 
+template <typename sztype>
+inline constexpr sztype cal_grow_twice_size_size_based(sztype cap) noexcept
+{
+	constexpr sztype mx_value2{::std::numeric_limits<sztype>::max()};
+	constexpr sztype mx_value{mx_value2};
+	constexpr sztype mx_half_value{mx_value >> 1u};
+	if (cap == mx_value)
+	{
+		::fast_io::fast_terminate();
+	}
+	else if (mx_half_value < cap)
+	{
+		return mx_value;
+	}
+	else if (!cap)
+	{
+		return 1u;
+	}
+	return static_cast<sztype>(cap << 1u);
+}
+
 template <::std::size_t size, bool trivial>
 inline constexpr ::std::size_t cal_grow_twice_size(::std::size_t cap) noexcept
 {
@@ -110,22 +131,33 @@ inline constexpr ::std::size_t cal_grow_twice_size(::std::size_t cap) noexcept
 	{
 		::fast_io::fast_terminate();
 	}
-	else if (cap > mx_half_value)
+	else if (mx_half_value < cap)
 	{
-		if constexpr (trivial)
-		{
-			return mx_value;
-		}
-		else
-		{
-			return 1;
-		}
+		return mx_value;
 	}
-	else if (cap == 0)
+	else if (!cap)
 	{
 		return size;
 	}
 	return static_cast<::std::size_t>(cap << 1);
+}
+
+template <::std::unsigned_integral T>
+inline constexpr T reduce_sizet_to_small_sizetype(::std::size_t count) noexcept
+{
+	if constexpr (sizeof(::std::size_t) <= sizeof(T))
+	{
+		return static_cast<T>(count);
+	}
+	else
+	{
+		constexpr T mx{::std::numeric_limits<T>::max()};
+		if (mx < count) [[unlikely]]
+		{
+			return mx;
+		}
+		return static_cast<T>(count);
+	}
 }
 
 } // namespace fast_io::containers::details
