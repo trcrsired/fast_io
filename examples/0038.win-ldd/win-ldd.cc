@@ -85,9 +85,13 @@ int main(int argc, char const **argv)
 try
 #endif
 {
-	if (argc == 0)
+	if (argc < 2)
 	{
-		return 1;
+		if (argc == 0)
+		{
+			return 1;
+		}
+		::fast_io::io::perr("Usage:", ::fast_io::mnp::os_c_str(*argv), " <.exe>...\n");
 	}
 	::fast_io::out_buf_type obf(::fast_io::out());
 	::fast_io::span<char const *> args(argv + 1, argc - 1);
