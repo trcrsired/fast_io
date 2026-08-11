@@ -92,6 +92,7 @@ try
 			return 1;
 		}
 		::fast_io::io::perr("Usage:", ::fast_io::mnp::os_c_str(*argv), " <.exe>...\n");
+		return 1;
 	}
 	::fast_io::out_buf_type obf(::fast_io::out());
 	::fast_io::span<char const *> args(argv + 1, argc - 1);
