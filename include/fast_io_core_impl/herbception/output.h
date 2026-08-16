@@ -49,7 +49,7 @@ inline constexpr void herbception_scatter_write_callback(void *cookie, ::std::io
 	if constexpr (sizeof(output) <= sizeof(void *) && ::std::is_trivially_copyable_v<output>)
 	{
 		output otm;
-		::std::memcpy(__builtin_addressof(otm), __builtin_addressof(cookie), sizeof(output));
+		::fast_io::details::my_memcpy(__builtin_addressof(otm), __builtin_addressof(cookie), sizeof(output));
 		::fast_io::operations::scatter_write_all_bytes(otm, reinterpret_cast<fast_io_io_scatter_const_may_alias_ptr>(base), n);
 	}
 	else
@@ -93,7 +93,7 @@ inline constexpr void print_define_herbception_impl(output otm, ::std::error_dom
 	void *cookie{};
 	if constexpr (sizeof(output) <= sizeof(void *) && ::std::is_trivially_copyable_v<output>)
 	{
-		::std::memcpy(__builtin_addressof(cookie), __builtin_addressof(otm), sizeof(output));
+		::fast_io::details::my_memcpy(__builtin_addressof(cookie), __builtin_addressof(otm), sizeof(output));
 	}
 	else
 	{
