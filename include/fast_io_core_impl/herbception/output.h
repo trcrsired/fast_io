@@ -86,8 +86,9 @@ inline constexpr ::std::error_reporter_encoding compute_herbception_encoding() n
 template <::std::integral char_type>
 inline constexpr ::std::error_reporter_encoding herbception_encoding_impl = ::fast_io::details::compute_herbception_encoding<char_type>();
 
-template <typename output, ::std::integral char_type>
-inline constexpr void print_define_herbception_impl(output otm, ::std::error_domain_singleton const *domain, ::std::size_t code, ::std::error_query_information info)
+template <typename output>
+inline constexpr void print_define_herbception_impl(output otm, ::std::error_domain_singleton const *domain, ::std::size_t code,
+													::std::error_reporter_encoding encoding, ::std::error_query_information info)
 {
 	void *cookie{};
 	if constexpr (sizeof(output) <= sizeof(void *) && ::std::is_trivially_copyable_v<output>)
@@ -98,16 +99,14 @@ inline constexpr void print_define_herbception_impl(output otm, ::std::error_dom
 	{
 		cookie = __builtin_addressof(otm);
 	}
-	constexpr ::std::error_reporter_encoding encoding{};
-	domain->do_query_information(code, ::fast_io::details::herbception_encoding_impl<char_type>,
-								 cookie, ::fast_io::details::herbception_scatter_write_callback<output>);
+	domain->do_query_information(code, encoding, cookie, ::fast_io::details::herbception_scatter_write_callback<output>, info);
 }
 } // namespace details
 
 template <::std::integral char_type, typename output>
 inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::manipulators::herbception_query_information>, output otm, ::fast_io::manipulators::herbception_query_information const &info)
 {
-	::fast_io::details::print_define_herbception_impl(otm, info.domain, info.code, info.info);
+	::fast_io::details::print_define_herbception_impl(otm, info.domain, info.code, ::fast_io::details::herbception_encoding_impl<char_type>, info.info);
 }
 
 } // namespace fast_io
