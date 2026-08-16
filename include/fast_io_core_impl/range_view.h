@@ -83,8 +83,8 @@ inline constexpr void print_freestanding(output &&outstm, Args &&...args);
 }
 
 template <::std::integral char_type, ::std::input_iterator It, typename output>
-inline constexpr void print_define(io_reserve_type_t<char_type, range_view_t<char_type, It>>, output out,
-								   range_view_t<char_type, It> t)
+inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, range_view_t<char_type, It>>, output out,
+								   ::fast_io::range_view_t<char_type, It> t)
 {
 	if (t.begin == t.end)
 	{

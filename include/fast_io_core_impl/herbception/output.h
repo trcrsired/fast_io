@@ -99,7 +99,7 @@ inline constexpr void print_define_herbception_impl(output otm, ::std::error_dom
 	{
 		cookie = __builtin_addressof(otm);
 	}
-	domain->do_query_information(code, encoding, cookie, ::fast_io::details::herbception_scatter_write_callback<output>, info);
+	domain->do_query_information(code, info, encoding, cookie, ::fast_io::details::herbception_scatter_write_callback<output>);
 }
 } // namespace details
 
