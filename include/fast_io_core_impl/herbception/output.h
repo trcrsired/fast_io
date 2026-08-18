@@ -100,6 +100,10 @@ template <typename output>
 inline constexpr void print_define_herbception_impl(output otm, ::std::error_domain_singleton const *domain, ::std::size_t code,
 													::std::error_reporter_encoding encoding, ::std::error_query_information info)
 {
+	if (domain == nullptr) [[unlikely]]
+	{
+		return;
+	}
 	void *cookie{};
 	if constexpr (sizeof(output) <= sizeof(void *) && ::std::is_trivially_copyable_v<output>)
 	{
