@@ -6,7 +6,7 @@ namespace fast_io
 namespace manipulators
 {
 
-struct herbception_query_information
+struct herbceptions_query_information
 {
 	using manip_tag = ::fast_io::manip_tag_t;
 	::std::error_domain_singleton const *domain{};
@@ -14,24 +14,34 @@ struct herbception_query_information
 	::std::error_query_information info{};
 };
 
-inline constexpr ::fast_io::manipulators::herbception_query_information name(::std::error const &e) noexcept
+inline constexpr ::fast_io::manipulators::herbceptions_query_information name(::std::error const &e) noexcept
 {
 	return {e.domain(), e.code(), ::std::error_query_information::name};
 }
 
-inline constexpr ::fast_io::manipulators::herbception_query_information message(::std::error const &e) noexcept
+inline constexpr ::fast_io::manipulators::herbceptions_query_information message(::std::error const &e) noexcept
 {
 	return {e.domain(), e.code(), ::std::error_query_information::message};
 }
 
-inline constexpr ::fast_io::manipulators::herbception_query_information name_message(::std::error const &e) noexcept
+inline constexpr ::fast_io::manipulators::herbceptions_query_information name_message(::std::error const &e) noexcept
 {
 	return {e.domain(), e.code(), ::std::error_query_information::name_message};
 }
 
-inline constexpr ::fast_io::manipulators::herbception_query_information print_alias_define(::fast_io::io_alias_t, ::std::error const &e) noexcept
+inline constexpr ::fast_io::manipulators::herbceptions_query_information posix_equivalent_name(::std::error const &e) noexcept
 {
-	return {e.domain(), e.code(), ::std::error_query_information::name_message};
+	return {::std::error_domain<::std::errc>::domain(), ::std::error_domain<::std::errc>::code(e.to_errc()), ::std::error_query_information::name};
+}
+
+inline constexpr ::fast_io::manipulators::herbceptions_query_information posix_equivalent_message(::std::error const &e) noexcept
+{
+	return {::std::error_domain<::std::errc>::domain(), ::std::error_domain<::std::errc>::code(e.to_errc()), ::std::error_query_information::name_message};
+}
+
+inline constexpr ::fast_io::manipulators::herbceptions_query_information posix_equivalent_name_message(::std::error const &e) noexcept
+{
+	return {::std::error_domain<::std::errc>::domain(), ::std::error_domain<::std::errc>::code(e.to_errc()), ::std::error_query_information::name_message};
 }
 
 } // namespace manipulators
@@ -104,9 +114,14 @@ inline constexpr void print_define_herbception_impl(output otm, ::std::error_dom
 } // namespace details
 
 template <::std::integral char_type, typename output>
-inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::manipulators::herbception_query_information>, output otm, ::fast_io::manipulators::herbception_query_information const &info)
+inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::manipulators::herbceptions_query_information>, output otm, ::fast_io::manipulators::herbceptions_query_information const &info)
 {
 	::fast_io::details::print_define_herbception_impl(otm, info.domain, info.code, ::fast_io::details::herbception_encoding_impl<char_type>, info.info);
+}
+
+inline constexpr ::fast_io::manipulators::herbceptions_query_information print_alias_define(::fast_io::io_alias_t, ::std::error const &e) noexcept
+{
+	return {e.domain(), e.code(), ::std::error_query_information::name_message};
 }
 
 } // namespace fast_io
