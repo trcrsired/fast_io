@@ -59,7 +59,7 @@ namespace details
 #if __has_cpp_attribute(__gnu__::__pure__)
 [[__gnu__::__pure__]]
 #endif
-inline constexpr auto posix_clock_id_to_native_value(posix_clock_id pcid)
+inline constexpr auto posix_clock_id_to_native_value(posix_clock_id pcid) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	switch (pcid)
@@ -180,7 +180,7 @@ inline constexpr auto posix_clock_id_to_native_value(posix_clock_id pcid)
 #if __has_cpp_attribute(__gnu__::__pure__)
 [[__gnu__::__pure__]]
 #endif
-inline ::std::int_least64_t win32_query_performance_frequency()
+inline ::std::int_least64_t win32_query_performance_frequency() FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::int_least64_t val{};
 	if (!::fast_io::win32::QueryPerformanceFrequency(__builtin_addressof(val)))
@@ -197,7 +197,7 @@ inline ::std::int_least64_t win32_query_performance_frequency()
 #if __has_cpp_attribute(__gnu__::__pure__)
 [[__gnu__::__pure__]]
 #endif
-inline unix_timestamp win32_query_performance_frequency_to_unix_timestamp()
+inline unix_timestamp win32_query_performance_frequency_to_unix_timestamp() FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {0, uint_least64_subseconds_per_second /
 				   static_cast<::std::uint_least64_t>(win32_query_performance_frequency())};
@@ -210,7 +210,7 @@ inline
 	constexpr
 #endif
 	unix_timestamp
-	posix_clock_getres([[maybe_unused]] posix_clock_id pclk_id)
+	posix_clock_getres([[maybe_unused]] posix_clock_id pclk_id) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__CYGWIN__))
 	switch (pclk_id)
