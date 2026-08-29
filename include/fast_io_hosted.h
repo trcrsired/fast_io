@@ -24,10 +24,11 @@ freestanding ones.
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES))
 
+
 #ifdef __MSDOS__
 #undef __STRICT_ANSI__
+#endif
 
-#include "fast_io_hosted/posix_code.h"
 #include "fast_io_hosted/api_encoding_converter/impl.h"
 #include "fast_io_hosted/mmap.h"
 #include "fast_io_hosted/mmap/impl.h"
@@ -39,6 +40,8 @@ freestanding ones.
 #include <time.h>
 #include "fast_io_unit/timespec.h"
 #endif
+
+#include "fast_io_hosted/posix_code.h"
 
 #if !defined(__AVR__)
 #include "fast_io_dsal/impl/common.h"
@@ -107,6 +110,3 @@ freestanding ones.
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
-
-
-#endif

@@ -10,7 +10,7 @@ inline constexpr void throw_posix_error() FAST_IO_HERBCEPTIONS_THROWS
 
 inline constexpr void throw_posix_error(int err) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::Fast_io::herbceptions::throws_errc_with_value(err);
+	::fast_io::herbceptions::throws_errc_with_value(err);
 }
 
 } // namespace fast_io

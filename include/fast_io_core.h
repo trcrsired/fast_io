@@ -45,6 +45,8 @@
 #include "fast_io_core_impl/ebcdic.h"
 #include "fast_io_core_impl/literals/literal.h"
 #include "fast_io_core_impl/char_category/impl.h"
+#include "fast_io_core_impl/simd/impl.h"
+#include "fast_io_core_impl/simd_find.h"
 #include "fast_io_core_impl/codecvt/impl.h"
 #include "fast_io_core_impl/herbceptions/throws_wrapper.h"
 
@@ -78,8 +80,6 @@
 #include "fast_io_core_impl/source_location.h"
 #endif
 
-#include "fast_io_core_impl/simd/impl.h"
-#include "fast_io_core_impl/simd_find.h"
 #include "fast_io_core_impl/integers/sto/sto_contiguous.h"
 
 #include "fast_io_core_impl/integers/chrono.h"
