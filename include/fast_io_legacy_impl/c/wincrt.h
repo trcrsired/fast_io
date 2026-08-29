@@ -207,7 +207,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, char const *last)
+inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, char const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t diff{static_cast<::std::size_t>(last - first)};
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
@@ -326,7 +326,7 @@ template <::std::integral char_type>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline bool wincrt_fp_underflow_impl(FILE *__restrict fpp)
+inline bool wincrt_fp_underflow_impl(FILE *__restrict fpp) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (fpp == ::fast_io::win32::wincrt_acrt_iob_func(0))
 	{
@@ -494,7 +494,7 @@ inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_io_obser
 
 template <::std::integral char_type>
 inline void write_all_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
-											::std::byte const *first, ::std::byte const *last)
+											::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::wincrt_fp_write_cold_impl(ciob.fp, reinterpret_cast<char const *>(first),
 												  reinterpret_cast<char const *>(last));
