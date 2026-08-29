@@ -33,8 +33,8 @@ template <typename instmtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr
-	typename instmtype::input_char_type *read_some_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
-															 typename instmtype::input_char_type *last)
+typename instmtype::input_char_type *read_some_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
+														 typename instmtype::input_char_type *last)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_read_some_underflow_define<instmtype>)
@@ -196,7 +196,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 			{
 				if (it == first)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				first = it;
 				char_type *curr{ibuffer_curr(insm)};
@@ -217,7 +217,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 			{
 				if (it == first)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 			}
 		}
@@ -239,7 +239,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				}
 				if (!sz)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				char_type *curr{ibuffer_curr(insm)};
 				char_type *ed{ibuffer_end(insm)};
@@ -268,7 +268,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				}
 				if (!sz)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 			}
 		}
@@ -319,7 +319,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 			{
 				if (it == first)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				first = it;
 				char_type *curr{ibuffer_curr(insm)};
@@ -340,7 +340,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 			{
 				if (it == first)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 			}
 		}
@@ -362,7 +362,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				}
 				if (!sz)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				char_type *curr{ibuffer_curr(insm)};
 				char_type *ed{ibuffer_end(insm)};
@@ -391,7 +391,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				}
 				if (!sz)
 				{
-					::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 			}
 		}

@@ -218,7 +218,7 @@ inline constexpr void pread_all_cold_impl(instmtype insm, typename instmtype::in
 			}
 			if (nit == first)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			first = nit;
 		}
@@ -238,7 +238,7 @@ inline constexpr void pread_all_cold_impl(instmtype insm, typename instmtype::in
 			}
 			if (nit == first)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			first = nit;
 		}
@@ -294,7 +294,7 @@ inline constexpr void pread_all_bytes_cold_impl(instmtype insm, ::std::byte *fir
 			}
 			if (nit == first)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			off = ::fast_io::fposoffadd_nonegative(off, nit - first);
 			first = nit;
@@ -315,7 +315,7 @@ inline constexpr void pread_all_bytes_cold_impl(instmtype insm, ::std::byte *fir
 			}
 			if (nit == first)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			off = ::fast_io::fposoffadd_nonegative(off, sz);
 			first = nit;

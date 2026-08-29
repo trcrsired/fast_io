@@ -12,10 +12,14 @@
 #include <type_traits>
 #include <concepts>
 #include <cstdint>
+#ifdef __HERBCEPTIONS__
+#include <herbceptions/error>
+#endif
 
 #include "fast_io_dsal/impl/misc/push_macros.h"
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 
+#include "fast_io_core_impl/freestanding/herbceptions.h"
 #include "fast_io_core_impl/freestanding/addressof.h"
 #include "fast_io_core_impl/concepts/impl.h"
 

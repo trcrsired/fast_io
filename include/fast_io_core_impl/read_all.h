@@ -19,7 +19,7 @@ read_all_impl_decay_cold(input in, typename input::char_type *first, typename in
 		{
 			if constexpr (throweh)
 			{
-				throw_parse_code(parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			else
 			{

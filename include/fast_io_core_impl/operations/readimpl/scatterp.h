@@ -172,7 +172,7 @@ scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 			}
 			if (!retpos)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			off = ::fast_io::fposoffadd_scatters(off, pscatters, ret);
 			::std::size_t pisc{ret.position_in_scatter};
