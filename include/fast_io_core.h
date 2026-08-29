@@ -46,7 +46,7 @@
 #include "fast_io_core_impl/literals/literal.h"
 #include "fast_io_core_impl/char_category/impl.h"
 #include "fast_io_core_impl/codecvt/impl.h"
-#include "fast_io_core_impl/herbceptions/impl.h"
+#include "fast_io_core_impl/herbceptions/throws_wrapper.h"
 
 #if __cpp_lib_three_way_comparison >= 201907L
 #include "fast_io_core_impl/compare.h"
@@ -65,6 +65,7 @@
 #include "fast_io_core_impl/mode.h"
 #include "fast_io_core_impl/perms.h"
 #include "fast_io_core_impl/operations/impl.h"
+#include "fast_io_core_impl/herbceptions/impl.h"
 
 // This should provide an option macro to disable any generation for table in freestanding environments.
 #include "fast_io_core_impl/integers/integer.h"
