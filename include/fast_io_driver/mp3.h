@@ -41,7 +41,8 @@ inline mp3_duration_result compute_mp3_duration(void const *first, void const *l
 	::std::uint_least8_t mp3_header_flag;
 	::memcpy(__builtin_addressof(mp3_header_flag), firstbyte + 6, 1);
 	constexpr ::std::size_t mp3extendedheadersize{6};
-	if (mp3_header_flag & UINT32_C(0x40))
+	constexpr ::std::uint_least32_t zerox40{0x40};
+	if (mp3_header_flag & zerox40)
 	{
 		if (static_cast<::std::size_t>(lastbyte - firstbyte) < mp3extendedheadersize)
 		{
