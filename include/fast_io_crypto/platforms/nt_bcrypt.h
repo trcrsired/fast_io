@@ -101,7 +101,7 @@ inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t cons
 		::fast_io::win32::BCryptOpenAlgorithmProvider(__builtin_addressof(phalgo), name, nullptr, 0u)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	bcrypt_algo_guard guard;
 	guard.phalgo = phalgo;
@@ -110,7 +110,7 @@ inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t cons
 												 sizeof(hash_digest_length), __builtin_addressof(result_length), 0u);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	::fast_io::details::local_operator_new_array_ptr<::std::byte> locarr(hash_digest_length);
 	void *hash_handle{};
@@ -118,7 +118,7 @@ inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t cons
 												0x00000020);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	g.phAlgorithm = guard.release();
 	g.hashHandle = hash_handle;
@@ -156,7 +156,7 @@ inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::s
 			hashHandle, first, static_cast<::std::uint_least32_t>(static_cast<::std::size_t>(last - first)), 0u)};
 		if (ntstatus)
 		{
-			throw_nt_error(ntstatus);
+			::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 		}
 	}
 	else
@@ -174,7 +174,7 @@ inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::s
 				::fast_io::win32::BCryptHashData(hashHandle, first, static_cast<::std::uint_least32_t>(mn), 0u)};
 			if (ntstatus)
 			{
-				throw_nt_error(ntstatus);
+				::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 			}
 			sz -= mn;
 			first += mn;
@@ -187,7 +187,7 @@ inline void ntbcrypt_do_final_impl(void *hashhandle, ::std::byte *buffer, ::std:
 	::std::uint_least32_t ntstatus{::fast_io::win32::BCryptFinishHash(hashhandle, buffer, bcrypt_size, 0u)};
 	if (ntstatus)
 	{
-		throw_nt_error(ntstatus);
+		::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 	}
 }
 

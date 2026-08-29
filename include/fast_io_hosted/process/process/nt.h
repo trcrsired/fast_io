@@ -44,7 +44,7 @@ inline void nt_wait_and_close_user_process_or_thread(void *handle) noexcept(!thr
 	{
 		if (status) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 	}
 }
@@ -865,7 +865,7 @@ inline nt_wait_status wait(nt_family_process_observer<family> ppob) noexcept(!th
 	{
 		if constexpr (throw_eh)
 		{
-			throw_nt_error(0xC0000008);
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000008);
 		}
 		else
 		{
@@ -879,7 +879,7 @@ inline nt_wait_status wait(nt_family_process_observer<family> ppob) noexcept(!th
 	{
 		if constexpr (throw_eh)
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		else
 		{
@@ -899,7 +899,7 @@ inline nt_wait_status wait(nt_family_process_observer<family> ppob) noexcept(!th
 	{
 		if constexpr (throw_eh)
 		{
-			throw_nt_error(status2);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status2);
 		}
 		else
 		{
@@ -917,7 +917,7 @@ inline void kill(nt_family_process_observer<family> ppob, nt_wait_status exit_co
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -942,7 +942,7 @@ inline nt_process_id get_process_id(nt_family_process_observer<family> ppob) noe
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	return {pbi.UniqueProcessId};

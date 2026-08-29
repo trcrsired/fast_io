@@ -239,7 +239,7 @@ struct nt_alpc_handle FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 			ntstatus = ::fast_io::win32::nt::nt_alpc_disconnect_port<zw>(section_handle, 0);
 			if (ntstatus) [[unlikely]]
 			{
-				throw_nt_error(ntstatus);
+				::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 			}
 			section_handle = nullptr;
 		}
@@ -249,7 +249,7 @@ struct nt_alpc_handle FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 			ntstatus = ::fast_io::win32::nt::nt_alpc_disconnect_port<zw>(port_handle, 0);
 			if (ntstatus) [[unlikely]]
 			{
-				throw_nt_error(ntstatus);
+				::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 			}
 			port_handle = nullptr;
 		}
@@ -299,7 +299,7 @@ inline void *nt_family_create_alpc_ipc_server_port_impl(nt_alpc_char_type const 
 
 	if (::fast_io::details::is_invalid_dos_filename_with_size(server_name, server_name_size)) [[unlikely]]
 	{
-		throw_nt_error(3221225524);
+		::fast_io::herbceptions::throws_nt_errc_with_value(3221225524);
 	}
 
 	auto temp_ipc_name_tlc_str{concat_nt_alpc_internal_tlc_str(u"\\RPC Control\\fast_io_ipc_", ::fast_io::mnp::os_c_str_with_known_size(server_name, server_name_size))};
@@ -367,7 +367,7 @@ inline ::fast_io::win32::nt::alpc_message_attributes *nt_family_create_alpc_ipc_
 
 	if (header_size == 0) [[unlikely]]
 	{
-		throw_nt_error(3221225485);
+		::fast_io::herbceptions::throws_nt_errc_with_value(3221225485);
 	}
 
 	auto message_stroge{nt_alpc_handle<family>::alpc_message_alloc::allocate(header_size)}; // This function does not recycle
@@ -556,7 +556,7 @@ inline nt_alpc_connect_handle nt_family_alpc_ipc_server_wait_for_connect_and_wri
 	}
 	else if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	else
 	{
@@ -658,7 +658,7 @@ inline ::fast_io::win32::nt::alpc_message_attributes *nt_family_create_alpc_ipc_
 
 	if (header_size == 0) [[unlikely]]
 	{
-		throw_nt_error(3221225485);
+		::fast_io::herbceptions::throws_nt_errc_with_value(3221225485);
 	}
 
 	auto message_stroge{nt_alpc_handle<family>::alpc_message_alloc::allocate(header_size)}; // This function does not recycle
@@ -692,7 +692,7 @@ inline void *nt_family_ipc_alpc_client_connect_impl(nt_alpc_char_type const *ser
 
 	if (::fast_io::details::is_invalid_dos_filename_with_size(server_name, server_name_size)) [[unlikely]]
 	{
-		throw_nt_error(3221225524);
+		::fast_io::herbceptions::throws_nt_errc_with_value(3221225524);
 	}
 
 	auto temp_ipc_name_tlc_str{concat_nt_alpc_internal_tlc_str(u"\\RPC Control\\fast_io_ipc_", ::fast_io::mnp::os_c_str_with_known_size(server_name, server_name_size))};
@@ -732,7 +732,7 @@ inline void *nt_family_ipc_alpc_client_connect_impl(nt_alpc_char_type const *ser
 
 	if (receive_size > nt_alpc_max_message_length) [[unlikely]]
 	{
-		throw_nt_error(0xc0000701);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000701);
 	}
 
 	auto tmp{static_cast<::fast_io::win32::nt::alpc_message *>(nt_ipc_alpc_thread_local_heap_allocate_guard::alloc::allocate(nt_alpc_max_message_length))};
@@ -848,7 +848,7 @@ inline ::std::byte *nt_alpc_read_or_pread_some_bytes_common_impl(void *__restric
 	}
 	else if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	else [[likely]]
 	{
@@ -942,7 +942,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_alpc_ipc_un
 {
 	if (!wiob) [[unlikely]]
 	{
-		throw_nt_error(0xc0000008);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000008);
 	}
 
 	switch (wiob.handle->status)
@@ -988,7 +988,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_alpc_ipc_un
 	}
 	default:
 	{
-		throw_nt_error(0x0c0000701);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0x0c0000701);
 	}
 	}
 }
@@ -999,7 +999,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_alpc_
 {
 	if (!wiob) [[unlikely]]
 	{
-		throw_nt_error(0xc0000008);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000008);
 	}
 
 	switch (wiob.handle->status)
@@ -1031,7 +1031,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_alpc_
 	}
 	default:
 	{
-		throw_nt_error(0x0c0000701);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0x0c0000701);
 	}
 	}
 }
@@ -1269,7 +1269,7 @@ inline basic_nt_family_alpc_ipc_client<client_family, client_ch_type> wait_for_c
 	}
 	else
 	{
-		throw_nt_error(0xc0000008);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000008);
 	}
 }
 
@@ -1291,7 +1291,7 @@ inline void accept_connect(
 	}
 	else
 	{
-		throw_nt_error(0xc0000008);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000008);
 	}
 }
 
@@ -1305,7 +1305,7 @@ inline void disconnect(basic_nt_family_alpc_ipc_universal_observer<client_family
 	}
 	else
 	{
-		throw_nt_error(0xc0000008);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xc0000008);
 	}
 }
 

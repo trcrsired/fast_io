@@ -54,13 +54,13 @@ inline ::std::size_t nt_load_file_get_file_size(void *handle)
 		::fast_io::win32::nt::file_information_class::FileStandardInformation)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	if constexpr (sizeof(::std::size_t) < sizeof(::std::uint_least64_t))
 	{
 		if (SIZE_MAX < fsi.end_of_file)
 		{
-			throw_nt_error(0xC0000040 /*STATUS_SECTION_TOO_BIG*/);
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000040 /*STATUS_SECTION_TOO_BIG*/);
 		}
 	}
 	return static_cast<::std::size_t>(fsi.end_of_file);

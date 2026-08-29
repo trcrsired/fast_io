@@ -377,12 +377,12 @@ inline unix_timestamp nt_posix_clock_gettime_boottime_impl() noexcept
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	if (counter < 0 || freq <= 0) [[unlikely]]
 	{
-		throw_nt_error(0xC0000003);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000003);
 	}
 
 	::std::uint_least64_t ucounter{static_cast<::std::uint_least64_t>(counter)};
@@ -415,7 +415,7 @@ inline unix_timestamp nt_posix_clock_gettime_process_or_thread_time_impl()
 
 		if (status) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		kernel_time = kut.KernelTime;
@@ -436,7 +436,7 @@ inline unix_timestamp nt_posix_clock_gettime_process_or_thread_time_impl()
 
 		if (status) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		kernel_time = kut.KernelTime;
@@ -457,7 +457,7 @@ inline ::std::uint_least64_t nt10x_get_auxiliary_counter_frequency()
 	auto status{::fast_io::win32::nt::nt_query_auxiliary_counter_frequency<zw>(__builtin_addressof(feq))};
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return feq;
 }
@@ -681,12 +681,12 @@ inline basic_timestamp<off_to_epoch> nt_family_clock_settime(posix_clock_id pclk
 			auto ntstatus{win32::nt::nt_set_system_time<(family == nt_family::zw)>(__builtin_addressof(tms), __builtin_addressof(old_tms))};
 			if (ntstatus)
 			{
-				throw_nt_error(ntstatus);
+				::fast_io::herbceptions::throws_nt_errc_with_value(ntstatus);
 			}
 			return to_win32_timestamp_ftu64(old_tms);
 		}
 		default:
-			throw_nt_error(0xC00000EF);
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC00000EF);
 		};
 	}
 	else

@@ -103,7 +103,7 @@ inline void nt_unlinkat_impl(void *dirhd, char16_t const *path_c_str, ::std::siz
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -127,7 +127,7 @@ inline void nt_mkdirat_impl(void *dirhd, char16_t const *path_c_str, ::std::size
 
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -145,7 +145,7 @@ inline void nt_faccessat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 	case ::fast_io::access_how::r_ok:
 		break;
 	default:
-		throw_nt_error(0xC0000003);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000003);
 	}
 
 	nt_open_mode md{
@@ -182,12 +182,12 @@ inline void nt_faccessat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 
 		if (status) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		if ((fbi.FileAttributes & 0x1) == 0x1) // READ_ONLY
 		{
-			throw_nt_error(0xC000001E); // no access
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC000001E); // no access
 		}
 		return;
 	}
@@ -226,7 +226,7 @@ inline void nt_fchmodat_impl(void *dirhd, char16_t const *path_c_str, ::std::siz
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	if ((pm & perms::owner_write) == perms::none)
@@ -251,7 +251,7 @@ inline void nt_fchmodat_impl(void *dirhd, char16_t const *path_c_str, ::std::siz
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -277,7 +277,7 @@ template <bool zw>
 
 	// Windows does not use POSIX user group system. stub it and it is perfectly fine.
 	// But nt_fchownat, zw_fchownat will not be provided since they do not exist.
-	throw_nt_error(0xC0000002);
+	::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000002);
 }
 
 template <bool zw>
@@ -360,7 +360,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 		fbi.CreationTime = 0;
 		break;
 	default:
-		throw_nt_error(0xC0000003);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000003);
 	}
 
 	switch (last_access_time.flags)
@@ -379,7 +379,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 		fbi.LastAccessTime = 0;
 		break;
 	default:
-		throw_nt_error(0xC0000003);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000003);
 	}
 
 	switch (last_modification_time.flags)
@@ -398,7 +398,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 		fbi.LastWriteTime = 0;
 		break;
 	default:
-		throw_nt_error(0xC0000003);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000003);
 	}
 
 	// If this is set to 0 in a FILE_BASIC_INFO structure passed to func then none of the attributes are changed.
@@ -412,7 +412,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -493,7 +493,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 			::std::size_t end{::fast_io::win32::nt::RtlGetFullPathName_U(oldpath_c_str, 32767 * sizeof(char16_t), buf, nullptr)};
 			if (end == 0) [[unlikely]]
 			{
-				throw_nt_error(0xC0000004);
+				::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000004);
 			}
 
 			is_root = true;
@@ -555,7 +555,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 	{
 		if (status != 0xC0000034) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 	}
 	else
@@ -575,7 +575,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 																	 ::fast_io::win32::nt::file_information_class::FileBasicInformation);
 		if (status) [[unlikely]]
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		check_file.close();
@@ -655,7 +655,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 		::fast_io::win32::nt::file_disposition_information DispInfo{1};
 		::fast_io::win32::nt::nt_set_information_file<zw>(new_file.native_handle(), __builtin_addressof(isb), __builtin_addressof(DispInfo),
 														  static_cast<::std::uint_least32_t>(sizeof(DispInfo)), ::fast_io::win32::nt::file_information_class::FileDispositionInformation);
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 #else
 #if defined(FAST_IO_USE_DJGPP_SYMLINK)
@@ -673,7 +673,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 
 	::fast_io::operations::write_all(new_file, buffer, buffer + 510);
 #else
-	throw_nt_error(0xC0000002);
+	::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000002);
 #endif
 #endif
 }
@@ -717,7 +717,7 @@ inline void nt_renameat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::st
 				static_cast<::std::uint_least32_t>(sizeof(::fast_io::win32::nt::file_rename_information) + pth_size2 + sizeof(char16_t)), file_information_class::FileRenameInformation)};
 			if (status) [[unlikely]]
 			{
-				throw_nt_error(status);
+				::fast_io::herbceptions::throws_nt_errc_with_value(status);
 			}
 		});
 }
@@ -784,7 +784,7 @@ inline void nt_linkat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std:
 
 			if (status) [[unlikely]]
 			{
-				throw_nt_error(status);
+				::fast_io::herbceptions::throws_nt_errc_with_value(status);
 			}
 		});
 }
@@ -823,7 +823,7 @@ inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *d
 
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	// ::std::size_t const bytesReturned{isb.Information};
@@ -851,7 +851,7 @@ inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *d
 #endif
 	else
 	{
-		throw_nt_error(0xC0000275u /*STATUS_NOT_A_REPARSE_POINT*/);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000275u /*STATUS_NOT_A_REPARSE_POINT*/);
 	}
 
 	return {};
@@ -868,7 +868,7 @@ inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *d
 	::fast_io::basic_nt_family_file<(zw ? nt_family::zw : nt_family::nt), char> file{
 		nt_call_determine_kernel_callback(dirhd, path_c_str, path_size, kernel, nt_create_callback<zw>{md})};
 
-	throw_nt_error(0xC0000275u /*STATUS_NOT_A_REPARSE_POINT*/);
+	::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000275u /*STATUS_NOT_A_REPARSE_POINT*/);
 
 	return {};
 #endif

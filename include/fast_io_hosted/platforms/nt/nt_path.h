@@ -7,7 +7,7 @@ inline ::std::uint_least16_t nt_filename_bytes_check(::std::size_t bytes)
 	constexpr ::std::size_t max_value{static_cast<::std::size_t>(::std::numeric_limits<::std::uint_least16_t>::max())};
 	if (max_value < bytes)
 	{
-		throw_nt_error(0xC0000106);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000106);
 	}
 	return static_cast<::std::uint_least16_t>(bytes);
 }
@@ -17,7 +17,7 @@ inline ::std::uint_least16_t strlen_to_nt_filename_bytes(::std::size_t str_sz)
 	constexpr ::std::size_t max_value{static_cast<::std::size_t>(::std::numeric_limits<::std::uint_least16_t>::max() >> 1u)};
 	if (max_value < str_sz)
 	{
-		throw_nt_error(0xC0000106);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000106);
 	}
 	return static_cast<::std::uint_least16_t>(str_sz << 1);
 }
@@ -34,13 +34,13 @@ ReactOS shows that RtlDosPathNameToNtPathName_U_WithStatus was added since Windo
 		filename, __builtin_addressof(nt_name), __builtin_addressof(part_name), __builtin_addressof(relative_name))};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 #else
 	if (!win32::nt::rtl_dos_path_name_to_nt_path_name_u(
 			filename, __builtin_addressof(nt_name), __builtin_addressof(part_name), __builtin_addressof(relative_name)))
 	{
-		throw_nt_error(0xC0000039);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000039);
 	}
 #endif
 }
@@ -196,7 +196,7 @@ inline auto nt_call_callback(void *directory, char_type const *filename, ::std::
 {
 	if (directory == nullptr)
 	{
-		throw_nt_error(0xC0000008); // STATUS_INVALID_HANDLE
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000008); // STATUS_INVALID_HANDLE
 	}
 	else if (directory == reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-3)))
 	{
@@ -232,7 +232,7 @@ inline auto nt_call_kernel_callback(void *directory, char16_t const *filename, :
 {
 	if (directory == nullptr)
 	{
-		throw_nt_error(0xC0000008); // STATUS_INVALID_HANDLE
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000008); // STATUS_INVALID_HANDLE
 	}
 	else if (directory == reinterpret_cast<void *>(::std::ptrdiff_t(-3)))
 	{
@@ -247,7 +247,7 @@ inline auto nt_call_kernel_fs_dirent_callback(void *directory, char16_t const *f
 {
 	if (directory == nullptr)
 	{
-		throw_nt_error(0xC0000008); // STATUS_INVALID_HANDLE
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000008); // STATUS_INVALID_HANDLE
 	}
 	return nt_call_kernel_common_impl(directory, filename, filename_len, callback);
 }

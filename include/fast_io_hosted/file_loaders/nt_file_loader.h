@@ -53,7 +53,7 @@ inline nt_file_loader_return_value_t nt_load_address_options_impl(::fast_io::nt_
 	status = ::fast_io::win32::nt::nt_create_section<(family == ::fast_io::nt_family::zw)>(__builtin_addressof(h_section), options.dwDesiredAccess, pobjattr, nullptr, options.flProtect, options.attributes, handle);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	::fast_io::basic_nt_family_file<family, char> map_hd{h_section};
 	void *p_map_address{};
@@ -62,7 +62,7 @@ inline nt_file_loader_return_value_t nt_load_address_options_impl(::fast_io::nt_
 	status = ::fast_io::win32::nt::nt_map_view_of_section<(family == ::fast_io::nt_family::zw)>(h_section, current_process_handle, __builtin_addressof(p_map_address), 0u, 0u, nullptr, __builtin_addressof(view_size), static_cast<::fast_io::win32::nt::section_inherit>(options.viewShare), 0u, options.flProtect);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return {reinterpret_cast<char *>(p_map_address), reinterpret_cast<char *>(p_map_address) + fsz};
 }
@@ -153,8 +153,8 @@ public:
 		address_end = ret.address_end;
 	}
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit nt_family_file_loader(::fast_io::io_kernel_t, T const &t, 
-		                                  ::fast_io::open_mode om = ::fast_io::open_mode::in,
+	inline explicit nt_family_file_loader(::fast_io::io_kernel_t, T const &t,
+										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_file_impl<family>(::fast_io::io_kernel, t, om, pm)};
@@ -215,7 +215,7 @@ public:
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, ::fast_io::io_kernel_t,
-										  ::fast_io::nt_at_entry ent, T const &t, 
+										  ::fast_io::nt_at_entry ent, T const &t,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
 	{

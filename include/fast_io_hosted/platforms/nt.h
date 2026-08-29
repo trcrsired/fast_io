@@ -61,7 +61,7 @@ inline void check_nt_status(::std::uint_least32_t status)
 {
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -282,7 +282,7 @@ inline constexpr nt_open_mode calculate_nt_open_mode(open_mode_perms ompm) noexc
 			mode.DesiredAccess |= default_write_attribute | default_read_attribute; // GENERIC_READ | GENERIC_WRITE
 		}
 	}
-	
+
 	if ((value & open_mode::no_block) == open_mode::none)
 	{
 		mode.CreateOptions |= 0x00000020; // FILE_SYNCHRONOUS_IO_NONALERT 0x00000020
@@ -353,7 +353,7 @@ inline void *nt_create_file_common(void *directory, ::fast_io::win32::nt::unicod
 		mode.FileAttributes, mode.ShareAccess, mode.CreateDisposition, mode.CreateOptions, nullptr, 0u)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return handle;
 }
@@ -498,7 +498,7 @@ inline ::std::uint_least64_t nt_calculate_current_file_offset(void *__restrict h
 																									::fast_io::win32::nt::file_information_class::FilePositionInformation)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return fps;
 }
@@ -511,7 +511,7 @@ inline ::std::int_least64_t nt_calculate_offset_impl(::fast_io::intfpos_t off)
 		constexpr ::std::int_least64_t mx{::std::numeric_limits<::std::int_least64_t>::max()};
 		if (off < 0 || off > mx)
 		{
-			throw_nt_error(0xC0000106);
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000106);
 		}
 	}
 	return static_cast<::std::int_least64_t>(off);
@@ -531,7 +531,7 @@ inline ::std::byte *nt_read_pread_some_bytes_common_impl(void *__restrict handle
 		{
 			return first;
 		}
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return first + block.Information;
 }
@@ -564,7 +564,7 @@ inline ::std::byte const *nt_write_pwrite_some_bytes_common_impl(void *__restric
 																							  ::fast_io::details::read_write_bytes_compute<::std::uint_least32_t>(first, last), pbyteoffset, nullptr)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return first + block.Information;
 }
@@ -774,7 +774,7 @@ inline void nt_flush_impl(void *handle)
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_flush_buffers_file<zw>(handle, __builtin_addressof(block))};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -790,7 +790,7 @@ inline void nt_data_sync_impl(void *handle, data_sync_flags flags [[maybe_unused
 		handle, static_cast<::std::uint_least32_t>(flags), nullptr, 0u, __builtin_addressof(block))};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 #else
 	nt_flush_impl<zw>(handle);
@@ -870,7 +870,7 @@ inline ::std::int_least64_t nt_seek64_impl(void *__restrict handle, ::std::int_l
 	auto [status, file_position] = nt_get_file_position_impl<zw>(handle, offset, s);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	::fast_io::win32::nt::io_status_block block;
 	status = ::fast_io::win32::nt::nt_set_information_file<zw>(handle, __builtin_addressof(block),
@@ -878,7 +878,7 @@ inline ::std::int_least64_t nt_seek64_impl(void *__restrict handle, ::std::int_l
 															   ::fast_io::win32::nt::file_information_class::FilePositionInformation);
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return file_position;
 }
@@ -898,7 +898,7 @@ inline void *nt_dup_impl(void *handle)
 															  __builtin_addressof(new_handle), 0, 0x00000002L, 2)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return new_handle;
 }
@@ -924,7 +924,7 @@ inline void nt_truncate_impl(void *handle, ::std::uintmax_t newfilesizem)
 																  ::fast_io::win32::nt::file_information_class::FileEndOfFileInformation)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -988,7 +988,7 @@ inline void nt_family_file_lock_common_impl(void *__restrict handle, flock_reque
 	auto status{nt_family_file_lock_common_impl<zw>(handle, req, false)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -1001,7 +1001,7 @@ inline void nt_family_file_lock_impl(void *__restrict handle, basic_flock_reques
 		constexpr int_type mx{::std::numeric_limits<::std::int_least64_t>::max()};
 		if (t.start < mn || mx < t.start || t.len < mn || mx < t.len)
 		{
-			throw_nt_error(0xC0000095); // STATUS_INTEGER_OVERFLOW
+			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000095); // STATUS_INTEGER_OVERFLOW
 		}
 	}
 	nt_family_file_lock_common_impl<zw>(handle, t);
@@ -1153,7 +1153,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 																										   ::fast_io::win32::nt::fs_information_class::FileFsDeviceInformation)};
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	auto ft{file_type_impl(ffdt.DeviceType)};
@@ -1186,7 +1186,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	::fast_io::win32::nt::file_internal_information fii;
@@ -1196,7 +1196,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	struct
@@ -1210,7 +1210,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 																										::fast_io::win32::nt::fs_information_class::FileFsVolumeInformation);
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	::fast_io::win32::nt::file_standard_information fsi;
@@ -1220,7 +1220,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 
 	if (status) [[unlikely]]
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	::std::uintmax_t file_size{static_cast<::std::uintmax_t>(fsi.end_of_file)};
@@ -1389,7 +1389,7 @@ public:
 			this->handle = nullptr; // POSIX standard says we should never call close(2) again even close syscall fails
 			if (status) [[unlikely]]
 			{
-				throw_nt_error(status);
+				::fast_io::herbceptions::throws_nt_errc_with_value(status);
 			}
 		}
 	}
@@ -1470,7 +1470,7 @@ inline void nt_create_pipe(void **hReadPipe, void **hWritePipe)
 
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	::fast_io::basic_nt_family_file<zw ? nt_family::zw : nt_family::nt, char> file{namedpipedir};
@@ -1503,7 +1503,7 @@ inline void nt_create_pipe(void **hReadPipe, void **hWritePipe)
 
 	if (status)
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	obj2.RootDirectory = ReadPipeHandle;
@@ -1515,7 +1515,7 @@ inline void nt_create_pipe(void **hReadPipe, void **hWritePipe)
 
 	if (status)
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 
 	*hReadPipe = ReadPipeHandle;

@@ -24,29 +24,10 @@ freestanding ones.
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES))
 
-#if __has_include(<stdio.h>)
-#if __has_include(<bits/error_constants.h>)
-#include <bits/error_constants.h>
-#include "fast_io_hosted/platforms/errc_default_impl.h"
-#elif __has_include(<__errc>) && !defined(__clang__)
-#include <__errc>
-#include "fast_io_hosted/platforms/errc_default_impl.h"
-#elif __has_include(<xerrc.h>) && !defined(__BIONIC__)
-#include <xerrc.h>
-#include "fast_io_hosted/platforms/errc_default_impl.h"
-#elif __has_include(<system_error>)
-#include <system_error>
-#include "fast_io_hosted/platforms/errc_default_impl.h"
-#else
-#include "fast_io_hosted/platforms/errc_impl.h"
-#endif
-
-#include "fast_io_hosted/posix_error_scatter/impl.h"
-#include "fast_io_hosted/posix_error.h"
 #ifdef __MSDOS__
 #undef __STRICT_ANSI__
-#endif
 
+#include "fast_io_hosted/posix_code.h"
 #include "fast_io_hosted/api_encoding_converter/impl.h"
 #include "fast_io_hosted/mmap.h"
 #include "fast_io_hosted/mmap/impl.h"

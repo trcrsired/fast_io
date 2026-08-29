@@ -110,7 +110,7 @@ inline nt_dirent *set_nt_dirent(nt_dirent *entry, bool start)
 		{
 			return nullptr;
 		}
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	auto id_ful_dir_info{d_info.IdFullDirInfo};
 

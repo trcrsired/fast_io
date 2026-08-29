@@ -14,6 +14,19 @@
 #include <cstdint>
 #ifdef __HERBCEPTIONS__
 #include <herbceptions/error>
+#else
+#if defined(_LIBCPP_VERSION) && \
+	__has_include(<__system_error/errc.h>)
+#include <__system_error/errc.h>
+#elif defined(__GLIBCXX__) && \
+	__has_include(<bits/error_constants.h>)
+#include <bits/error_constants.h>
+#elif defined(_MSVC_STL_UPDATE) && \
+	__has_include(<xerrc.h>)
+#include <xerrc.h>
+#else
+#include <system_error>
+#endif
 #endif
 
 #include "fast_io_dsal/impl/misc/push_macros.h"

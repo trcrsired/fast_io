@@ -131,7 +131,7 @@ public:
 			::std::destroy_at(reinterpret_cast<start_routine_tuple_type *>(start_routine_tuple));
 			alloc::deallocate_n(start_routine_tuple, 1u);
 
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		this->id_ = cid.UniqueThread;
@@ -186,12 +186,12 @@ public:
 		auto status{::fast_io::win32::nt::nt_wait_for_single_object<zw>(this->handle_, false, nullptr)};
 		if (status) [[unlikely]]
 		{
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		status = ::fast_io::win32::nt::nt_close<zw>(this->handle_);
 		if (status) [[unlikely]]
 		{
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		this->handle_ = nullptr;
 		this->id_ = nullptr;
@@ -206,7 +206,7 @@ public:
 		auto status{::fast_io::win32::nt::nt_close<zw>(this->handle_)};
 		if (status) [[unlikely]]
 		{
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		this->handle_ = nullptr;
 		this->id_ = nullptr;
@@ -243,7 +243,7 @@ public:
 
 		if (status) [[unlikely]]
 		{
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 
 		return static_cast<::std::uint_least32_t>(reinterpret_cast<::std::size_t>(tbi.ClientId.UniqueThread));
@@ -256,7 +256,7 @@ public:
 																		  __builtin_addressof(sb), static_cast<::std::uint_least32_t>(sizeof(sb)), nullptr)};
 		if (status) [[unlikely]]
 		{
-			::fast_io::throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		return static_cast<::std::uint_least32_t>(sb.NumberOfProcessors);
 	}
@@ -283,7 +283,7 @@ inline
 		nullptr)};
 	if (status) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return tbi.ClientId.UniqueThread;
 }
@@ -315,14 +315,14 @@ inline
 
 	if (count > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max()))
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto val{-static_cast<::std::int_least64_t>(count)};
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_delay_execution<zw>(false, __builtin_addressof(val))};
 	if (status) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -337,7 +337,7 @@ inline
 {
 	if (sleep_duration.seconds < 0) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	constexpr ::std::uint_least64_t mul_factor{::fast_io::uint_least64_subseconds_per_second / 1000000000u};
@@ -346,14 +346,14 @@ inline
 
 	if (win_100ns_seconds > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max())) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto val = -static_cast<::std::int_least64_t>(win_100ns_seconds);
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_delay_execution<zw>(false, __builtin_addressof(val))};
 	if (status) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -377,21 +377,21 @@ inline
 	auto const unix_to_nt_secs{static_cast<::std::int_least64_t>(unix_ts) + 11644473600};
 	if (unix_to_nt_secs < 0) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto const count{static_cast<::std::uint_least64_t>(unix_to_nt_secs) * 10000000u + static_cast<::std::uint_least64_t>(unix_subsec_ts)};
 
 	if (count > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max()))
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto nt_ts{static_cast<::std::int_least64_t>(count)};
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_delay_execution<zw>(false, __builtin_addressof(nt_ts))};
 	if (status) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 
@@ -406,7 +406,7 @@ inline
 {
 	if (expect_time.seconds < 0) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto const win32_ts{static_cast<::fast_io::win32_timestamp>(expect_time)};
@@ -416,14 +416,14 @@ inline
 
 	if (win_100ns_seconds > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max())) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(0xC000000D);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
 	auto val = static_cast<::std::int_least64_t>(win_100ns_seconds);
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_delay_execution<zw>(false, __builtin_addressof(val))};
 	if (status) [[unlikely]]
 	{
-		::fast_io::throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 }
 

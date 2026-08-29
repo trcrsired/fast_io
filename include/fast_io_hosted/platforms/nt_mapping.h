@@ -71,7 +71,7 @@ inline constexpr nt_file_map_attribute to_nt_file_map_attribute(file_map_attribu
 	case file_map_attribute::write_copy:
 		return nt_file_map_attribute::required | nt_file_map_attribute::read | nt_file_map_attribute::copy;
 	default:
-		throw_nt_error(0x000000A0);
+		::fast_io::herbceptions::throws_nt_errc_with_value(0x000000A0);
 	};
 }
 
@@ -84,11 +84,11 @@ inline void *create_file_mapping_impl(void *handle, file_map_attribute attr)
 	::fast_io::win32::nt::object_attributes objAttr{};
 	objAttr.Length = sizeof(::fast_io::win32::nt::object_attributes);
 	void *h_section{};
-	auto status{::fast_io::win32::nt::nt_create_section < family == ::fast_io::nt_family::zw > (__builtin_addressof(h_section), static_cast<::std::uint_least32_t>(to_nt_file_map_attribute(attr)),
-																								__builtin_addressof(objAttr), nullptr, static_cast<::std::uint_least32_t>(attr), 0x08000000, handle)};
+	auto status{::fast_io::win32::nt::nt_create_section<family == ::fast_io::nt_family::zw>(__builtin_addressof(h_section), static_cast<::std::uint_least32_t>(to_nt_file_map_attribute(attr)),
+																							__builtin_addressof(objAttr), nullptr, static_cast<::std::uint_least32_t>(attr), 0x08000000, handle)};
 	if (status)
 	{
-		throw_nt_error(status);
+		::fast_io::herbceptions::throws_nt_errc_with_value(status);
 	}
 	return h_section;
 }
@@ -118,19 +118,19 @@ public:
 	{
 	}
 	inline nt_family_memory_map_file(nt_at_entry bf, file_map_attribute attr, ::std::size_t bytes,
-							  ::std::uintmax_t start_address = 0)
+									 ::std::uintmax_t start_address = 0)
 	{
 		basic_nt_family_file<family, char> mapping_file{
 			win32::nt::details::create_file_mapping_impl<family>(bf.handle, attr)};
 		void *base_ptr{};
 		void *current_process_handle{reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))};
-		auto status{::fast_io::win32::nt::nt_map_view_of_section < family == ::fast_io::nt_family::zw > (mapping_file.handle, current_process_handle, __builtin_addressof(base_ptr), 0, 0,
-																										 reinterpret_cast<::fast_io::win32::nt::large_integer const *>(__builtin_addressof(start_address)),
-																										 __builtin_addressof(bytes), ::fast_io::win32::nt::section_inherit::ViewShare, 0,
-																										 static_cast<::std::uint_least32_t>(attr))};
+		auto status{::fast_io::win32::nt::nt_map_view_of_section<family == ::fast_io::nt_family::zw>(mapping_file.handle, current_process_handle, __builtin_addressof(base_ptr), 0, 0,
+																									 reinterpret_cast<::fast_io::win32::nt::large_integer const *>(__builtin_addressof(start_address)),
+																									 __builtin_addressof(bytes), ::fast_io::win32::nt::section_inherit::ViewShare, 0,
+																									 static_cast<::std::uint_least32_t>(attr))};
 		if (status)
 		{
-			throw_nt_error(status);
+			::fast_io::herbceptions::throws_nt_errc_with_value(status);
 		}
 		this->address_begin = reinterpret_cast<::std::byte *>(base_ptr);
 		this->address_end = this->address_begin + bytes;
@@ -258,7 +258,7 @@ public:
 			this->address_end = this->address_begin = nullptr;
 			if (ret) [[unlikely]]
 			{
-				throw_nt_error(ret);
+				::fast_io::herbceptions::throws_nt_errc_with_value(ret);
 			}
 		}
 	}
