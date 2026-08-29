@@ -1787,7 +1787,7 @@ scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *
 			it = ::fast_io::find_none_c_space(it, last);
 			if (it == last)
 			{
-				return {it, ::fast_io::parse_code::partial};
+				return {it, ::fast_io::freestanding::parse_errc::partial};
 			}
 			skip_space_done = true;
 			ref.clear();
@@ -1820,24 +1820,24 @@ scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *
 	}
 	if (it_space == last)
 	{
-		return {it_space, ::fast_io::parse_code::partial};
+		return {it_space, ::fast_io::freestanding::parse_errc::partial};
 	}
 	if constexpr (line)
 	{
 		++it_space;
 	}
-	return {it_space, ::fast_io::parse_code::ok};
+	return {it_space, ::fast_io::freestanding::parse_errc::ok};
 }
 
-inline constexpr ::fast_io::parse_code scan_context_eof_fast_io_string_define_impl(bool skip_space_done) noexcept
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_fast_io_string_define_impl(bool skip_space_done) noexcept
 {
 	if (skip_space_done)
 	{
-		return ::fast_io::parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 	else
 	{
-		return ::fast_io::parse_code::end_of_file;
+		return ::fast_io::freestanding::parse_errc::end_of_file;
 	}
 }
 
@@ -1857,18 +1857,18 @@ scan_context_define_whole_fast_io_string_impl(bool &notfirstround, char_type con
 	{
 		ref.append(::fast_io::containers::basic_string_view<char_type>{first, static_cast<::std::size_t>(last - first)});
 	}
-	return {last, ::fast_io::parse_code::partial};
+	return {last, ::fast_io::freestanding::parse_errc::partial};
 }
 
 template <::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::parse_code
+inline constexpr ::fast_io::freestanding::parse_errc
 scan_context_define_whole_fast_io_string_eof_impl(bool notfirstround, basic_string<char_type, allocator_type> &ref)
 {
 	if (!notfirstround)
 	{
 		ref.clear();
 	}
-	return ::fast_io::parse_code::ok;
+	return ::fast_io::freestanding::parse_errc::ok;
 }
 
 } // namespace details
@@ -1890,7 +1890,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 }
 
 template <::fast_io::manipulators::scalar_flags flags, ::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::parse_code scan_context_eof_define(
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &>>,
 	scan_fast_io_string_context skip_space_done,
 	::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &> str) noexcept
@@ -1899,11 +1899,11 @@ inline constexpr ::fast_io::parse_code scan_context_eof_define(
 	{
 		if (str.reference.empty())
 		{
-			return ::fast_io::parse_code::end_of_file;
+			return ::fast_io::freestanding::parse_errc::end_of_file;
 		}
 		else
 		{
-			return ::fast_io::parse_code::ok;
+			return ::fast_io::freestanding::parse_errc::ok;
 		}
 	}
 	else
@@ -1937,7 +1937,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 }
 
 template <::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::parse_code scan_context_eof_define(
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &>>,
 	scan_fast_io_string_context ctx,
 	::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &> str) noexcept

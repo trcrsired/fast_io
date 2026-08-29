@@ -266,3 +266,11 @@ Internal assert macros for fuzzing fast_io.
 #define FAST_IO_CPP_EXCEPTIONS
 #endif
 #endif
+
+#pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS")
+#undef FAST_IO_HERBCEPTIONS_THROWS
+#ifdef __HERBCEPTIONS__
+#define FAST_IO_HERBCEPTIONS_THROWS throws
+#else
+#define FAST_IO_HERBCEPTIONS_THROWS
+#endif

@@ -73,7 +73,7 @@ scan_context_define_strlike_impl(::std::conditional_t<ctxread, bool, bool &> ski
 			it = ::fast_io::find_none_c_space(it, last);
 			if (it == last)
 			{
-				return {it, ::fast_io::parse_code::partial};
+				return {it, ::fast_io::freestanding::parse_errc::partial};
 			}
 			skip_space_done = true;
 			obuffer_set_curr(ref, obuffer_begin(ref));
@@ -103,13 +103,13 @@ scan_context_define_strlike_impl(::std::conditional_t<ctxread, bool, bool &> ski
 	}
 	if (it_space == last)
 	{
-		return {it_space, ::fast_io::parse_code::partial};
+		return {it_space, ::fast_io::freestanding::parse_errc::partial};
 	}
 	if constexpr (line)
 	{
 		++it_space;
 	}
-	return {it_space, ::fast_io::parse_code::ok};
+	return {it_space, ::fast_io::freestanding::parse_errc::ok};
 }
 
 template <bool ctxread = false, ::std::integral char_type, typename T>
@@ -123,18 +123,18 @@ scan_context_define_strlike_getall_impl(::std::conditional_t<ctxread, bool, bool
 		skip_space_done = true;
 	}
 	::fast_io::operations::decay::write_all_decay(ref, first, last);
-	return {last, ::fast_io::parse_code::partial};
+	return {last, ::fast_io::freestanding::parse_errc::partial};
 }
 
-inline constexpr ::fast_io::parse_code scan_context_eof_strlike_define_impl(bool skip_space_done) noexcept
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_strlike_define_impl(bool skip_space_done) noexcept
 {
 	if (skip_space_done)
 	{
-		return ::fast_io::parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 	else
 	{
-		return ::fast_io::parse_code::end_of_file;
+		return ::fast_io::freestanding::parse_errc::end_of_file;
 	}
 }
 
@@ -171,7 +171,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 		bool b{ctx.buffer_begin != ctx.buffer_curr};
 		auto [it, ec] = ::fast_io::details::scan_context_define_strlike_impl<flags.noskipws, flags.line, true>(
 			b, first, last, io_strlike_ref(io_alias, ctx));
-		if (ec == ::fast_io::parse_code::ok)
+		if (ec == ::fast_io::freestanding::parse_errc::ok)
 		{
 			using ioreftype = typename value_type::value_type;
 			if constexpr (::std::same_as<undefttype_char_type, char_type>)
@@ -191,7 +191,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 }
 
 template <::fast_io::manipulators::scalar_flags flags, ::std::integral char_type, typename ctx_type, typename T>
-inline constexpr ::fast_io::parse_code scan_context_eof_define(
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type,
 					  ::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, ::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>> ref)
@@ -205,18 +205,18 @@ inline constexpr ::fast_io::parse_code scan_context_eof_define(
 		{
 			if (obuffer_begin(ref.reference.reference) == obuffer_curr(ref.reference.reference))
 			{
-				return ::fast_io::parse_code::end_of_file;
+				return ::fast_io::freestanding::parse_errc::end_of_file;
 			}
 			else
 			{
-				return ::fast_io::parse_code::ok;
+				return ::fast_io::freestanding::parse_errc::ok;
 			}
 		}
 		else
 		{
 			if (ctx.buffer_begin == ctx.buffer_curr)
 			{
-				return ::fast_io::parse_code::end_of_file;
+				return ::fast_io::freestanding::parse_errc::end_of_file;
 			}
 			else
 			{
@@ -233,7 +233,7 @@ inline constexpr ::fast_io::parse_code scan_context_eof_define(
 							::fast_io::manipulators::code_cvt(
 								::fast_io::manipulators::strvw(ctx.buffer_begin, ctx.buffer_curr)));
 				}
-				return ::fast_io::parse_code::ok;
+				return ::fast_io::freestanding::parse_errc::ok;
 			}
 		}
 	}
@@ -261,11 +261,11 @@ inline constexpr ::fast_io::parse_code scan_context_eof_define(
 							::fast_io::manipulators::code_cvt(
 								::fast_io::manipulators::strvw(ctx.buffer_begin, ctx.buffer_curr)));
 				}
-				return ::fast_io::parse_code::ok;
+				return ::fast_io::freestanding::parse_errc::ok;
 			}
 			else
 			{
-				return ::fast_io::parse_code::end_of_file;
+				return ::fast_io::freestanding::parse_errc::end_of_file;
 			}
 		}
 	}
@@ -302,7 +302,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 		bool b{ctx.buffer_begin != ctx.buffer_curr};
 		auto [it, ec] = ::fast_io::details::scan_context_define_strlike_getall_impl<true>(
 			b, first, last, io_strlike_ref(io_alias, ctx));
-		if (ec == ::fast_io::parse_code::ok)
+		if (ec == ::fast_io::freestanding::parse_errc::ok)
 		{
 			using ioreftype = typename value_type::value_type;
 			if constexpr (::std::same_as<undefttype_char_type, char_type>)
@@ -322,7 +322,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 }
 
 template <::std::integral char_type, typename ctx_type, typename T>
-inline constexpr ::fast_io::parse_code scan_context_eof_define(
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, ::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>> ref)
 {
@@ -351,7 +351,7 @@ inline constexpr ::fast_io::parse_code scan_context_eof_define(
 				::fast_io::manipulators::code_cvt(::fast_io::manipulators::strvw(ctx.buffer_begin, ctx.buffer_curr)));
 		}
 	}
-	return ::fast_io::parse_code::ok;
+	return ::fast_io::freestanding::parse_errc::ok;
 }
 
 } // namespace fast_io

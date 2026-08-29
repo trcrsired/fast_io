@@ -331,7 +331,7 @@ inline constexpr ::std::conditional_t<report, bool, void> scan(input &&in, Args 
 					::fast_io::operations::input_stream_ref(in),
 					::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...))
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 		}
 	}

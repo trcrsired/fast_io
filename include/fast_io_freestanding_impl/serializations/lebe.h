@@ -138,7 +138,7 @@ inline constexpr auto lebe_put(int_type t) noexcept(
 			static_cast<uint_type>(mx_value_halfm1 - static_cast<uint_type>(1)) + mx_value_halfm1)};
 		if (u > mx_value)
 		{
-			throw_parse_code(::fast_io::parse_code::invalid);
+			::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::invalid);
 		}
 	}
 	using proxy_type = ::std::conditional_t<
@@ -397,7 +397,7 @@ inline
 }
 
 template <::std::endian endn, ::std::size_t n, ::fast_io::details::my_integral int_type, ::std::integral char_type>
-inline constexpr ::std::conditional_t<(1 < sizeof(char_type)), ::fast_io::parse_code, void>
+inline constexpr ::std::conditional_t<(1 < sizeof(char_type)), ::fast_io::freestanding::parse_errc, void>
 scan_precise_reserve_define_integer_impl(char_type const *iter, int_type &t) noexcept
 {
 	static_assert(n <= 128);
@@ -414,7 +414,7 @@ scan_precise_reserve_define_integer_impl(char_type const *iter, int_type &t) noe
 		auto [cd, tp] = scan_precise_reserve_define_integer_common_largechartype_impl<endn, proxy_type>(iter);
 		if (cd)
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
 		temp = tp;
 	}
@@ -429,10 +429,10 @@ scan_precise_reserve_define_integer_impl(char_type const *iter, int_type &t) noe
 		constexpr proxy_type mx_value{::std::numeric_limits<my_unsigned_type>::max()};
 		if (mx_value < temp)
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
 		t = static_cast<int_type>(static_cast<my_unsigned_type>(temp));
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 	else
 	{
@@ -440,12 +440,12 @@ scan_precise_reserve_define_integer_impl(char_type const *iter, int_type &t) noe
 	}
 	if constexpr (1 < sizeof(char_type))
 	{
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 }
 
 template <::std::endian endn, ::std::floating_point flttypef, ::std::integral char_type>
-inline constexpr ::std::conditional_t<(1 < sizeof(char_type)), ::fast_io::parse_code, void>
+inline constexpr ::std::conditional_t<(1 < sizeof(char_type)), ::fast_io::freestanding::parse_errc, void>
 scan_precise_reserve_define_lebe_float_get_impl(char_type const *iter, flttypef &t) noexcept
 {
 	using flttype = ::std::remove_cvref_t<flttypef>;
@@ -463,7 +463,7 @@ scan_precise_reserve_define_lebe_float_get_impl(char_type const *iter, flttypef 
 		auto [cd, tp] = scan_precise_reserve_define_integer_common_largechartype_impl<endn, proxy_type>(iter);
 		if (cd)
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
 		temp = tp;
 	}
@@ -517,7 +517,7 @@ scan_precise_reserve_define_lebe_float_get_impl(char_type const *iter, flttypef 
 	}
 	if constexpr (1 < sizeof(char_type))
 	{
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 }
 

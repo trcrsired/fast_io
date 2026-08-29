@@ -133,7 +133,7 @@ inline constexpr ::std::conditional_t<report, bool, void> scan_after_io_scan_for
 	{
 		if (!::fast_io::operations::decay::scan_freestanding_decay(c_stdin(), args...))
 		{
-			::fast_io::throw_parse_code(fast_io::parse_code::end_of_file);
+			::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 		}
 	}
 #endif
