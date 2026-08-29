@@ -12,13 +12,13 @@ template<typename input,typename T,typename P>
 #endif
 inline constexpr bool scan_single_status_impl(input in,T& state_machine,P arg)
 {
-	for(;state_machine.code==parse_code::partial;)
+	for(;state_machine.code==::fast_io::freestanding::parse_errc::partial;)
 	{
 		if(!ibuffer_underflow(in))
 		{
 			if(!state_machine.test_eof(arg))
 				return false;
-			if(state_machine.code==parse_code{})[[likely]]
+			if(state_machine.code==::fast_io::freestanding::parse_errc{})[[likely]]
 				return true;
 			break;
 		}
@@ -26,10 +26,10 @@ inline constexpr bool scan_single_status_impl(input in,T& state_machine,P arg)
 		auto end{ibuffer_end(in)};
 		state_machine(curr,end,arg);
 		ibuffer_set_curr(in, state_machine.iter);
-		if(state_machine.code==parse_code::ok)[[likely]]
+		if(state_machine.code==::fast_io::freestanding::parse_errc::ok)[[likely]]
 			return true;
 	}
-	throw_parse_code(state_machine.code);
+	::fast_io::herbceptions::throws_parse_errc(state_machine.code);
 }
 #endif
 
@@ -37,7 +37,7 @@ template <typename input, typename P>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr bool scan_context_status_impl(input in, P arg)
+inline constexpr bool scan_context_status_impl(input in, P arg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename input::input_char_type;
 	for (typename ::std::remove_cvref_t<decltype(scan_context_type(io_reserve_type<char_type, P>))>::type state;;)
@@ -53,26 +53,26 @@ inline constexpr bool scan_context_status_impl(input in, P arg)
 		{
 			ibuffer_set_curr(in, it - curr + curr);
 		}
-		if (ec == parse_code::ok)
+		if (ec == ::fast_io::freestanding::parse_errc::ok)
 		{
 			return true;
 		}
-		else if (ec != parse_code::partial)
+		else if (ec != ::fast_io::freestanding::parse_errc::partial)
 		{
-			throw_parse_code(ec);
+			::fast_io::herbceptions::throws_parse_errc(ec);
 		}
 		if (!ibuffer_underflow(in)) [[unlikely]]
 		{
 			ec = scan_context_eof_define(io_reserve_type<char_type, P>, state, arg);
-			if (ec == parse_code::ok)
+			if (ec == ::fast_io::freestanding::parse_errc::ok)
 			{
 				return true;
 			}
-			else if (ec == parse_code::end_of_file)
+			else if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
 			{
 				break;
 			}
-			throw_parse_code(ec);
+			::fast_io::herbceptions::throws_parse_errc(ec);
 		}
 	}
 	return false;
@@ -106,13 +106,13 @@ template <typename input, typename T>
 			else
 			{
 				auto ret{scan_precise_reserve_define(io_reserve_type<char_type,T>,curr,arg)};
-				if(ret!=parse_code::ok)
+				if(ret!=::fast_io::freestanding::parse_errc::ok)
 				{
-					if(ret==parse_code::end_of_file)
+					if(ret==::fast_io::freestanding::parse_errc::end_of_file)
 					{
 						return false;
 					}
-					throw_parse_code(ret);
+					::fast_io::herbceptions::throws_parse_errc(ret);
 				}
 			}
 			ibuffer_set_curr(in,curr_ptr+n);
@@ -131,11 +131,11 @@ template <typename input, typename T>
 			{
 				ibuffer_set_curr(in,it-curr+curr);
 			}
-			if(ec!=parse_code::ok)
+			if(ec!=::fast_io::freestanding::parse_errc::ok)
 			{
-				if(ec==parse_code::end_of_file)
+				if(ec==::fast_io::freestanding::parse_errc::end_of_file)
 					return false;
-				throw_parse_code(ec);
+				::fast_io::herbceptions::throws_parse_errc(ec);
 			}
 			return true;
 		}
@@ -153,15 +153,15 @@ template <typename input, typename T>
 			{
 				ibuffer_set_curr(in,it-curr+curr);
 			}
-			if(ec==parse_code::ok)
+			if(ec==::fast_io::freestanding::parse_errc::ok)
 				return true;
-			else if(ec!=parse_code::partial)
-				throw_parse_code(ec);
+			else if(ec!=::fast_io::freestanding::parse_errc::partial)
+				::fast_io::herbceptions::throws_parse_errc(ec);
 			ec=scan_context_eof_define(io_reserve_type<char_type,T>,state,arg);
-			if(ec==parse_code::ok)
+			if(ec==::fast_io::freestanding::parse_errc::ok)
 				return true;
-			else if(ec!=parse_code::end_of_file)
-				throw_parse_code(ec);
+			else if(ec!=::fast_io::freestanding::parse_errc::end_of_file)
+				::fast_io::herbceptions::throws_parse_errc(ec);
 			return false;
 		}
 		else
@@ -189,13 +189,13 @@ template <typename input, typename T>
 				else
 				{
 					auto ret{scan_precise_reserve_define(io_reserve_type<char_type, T>, p, arg)};
-					if (ret != parse_code::ok)
+					if (ret != ::fast_io::freestanding::parse_errc::ok)
 					{
-						if (ret == parse_code::end_of_file)
+						if (ret == ::fast_io::freestanding::parse_errc::end_of_file)
 						{
 							return false;
 						}
-						throw_parse_code(ret);
+						::fast_io::herbceptions::throws_parse_errc(ret);
 					}
 				}
 			}
@@ -219,13 +219,13 @@ template <typename input, typename T>
 				else
 				{
 					auto ret{scan_precise_reserve_define(io_reserve_type<char_type, T>, p, arg)};
-					if (ret != parse_code::ok)
+					if (ret != ::fast_io::freestanding::parse_errc::ok)
 					{
-						if (ret == parse_code::end_of_file)
+						if (ret == ::fast_io::freestanding::parse_errc::end_of_file)
 						{
 							return false;
 						}
-						throw_parse_code(ret);
+						::fast_io::herbceptions::throws_parse_errc(ret);
 					}
 				}
 				if (!inbuffer) [[likely]]
@@ -254,9 +254,9 @@ template <typename input, typename T>
 				{
 					ibuffer_set_curr(in, it - curr + curr);
 				}
-				if (ec != parse_code::ok)
+				if (ec != ::fast_io::freestanding::parse_errc::ok)
 				{
-					throw_parse_code(ec);
+					::fast_io::herbceptions::throws_parse_errc(ec);
 				}
 			}
 			return true;
@@ -276,34 +276,34 @@ template <typename input, typename T>
 				{
 					ibuffer_set_curr(in, it - curr + curr);
 				}
-				if (ec == parse_code::ok)
+				if (ec == ::fast_io::freestanding::parse_errc::ok)
 				{
 					return true;
 				}
-				else if (ec != parse_code::partial)
+				else if (ec != ::fast_io::freestanding::parse_errc::partial)
 				{
-					throw_parse_code(ec);
+					::fast_io::herbceptions::throws_parse_errc(ec);
 				}
 				if (!ibuffer_underflow(in)) [[unlikely]]
 				{
 					ec = scan_context_eof_define(io_reserve_type<char_type, T>, state, arg);
-					if (ec == parse_code::ok)
+					if (ec == ::fast_io::freestanding::parse_errc::ok)
 					{
 						return true;
 					}
-					else if (ec == parse_code::end_of_file)
+					else if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
 					{
 						break;
 					}
-					throw_parse_code(ec);
+					::fast_io::herbceptions::throws_parse_errc(ec);
 				}
 			}
 			return false;
 		}
 		else
 		{
-			constexpr bool not_scannable{context_scannable<char_type,T>};
-			static_assert(not_scannable,"type not scannable. need context_scannable");
+			constexpr bool not_scannable{context_scannable<char_type, T>};
+			static_assert(not_scannable, "type not scannable. need context_scannable");
 			return false;
 		}
 	}
@@ -332,8 +332,8 @@ template <typename input, typename... Args>
 	}
 	else if constexpr (::fast_io::operations::defines::available_add_ibuf<input>)
 	{
-		static_assert(::fast_io::operations::decay::defines::has_status_scan_define<input>, 
-			"If you want to scan this type of file, please add ::fast_io::basic_ibuf.");
+		static_assert(::fast_io::operations::decay::defines::has_status_scan_define<input>,
+					  "If you want to scan this type of file, please add ::fast_io::basic_ibuf.");
 		return false;
 	}
 	else

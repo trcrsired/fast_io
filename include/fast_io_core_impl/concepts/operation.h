@@ -54,7 +54,7 @@ concept contiguous_scannable = requires(char_type const *begin, char_type const 
 /// @param    ::fast_io::io_reserve_type_t<char_type, T>    tag-invoke
 /// @param    your_context_type&                            the context object
 /// @param    T                                             the object to be scanned, can be any passing style
-/// @return   ::fast_io::parse_code                         a parse code indicating parsing state
+/// @return   ::fast_io::freestanding::parse_errc                         a parse code indicating parsing state
 template <typename char_type, typename T>
 concept context_scannable = requires(char_type const *begin, char_type const *end, T t) {
 	requires requires(
@@ -62,7 +62,7 @@ concept context_scannable = requires(char_type const *begin, char_type const *en
 		{
 			scan_context_define(io_reserve_type<char_type, T>, st, begin, end, t)
 		} -> ::std::same_as<parse_result<char_type const *>>;
-		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<parse_code>;
+		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<::fast_io::freestanding::parse_errc>;
 	};
 };
 
@@ -302,7 +302,7 @@ struct parameter
 template <::std::integral char_type, typename output, typename value_type>
 	requires(printable<char_type, ::std::remove_cvref_t<value_type>> && ::std::is_trivially_copyable_v<output>)
 inline constexpr void print_define(io_reserve_type_t<char_type, parameter<value_type>>, output out,
-							parameter<value_type> wrapper)
+								   parameter<value_type> wrapper)
 {
 	print_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference);
 }
@@ -317,7 +317,7 @@ inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, p
 template <::std::integral char_type, typename value_type>
 	requires dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, parameter<value_type>>,
-										   parameter<value_type> para)
+												  parameter<value_type> para)
 {
 	return print_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
@@ -326,7 +326,7 @@ template <::std::integral char_type, typename value_type>
 	requires(reserve_printable<char_type, ::std::remove_cvref_t<value_type>> ||
 			 dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>)
 inline constexpr auto print_reserve_define(io_reserve_type_t<char_type, parameter<value_type>>, char_type *begin,
-									parameter<value_type> para)
+										   parameter<value_type> para)
 {
 	return print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference);
 }
@@ -334,7 +334,7 @@ inline constexpr auto print_reserve_define(io_reserve_type_t<char_type, paramete
 template <::std::integral char_type, typename value_type, typename Iter>
 	requires(printable_internal_shift<char_type, ::std::remove_cvref_t<value_type>>)
 inline constexpr auto print_define_internal_shift(io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
-										   parameter<value_type> para)
+												  parameter<value_type> para)
 {
 	return print_define_internal_shift(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin,
 									   para.reference);
@@ -343,7 +343,7 @@ inline constexpr auto print_define_internal_shift(io_reserve_type_t<char_type, p
 template <::std::integral char_type, typename value_type>
 	requires precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr ::std::size_t print_reserve_precise_size(io_reserve_type_t<char_type, parameter<value_type>>,
-												   parameter<value_type> para)
+														  parameter<value_type> para)
 {
 	return print_reserve_precise_size(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
@@ -351,7 +351,7 @@ inline constexpr ::std::size_t print_reserve_precise_size(io_reserve_type_t<char
 template <::std::integral char_type, typename value_type, typename Iter>
 	requires precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr void print_reserve_precise_define(io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
-											::std::size_t n, parameter<value_type> para)
+												   ::std::size_t n, parameter<value_type> para)
 {
 	print_reserve_precise_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, n,
 								 para.reference);
@@ -373,7 +373,7 @@ concept iterative_scannable =
 		} -> ::std::same_as<parse_result<char_type const *>>;
 		{
 			scan_iterative_eof_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
-		} -> ::std::same_as<fast_io::parse_code>;
+		} -> ::std::same_as<::fast_io::freestanding::parse_errc>;
 	};
 
 template <typename char_type, typename T>

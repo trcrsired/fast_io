@@ -77,19 +77,19 @@ inline bool try_copy_into_buffer(basic_http_header_buffer<ch_type, buffer_size> 
 }
 
 template <::std::integral ch_type, ::std::size_t buffer_size>
-inline constexpr parse_code determine_http_header_location(basic_http_header_buffer<ch_type, buffer_size> &b) noexcept
+inline constexpr ::fast_io::freestanding::parse_errc determine_http_header_location(basic_http_header_buffer<ch_type, buffer_size> &b) noexcept
 {
 	auto i{b.buffer}, e{b.buffer + b.header_length};
 	if (i != e && *i == char_literal_v<u8' ', ch_type>)
 	{
-		return parse_code::invalid;
+		return ::fast_io::freestanding::parse_errc::invalid;
 	}
 	{
 		i = ::fast_io::details::find_ch_impl<u8' ', false>(i, e);
 		// for(;i!=e&&*i!=char_literal_v<u8' ',ch_type>;++i);
 		if (i == e)
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
 		b.http_request_end_location = static_cast<::std::size_t>(i - b.buffer);
 	}
@@ -98,7 +98,7 @@ inline constexpr parse_code determine_http_header_location(basic_http_header_buf
 	// for(;i!=e&&*i==char_literal_v<u8' ',ch_type>;++i);
 	if (i == e)
 	{
-		return parse_code::invalid;
+		return ::fast_io::freestanding::parse_errc::invalid;
 	}
 	b.http_status_code_start_location = static_cast<::std::size_t>(i - b.buffer);
 	{
@@ -106,7 +106,7 @@ inline constexpr parse_code determine_http_header_location(basic_http_header_buf
 		// for(;i!=e&&*i!=char_literal_v<u8' ',ch_type>;++i);
 		if (i == e)
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
 		b.http_status_code_end_location = static_cast<::std::size_t>(i - b.buffer);
 	}
@@ -114,17 +114,17 @@ inline constexpr parse_code determine_http_header_location(basic_http_header_buf
 	// for(;i!=e&&*i==char_literal_v<u8' ',ch_type>;++i);
 	if (i == e)
 	{
-		return parse_code::invalid;
+		return ::fast_io::freestanding::parse_errc::invalid;
 	}
 	b.http_status_reason_start_location = static_cast<::std::size_t>(i - b.buffer);
 	i = ::fast_io::details::find_ch_impl<u8'\r', false>(i, e);
 	// for(;i!=e&&*i!=char_literal_v<u8'\r',ch_type>;++i);
 	if (i == e)
 	{
-		return parse_code::invalid;
+		return ::fast_io::freestanding::parse_errc::invalid;
 	}
 	b.http_status_reason_end_location = static_cast<::std::size_t>(i - b.buffer);
-	return parse_code::ok;
+	return ::fast_io::freestanding::parse_errc::ok;
 }
 
 template <::std::integral char_type, ::std::size_t buffer_size>
@@ -135,7 +135,7 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 	auto first{first1};
 	if (first == last)
 	{
-		return {first, parse_code::partial};
+		return {first, ::fast_io::freestanding::parse_errc::partial};
 	}
 	if (state != 0)
 	{
@@ -153,9 +153,9 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 				state = 2u;
 				if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, last))
 				{
-					return {first, parse_code::invalid};
+					return {first, ::fast_io::freestanding::parse_errc::invalid};
 				}
-				return {first, parse_code::partial};
+				return {first, ::fast_io::freestanding::parse_errc::partial};
 			}
 			[[fallthrough]];
 		}
@@ -171,9 +171,9 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 				state = 3u;
 				if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, last))
 				{
-					return {first, parse_code::invalid};
+					return {first, ::fast_io::freestanding::parse_errc::invalid};
 				}
-				return {first, parse_code::partial};
+				return {first, ::fast_io::freestanding::parse_errc::partial};
 			}
 			[[fallthrough]];
 		}
@@ -186,7 +186,7 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 			++first;
 			if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 			{
-				return {first, parse_code::invalid};
+				return {first, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			return {first, ::fast_io::details::determine_http_header_location(bufferref)};
 		}
@@ -201,34 +201,34 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 		{
 			if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 			{
-				return {first, parse_code::invalid};
+				return {first, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			state = 0u;
-			return {first, parse_code::partial};
+			return {first, ::fast_io::freestanding::parse_errc::partial};
 		}
 		++first;
 		if (first == last)
 		{
 			if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 			{
-				return {first, parse_code::invalid};
+				return {first, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			state = 1u;
-			return {first, parse_code::partial};
+			return {first, ::fast_io::freestanding::parse_errc::partial};
 		}
 		if (*first != char_literal_v<u8'\n', char_type>)
 		{
-			return {first, parse_code::invalid};
+			return {first, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		++first;
 		if (first == last)
 		{
 			if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 			{
-				return {first, parse_code::invalid};
+				return {first, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			state = 2u;
-			return {first, parse_code::partial};
+			return {first, ::fast_io::freestanding::parse_errc::partial};
 		}
 		if (*first != char_literal_v<u8'\r', char_type>)
 		{
@@ -239,19 +239,19 @@ http_header_scan_context_define_impl(::std::size_t &state, char_type const *firs
 		{
 			if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 			{
-				return {first, parse_code::invalid};
+				return {first, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			state = 3u;
-			return {first, parse_code::partial};
+			return {first, ::fast_io::freestanding::parse_errc::partial};
 		}
 		if (*first != char_literal_v<u8'\n', char_type>)
 		{
-			return {first, parse_code::invalid};
+			return {first, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		++first;
 		if (!::fast_io::details::try_copy_into_buffer(bufferref, first1, first))
 		{
-			return {first, parse_code::invalid};
+			return {first, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		return {first, ::fast_io::details::determine_http_header_location(bufferref)};
 	}
@@ -269,12 +269,12 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 }
 
 template <::std::integral char_type, ::std::size_t buffer_size>
-inline constexpr parse_code
+inline constexpr ::fast_io::freestanding::parse_errc
 scan_context_eof_define(io_reserve_type_t<char_type, ::fast_io::parameter<basic_http_header_buffer<char_type> &>>,
 						http_buffer_parse_context,
 						::fast_io::parameter<basic_http_header_buffer<char_type, buffer_size> &>) noexcept
 {
-	return parse_code::invalid;
+	return ::fast_io::freestanding::parse_errc::invalid;
 }
 
 using http_header_buffer = basic_http_header_buffer<char>;
@@ -301,7 +301,7 @@ struct basic_http_line
 
 template <::std::integral char_type, ::std::size_t buffer_size>
 inline constexpr basic_http_line_generator<char_type>
-line_generator(basic_http_header_buffer<char_type, buffer_size> const&b) noexcept
+line_generator(basic_http_header_buffer<char_type, buffer_size> const &b) noexcept
 {
 	::std::size_t end_loc{b.http_status_reason_end_location};
 	char_type const *start{b.buffer + end_loc};

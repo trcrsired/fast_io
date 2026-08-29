@@ -161,7 +161,7 @@ general_code_cvt(src_char_type const *src_first, src_char_type const *src_last, 
 					else
 					{
 						constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
-						*dst = val; 
+						*dst = val;
 					}
 					++dst;
 				}
@@ -413,7 +413,7 @@ inline constexpr dest_char_type *general_code_cvt(state_type &__restrict state, 
 					else
 					{
 						constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
-						*dst = val; 
+						*dst = val;
 					}
 					++dst;
 				}
@@ -540,7 +540,7 @@ inline constexpr dest_char_type *general_code_cvt_full(src_char_type const *src_
 				else
 				{
 					constexpr dest_char_type val{byte_swap(static_cast<dest_char_type>(0xFFFD))};
-					*new_dst = val; 
+					*new_dst = val;
 				}
 				++new_dst;
 			}
@@ -606,13 +606,6 @@ template <encoding_scheme src_scheme = encoding_scheme::execution_charset,
 inline constexpr auto code_cvt(basic_io_scatter_t<char_type> t) noexcept
 {
 	return code_cvt_t<src_scheme, dst_scheme, char_type>{t};
-}
-
-template <encoding_scheme src_scheme = encoding_scheme::execution_charset,
-		  encoding_scheme dst_scheme = encoding_scheme::execution_charset, ::std::integral char_type, ::std::size_t N>
-inline constexpr auto code_cvt(small_scatter_t<char_type, N> t) noexcept
-{
-	return code_cvt_t<src_scheme, dst_scheme, char_type>{{t.base, t.len}};
 }
 
 template <encoding_scheme src_scheme = encoding_scheme::execution_charset,

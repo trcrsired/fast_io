@@ -26,9 +26,9 @@ inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_outp
 	auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
 	if (it != buffer_curr)
 	{
-		if (ec != ::fast_io::parse_code::ok)
+		if (ec != ::fast_io::freestanding::parse_errc::ok)
 		{
-			::fast_io::throw_parse_code(ec);
+			::fast_io::herbceptions::throws_parse_errc(ec);
 		}
 		return;
 	}
@@ -39,10 +39,10 @@ inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_outp
 	}
 	else
 	{
-		::fast_io::parse_code p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-		if (p != ::fast_io::parse_code::ok)
+		::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+		if (p != ::fast_io::freestanding::parse_errc::ok)
 		{
-			::fast_io::throw_parse_code(p);
+			::fast_io::herbceptions::throws_parse_errc(p);
 		}
 	}
 }
@@ -61,9 +61,9 @@ inline constexpr void inplace_to_decay_buffer_scatter_context_impl(state &s, T t
 	auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
 	if (it != buffer_curr)
 	{
-		if (ec != ::fast_io::parse_code::ok)
+		if (ec != ::fast_io::freestanding::parse_errc::ok)
 		{
-			throw_parse_code(ec);
+			::fast_io::herbceptions::throws_parse_errc(ec);
 		}
 		return;
 	}
@@ -73,10 +73,10 @@ inline constexpr void inplace_to_decay_buffer_scatter_context_impl(state &s, T t
 	}
 	else
 	{
-		::fast_io::parse_code p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-		if (p != ::fast_io::parse_code::ok)
+		::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+		if (p != ::fast_io::freestanding::parse_errc::ok)
 		{
-			throw_parse_code(p);
+			::fast_io::herbceptions::throws_parse_errc(p);
 		}
 	}
 }
@@ -112,9 +112,9 @@ inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, st
 		auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
 		if (it != buffer_curr)
 		{
-			if (ec != ::fast_io::parse_code::ok)
+			if (ec != ::fast_io::freestanding::parse_errc::ok)
 			{
-				throw_parse_code(ec);
+				::fast_io::herbceptions::throws_parse_errc(ec);
 			}
 			return;
 		}
@@ -124,10 +124,10 @@ inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, st
 		}
 		else
 		{
-			parse_code p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-			if (p != parse_code::ok)
+			::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+			if (p != ::fast_io::freestanding::parse_errc::ok)
 			{
-				throw_parse_code(p);
+				::fast_io::herbceptions::throws_parse_errc(p);
 			}
 		}
 	}
@@ -201,9 +201,9 @@ template <::std::integral char_type, typename T>
 inline constexpr void deal_with_single_to(char_type const *buffer_begin, char_type const *buffer_end, T t)
 {
 	auto code{scan_contiguous_define(io_reserve_type<char_type, T>, buffer_begin, buffer_end, t).code};
-	if (code != parse_code::ok)
+	if (code != ::fast_io::freestanding::parse_errc::ok)
 	{
-		throw_parse_code(code);
+		::fast_io::herbceptions::throws_parse_errc(code);
 	}
 }
 

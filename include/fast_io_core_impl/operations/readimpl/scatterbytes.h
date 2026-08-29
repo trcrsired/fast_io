@@ -169,7 +169,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 			}
 			if (!retpos)
 			{
-				::fast_io::throw_parse_code(::fast_io::parse_code::end_of_file);
+				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}
 			::std::size_t pisc{ret.position_in_scatter};
 			if (pisc)

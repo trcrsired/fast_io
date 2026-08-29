@@ -894,28 +894,28 @@ scn_cnt_define_unix_timestamp_impl(char_type const *begin, char_type const *end,
 {
 	// TODO: whether to accept C-like floatings such as 2. and .2
 	auto [itr, ec] = scan_int_contiguous_define_impl<10, false, false, false>(begin, end, t.seconds);
-	if (ec != parse_code::ok) [[unlikely]]
+	if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {itr, ec};
 	}
 	if (itr == end) [[unlikely]]
 	{
 		t.subseconds = 0;
-		return {itr, parse_code::ok};
+		return {itr, ::fast_io::freestanding::parse_errc::ok};
 	}
 	begin = itr;
 	if constexpr (comma)
 	{
 		if (*begin != char_literal_v<u8',', char_type>) [[unlikely]]
 		{
-			return {begin, parse_code::invalid};
+			return {begin, ::fast_io::freestanding::parse_errc::invalid};
 		}
 	}
 	else
 	{
 		if (*begin != char_literal_v<u8'.', char_type>) [[unlikely]]
 		{
-			return {begin, parse_code::invalid};
+			return {begin, ::fast_io::freestanding::parse_errc::invalid};
 		}
 	}
 	++begin;
@@ -929,7 +929,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 {
 	if (begin == end)
 	{
-		return {begin, parse_code::partial};
+		return {begin, ::fast_io::freestanding::parse_errc::partial};
 	}
 	auto itr{skip_digits<10, char_type>(begin, end)};
 	auto frag_length{static_cast<::std::uint_least8_t>(itr - begin)};
@@ -942,15 +942,15 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 		if (buffer_size == 0)
 		{
 			auto [itr2, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(begin, itr, t);
-			if (ec != parse_code::ok) [[unlikely]]
+			if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 			{
-				return {itr, parse_code::invalid};
+				return {itr, ::fast_io::freestanding::parse_errc::invalid};
 			}
 			if (itr2 != itr)
 			{
 				chrono_scan_decimal_fraction_part_rounding_impl(itr2, itr, t);
 			}
-			return {itr, parse_code::ok};
+			return {itr, ::fast_io::freestanding::parse_errc::ok};
 		}
 		else
 		{
@@ -961,12 +961,12 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 					::fast_io::freestanding::non_overlapped_copy_n(begin, digitsm1 - buffer_size, buffer_begin)};
 				auto digit_end{begin + (digitsm1 - buffer_size)};
 				auto [_, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(itr_begin, itr_end, t);
-				if (ec != parse_code::ok) [[unlikely]]
+				if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 				{
-					return {itr, parse_code::invalid};
+					return {itr, ::fast_io::freestanding::parse_errc::invalid};
 				}
 				chrono_scan_decimal_fraction_part_rounding_impl(digit_end, itr, t);
-				return {itr, parse_code::ok};
+				return {itr, ::fast_io::freestanding::parse_errc::ok};
 			}
 			else
 			{
@@ -974,11 +974,11 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 				auto itr_end{
 					::fast_io::freestanding::non_overlapped_copy_n(begin, frag_length, buffer_begin + buffer_size)};
 				auto [_, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(itr_begin, itr_end, t);
-				if (ec != parse_code::ok) [[unlikely]]
+				if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 				{
-					return {itr, parse_code::invalid};
+					return {itr, ::fast_io::freestanding::parse_errc::invalid};
 				}
-				return {itr, parse_code::ok};
+				return {itr, ::fast_io::freestanding::parse_errc::ok};
 			}
 		}
 	}
@@ -1001,22 +1001,22 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 			digit_end = begin + (digitsm1 - buffer_size);
 		}
 		auto [_, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(itr_begin, itr_end, t);
-		if (ec != parse_code::ok) [[unlikely]]
+		if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
-			return {itr, parse_code::invalid};
+			return {itr, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		if (*digit_end < char_literal_v<u8'5', char_type>)
 		{
 			state.size = 0;
 			state.tsp_phase = scan_timestamp_context_phase::waiting_for_numbers;
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		else if (*digit_end > char_literal_v<u8'5', char_type>)
 		{
 			++t;
 			state.size = 0;
 			state.tsp_phase = scan_timestamp_context_phase::waiting_for_numbers;
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		else [[unlikely]]
 		{
@@ -1028,13 +1028,13 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 					++t;
 					state.size = 0;
 					state.tsp_phase = scan_timestamp_context_phase::waiting_for_numbers;
-					return {end, parse_code::partial};
+					return {end, ::fast_io::freestanding::parse_errc::partial};
 				}
 			}
 			// xxxx500000....(unknown), then it depends on the rest
 			state.size = 0;
 			state.tsp_phase = scan_timestamp_context_phase::waiting_for_five;
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 	}
 	else
@@ -1044,7 +1044,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 		// so put it into the buffer
 		::fast_io::freestanding::non_overlapped_copy_n(begin, frag_length, buffer_begin + buffer_size);
 		state.size += static_cast<::std::uint_least8_t>(frag_length);
-		return {end, parse_code::partial};
+		return {end, ::fast_io::freestanding::parse_errc::partial};
 	}
 }
 
@@ -1074,7 +1074,7 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 	case scan_timestamp_context_phase::year:
 	{
 		auto [itr, ec] = scan_context_define_parse_impl<10, false, false, true>(state, begin, end, t.seconds);
-		if (ec != parse_code::ok)
+		if (ec != ::fast_io::freestanding::parse_errc::ok)
 		{
 			return {itr, ec};
 		}
@@ -1088,7 +1088,7 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 	{
 		if (begin == end)
 		{
-			return {begin, parse_code::partial};
+			return {begin, ::fast_io::freestanding::parse_errc::partial};
 		}
 		else
 		{
@@ -1096,14 +1096,14 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 			{
 				if (*begin++ != char_literal_v<u8',', char_type>) [[unlikely]]
 				{
-					return {begin, parse_code::invalid};
+					return {begin, ::fast_io::freestanding::parse_errc::invalid};
 				}
 			}
 			else
 			{
 				if (*begin++ != char_literal_v<u8'.', char_type>) [[unlikely]]
 				{
-					return {begin, parse_code::invalid};
+					return {begin, ::fast_io::freestanding::parse_errc::invalid};
 				}
 			}
 			state.tsp_phase = scan_timestamp_context_phase::subseconds;
@@ -1113,7 +1113,7 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 	case scan_timestamp_context_phase::subseconds:
 	{
 		auto result = scn_ctx_decimal_fraction_part_never_overflow_impl(state, begin, end, t.subseconds);
-		if (result.code == parse_code::ok)
+		if (result.code == ::fast_io::freestanding::parse_errc::ok)
 		{
 			state.tsp_phase = scan_timestamp_context_phase::ok;
 		}
@@ -1130,7 +1130,7 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 					++t.subseconds;
 				}
 				state.tsp_phase = scan_timestamp_context_phase::ok;
-				return {begin, parse_code::ok};
+				return {begin, ::fast_io::freestanding::parse_errc::ok};
 			}
 			if (*begin != char_literal_v<u8'0', char_type>)
 			{
@@ -1145,18 +1145,18 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 	{
 		if (begin == end)
 		{
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		auto itr{skip_digits<10>(begin, end)};
 		if (itr == end)
 		{
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		state.tsp_phase = scan_timestamp_context_phase::ok;
-		return {itr, parse_code::ok};
+		return {itr, ::fast_io::freestanding::parse_errc::ok};
 	}
 	case scan_timestamp_context_phase::ok:
-		return {begin, parse_code::ok};
+		return {begin, ::fast_io::freestanding::parse_errc::ok};
 	default:
 		break;
 	}
@@ -1164,8 +1164,8 @@ scn_ctx_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state, cha
 }
 
 template <::std::integral char_type>
-inline constexpr parse_code scn_ctx_eof_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state,
-																   unix_timestamp &t) noexcept
+inline constexpr ::fast_io::freestanding::parse_errc scn_ctx_eof_define_unix_timestamp_impl(timestamp_scan_state_t<char_type> &state,
+																							unix_timestamp &t) noexcept
 {
 	switch (state.tsp_phase)
 	{
@@ -1175,11 +1175,11 @@ inline constexpr parse_code scn_ctx_eof_define_unix_timestamp_impl(timestamp_sca
 		auto buffer_end{buffer_begin + state.size};
 		auto [_, ec] =
 			chrono_scan_decimal_fraction_part_never_overflow_impl(buffer_begin, buffer_end, t.subseconds);
-		if (ec != parse_code::ok) [[unlikely]]
+		if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
-			return parse_code::invalid;
+			return ::fast_io::freestanding::parse_errc::invalid;
 		}
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 	case scan_timestamp_context_phase::waiting_for_five:
 		if (t.subseconds % 2 == 1)
@@ -1189,9 +1189,9 @@ inline constexpr parse_code scn_ctx_eof_define_unix_timestamp_impl(timestamp_sca
 		[[fallthrough]];
 	case scan_timestamp_context_phase::waiting_for_numbers:
 	case scan_timestamp_context_phase::ok:
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	default:
-		return parse_code::end_of_file;
+		return ::fast_io::freestanding::parse_errc::end_of_file;
 	}
 }
 
@@ -1202,7 +1202,7 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 {
 	iso8601_timestamp retval{};
 	begin = ::fast_io::find_none_c_space(begin, end);
-	if (auto [itr, ec] = chrono_scan_year_impl(begin, end, retval.year); ec != parse_code::ok) [[unlikely]]
+	if (auto [itr, ec] = chrono_scan_year_impl(begin, end, retval.year); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {itr, ec};
 	}
@@ -1212,71 +1212,71 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 	}
 	if (end - begin < 16) [[unlikely]]
 	{
-		return {end, parse_code::invalid};
+		return {end, ::fast_io::freestanding::parse_errc::invalid};
 	}
 	if (*begin++ != char_literal_v<u8'-', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.month); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.month); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.month > 12 || retval.month == 0) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	if (*begin++ != char_literal_v<u8'-', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.day); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.day); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.day > 31 || retval.day == 0) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	if (*begin++ != char_literal_v<u8'T', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.hours); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.hours); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.hours >= 24) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	if (*begin++ != char_literal_v<u8':', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.minutes); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.minutes); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.minutes >= 60) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	if (*begin++ != char_literal_v<u8':', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.seconds); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.seconds); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.seconds >= 60) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	bool sign{};
@@ -1284,7 +1284,7 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 	{
 		++begin;
 		t = retval;
-		return {begin, parse_code::ok};
+		return {begin, ::fast_io::freestanding::parse_errc::ok};
 	}
 	else if (*begin == char_literal_v<u8'+', char_type>)
 	{
@@ -1301,20 +1301,20 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 		// parse subseconds
 		// warning that there is no garantee on end > begin here anymore
 		auto [itr, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl(begin, end, retval.subseconds);
-		if (ec != parse_code::ok) [[unlikely]]
+		if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {itr, ec};
 		}
 		begin = itr;
 		if (begin == end) [[unlikely]]
 		{
-			return {end, parse_code::invalid};
+			return {end, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		if (*begin == char_literal_v<u8'Z', char_type>)
 		{
 			++begin;
 			t = retval;
-			return {begin, parse_code::ok};
+			return {begin, ::fast_io::freestanding::parse_errc::ok};
 		}
 		else if (*begin == char_literal_v<u8'+', char_type>)
 		{
@@ -1326,40 +1326,40 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 		}
 		else [[unlikely]]
 		{
-			return {begin, parse_code::invalid};
+			return {begin, ::fast_io::freestanding::parse_errc::invalid};
 		}
 	}
 	else [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
 	// when control flow reaches here, it's to parse time-zone, format HH:MM
 	if (end - begin < 5) [[unlikely]]
 	{
-		return {end, parse_code::invalid};
+		return {end, ::fast_io::freestanding::parse_errc::invalid};
 	}
 	++begin;
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.timezone); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, retval.timezone); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (retval.timezone >= 24) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	if (*begin++ != char_literal_v<u8':', char_type>) [[unlikely]]
 	{
-		return {begin, parse_code::invalid};
+		return {begin, ::fast_io::freestanding::parse_errc::invalid};
 	}
 	::std::uint8_t timezone_minutes;
-	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, timezone_minutes); ec != parse_code::ok) [[unlikely]]
+	if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, timezone_minutes); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 	{
 		return {begin, ec};
 	}
 	if (timezone_minutes >= 60) [[unlikely]]
 	{
-		return {begin, parse_code::overflow};
+		return {begin, ::fast_io::freestanding::parse_errc::overflow};
 	}
 	begin += 2;
 	retval.timezone *= 3600;
@@ -1369,7 +1369,7 @@ scn_cnt_define_iso8601_impl(char_type const *begin, char_type const *end, iso860
 		retval.timezone = -retval.timezone;
 	}
 	t = retval;
-	return {begin, parse_code::ok};
+	return {begin, ::fast_io::freestanding::parse_errc::ok};
 }
 
 template <::std::integral char_type, ::std::integral T>
@@ -1385,7 +1385,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 	case scan_integral_context_phase::space:
 	{
 		auto phase_ret = sc_int_ctx_space_phase(begin, end);
-		if (phase_ret.code != ongoing_parse_code)
+		if (phase_ret.code != ongoing_parse_ec)
 		{
 			return phase_ret;
 		}
@@ -1397,7 +1397,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 	{
 		if (begin == end)
 		{
-			return {begin, parse_code::partial};
+			return {begin, ::fast_io::freestanding::parse_errc::partial};
 		}
 		if (*begin == char_literal_v<u8'-', char_type>)
 		{
@@ -1416,7 +1416,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 	{
 		if (begin == end)
 		{
-			return {begin, parse_code::partial};
+			return {begin, ::fast_io::freestanding::parse_errc::partial};
 		}
 		auto neg{state.buffer.front() == char_literal_v<u8'-', char_type>};
 		if ((state.size == 0 || (neg && state.size == 1)) && end - begin > 4)
@@ -1426,7 +1426,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 			{
 				if (!char_is_digit<10, char_type>(*itr)) [[unlikely]]
 				{
-					return {itr, parse_code::invalid};
+					return {itr, ::fast_io::freestanding::parse_errc::invalid};
 				}
 			}
 			if (char_is_digit<10, char_type>(*itr)) [[unlikely]]
@@ -1444,7 +1444,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 				{
 					t = -t;
 				}
-				return {begin, parse_code::ok};
+				return {begin, ::fast_io::freestanding::parse_errc::ok};
 			}
 		}
 		else
@@ -1459,11 +1459,11 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 				{
 					if (!char_is_digit<10, char_type>(*begin)) [[unlikely]]
 					{
-						return {begin, parse_code::invalid};
+						return {begin, ::fast_io::freestanding::parse_errc::invalid};
 					}
 					state.buffer[state.size++] = *begin;
 				}
-				return {begin, parse_code::partial};
+				return {begin, ::fast_io::freestanding::parse_errc::partial};
 			}
 			else
 			{
@@ -1471,7 +1471,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 				{
 					if (!char_is_digit<10, char_type>(*begin)) [[unlikely]]
 					{
-						return {begin, parse_code::invalid};
+						return {begin, ::fast_io::freestanding::parse_errc::invalid};
 					}
 					state.buffer[state.size++] = *begin;
 				}
@@ -1491,7 +1491,7 @@ scan_iso8601_context_year_phase(timestamp_scan_state_t<char_type> &state, char_t
 					{
 						t = -t;
 					}
-					return {begin, parse_code::ok};
+					return {begin, ::fast_io::freestanding::parse_errc::ok};
 				}
 			}
 		}
@@ -1509,7 +1509,7 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 	auto diff{end - begin};
 	if (diff == 0)
 	{
-		return {begin, parse_code::partial};
+		return {begin, ::fast_io::freestanding::parse_errc::partial};
 	}
 	auto buffer_begin{state.buffer.begin()};
 #if __has_cpp_attribute(assume)
@@ -1522,7 +1522,7 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 		if (diff >= 2)
 		{
 			/*no copy to buffer*/
-			if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, t); ec != parse_code::ok) [[unlikely]]
+			if (auto ec = chrono_scan_two_digits_unsafe_impl(begin, t); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 			{
 				return {begin, ec};
 			}
@@ -1533,14 +1533,14 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 		{
 			::fast_io::freestanding::non_overlapped_copy_n(begin, 1, buffer_begin);
 			state.size = 1;
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		break;
 	}
 	case 1:
 	{
 		::fast_io::freestanding::non_overlapped_copy_n(begin, 1, buffer_begin + 1);
-		if (auto ec = chrono_scan_two_digits_unsafe_impl(buffer_begin, t); ec != parse_code::ok) [[unlikely]]
+		if (auto ec = chrono_scan_two_digits_unsafe_impl(buffer_begin, t); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {begin, ec};
 		}
@@ -1552,7 +1552,7 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 	default:;
 		::fast_io::unreachable();
 	}
-	return {begin, parse_code::ok};
+	return {begin, ::fast_io::freestanding::parse_errc::ok};
 }
 
 template <bool comma, ::std::integral char_type>
@@ -1567,7 +1567,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 	{
 		t = {};
 		auto [itr, ec] = scan_iso8601_context_year_phase(state, begin, end, t.year);
-		if (ec != parse_code::ok)
+		if (ec != ::fast_io::freestanding::parse_errc::ok)
 		{
 			return {itr, ec};
 		}
@@ -1578,22 +1578,22 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		[[fallthrough]];
 	}
 	case scan_timestamp_context_phase::after_year:
-#define FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE(TOK)                    \
-	{                                                                    \
-		if (begin == end)                                                \
-			return {begin, parse_code::partial};                         \
-		else                                                             \
-		{                                                                \
-			if (*begin++ != char_literal_v<TOK, char_type>) [[unlikely]] \
-				return {begin, parse_code::invalid};                     \
-			++state.tsp_phase;                                           \
-		}                                                                \
+#define FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE(TOK)                         \
+	{                                                                         \
+		if (begin == end)                                                     \
+			return {begin, ::fast_io::freestanding::parse_errc::partial};     \
+		else                                                                  \
+		{                                                                     \
+			if (*begin++ != char_literal_v<TOK, char_type>) [[unlikely]]      \
+				return {begin, ::fast_io::freestanding::parse_errc::invalid}; \
+			++state.tsp_phase;                                                \
+		}                                                                     \
 	}
 
 		FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE(u8'-');
 		[[fallthrough]];
 	case scan_timestamp_context_phase::month:
-		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.month); ec != parse_code::ok)
+		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.month); ec != ::fast_io::freestanding::parse_errc::ok)
 			[[unlikely]]
 		{
 			return {itr, ec};
@@ -1602,7 +1602,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.month > 12 || t.month == 0) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1611,7 +1611,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE(u8'-');
 		[[fallthrough]];
 	case scan_timestamp_context_phase::day:
-		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.day); ec != parse_code::ok)
+		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.day); ec != ::fast_io::freestanding::parse_errc::ok)
 			[[unlikely]]
 		{
 			return {itr, ec};
@@ -1620,7 +1620,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.day > 31 || t.day == 0) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1629,7 +1629,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE(u8'T');
 		[[fallthrough]];
 	case scan_timestamp_context_phase::hours:
-		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.hours); ec != parse_code::ok)
+		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.hours); ec != ::fast_io::freestanding::parse_errc::ok)
 			[[unlikely]]
 		{
 			return {itr, ec};
@@ -1638,7 +1638,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.hours >= 24) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1648,7 +1648,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		[[fallthrough]];
 	case scan_timestamp_context_phase::minutes:
 		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.minutes);
-			ec != parse_code::ok) [[unlikely]]
+			ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {itr, ec};
 		}
@@ -1656,7 +1656,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.minutes >= 60) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1666,7 +1666,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		[[fallthrough]];
 	case scan_timestamp_context_phase::seconds:
 		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.seconds);
-			ec != parse_code::ok) [[unlikely]]
+			ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {itr, ec};
 		}
@@ -1674,7 +1674,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.seconds >= 60) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1684,14 +1684,14 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 	{
 		if (begin == end)
 		{
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		switch (*begin)
 		{
 		case char_literal_v<u8'Z', char_type>:
 			t.timezone = 0;
 			state.tsp_phase = scan_timestamp_context_phase::ok;
-			return {begin + 1, parse_code::ok};
+			return {begin + 1, ::fast_io::freestanding::parse_errc::ok};
 		case char_literal_v<u8'+', char_type>:
 			++begin;
 			state.integer_phase = static_cast<scan_integral_context_phase>(0);
@@ -1713,13 +1713,13 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 			}
 			else [[fallthrough]];
 		default:
-			return {begin, parse_code::invalid};
+			return {begin, ::fast_io::freestanding::parse_errc::invalid};
 		}
 		[[fallthrough]];
 	}
 	case scan_timestamp_context_phase::timezone_hours:
 		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, t.timezone);
-			ec != parse_code::ok) [[unlikely]]
+			ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {itr, ec};
 		}
@@ -1727,7 +1727,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (t.timezone >= 24) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1739,7 +1739,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 	{
 		::std::uint8_t timezone_minutes;
 		if (auto [itr, ec] = scan_iso8601_context_2_digits_phase(state, begin, end, timezone_minutes);
-			ec != parse_code::ok) [[unlikely]]
+			ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {itr, ec};
 		}
@@ -1747,7 +1747,7 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 		{
 			if (timezone_minutes >= 60) [[unlikely]]
 			{
-				return {itr, parse_code::overflow};
+				return {itr, ::fast_io::freestanding::parse_errc::overflow};
 			}
 			begin = itr;
 		}
@@ -1758,12 +1758,12 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 			t.timezone = -t.timezone;
 		}
 		state.tsp_phase = scan_timestamp_context_phase::ok;
-		return {begin, parse_code::ok};
+		return {begin, ::fast_io::freestanding::parse_errc::ok};
 	}
 	case scan_timestamp_context_phase::subseconds:
 	{
 		auto [itr, ec] = scn_ctx_decimal_fraction_part_never_overflow_impl(state, begin, end, t.subseconds);
-		if (ec == parse_code::ok)
+		if (ec == ::fast_io::freestanding::parse_errc::ok)
 		{
 			state.tsp_phase = scan_timestamp_context_phase::after_subseconds_timezone_marker;
 			return scn_ctx_define_iso8601_impl<comma>(state, itr, end, t);
@@ -1799,18 +1799,18 @@ scn_ctx_define_iso8601_impl(timestamp_scan_state_t<char_type> &state, char_type 
 	{
 		if (begin == end)
 		{
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		auto itr{skip_digits<10>(begin, end)};
 		if (itr == end)
 		{
-			return {end, parse_code::partial};
+			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
 		state.tsp_phase = scan_timestamp_context_phase::after_subseconds_timezone_marker;
 		return scn_ctx_define_iso8601_impl<comma>(state, itr, end, t);
 	}
 	case scan_timestamp_context_phase::ok:
-		return {begin, parse_code::ok};
+		return {begin, ::fast_io::freestanding::parse_errc::ok};
 	}
 	::fast_io::unreachable();
 #undef FAST_IO_SCAN_ISO8601_CONTEXT_TOKEN_PHASE
@@ -1856,7 +1856,7 @@ scan_context_define(io_reserve_type_t<char_type, parameter<basic_timestamp<off_t
 	}
 	auto result{details::scn_ctx_define_unix_timestamp_impl<false>(
 		state, begin, end, *reinterpret_cast<unix_timestamp *>(__builtin_addressof(t.reference)))};
-	if (result.code == parse_code::ok)
+	if (result.code == ::fast_io::freestanding::parse_errc::ok)
 	{
 		t.reference.seconds -= off_to_epoch;
 	}
@@ -1864,7 +1864,7 @@ scan_context_define(io_reserve_type_t<char_type, parameter<basic_timestamp<off_t
 }
 
 template <::std::integral char_type, ::std::int_least64_t off_to_epoch>
-inline constexpr parse_code
+inline constexpr ::fast_io::freestanding::parse_errc
 scan_context_eof_define(io_reserve_type_t<char_type, parameter<basic_timestamp<off_to_epoch> &>>,
 						timestamp_scan_state_t<char_type> &state,
 						fast_io::parameter<basic_timestamp<off_to_epoch> &> t) noexcept
@@ -1875,7 +1875,7 @@ scan_context_eof_define(io_reserve_type_t<char_type, parameter<basic_timestamp<o
 	}
 	auto result{details::scn_ctx_eof_define_unix_timestamp_impl(
 		state, *reinterpret_cast<unix_timestamp *>(__builtin_addressof(t.reference)))};
-	if (result == parse_code::ok && state.tsp_phase != scan_timestamp_context_phase::ok)
+	if (result == ::fast_io::freestanding::parse_errc::ok && state.tsp_phase != scan_timestamp_context_phase::ok)
 	{
 		t.reference.seconds -= off_to_epoch;
 	}
@@ -1907,17 +1907,17 @@ scan_context_define(io_reserve_type_t<char_type, parameter<iso8601_timestamp &>>
 }
 
 template <::std::integral char_type>
-inline constexpr parse_code
+inline constexpr ::fast_io::freestanding::parse_errc
 scan_context_eof_define(io_reserve_type_t<char_type, fast_io::parameter<iso8601_timestamp &>>,
 						timestamp_scan_state_t<char_type> &state, fast_io::parameter<iso8601_timestamp &>) noexcept
 {
 	if (state.tsp_phase == scan_timestamp_context_phase::ok)
 	{
-		return parse_code::ok;
+		return ::fast_io::freestanding::parse_errc::ok;
 	}
 	else
 	{
-		return parse_code::end_of_file;
+		return ::fast_io::freestanding::parse_errc::end_of_file;
 	}
 }
 
