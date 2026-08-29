@@ -6,7 +6,7 @@ namespace fast_io
 namespace details
 {
 
-inline ::std::byte *posix_read_bytes_impl(int fd, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *posix_read_bytes_impl(int fd, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_read)
 	auto ret{system_call<__NR_read, ::std::ptrdiff_t>(fd, first, static_cast<::std::size_t>(last - first))};
@@ -28,7 +28,7 @@ inline ::std::byte *posix_read_bytes_impl(int fd, ::std::byte *first, ::std::byt
 	return first + ret;
 }
 
-inline ::std::byte const *posix_write_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last)
+inline ::std::byte const *posix_write_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_write)
 	auto ret{system_call<__NR_write, ::std::ptrdiff_t>(fd, first, static_cast<::std::size_t>(last - first))};
