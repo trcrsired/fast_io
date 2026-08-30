@@ -203,7 +203,6 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 		}
 	}
 }
-
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif

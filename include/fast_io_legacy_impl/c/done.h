@@ -35,7 +35,7 @@ extern ::std::size_t
 #endif
 
 inline ::std::size_t c_fwrite_unlocked_impl(void const *__restrict begin, ::std::size_t type_size, ::std::size_t count,
-											FILE *__restrict fp)
+											FILE *__restrict fp) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (count == 0)
 	{
@@ -132,12 +132,8 @@ inline ::std::size_t c_fwrite_unlocked_impl(void const *__restrict begin, ::std:
 }
 
 inline ::std::size_t c_fread_unlocked_impl(void *__restrict begin, ::std::size_t type_size, ::std::size_t count,
-										   FILE *__restrict fp)
+										   FILE *__restrict fp) FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (fp == stdin)
-	{
-		::fast_io::noexcept_call(::fflush, stdout);
-	}
 #if defined(__NEWLIB__) && !defined(__CYGWIN__)
 	struct _reent rent{};
 	::std::size_t read_count{
@@ -250,7 +246,7 @@ inline ::std::size_t c_fread_unlocked_impl(void *__restrict begin, ::std::size_t
 }
 
 inline ::std::size_t c_fwrite_impl(void const *__restrict begin, ::std::size_t type_size, ::std::size_t count,
-								   FILE *__restrict fp)
+								   FILE *__restrict fp) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (count == 0)
 	{
@@ -294,12 +290,8 @@ inline ::std::size_t c_fwrite_impl(void const *__restrict begin, ::std::size_t t
 }
 
 inline ::std::size_t c_fread_impl(void *__restrict begin, ::std::size_t type_size, ::std::size_t count,
-								  FILE *__restrict fp)
+								  FILE *__restrict fp) FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (fp == stdin)
-	{
-		::fast_io::noexcept_call(::fflush, stdout);
-	}
 #if defined(__NEWLIB__)
 	struct _reent rent{};
 	::std::size_t read_count{noexcept_call(_fread_r, __builtin_addressof(rent), begin, type_size, count, fp)};
@@ -347,24 +339,24 @@ inline ::std::size_t c_fread_impl(void *__restrict begin, ::std::size_t type_siz
 	return read_count;
 }
 
-inline ::std::byte *c_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *c_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return c_fread_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
 }
 
-inline ::std::byte *c_unlocked_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *c_unlocked_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return c_fread_unlocked_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
 }
 
 inline ::std::byte const *c_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first,
-												  ::std::byte const *last)
+												  ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return c_fwrite_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
 }
 
 inline ::std::byte const *c_unlocked_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first,
-														   ::std::byte const *last)
+														   ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return c_fwrite_unlocked_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
 }
@@ -373,7 +365,7 @@ inline ::std::byte const *c_unlocked_write_some_bytes_impl(FILE *__restrict fp, 
 
 template <::fast_io::c_family family, ::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_family_io_observer<family, char_type> ciob,
-													 ::std::byte *first, ::std::byte *last)
+													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == ::fast_io::c_family::unlocked || family == ::fast_io::c_family::emulated_unlocked)
 	{
@@ -388,7 +380,7 @@ inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_family_i
 template <::fast_io::c_family family, ::std::integral char_type>
 inline ::std::byte const *
 write_some_bytes_overflow_define(::fast_io::basic_c_family_io_observer<family, char_type> ciob,
-								 ::std::byte const *first, ::std::byte const *last)
+								 ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == ::fast_io::c_family::unlocked || family == ::fast_io::c_family::emulated_unlocked)
 	{
