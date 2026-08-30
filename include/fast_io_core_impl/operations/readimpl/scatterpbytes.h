@@ -104,7 +104,7 @@ template <typename instmtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void scatter_pread_all_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
-														::fast_io::intfpos_t off)
+														::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::defines::has_any_of_read_operations_herbceptions_throws<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_all_bytes_underflow_define<instmtype>)

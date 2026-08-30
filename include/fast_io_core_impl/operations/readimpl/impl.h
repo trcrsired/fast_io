@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "basis.h"
+#include "if_herbceptions_throws.h"
 #include "scatter.h"
 #include "scatterbytes.h"
 #include "pbasis.h"

@@ -193,7 +193,7 @@ template <typename instmtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void pread_all_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
-										  typename instmtype::input_char_type *last, ::fast_io::intfpos_t off)
+										  typename instmtype::input_char_type *last, ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::defines::has_any_of_read_operations_herbceptions_throws<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_all_underflow_define<instmtype>)
@@ -271,7 +271,7 @@ template <typename instmtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void pread_all_bytes_cold_impl(instmtype insm, ::std::byte *first, ::std::byte *last,
-												::fast_io::intfpos_t off)
+												::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::defines::has_any_of_read_operations_herbceptions_throws<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_all_bytes_underflow_define<instmtype>)

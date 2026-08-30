@@ -145,7 +145,7 @@ template <typename instmtype>
 #endif
 inline constexpr void
 scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
-							::std::size_t n, ::fast_io::intfpos_t off)
+							::std::size_t n, ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::defines::has_any_of_read_operations_herbceptions_throws<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_all_underflow_define<instmtype>)
 	{

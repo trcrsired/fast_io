@@ -82,7 +82,7 @@ template <bool>
 inline constexpr bool type_not_scannable = false;
 
 template <typename input, typename T>
-[[nodiscard]] inline constexpr bool scan_single_impl(input in, T arg)
+[[nodiscard]] inline constexpr bool scan_single_impl(input in, T arg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename input::input_char_type;
 #if 0
@@ -314,7 +314,7 @@ namespace operations::decay
 {
 
 template <typename input, typename... Args>
-[[nodiscard]] inline constexpr decltype(auto) scan_freestanding_decay(input instm, Args... args)
+[[nodiscard]] inline constexpr decltype(auto) scan_freestanding_decay(input instm, Args... args) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_status_scan_define<input>)
 	{
