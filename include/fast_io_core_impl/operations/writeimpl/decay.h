@@ -7,6 +7,7 @@ template <typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const *
 write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				 typename outstmtype::output_char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::write_some_impl(outsm, first, last);
 }
@@ -14,6 +15,7 @@ write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *
 template <typename outstmtype>
 inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									  typename outstmtype::output_char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::write_all_impl(outsm, first, last);
 }
@@ -21,12 +23,14 @@ inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::out
 template <typename outstmtype>
 inline constexpr ::std::byte const *write_some_bytes_decay(outstmtype outsm, ::std::byte const *first,
 														   ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::write_some_bytes_impl(outsm, first, last);
 }
 
 template <typename outstmtype>
 inline constexpr void write_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::write_all_bytes_impl(outsm, first, last);
 }
@@ -35,13 +39,15 @@ template <typename outstmtype>
 inline constexpr io_scatter_status_t
 scatter_write_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::scatter_write_some_impl(outsm, pscatters, n);
 }
 
 template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
-																		::std::size_t n)
+																	::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::scatter_write_some_bytes_impl(outsm, pscatters, n);
 }
@@ -50,12 +56,14 @@ template <typename outstmtype>
 inline constexpr void
 scatter_write_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::scatter_write_all_impl(outsm, pscatters, n);
 }
 
 template <typename outstmtype>
 inline constexpr void scatter_write_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::scatter_write_all_bytes_impl(outsm, pscatters, n);
 }
@@ -64,6 +72,7 @@ template <typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const *
 pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				  typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::pwrite_some_impl(outsm, first, last, off);
 }
@@ -71,6 +80,7 @@ pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const 
 template <typename outstmtype>
 inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									   typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::pwrite_all_impl(outsm, first, last, off);
 }
@@ -78,6 +88,7 @@ inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::ou
 template <typename outstmtype>
 inline constexpr ::std::byte const *pwrite_some_bytes_decay(outstmtype outsm, ::std::byte const *first,
 															::std::byte const *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::pwrite_some_bytes_impl(outsm, first, last, off);
 }
@@ -85,6 +96,7 @@ inline constexpr ::std::byte const *pwrite_some_bytes_decay(outstmtype outsm, ::
 template <typename outstmtype>
 inline constexpr void pwrite_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::byte const *last,
 											 ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::pwrite_all_bytes_impl(outsm, first, last, off);
 }
@@ -93,13 +105,15 @@ template <typename outstmtype>
 inline constexpr io_scatter_status_t
 scatter_pwrite_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						  ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::scatter_pwrite_some_impl(outsm, pscatters, n, off);
 }
 
 template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
-																		 ::std::size_t n, ::fast_io::intfpos_t off)
+																	 ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	return ::fast_io::details::scatter_pwrite_some_bytes_impl(outsm, pscatters, n, off);
 }
@@ -108,6 +122,7 @@ template <typename outstmtype>
 inline constexpr void
 scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::scatter_pwrite_all_impl(outsm, pscatters, n, off);
 }
@@ -115,6 +130,7 @@ scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 template <typename outstmtype>
 inline constexpr void scatter_pwrite_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n,
 													 ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::scatter_pwrite_all_bytes_impl(outsm, pscatters, n, off);
 }
@@ -126,6 +142,7 @@ template <typename outstmtype>
 [[msvc::forceinline]]
 #endif
 inline constexpr void char_put_decay(outstmtype outstm, typename outstmtype::output_char_type ch)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::details::char_put_impl(outstm, ch);
 }

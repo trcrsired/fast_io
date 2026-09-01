@@ -5,7 +5,7 @@ namespace fast_io::herbceptions
 
 template <typename T>
 	requires ::std::is_enum_v<T>
-inline constexpr void throws_errc_generic([[maybe_unused]] T ec) FAST_IO_HERBCEPTIONS_THROWS
+[[noreturn]] inline constexpr void throws_errc_generic([[maybe_unused]] T ec) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__HERBCEPTIONS__)
 	throw throws ec;
@@ -19,7 +19,7 @@ inline constexpr void throws_errc([[maybe_unused]] ::std::errc ec) FAST_IO_HERBC
 	::fast_io::herbceptions::throws_errc_generic(ec);
 }
 
-inline constexpr void throws_errc_with_value([[maybe_unused]] int ec) FAST_IO_HERBCEPTIONS_THROWS
+[[noreturn]] inline constexpr void throws_errc_with_value([[maybe_unused]] int ec) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::herbceptions::throws_errc_generic(static_cast<::std::errc>(ec));
 }

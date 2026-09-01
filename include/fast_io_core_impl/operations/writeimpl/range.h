@@ -48,9 +48,10 @@ bytes_copy_punning_impl(FromItbg fromfirst, FromIted fromlast, ToIter tofirst, T
 
 template <::std::size_t blocksize, typename outstmtype, typename T1, typename T>
 inline constexpr void write_all_iterator_decay_multiblock_common_impl(outstmtype outsm, T1 **controller_first,
-															   T const *firstblock_curr, T const *firstblock_end,
-															   T1 **controller_last, T const *lastblock_first,
-															   T const *lastblock_curr)
+																	  T const *firstblock_curr, T const *firstblock_end,
+																	  T1 **controller_last, T const *lastblock_first,
+																	  T const *lastblock_curr)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	using output_char_type = typename outstmtype::output_char_type;
 	using nocref = ::std::remove_cvref_t<T>;
@@ -130,6 +131,7 @@ inline constexpr void write_all_iterator_decay_multiblock_common_impl(outstmtype
 
 template <typename outstmtype, typename Iter, typename Iterlast>
 inline constexpr void write_all_iterator_decay_impl(outstmtype outsm, Iter first, Iterlast last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -210,6 +212,7 @@ template <typename outstmtype, ::std::ranges::input_range rg>
 			   (sizeof(::std::ranges::range_value_t<rg>) % sizeof(typename outstmtype::output_char_type) == 0))) &&
 			 ::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<::std::ranges::range_value_t<rg>>)
 inline constexpr void write_all_range_decay(outstmtype outsm, rg &&r)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	using output_char_type = typename outstmtype::output_char_type;
 	using rgvlt = ::std::ranges::range_value_t<rg>;
@@ -261,6 +264,7 @@ template <typename outstmtype, ::std::ranges::input_range R>
 [[msvc::forceinline]]
 #endif
 inline constexpr void write_all_range(outstmtype &&outstm, R &&r)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	::fast_io::operations::decay::write_all_range_decay(::fast_io::operations::output_stream_ref(outstm),
 														::std::forward<R>(r));

@@ -10,6 +10,7 @@ template <typename outstmtype>
 #endif
 inline constexpr io_scatter_status_t scatter_write_some_bytes_cold_impl(outstmtype outsm, io_scatter_t const *pscatters,
 																		::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_write_some_bytes_overflow_define<outstmtype>)
@@ -87,6 +88,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_cold_impl(outstmty
 template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_write_some_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters,
 																   ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -159,6 +161,7 @@ template <typename outstmtype>
 #endif
 inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_scatter_t const *pscatters,
 														::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_write_all_bytes_overflow_define<outstmtype>)
@@ -250,6 +253,7 @@ inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_sca
 
 template <typename outstmtype>
 inline constexpr void scatter_write_all_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
