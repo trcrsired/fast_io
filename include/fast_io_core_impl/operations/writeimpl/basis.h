@@ -8,8 +8,11 @@ namespace details
 template <typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const *
 pwrite_some_cold_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
-					  typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t);
-
+					  typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t)
+#if 0
+					  FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>);
+#endif
+	;
 template <typename outstmtype>
 inline constexpr ::std::byte const *pwrite_some_bytes_cold_impl(outstmtype outsm, ::std::byte const *first,
 																::std::byte const *last, ::fast_io::intfpos_t off);

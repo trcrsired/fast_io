@@ -270,10 +270,11 @@ Internal assert macros for fuzzing fast_io.
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS")
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS_IF")
 #undef FAST_IO_HERBCEPTIONS_THROWS
+#undef FAST_IO_HERBCEPTIONS_THROWS_IF
 #ifdef __HERBCEPTIONS__
 #define FAST_IO_HERBCEPTIONS_THROWS throws
 #define FAST_IO_HERBCEPTIONS_THROWS_IF(x) throws(x)
 #else
 #define FAST_IO_HERBCEPTIONS_THROWS
-#define FAST_IO_HERBCEPTIONS_THROWS_IF(x)
+#define FAST_IO_HERBCEPTIONS_THROWS_IF(x) noexcept(!(x))
 #endif

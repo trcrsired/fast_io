@@ -152,4 +152,9 @@ struct io_null_t
 
 inline constexpr io_null_t io_null{};
 
+struct io_nothrow_tag
+{
+	explicit inline constexpr io_nothrow_tag() noexcept = default;
+};
+
 } // namespace fast_io

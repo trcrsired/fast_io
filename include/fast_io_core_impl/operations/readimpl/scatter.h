@@ -193,7 +193,7 @@ template <typename instmtype>
 #endif
 inline constexpr void
 scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
-						   ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::defines::has_any_of_read_operations_herbceptions_throws<instmtype>)
+						   ::std::size_t n)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_read_all_underflow_define<instmtype>)
