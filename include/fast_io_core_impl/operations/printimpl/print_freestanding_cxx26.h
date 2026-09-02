@@ -1,7 +1,5 @@
 #pragma once
 
-#error "We do not recommend using this header file for the time being."
-
 namespace fast_io
 {
 
