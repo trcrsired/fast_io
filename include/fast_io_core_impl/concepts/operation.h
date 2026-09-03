@@ -253,7 +253,7 @@ concept scatter_printable = ::fast_io::runtime_reserve_printable_size_available<
 	{
 		print_scatter_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>,
 							 ::fast_io::freestanding::forward<T>(t))
-	} -> ::std::same_as<basic_io_scatter_t<char_type>>;
+	} -> ::std::same_as<::fast_io::basic_io_scatter_t<char_type>>;
 };
 
 /// @brief      alias_scannable
@@ -306,7 +306,8 @@ struct parameter
 template <::std::integral char_type, typename output, typename value_type>
 	requires(printable<char_type, ::std::remove_cvref_t<value_type>> && ::std::is_trivially_copyable_v<output>)
 inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::parameter<value_type>>, output out,
-								   ::fast_io::parameter<value_type> wrapper) FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference)))
+								   ::fast_io::parameter<value_type> wrapper)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference)))
 {
 	print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference);
 }
@@ -322,7 +323,7 @@ template <::std::integral char_type, typename value_type>
 	requires ::fast_io::runtime_reserve_printable_size_available<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>,
 												  parameter<value_type> para)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference)))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference))
 {
 	return print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
@@ -332,7 +333,7 @@ template <::std::integral char_type, typename value_type>
 			 ::fast_io::dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>)
 inline constexpr auto print_reserve_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, char_type *begin,
 										   parameter<value_type> para)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference)))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference))
 {
 	return print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference);
 }
@@ -341,6 +342,8 @@ template <::std::integral char_type, typename value_type, typename Iter>
 	requires(::fast_io::printable_internal_shift<char_type, ::std::remove_cvref_t<value_type>>)
 inline constexpr auto print_define_internal_shift(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
 												  parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_define_internal_shift(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin,
+																			para.reference))
 {
 	return print_define_internal_shift(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin,
 									   para.reference);
@@ -350,6 +353,7 @@ template <::std::integral char_type, typename value_type>
 	requires ::fast_io::precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr ::std::size_t print_reserve_precise_size(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>,
 														  parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_reserve_precise_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference))
 {
 	return print_reserve_precise_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
@@ -358,6 +362,7 @@ template <::std::integral char_type, typename value_type, typename Iter>
 	requires ::fast_io::precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr void print_reserve_precise_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
 												   ::std::size_t n, parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_reserve_precise_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, n, para.reference))
 {
 	print_reserve_precise_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, n,
 								 para.reference);
@@ -366,6 +371,7 @@ inline constexpr void print_reserve_precise_define(::fast_io::io_reserve_type_t<
 template <::std::integral char_type, typename value_type>
 	requires scatter_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr auto print_scatter_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_scatter_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference))
 {
 	return print_scatter_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }

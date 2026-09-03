@@ -271,10 +271,21 @@ Internal assert macros for fuzzing fast_io.
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS_IF")
 #undef FAST_IO_HERBCEPTIONS_THROWS
 #undef FAST_IO_HERBCEPTIONS_THROWS_IF
+#undef FAST_IO_HERBCEPTIONS_THROWS_THROWS
 #ifdef __HERBCEPTIONS__
 #define FAST_IO_HERBCEPTIONS_THROWS throws
 #define FAST_IO_HERBCEPTIONS_THROWS_IF(x) throws(x)
+#define FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(x) throws(!noexcept(x))
 #else
 #define FAST_IO_HERBCEPTIONS_THROWS
 #define FAST_IO_HERBCEPTIONS_THROWS_IF(x) noexcept(!(x))
+#define FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(x) noexcept(noexcept(x))
+#endif
+
+#pragma push_macro("FAST_IO_INDETERMINATE")
+#undef FAST_IO_INDETERMINATE
+#if __has_cpp_attribute(indeterminate)
+#define FAST_IO_INDETERMINATE [[indeterminate]]
+#else
+#define FAST_IO_INDETERMINATE
 #endif
