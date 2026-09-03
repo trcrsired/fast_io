@@ -266,3 +266,13 @@ Internal assert macros for fuzzing fast_io.
 #define FAST_IO_CPP_EXCEPTIONS
 #endif
 #endif
+
+
+#pragma push_macro("FAST_IO_INDETERMINATE")
+#undef FAST_IO_INDETERMINATE
+#if __has_cpp_attribute(indeterminate)
+#define FAST_IO_INDETERMINATE [[indeterminate]]
+#else
+#define FAST_IO_INDETERMINATE
+#endif
+#endif
