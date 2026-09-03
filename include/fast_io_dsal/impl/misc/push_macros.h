@@ -275,4 +275,4 @@ Internal assert macros for fuzzing fast_io.
 #else
 #define FAST_IO_INDETERMINATE
 #endif
-#endif
+
