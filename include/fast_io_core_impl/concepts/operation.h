@@ -54,7 +54,7 @@ concept contiguous_scannable = requires(char_type const *begin, char_type const 
 /// @param    ::fast_io::io_reserve_type_t<char_type, T>    tag-invoke
 /// @param    your_context_type&                            the context object
 /// @param    T                                             the object to be scanned, can be any passing style
-/// @return   ::fast_io::parse_code                         a parse code indicating parsing state
+/// @return   ::fast_io::freestanding::parse_errc                         a parse code indicating parsing state
 template <typename char_type, typename T>
 concept context_scannable = requires(char_type const *begin, char_type const *end, T t) {
 	requires requires(
@@ -62,7 +62,7 @@ concept context_scannable = requires(char_type const *begin, char_type const *en
 		{
 			scan_context_define(io_reserve_type<char_type, T>, st, begin, end, t)
 		} -> ::std::same_as<parse_result<char_type const *>>;
-		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<parse_code>;
+		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<::fast_io::freestanding::parse_errc>;
 	};
 };
 
@@ -307,7 +307,7 @@ template <::std::integral char_type, typename output, typename value_type>
 	requires(printable<char_type, ::std::remove_cvref_t<value_type>> && ::std::is_trivially_copyable_v<output>)
 inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::parameter<value_type>>, output out,
 								   ::fast_io::parameter<value_type> wrapper)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference)))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference))
 {
 	print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference);
 }
@@ -385,7 +385,7 @@ concept iterative_scannable =
 		} -> ::std::same_as<parse_result<char_type const *>>;
 		{
 			scan_iterative_eof_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
-		} -> ::std::same_as<fast_io::parse_code>;
+		} -> ::std::same_as<::fast_io::freestanding::parse_errc>;
 	};
 
 template <typename char_type, typename T>

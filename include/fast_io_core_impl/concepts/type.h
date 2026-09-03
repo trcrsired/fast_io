@@ -103,13 +103,6 @@ struct try_get_result
 	bool eof;
 };
 
-template <typename in_char_type, typename out_char_type>
-struct transcode_result
-{
-	in_char_type const *input_result_ptr{};
-	out_char_type *output_result_ptr{};
-};
-
 enum class seekdir : ::std::uint_least8_t
 {
 	beg = 0, // SEEK_SET
