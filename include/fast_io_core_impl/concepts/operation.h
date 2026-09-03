@@ -54,7 +54,7 @@ concept contiguous_scannable = requires(char_type const *begin, char_type const 
 /// @param    ::fast_io::io_reserve_type_t<char_type, T>    tag-invoke
 /// @param    your_context_type&                            the context object
 /// @param    T                                             the object to be scanned, can be any passing style
-/// @return   ::fast_io::freestanding::parse_errc                         a parse code indicating parsing state
+/// @return   ::fast_io::parse_code                         a parse code indicating parsing state
 template <typename char_type, typename T>
 concept context_scannable = requires(char_type const *begin, char_type const *end, T t) {
 	requires requires(
@@ -62,7 +62,7 @@ concept context_scannable = requires(char_type const *begin, char_type const *en
 		{
 			scan_context_define(io_reserve_type<char_type, T>, st, begin, end, t)
 		} -> ::std::same_as<parse_result<char_type const *>>;
-		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<::fast_io::freestanding::parse_errc>;
+		{ scan_context_eof_define(io_reserve_type<char_type, T>, st, t) } -> ::std::same_as<parse_code>;
 	};
 };
 
@@ -91,6 +91,13 @@ concept reserve_printable = ::std::integral<char_type> && requires(T t, char_typ
 	} -> ::std::convertible_to<char_type *>;
 };
 
+template <typename char_type, typename T>
+concept runtime_reserve_printable_size_available = ::std::integral<char_type> && requires(T t) {
+	{
+		print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
+	} -> ::std::convertible_to<::std::size_t>;
+};
+
 /// @brief    dynamic_reserve_printable
 /// @details  That a type is dynamic reserve printable
 ///           is that it can be printed to a buffer with a run-time-known size,
@@ -109,10 +116,7 @@ concept reserve_printable = ::std::integral<char_type> && requires(T t, char_typ
 /// @param    T                                             the object to be printed
 /// @return   char_type*                                    a pointer to the next after printing
 template <typename char_type, typename T>
-concept dynamic_reserve_printable = ::std::integral<char_type> && requires(T t, char_type *ptr) {
-	{
-		print_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
-	} -> ::std::convertible_to<::std::size_t>;
+concept dynamic_reserve_printable = ::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, char_type *ptr) {
 	{
 		print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, ptr, t)
 	} -> ::std::convertible_to<char_type *>;
@@ -139,7 +143,7 @@ concept dynamic_reserve_printable = ::std::integral<char_type> && requires(T t, 
 /// @return     ::fast_io::context_print_result<char_type*> a pointer to the next after printing
 ///                                                         and a boolean indicating whether the printing is done
 template <typename char_type, typename T>
-concept context_printable = ::std::integral<char_type> && requires(T t, char_type *ptr) {
+concept context_printable = ::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, char_type *ptr) {
 	requires requires(
 		typename ::std::remove_cvref_t<decltype(print_context_type(io_reserve_type<char_type, T>))>::type st) {
 		{ st.print_context_define(t, ptr, ptr) } -> ::std::same_as<context_print_result<char_type *>>;
@@ -211,7 +215,7 @@ concept precise_reserve_printable =
 ///                                                         and a pointer to the next character after printing
 template <typename char_type, typename T>
 concept reserve_scatters_printable =
-	::std::integral<char_type> && requires(T t, ::fast_io::basic_io_scatter_t<char_type> *scatters, char_type *ptr) {
+	::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, ::fast_io::basic_io_scatter_t<char_type> *scatters, char_type *ptr) {
 		{
 			print_reserve_scatters_size(io_reserve_type<char_type, ::std::remove_cvref_t<T>>)
 		} -> ::std::same_as<reserve_scatters_size_result>;
@@ -245,7 +249,7 @@ concept printable = requires(::fast_io::details::dummy_buffer_output_stream<char
 /// @param      T                                           the object to be printed
 /// @return     ::fast_io::basic_io_scatter_t<char_type>    a scatter of the printed object
 template <typename char_type, typename T>
-concept scatter_printable = requires(char_type ch, T &&t) {
+concept scatter_printable = ::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(char_type ch, T &&t) {
 	{
 		print_scatter_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>,
 							 ::fast_io::freestanding::forward<T>(t))
@@ -301,103 +305,105 @@ struct parameter
 
 template <::std::integral char_type, typename output, typename value_type>
 	requires(printable<char_type, ::std::remove_cvref_t<value_type>> && ::std::is_trivially_copyable_v<output>)
-inline constexpr void print_define(io_reserve_type_t<char_type, parameter<value_type>>, output out,
-								   parameter<value_type> wrapper)
+inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, ::fast_io::parameter<value_type>>, output out,
+								   ::fast_io::parameter<value_type> wrapper) FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference)))
 {
-	print_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference);
+	print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, out, wrapper.reference);
 }
 
 template <::std::integral char_type, typename value_type>
-	requires reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
-inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, parameter<value_type>>)
+	requires ::fast_io::reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
+inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<char_type, ::fast_io::parameter<value_type>>) noexcept
 {
-	return print_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>);
+	return print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>);
 }
 
 template <::std::integral char_type, typename value_type>
-	requires dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
-inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, parameter<value_type>>,
+	requires ::fast_io::runtime_reserve_printable_size_available<char_type, ::std::remove_cvref_t<value_type>>
+inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>,
 												  parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference)))
 {
-	return print_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
+	return print_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
 
 template <::std::integral char_type, typename value_type>
-	requires(reserve_printable<char_type, ::std::remove_cvref_t<value_type>> ||
-			 dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>)
-inline constexpr auto print_reserve_define(io_reserve_type_t<char_type, parameter<value_type>>, char_type *begin,
+	requires(::fast_io::reserve_printable<char_type, ::std::remove_cvref_t<value_type>> ||
+			 ::fast_io::dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>)
+inline constexpr auto print_reserve_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, char_type *begin,
 										   parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(FAST_IO_HERBCEPTIONS_THROWS_IF(print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference)))
 {
-	return print_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference);
+	return print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, para.reference);
 }
 
 template <::std::integral char_type, typename value_type, typename Iter>
-	requires(printable_internal_shift<char_type, ::std::remove_cvref_t<value_type>>)
-inline constexpr auto print_define_internal_shift(io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
+	requires(::fast_io::printable_internal_shift<char_type, ::std::remove_cvref_t<value_type>>)
+inline constexpr auto print_define_internal_shift(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
 												  parameter<value_type> para)
 {
-	return print_define_internal_shift(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin,
+	return print_define_internal_shift(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin,
 									   para.reference);
 }
 
 template <::std::integral char_type, typename value_type>
-	requires precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
-inline constexpr ::std::size_t print_reserve_precise_size(io_reserve_type_t<char_type, parameter<value_type>>,
+	requires ::fast_io::precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
+inline constexpr ::std::size_t print_reserve_precise_size(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>,
 														  parameter<value_type> para)
 {
-	return print_reserve_precise_size(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
+	return print_reserve_precise_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
 
 template <::std::integral char_type, typename value_type, typename Iter>
-	requires precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
-inline constexpr void print_reserve_precise_define(io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
+	requires ::fast_io::precise_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
+inline constexpr void print_reserve_precise_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, Iter begin,
 												   ::std::size_t n, parameter<value_type> para)
 {
-	print_reserve_precise_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, n,
+	print_reserve_precise_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, begin, n,
 								 para.reference);
 }
 
 template <::std::integral char_type, typename value_type>
 	requires scatter_printable<char_type, ::std::remove_cvref_t<value_type>>
-inline constexpr auto print_scatter_define(io_reserve_type_t<char_type, parameter<value_type>>, parameter<value_type> para)
+inline constexpr auto print_scatter_define(::fast_io::io_reserve_type_t<char_type, parameter<value_type>>, parameter<value_type> para)
 {
-	return print_scatter_define(io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
+	return print_scatter_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<value_type>>, para.reference);
 }
 
 template <typename char_type, typename T>
 concept iterative_scannable =
 	::std::integral<char_type> && requires(T &t, char_type const *buffer_curr, char_type const *buffer_end) {
-		{ scan_iterative_init_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t) };
+		{ scan_iterative_init_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t) };
 		{
-			scan_iterative_next_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t, buffer_curr, buffer_end)
+			scan_iterative_next_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t, buffer_curr, buffer_end)
 		} -> ::std::same_as<parse_result<char_type const *>>;
 		{
-			scan_iterative_eof_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
-		} -> ::std::same_as<::fast_io::freestanding::parse_errc>;
+			scan_iterative_eof_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)
+		} -> ::std::same_as<fast_io::parse_code>;
 	};
 
 template <typename char_type, typename T>
 concept iterative_contiguous_scannable =
 	::std::integral<char_type> && requires(T t, char_type const *buffer_curr, char_type const *buffer_end) {
 		{
-			scan_iterative_contiguous_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t, buffer_curr,
+			scan_iterative_contiguous_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t, buffer_curr,
 											 buffer_end)
-		} -> ::std::same_as<parse_result<char_type const *>>;
+		} -> ::std::same_as<::fast_io::parse_result<char_type const *>>;
 	};
 
 template <typename char_type, typename T>
 concept precise_reserve_scannable = ::std::integral<char_type> && requires(char_type const *buffer_curr, T t) {
 	{
-		scan_precise_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<T>>)
+		scan_precise_reserve_size(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>)
 	} -> ::std::same_as<::std::size_t>;
-	scan_precise_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, buffer_curr, t);
+	scan_precise_reserve_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, buffer_curr, t);
 };
 
 template <typename char_type, typename T>
 concept precise_reserve_scannable_no_error =
-	precise_reserve_scannable<char_type, T> && requires(char_type const *buffer_curr, T t) {
+	::fast_io::precise_reserve_scannable<char_type, T> && requires(char_type const *buffer_curr, T t) {
 		{
-			scan_precise_reserve_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, buffer_curr, t)
+			scan_precise_reserve_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, buffer_curr, t)
 		} -> ::std::same_as<void>;
 	};
 

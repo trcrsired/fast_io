@@ -13,8 +13,8 @@ struct basic_io_scatter_t
 
 // should be binary compatible with POSIX's iovec
 
-using io_scatter_t = basic_io_scatter_t<void>;
-using io_scatters_t = basic_io_scatter_t<io_scatter_t>;
+using io_scatter_t = ::fast_io::basic_io_scatter_t<void>;
+using io_scatters_t = ::fast_io::basic_io_scatter_t<io_scatter_t>;
 
 struct io_scatter_status_t
 {
@@ -41,7 +41,7 @@ struct basic_message_hdr
 	}
 };
 
-using message_hdr = basic_message_hdr<void>;
+using message_hdr = ::fast_io::basic_message_hdr<void>;
 // should be binary compatible with POSIX's msghdr
 
 template <typename T>
@@ -56,7 +56,7 @@ template <::std::integral char_type>
 struct cross_code_cvt_t
 {
 	using value_type = char_type;
-	basic_io_scatter_t<value_type> scatter;
+	::fast_io::basic_io_scatter_t<value_type> scatter;
 };
 
 template <::std::integral char_type, typename T>
@@ -76,7 +76,7 @@ struct reserve_scatters_size_result
 template <::std::integral char_type>
 struct basic_reserve_scatters_define_result
 {
-	basic_io_scatter_t<char_type> *scatters_pos_ptr;
+	::fast_io::basic_io_scatter_t<char_type> *scatters_pos_ptr;
 	char_type *reserve_pos_ptr;
 };
 
@@ -85,7 +85,7 @@ struct io_alias_t
 	inline explicit constexpr io_alias_t() noexcept = default;
 };
 
-inline constexpr io_alias_t io_alias{};
+inline constexpr ::fast_io::io_alias_t io_alias{};
 
 template <::std::integral char_type>
 struct io_alias_type_t
@@ -94,7 +94,7 @@ struct io_alias_type_t
 };
 
 template <::std::integral char_type>
-inline constexpr io_alias_type_t<char_type> io_alias_type{};
+inline constexpr ::fast_io::io_alias_type_t<char_type> io_alias_type{};
 
 template <::std::integral char_type>
 struct try_get_result
@@ -104,7 +104,7 @@ struct try_get_result
 };
 
 template <typename in_char_type, typename out_char_type>
-struct deco_result
+struct transcode_result
 {
 	in_char_type const *input_result_ptr{};
 	out_char_type *output_result_ptr{};
@@ -127,7 +127,7 @@ struct io_construct_t
 	inline explicit constexpr io_construct_t() noexcept = default;
 };
 
-inline constexpr io_construct_t io_construct{};
+inline constexpr ::fast_io::io_construct_t io_construct{};
 
 template <typename T>
 struct io_cookie_type_t
@@ -136,21 +136,21 @@ struct io_cookie_type_t
 };
 
 template <typename T>
-inline constexpr io_cookie_type_t<T> io_cookie_type{};
+inline constexpr ::fast_io::io_cookie_type_t<T> io_cookie_type{};
 
 struct io_cookie_t
 {
 	explicit inline constexpr io_cookie_t() noexcept = default;
 };
 
-inline constexpr io_cookie_t io_cookie{};
+inline constexpr ::fast_io::io_cookie_t io_cookie{};
 
 struct io_null_t
 {
 	explicit inline constexpr io_null_t() noexcept = default;
 };
 
-inline constexpr io_null_t io_null{};
+inline constexpr ::fast_io::io_null_t io_null{};
 
 struct io_nothrow_tag
 {
