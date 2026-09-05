@@ -76,7 +76,7 @@ struct buffer_alloc_arr_ptr
 		constexpr
 #endif
 		buffer_alloc_arr_ptr(::std::size_t sz) noexcept
-		: ptr(allocate_iobuf_space<T, allocator_type>(sz)), size(sz)
+		: ptr(::fast_io::details::allocate_iobuf_space<T, allocator_type>(sz)), size(sz)
 	{
 	}
 
@@ -84,7 +84,7 @@ struct buffer_alloc_arr_ptr
 	inline buffer_alloc_arr_ptr &operator=(buffer_alloc_arr_ptr const &) = delete;
 	inline constexpr T *allocate_new(::std::size_t n) noexcept
 	{
-		return (ptr = allocate_iobuf_space<T, allocator_type>(size = n));
+		return (ptr = ::fast_io::details::allocate_iobuf_space<T, allocator_type>(size = n));
 	}
 	inline constexpr T *get() noexcept
 	{
@@ -105,16 +105,14 @@ struct buffer_alloc_arr_ptr
 	inline
 #if __cpp_constexpr >= 201907L && __cpp_constexpr_dynamic_alloc >= 201907L && \
 	(__cpp_lib_is_constant_evaluated >= 201811L || __cpp_if_consteval >= 202106L)
-	constexpr
+		constexpr
 #endif
 		~buffer_alloc_arr_ptr()
 	{
 		if (ptr) [[likely]]
 		{
-			deallocate_iobuf_space<nsecure_clear, T, allocator_type>(ptr, size);
-			ptr = nullptr;
+			::fast_io::details::deallocate_iobuf_space<nsecure_clear, T, allocator_type>(ptr, size);
 		}
-		size = 0;
 	}
 };
 

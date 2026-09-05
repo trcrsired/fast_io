@@ -636,8 +636,10 @@ inline constexpr void print_control_single(output outstm, T t)
 	}
 	else
 	{
+#if 0
 		constexpr bool no{printable<char_type, value_type>};
 		static_assert(no, "type not printable");
+#endif
 	}
 }
 

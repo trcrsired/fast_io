@@ -55,7 +55,7 @@ inline ::std::byte const *posix_write_bytes_impl(int fd, ::std::byte const *firs
 extern unsigned my_dos_read(int, void *, unsigned, unsigned *) noexcept __asm__("__dos_read");
 extern unsigned my_dos_write(int, void const *, unsigned, unsigned *) noexcept __asm__("__dos_write");
 
-inline ::std::byte *posix_dos_read_bytes_impl(int fd, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *posix_dos_read_bytes_impl(int fd, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	unsigned ret;
 	if (my_dos_read(fd, first, ::fast_io::details::read_write_bytes_compute<unsigned>(first, last), __builtin_addressof(ret)))
@@ -65,7 +65,7 @@ inline ::std::byte *posix_dos_read_bytes_impl(int fd, ::std::byte *first, ::std:
 	return first + ret;
 }
 
-inline ::std::byte const *posix_dos_write_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last)
+inline ::std::byte const *posix_dos_write_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	unsigned ret;
 	if (my_dos_write(fd, first, ::fast_io::details::read_write_bytes_compute<unsigned>(first, last), __builtin_addressof(ret)))
@@ -80,7 +80,7 @@ inline ::std::byte const *posix_dos_write_bytes_impl(int fd, ::std::byte const *
 
 template <::fast_io::posix_family family, ::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_posix_family_io_observer<family, char_type> piob,
-													 ::std::byte *first, ::std::byte *last)
+													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 #ifdef __MSDOS__
 	if constexpr (family == ::fast_io::posix_family::dos)
@@ -96,7 +96,7 @@ inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_posix_fami
 
 template <::fast_io::posix_family family, ::std::integral char_type>
 inline ::std::byte const *write_some_bytes_overflow_define(::fast_io::basic_posix_family_io_observer<family, char_type> piob,
-														   ::std::byte const *first, ::std::byte const *last)
+														   ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 #ifdef __MSDOS__
 	if constexpr (family == ::fast_io::posix_family::dos)
