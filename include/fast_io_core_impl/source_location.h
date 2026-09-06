@@ -51,6 +51,27 @@ inline constexpr ::std::size_t prrsv_reserve_size_source_location_impl(::std::so
 
 template <::std::integral char_type>
 	requires(sizeof(char_type) == 1)
+inline constexpr char_type *
+prrsv_reserve_define_source_location_impl(char_type *iter, ::std::source_location const &location) noexcept
+{
+	char const *flnm{location.file_name()};
+	::std::size_t flnmlen{::fast_io::cstr_len(flnm)};
+	iter = ::fast_io::details::non_overlapped_copy_n(flnm, flnmlen, iter);
+	*iter = ::fast_io::char_literal_v<u8':', char_type>;
+	++iter;
+	iter = print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::uint_least32_t>, iter, location.line());
+	*iter = ::fast_io::char_literal_v<u8':', char_type>;
+	++iter;
+	iter = print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::uint_least32_t>, iter, location.column());
+	*iter = ::fast_io::char_literal_v<u8':', char_type>;
+	++iter;
+	char const *fnnm{location.function_name()};
+	::std::size_t fnnmlen{::fast_io::cstr_len(fnnm)};
+	return ::fast_io::details::non_overlapped_copy_n(fnnm, fnnmlen, iter);
+}
+
+template <::std::integral char_type>
+	requires(sizeof(char_type) == 1)
 inline constexpr basic_reserve_scatters_define_result<char_type>
 prrsv_reserve_scatters_source_location_define_impl(::fast_io::basic_io_scatter_t<char_type> *pscatters,
 												   char_type *pbuffer, ::std::source_location const &location) noexcept
@@ -118,6 +139,20 @@ template <::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+inline constexpr char_type *
+print_reserve_define(::fast_io::io_reserve_type_t<char_type, ::std::source_location>, char_type *dest, ::std::source_location const &location) noexcept
+{
+	return ::fast_io::details::prrsv_reserve_define_source_location_impl(dest, location);
+}
+
+#if 0
+template <::std::integral char_type>
+	requires(sizeof(char_type) == 1)
+#if __has_cpp_attribute(__gnu__::__always_inline__)
+[[__gnu__::__always_inline__]]
+#elif __has_cpp_attribute(msvc::forceinline)
+[[msvc::forceinline]]
+#endif
 inline constexpr basic_reserve_scatters_define_result<char_type>
 print_reserve_scatters_define(::fast_io::io_reserve_type_t<char_type, ::std::source_location>,
 							  ::fast_io::basic_io_scatter_t<char_type> *pscatters, char_type *pbuffer,
@@ -125,7 +160,7 @@ print_reserve_scatters_define(::fast_io::io_reserve_type_t<char_type, ::std::sou
 {
 	return ::fast_io::details::prrsv_reserve_scatters_source_location_define_impl(pscatters, pbuffer, location);
 }
-
+#endif
 namespace manipulators
 {
 
