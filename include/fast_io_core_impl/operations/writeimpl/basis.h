@@ -372,6 +372,7 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 		{
 			while ((first = write_some_bytes_overflow_define(outsm, first, last)) != last)
 			{
+
 				char_type *curr{obuffer_curr(outsm)};
 				char_type *ed{obuffer_end(outsm)};
 				::std::ptrdiff_t bfddiff{ed - curr};
@@ -587,6 +588,7 @@ inline constexpr void write_all_bytes_impl(outstmtype outsm, ::std::byte const *
 			char_type *ed{obuffer_end(outsm)};
 			::std::ptrdiff_t bfddiff{ed - curr};
 			::std::ptrdiff_t itdiff{last - first};
+
 			if (itdiff < bfddiff)
 #if __has_cpp_attribute(__gnu__::__may_alias__)
 				[[likely]]
@@ -602,6 +604,7 @@ inline constexpr void write_all_bytes_impl(outstmtype outsm, ::std::byte const *
 				return;
 			}
 		}
+
 		::fast_io::details::write_all_bytes_cold_impl(outsm, first, last);
 	}
 }
