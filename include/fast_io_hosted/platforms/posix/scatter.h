@@ -42,7 +42,7 @@ inline ::fast_io::io_scatter_status_t posix_scatter_read_bytes_impl(int fd, ::fa
 }
 
 inline ::fast_io::io_scatter_status_t posix_scatter_write_bytes_impl(int fd, ::fast_io::io_scatter_t const *pscatter,
-																	 ::std::size_t n)
+																	 ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_writev)
 	auto ret{system_call<__NR_writev, ::std::ptrdiff_t>(fd, pscatter, n)};
@@ -89,7 +89,7 @@ scatter_read_some_bytes_underflow_define(::fast_io::basic_posix_io_observer<char
 template <::std::integral char_type>
 inline ::fast_io::io_scatter_status_t
 scatter_write_some_bytes_overflow_define(::fast_io::basic_posix_io_observer<char_type> piob,
-										 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
+										 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::posix_scatter_write_bytes_impl(piob.fd, pscatters, n);
 }
