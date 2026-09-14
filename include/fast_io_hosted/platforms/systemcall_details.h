@@ -51,12 +51,11 @@ inline int sys_dup(int old_fd)
 #endif
 }
 
-template <bool always_terminate = false>
-inline int sys_dup2(int old_fd, int new_fd)
+inline int sys_dup2(int old_fd, int new_fd) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_dup2)
 	int fd{::fast_io::system_call<__NR_dup2, int>(old_fd, new_fd)};
-	::fast_io::system_call_throw_error<always_terminate>(fd);
+	::fast_io::system_call_throw_error(fd);
 	return fd;
 #else
 
@@ -75,14 +74,7 @@ inline int sys_dup2(int old_fd, int new_fd)
 
 	if (fd == -1)
 	{
-		if constexpr (always_terminate)
-		{
-			fast_terminate();
-		}
-		else
-		{
-			throw_posix_error();
-		}
+		throw_posix_error();
 	}
 	return fd;
 #endif

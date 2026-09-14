@@ -416,7 +416,7 @@ inline int posix_execveat(int dirfd, char const *cstr, char const *const *args, 
 		flags |= AT_SYMLINK_NOFOLLOW;
 	}
 	return -(system_call<__NR_execveat, int>(dirfd, cstr, args, envp, flags));
-	
+
 #elif defined(__APPLE__) || defined(__DARWIN_C_LEVEL)
 	// macOS / Darwin: no public execveat/fexecve
 	// Fallback: emulate execveat(dirfd, path, ...) using execve() and F_GETPATH.
@@ -603,9 +603,9 @@ struct io_redirector
 			return fd_devnull;
 		}
 #ifdef O_CLOEXEC
-		fd_devnull = my_posix_open<true>(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR | O_CLOEXEC, 0644);
+		fd_devnull = my_posix_open(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR | O_CLOEXEC, 0644);
 #else
-		fd_devnull = my_posix_open<true>(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR, 0644);
+		fd_devnull = my_posix_open(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR, 0644);
 		sys_fcntl(fd_devnull, F_SETFD, FD_CLOEXEC);
 #endif
 		return fd_devnull;
@@ -790,9 +790,9 @@ struct fd_remapper
 			return fd_devnull;
 		}
 #ifdef O_CLOEXEC
-		fd_devnull = my_posix_open<true>(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR | O_CLOEXEC, 0644);
+		fd_devnull = my_posix_open(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR | O_CLOEXEC, 0644);
 #else
-		fd_devnull = my_posix_open<true>(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR, 0644);
+		fd_devnull = my_posix_open(reinterpret_cast<char const *>(u8"/dev/null"), O_RDWR, 0644);
 		sys_fcntl(fd_devnull, F_SETFD, FD_CLOEXEC);
 #endif
 		return fd_devnull;

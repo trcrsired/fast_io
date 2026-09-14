@@ -944,55 +944,31 @@ inline constexpr my_dos_concat_tlc_path_common_result my_dos_concat_tlc_path_com
 	}
 }
 
-template <bool always_terminate = true>
-inline constexpr dos_path_tlc_string my_dos_concat_tlc_path(int dirfd, char const *pathname) noexcept(always_terminate)
+inline constexpr dos_path_tlc_string my_dos_concat_tlc_path(int dirfd, char const *pathname) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto [failed, path]{my_dos_concat_tlc_path_common(dirfd, pathname)};
 	if (failed) [[unlikely]]
 	{
-		if constexpr (always_terminate)
-		{
-			fast_terminate();
-		}
-		else
-		{
-			throw_posix_error(EINVAL);
-		}
+		throw_posix_error(EINVAL);
 	}
 	return path;
 }
 
-template <bool always_terminate = false>
-inline int my_posix_openat(int dirfd, char const *pathname, int flags, mode_t mode)
+inline int my_posix_openat(int dirfd, char const *pathname, int flags, mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
 {
-	int fd{::fast_io::details::my_posix_open_noexcept(my_dos_concat_tlc_path<always_terminate>(dirfd, pathname).c_str(), flags, mode)};
+	int fd{::fast_io::details::my_posix_open_noexcept(my_dos_concat_tlc_path(dirfd, pathname).c_str(), flags, mode)};
 	if (fd == -1) [[unlikely]]
 	{
-		if constexpr (always_terminate)
-		{
-			fast_terminate();
-		}
-		else
-		{
-			throw_posix_error();
-		}
+		throw_posix_error();
 	}
 	return fd;
 }
 
 #elif (defined(__NEWLIB__) || defined(_PICOLIBC__)) && !defined(__CYGWIN__)
 
-template <bool always_terminate = false>
-inline int my_posix_openat(int, char const *, int, mode_t)
+inline int my_posix_openat(int, char const *, int, mode_t) FAST_IO_HERBCEPTIONS_THROWS
 {
-	if constexpr (always_terminate)
-	{
-		fast_terminate();
-	}
-	else
-	{
-		throw_posix_error(EINVAL);
-	}
+	throw_posix_error(EINVAL);
 }
 #else
 
@@ -1002,8 +978,7 @@ extern int my_posix_openat_noexcept(int fd, char const *path, int aflag, ... /*m
 extern int my_posix_openat_noexcept(int fd, char const *path, int aflag, ... /*mode_t mode*/) noexcept __asm__("openat");
 #endif
 
-template <bool always_terminate = false>
-inline int my_posix_openat(int dirfd, char const *pathname, int flags, mode_t mode)
+inline int my_posix_openat(int dirfd, char const *pathname, int flags, mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	int fd{
 #if defined(__linux__) && defined(__NR_openat)
@@ -1014,18 +989,11 @@ inline int my_posix_openat(int dirfd, char const *pathname, int flags, mode_t mo
 		(dirfd, pathname, flags, mode)};
 
 #if defined(__linux__) && defined(__NR_openat)
-	system_call_throw_error<always_terminate>(fd);
+	system_call_throw_error(fd);
 #else
 	if (fd == -1) [[unlikely]]
 	{
-		if constexpr (always_terminate)
-		{
-			fast_terminate();
-		}
-		else
-		{
-			throw_posix_error();
-		}
+		throw_posix_error();
 	}
 #endif
 
@@ -1085,33 +1053,25 @@ extern unsigned int my_dos_setmode(int, int) noexcept __asm__("_setmode");
 extern unsigned int my_dos_close(int) noexcept __asm__("__dos_close");
 #endif
 
-template <bool always_terminate = false>
 inline int my_posix_open(char const *pathname, int flags,
 #if __has_cpp_attribute(maybe_unused)
 						 [[maybe_unused]]
 #endif
-						 mode_t mode)
+						 mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__MSDOS__) || (defined(__NEWLIB__) && !defined(AT_FDCWD)) || defined(_PICOLIBC__)
 	int fd{::fast_io::details::my_posix_open_noexcept(pathname, flags, mode)};
 	if (fd == -1) [[unlikely]]
 	{
-		if constexpr (always_terminate)
-		{
-			fast_terminate();
-		}
-		else
-		{
-			throw_posix_error();
-		}
+		throw_posix_error();
 	}
 	return fd;
 #else
-	return ::fast_io::details::my_posix_openat<always_terminate>(AT_FDCWD, pathname, flags, mode);
+	return ::fast_io::details::my_posix_openat(AT_FDCWD, pathname, flags, mode);
 #endif
 }
 
-inline int my_posix_openat_file_internal_impl(int dirfd, char const *filepath, open_mode om, perms pm)
+inline int my_posix_openat_file_internal_impl(int dirfd, char const *filepath, open_mode om, perms pm) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::my_posix_openat(dirfd, filepath, ::fast_io::details::calculate_posix_open_mode(om), static_cast<mode_t>(pm));
 }
@@ -1121,7 +1081,7 @@ struct my_posix_at_open_paramter
 	int dirfd{-1};
 	int om{};
 	mode_t pm{};
-	inline int operator()(char const *filename) const
+	inline int operator()(char const *filename) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return ::fast_io::details::my_posix_openat(dirfd, filename, om, pm);
 	}
@@ -1157,7 +1117,7 @@ inline constexpr int posix_openat_file_impl(int dirfd, T const &t, open_mode om,
 #endif
 
 template <::fast_io::constructible_to_os_c_str T>
-inline constexpr int posix_open_file_impl(T const &t, open_mode om, perms pm)
+inline constexpr int posix_open_file_impl(T const &t, open_mode om, perms pm) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__MSDOS__) || (defined(__NEWLIB__) && !defined(AT_FDCWD)) || defined(_PICOLIBC__)
 	return ::fast_io::posix_api_common(
@@ -1329,13 +1289,13 @@ public:
 #endif
 
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit basic_posix_family_file(T const &filename, open_mode om, perms pm = static_cast<perms>(436))
+	inline explicit basic_posix_family_file(T const &filename, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{::fast_io::details::posix_open_file_impl(filename, om, pm)}
 	{
 	}
 
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit basic_posix_family_file(posix_at_entry pate, T const &filename, open_mode om, perms pm = static_cast<perms>(436))
+	inline explicit basic_posix_family_file(posix_at_entry pate, T const &filename, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{::fast_io::details::posix_openat_file_impl(pate.fd, filename, om, pm)}
 	{
 	}

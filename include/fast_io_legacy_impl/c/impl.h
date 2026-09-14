@@ -373,7 +373,7 @@ inline FILE *my_fdopen(int fd, char const *mode) noexcept
 
 #endif
 
-inline FILE *my_c_file_open_impl(int fd, open_mode mode)
+inline FILE *my_c_file_open_impl(int fd, open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__) && !defined(_WIN32_WINDOWS)
 
@@ -940,18 +940,18 @@ public:
 	}
 #if !defined(__AVR__)
 	template <::fast_io::constructible_to_os_c_str T>
-	inline basic_c_family_file(T const &file, open_mode om, perms pm = static_cast<perms>(436))
+	inline basic_c_family_file(T const &file, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(file, om, pm), om)
 	{
 	}
 	template <posix_family pfamily>
-	inline basic_c_family_file(basic_posix_family_file<pfamily, char_type> &&phd, open_mode om)
+	inline basic_c_family_file(basic_posix_family_file<pfamily, char_type> &&phd, open_mode om) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_io_observer<family, ch_type>{::fast_io::details::my_c_file_open_impl(phd.fd, om)}
 	{
 		phd.fd = -1;
 	}
 	template <posix_family pfamily>
-	inline explicit constexpr basic_c_family_file(io_construct_t, basic_posix_family_io_observer<pfamily, ch_type> piob, open_mode om) noexcept
+	inline explicit constexpr basic_c_family_file(io_construct_t, basic_posix_family_io_observer<pfamily, ch_type> piob, open_mode om) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_io_observer<family, char_type>{::fast_io::details::my_c_file_open_impl(piob.fd, om)}
 	{
 	}
