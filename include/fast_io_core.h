@@ -34,6 +34,7 @@
 #include "fast_io_core_impl/freestanding/impl.h"
 #include "fast_io_core_impl/terminate.h"
 #include "fast_io_dsal/impl/freestanding.h"
+#include "fast_io_dsal/impl/array.h"
 #include "fast_io_core_impl/allocation/impl.h"
 
 #include "fast_io_core_impl/asan_support.h"
@@ -91,10 +92,6 @@
 #include "fast_io_core_impl/timestamp_counter.h"
 #include "fast_io_core_impl/dll_mode.h"
 #include "fast_io_core_impl/socket/impl.h"
-
-#include "fast_io_core_impl/concat/impl.h"
-#include "fast_io_core_impl/to.h"
-
 #include "fast_io_core_impl/http_header.h"
 #include "fast_io_core_impl/io_lockable.h"
 

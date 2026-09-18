@@ -213,9 +213,12 @@ concept precise_reserve_printable =
 /// @return     ::fast_io::basic_reserve_scatters_define_result<char_type>
 ///                                                         a pointer to the next scatter after printing
 ///                                                         and a pointer to the next character after printing
+
 template <typename char_type, typename T>
-concept reserve_scatters_printable =
-	::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, ::fast_io::basic_io_scatter_t<char_type> *scatters, char_type *ptr) {
+concept reserve_scatters_printable = false;
+
+#if 0
+::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, ::fast_io::basic_io_scatter_t<char_type> *scatters, char_type *ptr) {
 		{
 			print_reserve_scatters_size(io_reserve_type<char_type, ::std::remove_cvref_t<T>>)
 		} -> ::std::same_as<reserve_scatters_size_result>;
@@ -223,7 +226,7 @@ concept reserve_scatters_printable =
 			print_reserve_scatters_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, scatters, ptr, t)
 		} -> ::std::same_as<::fast_io::basic_reserve_scatters_define_result<char_type>>;
 	};
-
+#endif
 /// @brief      printable
 /// @details    Makes a type printable
 /// @warning    This concept will be soon deprecated.
