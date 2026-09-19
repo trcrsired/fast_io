@@ -60,35 +60,21 @@ inline constexpr void herbception_scatter_write_callback(void *cookie, ::std::io
 	{
 		output otm;
 		::fast_io::details::my_memcpy(__builtin_addressof(otm), __builtin_addressof(cookie), sizeof(output));
-#if defined(__HERBCEPTIONS__) || defined(FAST_IO_CPP_EXCEPTIONS)
-		try
-#endif
+		FAST_IO_HERBCEPTIONS_TRY
 		{
 			::fast_io::operations::scatter_write_all_bytes(otm, reinterpret_cast<fast_io_io_scatter_const_may_alias_ptr>(base), n);
 		}
-#ifdef __HERBCEPTIONS__
-		catch throws(::std::error)
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
 		{}
-#elif defined(FAST_IO_CPP_EXCEPTIONS)
-		catch (...)
-		{}
-#endif
 	}
 	else
 	{
-#if defined(__HERBCEPTIONS__) || defined(FAST_IO_CPP_EXCEPTIONS)
-		try
-#endif
+		FAST_IO_HERBCEPTIONS_TRY
 		{
 			::fast_io::operations::scatter_write_all_bytes(*reinterpret_cast<output *>(cookie), reinterpret_cast<fast_io_io_scatter_const_may_alias_ptr>(base), n);
 		}
-#ifdef __HERBCEPTIONS__
-		catch throws(::std::error)
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
 		{}
-#elif defined(FAST_IO_CPP_EXCEPTIONS)
-		catch (...)
-		{}
-#endif
 	}
 }
 
