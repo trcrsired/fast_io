@@ -704,3 +704,22 @@ concepts defined wrong. dynamic_reserve_printable should be base for many others
 }
 
 } // namespace fast_io::operations::decay
+
+namespace fast_io::operations
+{
+
+template <bool line, typename output, typename... Args>
+#if __has_cpp_attribute(__gnu__::__always_inline__)
+[[__gnu__::__always_inline__]]
+#elif __has_cpp_attribute(msvc::forceinline)
+[[msvc::forceinline]]
+#endif
+inline constexpr void print_freestanding(output &&outstm, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::operations::decay::print_freestanding_decay<line>(
+		::fast_io::operations::output_stream_ref(outstm),
+		io_print_forward<typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type>(
+			io_print_alias(args))...);
+}
+
+} // namespace fast_io::operations

@@ -87,6 +87,11 @@ namespace details
 
 template <bool line, typename... Args>
 inline constexpr void print_after_io_print_forward(Args... args)
+#if __has_include(<stdio.h>)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(c_stdout(), args...))
+#else
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(out(), args...))
+#endif
 {
 #if __has_include(<stdio.h>)
 	::fast_io::operations::decay::print_freestanding_decay<line>(c_stdout(), args...);
@@ -100,6 +105,11 @@ template <bool line, typename... Args>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void perr_after_io_print_forward(Args... args)
+#if defined(__AVR__)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(c_stderr(), args...))
+#else
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(err(), args...))
+#endif
 {
 #if defined(__AVR__)
 	::fast_io::operations::decay::print_freestanding_decay<line>(c_stderr(), args...);
@@ -113,12 +123,71 @@ template <bool line, typename... Args>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void debug_print_after_io_print_forward(Args... args)
+#if defined(__AVR__)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(c_stdout(), args...))
+#else
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(out(), args...))
+#endif
 {
 #if defined(__AVR__)
 	::fast_io::operations::decay::print_freestanding_decay<line>(c_stdout(), args...);
 #else
 	::fast_io::operations::decay::print_freestanding_decay<line>(out(), args...);
 #endif
+}
+
+template <bool line, typename T, typename... Args>
+inline consteval bool io_print_may_throw() noexcept
+{
+	if constexpr (::fast_io::operations::defines::print_freestanding_okay<T, Args...>)
+	{
+		return !noexcept(::fast_io::operations::decay::print_freestanding_decay<line>(
+			::fast_io::operations::output_stream_ref(::std::declval<T>()),
+			::fast_io::io_print_forward<typename decltype(::fast_io::operations::output_stream_ref(
+				::std::declval<T>()))::output_char_type>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
+	else
+	{
+		return !noexcept(::fast_io::details::print_after_io_print_forward<line>(
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<T>())),
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
+}
+
+template <bool line, typename T, typename... Args>
+inline consteval bool io_perr_may_throw() noexcept
+{
+	if constexpr (::fast_io::operations::defines::print_freestanding_okay<T, Args...>)
+	{
+		return !noexcept(::fast_io::operations::decay::print_freestanding_decay_cold<line>(
+			::fast_io::operations::output_stream_ref(::std::declval<T>()),
+			::fast_io::io_print_forward<typename decltype(::fast_io::operations::output_stream_ref(
+				::std::declval<T>()))::output_char_type>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
+	else
+	{
+		return !noexcept(::fast_io::details::perr_after_io_print_forward<line>(
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<T>())),
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
+}
+
+template <bool line, typename T, typename... Args>
+inline consteval bool io_debug_print_may_throw() noexcept
+{
+	if constexpr (::fast_io::operations::defines::print_freestanding_okay<T, Args...>)
+	{
+		return !noexcept(::fast_io::operations::decay::print_freestanding_decay<line>(
+			::fast_io::operations::output_stream_ref(::std::declval<T>()),
+			::fast_io::io_print_forward<typename decltype(::fast_io::operations::output_stream_ref(
+				::std::declval<T>()))::output_char_type>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
+	else
+	{
+		return !noexcept(::fast_io::details::debug_print_after_io_print_forward<line>(
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<T>())),
+			::fast_io::io_print_forward<char>(::fast_io::io_print_alias(::std::declval<Args>()))...));
+	}
 }
 
 template <bool report, typename... Args>

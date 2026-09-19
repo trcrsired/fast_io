@@ -19,6 +19,7 @@ template <typename T, typename... Args>
 [[msvc::forceinline]]
 #endif
 inline constexpr void print(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_print_may_throw<false, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -64,6 +65,7 @@ template <typename T, typename... Args>
 [[msvc::forceinline]]
 #endif
 inline constexpr void println(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_print_may_throw<true, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -102,6 +104,7 @@ static_assert(device_and_type_ok, "some types are not printable for println");
 
 template <typename T, typename... Args>
 inline constexpr void perr(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_perr_may_throw<false, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -141,6 +144,7 @@ static_assert(device_and_type_ok, "some types are not printable for perr");
 
 template <typename T, typename... Args>
 inline constexpr void perrln(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_perr_may_throw<true, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -183,13 +187,20 @@ template <typename... Args>
 {
 	if constexpr (sizeof...(Args) != 0)
 	{
-#ifdef __cpp_exceptions
+#if defined(__HERBCEPTIONS__) || defined(__cpp_exceptions)
 		try
 		{
 #endif
 			::fast_io::io::perr(::std::forward<Args>(args)...);
-#ifdef __cpp_exceptions
+#if defined(__HERBCEPTIONS__) || defined(__cpp_exceptions)
 		}
+#endif
+#ifdef __HERBCEPTIONS__
+		catch throws (::std::error)
+		{
+		}
+#endif
+#ifdef __cpp_exceptions
 		catch (...)
 		{
 		}
@@ -202,13 +213,20 @@ template <typename... Args>
 	requires(sizeof...(Args) != 0)
 [[noreturn]] inline constexpr void panicln(Args &&...args) noexcept
 {
-#ifdef __cpp_exceptions
+#if defined(__HERBCEPTIONS__) || defined(__cpp_exceptions)
 	try
 	{
 #endif
 		::fast_io::io::perrln(::std::forward<Args>(args)...);
-#ifdef __cpp_exceptions
+#if defined(__HERBCEPTIONS__) || defined(__cpp_exceptions)
 	}
+#endif
+#ifdef __HERBCEPTIONS__
+	catch throws (::std::error)
+	{
+	}
+#endif
+#ifdef __cpp_exceptions
 	catch (...)
 	{
 	}
@@ -221,6 +239,7 @@ template <typename... Args>
 // With debugging. We output to POSIX fd or Win32 Handle directly instead of C's stdout.
 template <typename T, typename... Args>
 inline constexpr void debug_print(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_debug_print_may_throw<false, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -260,6 +279,7 @@ static_assert(device_and_type_ok, "some types are not printable for debug_print 
 
 template <typename T, typename... Args>
 inline constexpr void debug_println(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_debug_print_may_throw<true, T, Args...>())
 {
 	constexpr bool device_and_type_ok{::fast_io::operations::defines::print_freestanding_okay<T, Args...>};
 	if constexpr (device_and_type_ok)
@@ -300,6 +320,7 @@ static_assert(device_and_type_ok, "some types are not printable for debug_printl
 template <typename... Args>
 	requires(sizeof...(Args) != 0)
 inline constexpr void debug_perr(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::io::perr(::std::forward<Args>(args)...))
 {
 	::fast_io::io::perr(::std::forward<Args>(args)...);
 }
@@ -307,6 +328,7 @@ inline constexpr void debug_perr(Args &&...args)
 template <typename... Args>
 	requires(sizeof...(Args) != 0)
 inline constexpr void debug_perrln(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::io::perrln(::std::forward<Args>(args)...))
 {
 	::fast_io::io::perrln(::std::forward<Args>(args)...);
 }

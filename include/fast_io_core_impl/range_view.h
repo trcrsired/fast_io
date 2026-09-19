@@ -79,7 +79,7 @@ inline constexpr char_type *print_reserve_define(io_reserve_type_t<char_type, si
 namespace operations
 {
 template <bool line, typename output, typename... Args>
-inline constexpr void print_freestanding(output &&outstm, Args &&...args);
+inline constexpr void print_freestanding(output &&outstm, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS;
 }
 
 template <::std::integral char_type, ::std::input_iterator It, typename output>

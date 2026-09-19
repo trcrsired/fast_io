@@ -26,7 +26,9 @@ concept print_freestanding_params_okay =
 	((::fast_io::printable<char_type, Args> || ::fast_io::reserve_printable<char_type, Args> ||
 	  ::fast_io::dynamic_reserve_printable<char_type, Args> || ::fast_io::scatter_printable<char_type, Args> ||
 	  ::fast_io::reserve_scatters_printable<char_type, Args> || ::fast_io::context_printable<char_type, Args> ||
-	  ::fast_io::transcode_imaginary_printable<char_type, Args> || ::std::same_as<::std::remove_cvref_t<Args>, ::fast_io::io_null_t>) &&
+	  ::fast_io::transcode_imaginary_printable<char_type, Args> ||
+	  ::std::same_as<::std::remove_cvref_t<Args>, ::fast_io::basic_io_scatter_t<char_type>> ||
+	  ::std::same_as<::std::remove_cvref_t<Args>, ::fast_io::io_null_t>) &&
 	 ...);
 
 template <typename output, typename... Args>
