@@ -314,11 +314,11 @@ namespace operations::decay
 {
 
 template <typename input, typename... Args>
-[[nodiscard]] inline constexpr decltype(auto) scan_freestanding_decay(input instm, Args... args) FAST_IO_HERBCEPTIONS_THROWS
+[[nodiscard]] inline constexpr ::std::size_t scan_freestanding_decay(input instm, Args... args) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_status_scan_define<input>)
 	{
-		return status_scan_define(instm, args...);
+		return status_scan_define(instm, args...) ? sizeof...(Args) : 0;
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<input>)
 	{
@@ -328,18 +328,20 @@ template <typename input, typename... Args>
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<input>)
 	{
-		return (::fast_io::details::scan_single_impl(instm, args) && ...);
+		::std::size_t cnt{};
+		(void)((::fast_io::details::scan_single_impl(instm, args) ? (++cnt, true) : false) && ...);
+		return cnt;
 	}
 	else if constexpr (::fast_io::operations::defines::available_add_ibuf<input>)
 	{
 		static_assert(::fast_io::operations::decay::defines::has_status_scan_define<input>,
 					  "If you want to scan this type of file, please add ::fast_io::basic_ibuf.");
-		return false;
+		return 0;
 	}
 	else
 	{
 		static_assert(::fast_io::operations::decay::defines::has_status_scan_define<input>, "type not scannable.");
-		return false;
+		return 0;
 	}
 }
 

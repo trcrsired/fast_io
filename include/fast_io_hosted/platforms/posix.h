@@ -1355,7 +1355,7 @@ public:
 		}
 		this->fd = newfd;
 	}
-	inline void close()
+	inline void close() FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->fd != -1) [[likely]]
 		{

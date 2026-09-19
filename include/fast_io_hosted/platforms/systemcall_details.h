@@ -131,7 +131,7 @@ inline int sys_close(int fd) noexcept
 #endif
 }
 
-inline void sys_close_throw_error(int &fd)
+inline void sys_close_throw_error(int &fd) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ret{::fast_io::details::sys_close(fd)};
 	fd = -1; // POSIX standard says we should never call close(2) again even close syscall fails

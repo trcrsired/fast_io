@@ -9,6 +9,7 @@ namespace details
 template <typename optstmtype, typename instmtype>
 	requires(sizeof(typename optstmtype::output_char_type) == sizeof(typename instmtype::input_char_type))
 inline constexpr void transmit_all_main_impl(optstmtype optstm, instmtype instm, ::fast_io::uintfpos_t totransmit)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	/*
 	A dummy placeholder implementation
@@ -57,6 +58,7 @@ namespace decay
 
 template <typename optstmtype, typename instmtype>
 inline constexpr decltype(auto) transmit_all_decay(optstmtype optstm, instmtype instm, ::fast_io::uintfpos_t totransmit)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
@@ -93,6 +95,7 @@ inline constexpr decltype(auto) transmit_all_decay(optstmtype optstm, instmtype 
 
 template <typename optstmtype, typename instmtype>
 inline constexpr decltype(auto) transmit_all(optstmtype &&optstm, instmtype &&instm, ::fast_io::uintfpos_t totransmit)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	return ::fast_io::operations::decay::transmit_all_decay(::fast_io::operations::output_stream_ref(optstm),
 															::fast_io::operations::input_stream_ref(instm), totransmit);

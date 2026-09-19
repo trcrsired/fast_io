@@ -335,7 +335,8 @@ inline constexpr void debug_perrln(Args &&...args)
 #endif
 
 template <bool report = false, typename input, typename... Args>
-inline constexpr ::std::conditional_t<report, bool, void> scan(input &&in, Args &&...args)
+inline constexpr ::std::conditional_t<report, ::std::size_t, void> scan(input &&in, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_scan_may_throw<report, input, Args...>())
 {
 	constexpr bool device_error{::fast_io::operations::defines::has_input_or_io_stream_ref_define<input>};
 	if constexpr (device_error)
@@ -349,9 +350,9 @@ inline constexpr ::std::conditional_t<report, bool, void> scan(input &&in, Args 
 		}
 		else
 		{
-			if (!::fast_io::operations::decay::scan_freestanding_decay(
+			if (::fast_io::operations::decay::scan_freestanding_decay(
 					::fast_io::operations::input_stream_ref(in),
-					::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...))
+					::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...) != sizeof...(Args))
 			{
 				::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 			}

@@ -9,6 +9,7 @@ namespace details::io_buffer
 template <typename allocator_type, ::std::integral char_type, typename instmtype>
 inline constexpr bool ibuffer_underflow_rl_size_impl(instmtype insm, basic_io_buffer_pointers<char_type> &ibuffer,
 													 ::std::size_t bfsz)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 	if (ibuffer.buffer_begin == nullptr)
@@ -23,6 +24,7 @@ inline constexpr bool ibuffer_underflow_rl_size_impl(instmtype insm, basic_io_bu
 
 template <::std::size_t bfsz, ::std::integral char_type, typename allocator_type, typename instmtype>
 inline constexpr bool ibuffer_underflow_rl_impl(instmtype insm, basic_io_buffer_pointers<char_type> &ibuffer)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	return ::fast_io::details::io_buffer::ibuffer_underflow_rl_size_impl<allocator_type>(insm, ibuffer, bfsz);
 }
@@ -31,6 +33,7 @@ template <typename allocator_type, ::std::integral char_type, typename instmtype
 inline constexpr void
 ibuffer_minimum_size_underflow_all_prepare_rl_size_impl(instmtype insm, basic_io_buffer_pointers<char_type> &ibuffer,
 														::std::size_t bfsz)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 	if (ibuffer.buffer_begin == nullptr)
@@ -50,6 +53,7 @@ template <::std::size_t bfsz, ::std::integral char_type, typename allocator_type
 #endif
 inline constexpr void ibuffer_minimum_size_underflow_all_prepare_impl(instmtype insm,
 																	  basic_io_buffer_pointers<char_type> &ibuffer)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	::fast_io::details::io_buffer::ibuffer_minimum_size_underflow_all_prepare_rl_size_impl<allocator_type>(
 		insm, ibuffer, bfsz);
@@ -59,6 +63,7 @@ template <typename allocator_type, ::std::integral char_type, typename instmtype
 inline constexpr char_type *read_some_underflow_size_impl(instmtype instm,
 														  basic_io_buffer_pointers<char_type> &__restrict pointers,
 														  char_type *first, char_type *last, ::std::size_t bfsz)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 	first = ::fast_io::details::non_overlapped_copy(pointers.buffer_curr, pointers.buffer_end, first);
@@ -116,6 +121,7 @@ template <::std::size_t bfsz, typename allocatortype, ::std::integral char_type,
 inline constexpr char_type *read_some_underflow_impl(instmtype instm,
 													 basic_io_buffer_pointers<char_type> &__restrict pointers,
 													 char_type *first, char_type *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	return ::fast_io::details::io_buffer::read_some_underflow_size_impl<allocatortype>(instm, pointers, first,
 																					   last, bfsz);
@@ -126,6 +132,7 @@ inline constexpr char_type *read_some_underflow_impl(instmtype instm,
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr char_type *read_some_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 													   char_type *first, char_type *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -140,6 +147,7 @@ inline constexpr char_type *read_some_underflow_define(basic_io_buffer_ref<io_bu
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr char_type *pread_some_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														char_type *first, char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -152,6 +160,7 @@ inline constexpr char_type *pread_some_underflow_define(basic_io_buffer_ref<io_b
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr void pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 												 char_type *first, char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -164,6 +173,7 @@ inline constexpr void pread_all_underflow_define(basic_io_buffer_ref<io_buffer_t
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr ::fast_io::io_scatter_status_t scatter_pread_some_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 																					basic_io_scatter_t<char_type> const *pscatters, ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -176,6 +186,7 @@ inline constexpr ::fast_io::io_scatter_status_t scatter_pread_some_underflow_def
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr void scatter_pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														 basic_io_scatter_t<char_type> const *pscatters, ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -188,6 +199,7 @@ inline constexpr void scatter_pread_all_underflow_define(basic_io_buffer_ref<io_
 template <typename io_buffer_type, ::std::integral char_type>
 inline constexpr char_type *pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 													   char_type *first, char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -199,6 +211,7 @@ inline constexpr char_type *pread_all_underflow_define(basic_io_buffer_ref<io_bu
 
 template <typename io_buffer_type>
 inline constexpr bool ibuffer_underflow(basic_io_buffer_ref<io_buffer_type> iobref)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -246,6 +259,7 @@ inline constexpr ::std::size_t
 
 template <typename io_buffer_type>
 inline constexpr void ibuffer_minimum_size_underflow_all_prepare_define(basic_io_buffer_ref<io_buffer_type> iobref)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	::fast_io::details::io_buffer::ibuffer_minimum_size_underflow_all_prepare_impl<
 		io_buffer_type::traits_type::input_buffer_size, typename io_buffer_type::traits_type::input_char_type,

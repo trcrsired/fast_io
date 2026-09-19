@@ -7,7 +7,7 @@ template <bool line, typename outputstmtype, typename... Args>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr decltype(auto) print_freestanding_decay_cold(outputstmtype optstm, Args... args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::operations::decay::print_freestanding_decay<line>(optstm, args...))
+inline constexpr decltype(auto) print_freestanding_decay_cold(outputstmtype optstm, Args... args) FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::print_freestanding_decay<line>(optstm, args...))
 {
 #if !__has_cpp_attribute(__gnu__::__cold__)
 	if (true) [[unlikely]]

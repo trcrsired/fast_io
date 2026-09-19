@@ -9,7 +9,9 @@ template <typename instmtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void scatter_pread_all_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
-														::fast_io::intfpos_t off);
+														::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+;
 
 template <typename instmtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
@@ -17,6 +19,7 @@ template <typename instmtype>
 #endif
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters,
 																		::std::size_t n, intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_some_bytes_underflow_define<instmtype>)
@@ -85,6 +88,7 @@ inline constexpr io_scatter_status_t scatter_pread_some_bytes_cold_impl(instmtyp
 template <typename instmtype>
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_impl(instmtype insm, io_scatter_t const *pscatters,
 																   ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -105,6 +109,7 @@ template <typename instmtype>
 #endif
 inline constexpr void scatter_pread_all_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
 														::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_all_bytes_underflow_define<instmtype>)
@@ -191,6 +196,7 @@ inline constexpr void scatter_pread_all_bytes_cold_impl(instmtype insm, io_scatt
 template <typename instmtype>
 inline constexpr void scatter_pread_all_bytes_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
 												   ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

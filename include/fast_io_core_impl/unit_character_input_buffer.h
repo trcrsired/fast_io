@@ -19,6 +19,7 @@ template <input_stream input, ::std::contiguous_iterator Iter>
 	requires(::std::same_as<typename input::char_type, ::std::iter_value_t<Iter>> ||
 			 ::std::same_as<char, typename input::char_type>)
 inline constexpr Iter read(single_character_input_buffer<input> &in, Iter begin, Iter end)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(read(in.reference, begin, end))
 {
 	if constexpr (::std::same_as<typename input::char_type, ::std::iter_value_t<Iter>>)
 	{
@@ -65,6 +66,8 @@ inline constexpr void ibuffer_set_curr(single_character_input_buffer<input> &in,
 
 template <input_stream input>
 inline constexpr bool ibuffer_underflow(single_character_input_buffer<input> &in)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(read(in.reference, __builtin_addressof(in.single_character),
+													 __builtin_addressof(in.single_character) + 1))
 {
 	in.pos_end = (read(in.reference, __builtin_addressof(in.single_character),
 					   __builtin_addressof(in.single_character) + 1) != __builtin_addressof(in.single_character));

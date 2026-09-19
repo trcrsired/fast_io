@@ -12,6 +12,7 @@ template <typename instmtype>
 inline constexpr typename instmtype::input_char_type *
 pread_some_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
 					 typename instmtype::input_char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_some_underflow_define<instmtype>)
@@ -98,6 +99,7 @@ template <typename instmtype>
 #endif
 inline constexpr ::std::byte *pread_some_bytes_cold_impl(instmtype insm, ::std::byte *first, ::std::byte *last,
 														 ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_some_bytes_underflow_define<instmtype>)
@@ -194,6 +196,7 @@ template <typename instmtype>
 #endif
 inline constexpr void pread_all_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
 										  typename instmtype::input_char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_all_underflow_define<instmtype>)
@@ -272,6 +275,7 @@ template <typename instmtype>
 #endif
 inline constexpr void pread_all_bytes_cold_impl(instmtype insm, ::std::byte *first, ::std::byte *last,
 												::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_pread_all_bytes_underflow_define<instmtype>)
@@ -355,6 +359,7 @@ template <typename instmtype>
 inline constexpr typename instmtype::input_char_type *
 pread_some_impl(instmtype insm, typename instmtype::input_char_type *first, typename instmtype::input_char_type *last,
 				::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -372,6 +377,7 @@ pread_some_impl(instmtype insm, typename instmtype::input_char_type *first, type
 template <typename instmtype>
 inline constexpr void pread_all_impl(instmtype insm, typename instmtype::input_char_type *first,
 									 typename instmtype::input_char_type *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -389,6 +395,7 @@ inline constexpr void pread_all_impl(instmtype insm, typename instmtype::input_c
 template <typename instmtype>
 inline constexpr ::std::byte *pread_some_bytes_impl(instmtype insm, ::std::byte *first, ::std::byte *last,
 													::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -406,6 +413,7 @@ inline constexpr ::std::byte *pread_some_bytes_impl(instmtype insm, ::std::byte 
 template <typename instmtype>
 inline constexpr void pread_all_bytes_impl(instmtype insm, ::std::byte *first, ::std::byte *last,
 										   ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

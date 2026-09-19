@@ -64,6 +64,7 @@ public:
 	template <typename... Args>
 		requires(::std::constructible_from<handle_type, Args...>)
 	inline explicit constexpr basic_io_buffer(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(handle_type(::std::forward<Args>(args)...))
 		: handle(::std::forward<Args>(args)...)
 	{
 	}
@@ -79,6 +80,11 @@ public:
 	template <typename... Args>
 		requires(::std::constructible_from<handle_type, Args...>)
 	inline constexpr void reopen(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(
+			!noexcept(handle_type(::std::declval<Args>()...)) ||
+			requires { requires !noexcept(::std::declval<handle_type &>().reopen(::std::declval<Args>()...)); } ||
+			requires { requires !noexcept(::std::declval<handle_type &>() = ::std::declval<handle_type>()); } ||
+			requires { requires !noexcept(::std::declval<handle_type &>().close()); })
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);
@@ -93,6 +99,8 @@ public:
 	}
 
 	inline constexpr void close()
+		FAST_IO_HERBCEPTIONS_THROWS_IF(
+			requires { requires !noexcept(::std::declval<handle_type &>().close()); })
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);

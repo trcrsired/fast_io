@@ -9,6 +9,7 @@ namespace details
 template <typename optstmtype, typename instmtype, typename T>
 	requires(sizeof(typename optstmtype::output_char_type) == sizeof(typename instmtype::input_char_type))
 inline constexpr void transmit_until_eof_generic_main_impl(optstmtype optstm, instmtype instm, T resultint)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	/*
 	A dummy placeholder implementation
@@ -44,6 +45,7 @@ inline constexpr void transmit_until_eof_generic_main_impl(optstmtype optstm, in
 
 template <typename optstmtype, typename instmtype>
 inline constexpr ::fast_io::transmit_result transmit_until_eof_main_impl(optstmtype optstm, instmtype instm)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	::fast_io::uintfpos_t transmitted{};
 	uintfpos_transmit_reference_wrapper wrapper{__builtin_addressof(transmitted)};
@@ -61,6 +63,7 @@ namespace decay
 
 template <typename optstmtype, typename instmtype, typename T>
 inline constexpr decltype(auto) transmit_until_eof_generic_decay(optstmtype optstm, instmtype instm, T resultint)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
@@ -97,6 +100,7 @@ inline constexpr decltype(auto) transmit_until_eof_generic_decay(optstmtype opts
 
 template <typename optstmtype, typename instmtype>
 inline constexpr decltype(auto) transmit_until_eof_decay(optstmtype optstm, instmtype instm)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
@@ -133,6 +137,7 @@ inline constexpr decltype(auto) transmit_until_eof_decay(optstmtype optstm, inst
 
 template <typename optstmtype, typename instmtype, typename T>
 inline constexpr decltype(auto) transmit_until_eof_generic(optstmtype &&optstm, instmtype &&instm, T resultint)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	return ::fast_io::operations::decay::transmit_until_eof_generic_decay(
 		::fast_io::operations::output_stream_ref(optstm), ::fast_io::operations::input_stream_ref(instm), resultint);
@@ -140,6 +145,7 @@ inline constexpr decltype(auto) transmit_until_eof_generic(optstmtype &&optstm, 
 
 template <typename optstmtype, typename instmtype>
 inline constexpr decltype(auto) transmit_until_eof(optstmtype &&optstm, instmtype &&instm)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype> || !::fast_io::operations::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	return ::fast_io::operations::decay::transmit_until_eof_decay(::fast_io::operations::output_stream_ref(optstm),
 																  ::fast_io::operations::input_stream_ref(instm));
