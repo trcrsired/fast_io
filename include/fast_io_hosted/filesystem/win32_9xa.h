@@ -24,6 +24,7 @@ struct win32_9xa_dirent
 namespace win32::details
 {
 inline bool set_win32_9xa_dirent(win32_9xa_dirent &entry, bool start)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::win32_find_dataa wfda{};
 	if (start)
@@ -72,11 +73,13 @@ inline bool set_win32_9xa_dirent(win32_9xa_dirent &entry, bool start)
 }
 
 inline bool set_win32_9xa_dirent_first(win32_9xa_dirent &entry)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return set_win32_9xa_dirent(entry, true);
 }
 
 inline bool win32_9xa_dirent_next(win32_9xa_dirent &entry)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return set_win32_9xa_dirent(entry, false);
 }

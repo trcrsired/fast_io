@@ -30,6 +30,7 @@ range_view_t(basic_io_scatter_t<char_type>, I, I) -> range_view_t<char_type, I>;
 template <::std::integral char_type, ::std::input_iterator It>
 inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, sized_range_view_t<char_type, It>>,
 												  sized_range_view_t<char_type, It> t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (t.size == 0)
 	{
@@ -56,6 +57,7 @@ inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, s
 template <::std::integral char_type, ::std::input_iterator It>
 inline constexpr char_type *print_reserve_define(io_reserve_type_t<char_type, sized_range_view_t<char_type, It>>,
 												 char_type *__restrict ptr, sized_range_view_t<char_type, It> t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (t.size == 0)
 	{
@@ -85,6 +87,7 @@ inline constexpr void print_freestanding(output &&outstm, Args &&...args) FAST_I
 template <::std::integral char_type, ::std::input_iterator It, typename output>
 inline constexpr void print_define(::fast_io::io_reserve_type_t<char_type, range_view_t<char_type, It>>, output out,
 								   ::fast_io::range_view_t<char_type, It> t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (t.begin == t.end)
 	{

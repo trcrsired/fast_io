@@ -112,6 +112,7 @@ inline void linux_kpr_raw_write(::fast_io::kern k, void const *start, void const
 
 template <bool line, ::std::integral ch_type, typename T>
 inline constexpr void status_print_define_single_line_impl(basic_kpr<ch_type> kpr, T t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	basic_io_scatter_t<ch_type> scatter{print_scatter_define(io_reserve_type<ch_type, T>, t)};
 	auto base{scatter.base};
@@ -194,6 +195,7 @@ struct kpr_scatter_struct
 
 template <::std::integral char_type, typename T, typename... Args>
 inline void kpr_scatter_print_recursive(kpr_scatter_struct *p, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto scatter{print_scatter_define(io_reserve_type<char_type, T>, t)};
 	::std::size_t len{scatter.len * sizeof(char_type)};
@@ -211,6 +213,7 @@ inline void kpr_scatter_print_recursive(kpr_scatter_struct *p, T t, Args... args
 
 template <::std::integral char_type, typename T, typename... Args>
 inline void kpr_scatter_reserve_print_recursive(kpr_scatter_struct *p, char_type *buffer, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (scatter_printable<char_type, T>)
 	{
@@ -295,6 +298,7 @@ inline constexpr bool kpr_total_print_reserve_size_less_or_equal_than512(::std::
 
 template <::std::integral char_type, typename... Args>
 inline void deal_with_kpr_ignore_line(char const *fmt_str, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t n{sizeof...(Args)};
 	if constexpr (n == 0)
@@ -322,6 +326,7 @@ inline void deal_with_kpr_ignore_line(char const *fmt_str, Args... args)
 
 template <bool line, ::std::integral char_type, typename... Args>
 inline void deal_with_kpr_common(basic_kpr<char_type> kpr, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t n{sizeof...(Args)};
 	if constexpr (n == 0 && !line)
@@ -388,6 +393,7 @@ print_freestanding_decay_okay_character_type_no_status<ch_type, Args...> &&
 		sizeof(ch_type) == 1 &&
 		(!::fast_io::details::is_ebcdic<ch_type>))
 inline constexpr void print_status_define(basic_kpr<ch_type> k, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr ((::fast_io::details::kpr_total_print_reserve_size_less_or_equal_than512<ch_type, Args...>(0)))
 	{

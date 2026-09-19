@@ -39,6 +39,7 @@ namespace win32::details
 {
 
 inline ::std::byte *win32_crypt_gen_random_some_impl(::std::size_t hprov, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(::std::size_t) <= sizeof(::std::uint_least32_t))
 	{
@@ -73,6 +74,7 @@ inline ::std::byte *win32_crypt_gen_random_some_impl(::std::size_t hprov, ::std:
 }
 
 inline void win32_crypt_gen_random_all_impl(::std::size_t hprov, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ret{win32_crypt_gen_random_some_impl(hprov, first, last)};
 	if constexpr (sizeof(::std::uint_least32_t) < sizeof(::std::size_t))
@@ -90,6 +92,7 @@ template <::std::integral char_type>
 	requires(sizeof(::std::uint_least32_t) < sizeof(::std::size_t))
 inline ::std::byte *read_some_bytes_underflow_define(basic_win32_crypt_gen_random_io_observer<char_type> bcgiob,
 													 ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::win32_crypt_gen_random_some_impl(bcgiob.hprov, first, last);
 }
@@ -97,6 +100,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_win32_crypt_gen_rando
 template <::std::integral char_type>
 inline void read_all_bytes_underflow_define(basic_win32_crypt_gen_random_io_observer<char_type> bcgiob,
 											::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::details::win32_crypt_gen_random_all_impl(bcgiob.hprov, first, last);
 }
@@ -108,6 +112,7 @@ public:
 	using native_handle_type = ::std::size_t;
 	using input_char_type = ch_type;
 	inline basic_win32_family_crypt_gen_random_file()
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_crypt_gen_random_io_observer<ch_type>{
 			  ::fast_io::details::win32::crypt_acquire_context_fallback<family>()}
 	{
@@ -147,8 +152,9 @@ public:
 			::fast_io::win32::CryptReleaseContext(this->hprov, 0);
 		}
 	}
-	
+
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->hprov) [[likely]]
 		{

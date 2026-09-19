@@ -125,6 +125,7 @@ inline ::fast_io::win32::win32_family_addrinfo<fam> *
 win32_getaddrinfo_impl(::std::conditional_t<fam == win32_family::wide_nt, char16_t, char> const *node,
 					   ::std::conditional_t<fam == win32_family::wide_nt, char16_t, char> const *service,
 					   ::fast_io::win32::win32_family_addrinfo<fam> const *hints)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::win32_family_addrinfo<fam> *res{};
 	if constexpr (win32_family::ansi_9x == fam)
@@ -162,6 +163,7 @@ inline void win32_family_freeaddrinfo_impl(::fast_io::win32::win32_family_addrin
 template <win32_family fam>
 inline constexpr auto
 win32_family_dns_open_internal_impl(::std::conditional_t<fam == win32_family::wide_nt, char16_t, char> const *node)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::fast_io::win32::win32_family_addrinfo<fam> info{.ai_family = 0};
 	return win32_getaddrinfo_impl<fam>(node, nullptr, __builtin_addressof(info));

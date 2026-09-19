@@ -94,6 +94,7 @@ public:
 	template <typename Func, typename... Args>
 		requires(::std::invocable<Func, Args...>)
 	inline constexpr nt_thread(Func &&func, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		using start_routine_tuple_type = ::fast_io::containers::tuple<::std::decay_t<Func>, ::std::decay_t<Args>...>;
 		using alloc = ::fast_io::native_typed_global_allocator<start_routine_tuple_type>;
@@ -178,6 +179,7 @@ public:
 	}
 
 	inline constexpr void join()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (!this->joinable()) [[unlikely]]
 		{
@@ -198,6 +200,7 @@ public:
 	}
 
 	inline constexpr void detach()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (!this->joinable()) [[unlikely]]
 		{
@@ -250,6 +253,7 @@ public:
 	}
 
 	inline static constexpr ::std::uint_least32_t hardware_concurrency()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::fast_io::win32::nt::system_basic_information sb{};
 		auto status{::fast_io::win32::nt::nt_query_system_information<zw>(::fast_io::win32::nt::system_information_class::SystemBasicInformation,
@@ -273,6 +277,7 @@ inline
 	constexpr
 #endif
 	::fast_io::win32::nt::nt_thread<zw>::id get_id()
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::thread_basic_information tbi;
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_query_information_thread<zw>(
@@ -308,6 +313,7 @@ inline
 	constexpr
 #endif
 	void sleep_for(::std::chrono::duration<Rep, Period> const &sleep_duration)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const count{static_cast<::std::uint_least64_t>(
 		::std::chrono::duration_cast<::std::chrono::microseconds>(sleep_duration).count() * 10u +
@@ -334,6 +340,7 @@ inline
 	constexpr
 #endif
 	void sleep_for(::fast_io::basic_timestamp<off_to_epoch> const &sleep_duration)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (sleep_duration.seconds < 0) [[unlikely]]
 	{
@@ -365,6 +372,7 @@ inline
 	constexpr
 #endif
 	void sleep_until(::std::chrono::time_point<Clock, Duration> const &expect_time)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const unix_ts = ::std::chrono::duration_cast<std::chrono::seconds>(
 							 expect_time.time_since_epoch())
@@ -403,6 +411,7 @@ inline
 	constexpr
 #endif
 	void sleep_until(::fast_io::basic_timestamp<off_to_epoch> const &expect_time)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (expect_time.seconds < 0) [[unlikely]]
 	{

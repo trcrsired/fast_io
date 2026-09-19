@@ -58,6 +58,7 @@ namespace win32::nt::details
 [[msvc::forceinline]]
 #endif
 inline void check_nt_status(::std::uint_least32_t status)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (status) [[unlikely]]
 	{
@@ -336,7 +337,7 @@ inline constexpr nt_open_mode calculate_nt_open_mode(open_mode_perms ompm) noexc
 }
 
 template <bool zw>
-inline void *nt_create_file_common(void *directory, ::fast_io::win32::nt::unicode_string *relative_path, nt_open_mode const &mode)
+inline void *nt_create_file_common(void *directory, ::fast_io::win32::nt::unicode_string *relative_path, nt_open_mode const &mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::security_attributes sec_attr{sizeof(::fast_io::win32::security_attributes), nullptr, true};
 	::fast_io::win32::nt::object_attributes obj{.Length = sizeof(::fast_io::win32::nt::object_attributes),
@@ -367,14 +368,14 @@ struct nt_create_callback
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline void *operator()(void *directory_handle, ::fast_io::win32::nt::unicode_string *relative_path) const
+	inline void *operator()(void *directory_handle, ::fast_io::win32::nt::unicode_string *relative_path) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return nt_create_file_common<zw>(directory_handle, relative_path, mode); // get rid of this pointer
 	}
 };
 
 template <bool zw>
-inline void *nt_family_create_file_impl(char16_t const *filename_cstr, open_mode_perms ompm)
+inline void *nt_family_create_file_impl(char16_t const *filename_cstr, open_mode_perms ompm) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_call_invoke_without_directory_handle_impl(
 		filename_cstr, nt_create_callback<zw>{::fast_io::win32::nt::details::calculate_nt_open_mode(ompm)});
@@ -390,6 +391,7 @@ struct nt_family_open_file_parameter
 	[[msvc::forceinline]]
 #endif
 	inline void *operator()(char16_t const *filename_cstr)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return nt_family_create_file_impl<zw>(filename_cstr, ompm);
 	}
@@ -397,14 +399,14 @@ struct nt_family_open_file_parameter
 
 template <bool zw, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline void *nt_create_file_impl(T const &t, open_mode_perms ompm)
+inline void *nt_create_file_impl(T const &t, open_mode_perms ompm) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(t, nt_family_open_file_parameter<zw>{ompm});
 }
 
 template <bool zw, bool kernel>
 inline void *nt_family_create_file_at_impl(void *directory_handle, char16_t const *filename_c_str,
-										   ::std::size_t filename_c_str_len, open_mode_perms md)
+										   ::std::size_t filename_c_str_len, open_mode_perms md) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (kernel)
 	{
@@ -422,7 +424,7 @@ inline void *nt_family_create_file_at_impl(void *directory_handle, char16_t cons
 
 template <bool zw>
 inline void *nt_family_create_file_fs_dirent_impl(void *directory_handle, char16_t const *filename_c_str,
-												  ::std::size_t filename_c_str_len, open_mode_perms md)
+												  ::std::size_t filename_c_str_len, open_mode_perms md) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char16_may_alias_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -436,7 +438,7 @@ inline void *nt_family_create_file_fs_dirent_impl(void *directory_handle, char16
 
 template <bool zw>
 inline void *nt_family_create_file_kernel_impl(char16_t const *filename_cstr, ::std::size_t filename_c_str_len,
-											   open_mode_perms ompm)
+											   open_mode_perms ompm) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_call_kernel_nodir_callback(
 		filename_cstr, filename_c_str_len,
@@ -453,6 +455,7 @@ struct nt_family_open_file_kernel_parameter
 	[[msvc::forceinline]]
 #endif
 	inline void *operator()(char16_t const *filename_cstr, ::std::size_t filename_c_str_len)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return nt_family_create_file_kernel_impl<zw>(filename_cstr, filename_c_str_len, ompm);
 	}
@@ -460,7 +463,7 @@ struct nt_family_open_file_kernel_parameter
 
 template <bool zw, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline void *nt_create_file_kernel_impl(T const &t, open_mode_perms op)
+inline void *nt_create_file_kernel_impl(T const &t, open_mode_perms op) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(t, nt_family_open_file_kernel_parameter<zw>{op});
 }
@@ -476,6 +479,7 @@ struct nt_family_open_file_at_parameter
 	[[msvc::forceinline]]
 #endif
 	inline void *operator()(char16_t const *filename_cstr, ::std::size_t filename_c_str_len)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return nt_family_create_file_at_impl<zw, kernel>(directory_handle, filename_cstr, filename_c_str_len, ompm);
 	}
@@ -483,13 +487,14 @@ struct nt_family_open_file_at_parameter
 
 template <bool zw, bool kernel = false, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline void *nt_create_file_at_impl(void *directory_handle, T const &t, open_mode_perms op)
+inline void *nt_create_file_at_impl(void *directory_handle, T const &t, open_mode_perms op) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(t, nt_family_open_file_at_parameter<zw, kernel>{directory_handle, op});
 }
 
 template <::fast_io::nt_family family>
 inline ::std::uint_least64_t nt_calculate_current_file_offset(void *__restrict handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::io_status_block block;
 	::std::uint_least64_t fps{};
@@ -504,6 +509,7 @@ inline ::std::uint_least64_t nt_calculate_current_file_offset(void *__restrict h
 }
 
 inline ::std::int_least64_t nt_calculate_offset_impl(::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(::fast_io::intfpos_t) > sizeof(::std::int_least64_t))
 	{
@@ -520,6 +526,7 @@ inline ::std::int_least64_t nt_calculate_offset_impl(::fast_io::intfpos_t off)
 template <nt_family family>
 inline ::std::byte *nt_read_pread_some_bytes_common_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last,
 														 ::std::int_least64_t *pbyteoffset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// some poeple in zwclose7 forum said we do not need to initialize io_status_block
 	::fast_io::win32::nt::io_status_block block;
@@ -538,6 +545,7 @@ inline ::std::byte *nt_read_pread_some_bytes_common_impl(void *__restrict handle
 
 template <nt_family family>
 inline ::std::byte *nt_read_some_bytes_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_read_pread_some_bytes_common_impl<family>(handle, first, last, nullptr);
 }
@@ -545,6 +553,7 @@ inline ::std::byte *nt_read_some_bytes_impl(void *__restrict handle, ::std::byte
 template <nt_family family>
 inline ::std::byte *nt_pread_some_bytes_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last,
 											 ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
 	// the functions will advance the position by the number of bytes written or read after each write/read operation.
@@ -558,6 +567,7 @@ template <nt_family family>
 inline ::std::byte const *nt_write_pwrite_some_bytes_common_impl(void *__restrict handle, ::std::byte const *first,
 																 ::std::byte const *last,
 																 ::std::int_least64_t *pbyteoffset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::io_status_block block;
 	auto const status{::fast_io::win32::nt::nt_write_file<family == ::fast_io::nt_family::zw>(handle, nullptr, nullptr, nullptr, __builtin_addressof(block), first,
@@ -572,6 +582,7 @@ inline ::std::byte const *nt_write_pwrite_some_bytes_common_impl(void *__restric
 template <nt_family family>
 inline ::std::byte const *nt_write_some_bytes_impl(void *__restrict handle, ::std::byte const *first,
 												   ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_write_pwrite_some_bytes_common_impl<family>(handle, first, last, nullptr);
 }
@@ -579,6 +590,7 @@ inline ::std::byte const *nt_write_some_bytes_impl(void *__restrict handle, ::st
 template <nt_family family>
 inline ::std::byte const *nt_pwrite_some_bytes_impl(void *__restrict handle, ::std::byte const *first,
 													::std::byte const *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
 	// the functions will advance the position by the number of bytes written or read after each write/read operation.
@@ -695,6 +707,7 @@ public:
 template <nt_family family, ::std::integral ch_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_io_observer<family, ch_type> niob,
 													 ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_read_some_bytes_impl<family>(niob.handle, first, last);
 }
@@ -702,6 +715,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_io_observer
 template <nt_family family, ::std::integral ch_type>
 inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_io_observer<family, ch_type> niob,
 														   ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_write_some_bytes_impl<family>(niob.handle, first, last);
 }
@@ -709,6 +723,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_io_ob
 template <nt_family family, ::std::integral ch_type>
 inline ::std::byte *pread_some_bytes_underflow_define(basic_nt_family_io_observer<family, ch_type> niob,
 													  ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_pread_some_bytes_impl<family>(niob.handle, first, last, off);
 }
@@ -717,6 +732,7 @@ template <nt_family family, ::std::integral ch_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_nt_family_io_observer<family, ch_type> niob,
 															::std::byte const *first, ::std::byte const *last,
 															::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_pwrite_some_bytes_impl<family>(niob.handle, first, last, off);
 }
@@ -769,6 +785,7 @@ namespace win32::nt::details
 
 template <bool zw>
 inline void nt_flush_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::io_status_block block;
 	::std::uint_least32_t status{::fast_io::win32::nt::nt_flush_buffers_file<zw>(handle, __builtin_addressof(block))};
@@ -780,6 +797,7 @@ inline void nt_flush_impl(void *handle)
 
 template <bool zw>
 inline void nt_data_sync_impl(void *handle, data_sync_flags flags [[maybe_unused]])
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (!defined(_WIN32_WINNT) || _WIN32_WINNT >= 0x0602) || WINVER >= 0x0602
 	/*
@@ -801,12 +819,14 @@ inline void nt_data_sync_impl(void *handle, data_sync_flags flags [[maybe_unused
 
 template <nt_family family, ::std::integral ch_type>
 inline void flush(basic_nt_family_io_observer<family, ch_type> ntiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::details::nt_flush_impl<family == nt_family::zw>(ntiob.handle);
 }
 
 template <nt_family family, ::std::integral ch_type>
 inline void data_sync(basic_nt_family_io_observer<family, ch_type> ntiob, data_sync_flags flags)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::details::nt_data_sync_impl<family == nt_family::zw>(ntiob.handle, flags);
 }
@@ -866,6 +886,7 @@ inline nt_file_position_status nt_get_file_position_impl(void *__restrict handle
 
 template <bool zw>
 inline ::std::int_least64_t nt_seek64_impl(void *__restrict handle, ::std::int_least64_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto [status, file_position] = nt_get_file_position_impl<zw>(handle, offset, s);
 	if (status)
@@ -885,12 +906,14 @@ inline ::std::int_least64_t nt_seek64_impl(void *__restrict handle, ::std::int_l
 
 template <bool zw>
 inline ::fast_io::intfpos_t nt_seek_impl(void *__restrict handle, ::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return static_cast<::fast_io::intfpos_t>(nt_seek64_impl<zw>(handle, static_cast<::std::int_least64_t>(offset), s));
 }
 
 template <bool zw>
 inline void *nt_dup_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	void *current_process{reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))};
 	void *new_handle{};
@@ -905,6 +928,7 @@ inline void *nt_dup_impl(void *handle)
 
 template <bool zw>
 inline void *nt_dup2_impl(void *handle, void *newhandle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto temp{nt_dup_impl<zw>(handle)};
 	if (newhandle) [[likely]]
@@ -916,6 +940,7 @@ inline void *nt_dup2_impl(void *handle, void *newhandle)
 
 template <bool zw>
 inline void nt_truncate_impl(void *handle, ::std::uintmax_t newfilesizem)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least64_t newfilesize{static_cast<::std::uint_least64_t>(newfilesizem)};
 	::fast_io::win32::nt::io_status_block block;
@@ -984,6 +1009,7 @@ inline void nt_family_file_unlock_common_impl(void *__restrict handle, flock_req
 
 template <bool zw>
 inline void nt_family_file_lock_common_impl(void *__restrict handle, flock_request_l64 &req)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto status{nt_family_file_lock_common_impl<zw>(handle, req, false)};
 	if (status)
@@ -994,6 +1020,7 @@ inline void nt_family_file_lock_common_impl(void *__restrict handle, flock_reque
 
 template <bool zw, ::std::integral int_type>
 inline void nt_family_file_lock_impl(void *__restrict handle, basic_flock_request<int_type> &__restrict t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(int_type) >= sizeof(::std::int_least64_t))
 	{
@@ -1024,6 +1051,7 @@ inline void nt_family_file_unlock_impl(void *__restrict handle, basic_flock_requ
 
 template <bool zw, ::std::integral int_type>
 inline bool nt_family_file_try_lock_impl(void *__restrict handle, basic_flock_request<int_type> &__restrict t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(int_type) >= sizeof(::std::int_least64_t))
 	{
@@ -1053,12 +1081,14 @@ inline bool nt_family_file_try_lock_impl(void *__restrict handle, basic_flock_re
 template <nt_family family, ::std::integral ch_type>
 inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_nt_family_io_observer<family, ch_type> handle,
 														::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_seek_impl<family == nt_family::zw>(handle.handle, offset, s);
 }
 
 template <nt_family family, ::std::integral ch_type>
 inline void truncate(basic_nt_family_io_observer<family, ch_type> handle, ::std::uintmax_t newfilesize)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::details::nt_truncate_impl<family == nt_family::zw>(handle.handle, newfilesize);
 }
@@ -1144,6 +1174,7 @@ inline constexpr file_type file_type_impl(::std::uint_least32_t DeviceType) noex
 
 template <nt_family family>
 inline posix_file_status nt_status_impl(void *__restrict handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::io_status_block isb;
 
@@ -1271,6 +1302,7 @@ struct nt_family_file_lock
 	template <::std::signed_integral int_type>
 		requires(sizeof(int_type) >= sizeof(::std::int_least64_t))
 	inline void lock(basic_flock_request<int_type> &__restrict t)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::fast_io::win32::nt::details::nt_family_file_lock_impl<family == nt_family::zw>(this->handle, t);
 	}
@@ -1344,30 +1376,32 @@ public:
 		hd.handle = nullptr;
 	}
 	inline explicit basic_nt_family_file(io_dup_t, basic_nt_family_io_observer<family, ch_type> wiob)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>{
 			  ::fast_io::win32::nt::details::nt_dup_impl<family == nt_family::zw>(wiob.handle)}
 	{
 	}
 	inline explicit basic_nt_family_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, char_type>{
 			  ::fast_io::win32::nt::details::nt_family_create_file_fs_dirent_impl<family == nt_family::zw>(fsdirent.handle, fsdirent.filename.c_str(), fsdirent.filename.size(), {om, pm})}
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit basic_nt_family_file(T const &t, open_mode om, perms pm = static_cast<perms>(436))
+	inline explicit basic_nt_family_file(T const &t, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>{
 			  ::fast_io::win32::nt::details::nt_create_file_impl<family == nt_family::zw>(t, {om, pm})}
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit basic_nt_family_file(nt_at_entry ent, T const &t, open_mode om, perms pm = static_cast<perms>(436))
+	inline explicit basic_nt_family_file(nt_at_entry ent, T const &t, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>{
 			  ::fast_io::win32::nt::details::nt_create_file_at_impl<family == nt_family::zw>(ent.handle, t, {om, pm})}
 	{
 	}
 
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit basic_nt_family_file(io_kernel_t, T const &t, open_mode om, perms pm = static_cast<perms>(436))
+	inline explicit basic_nt_family_file(io_kernel_t, T const &t, open_mode om, perms pm = static_cast<perms>(436)) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>{
 			  ::fast_io::win32::nt::details::nt_create_file_kernel_impl<family == nt_family::zw>(t, {om, pm})}
 	{
@@ -1375,6 +1409,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_nt_family_file(io_kernel_t, nt_at_entry ent, T const &t, open_mode om,
 										 perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>{
 			  ::fast_io::win32::nt::details::nt_create_file_at_impl<family == nt_family::zw, true>(ent.handle, t,
 																								   {om, pm})}
@@ -1382,6 +1417,7 @@ public:
 	}
 
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->handle) [[likely]]
 		{
@@ -1402,6 +1438,7 @@ public:
 		this->handle = newhandle;
 	}
 	inline basic_nt_family_file(basic_nt_family_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, ch_type>(
 			  ::fast_io::win32::nt::details::nt_dup_impl<family == nt_family::zw>(other.handle))
 	{
@@ -1448,6 +1485,7 @@ namespace win32::nt::details
 
 template <bool zw>
 inline void nt_create_pipe(void **hReadPipe, void **hWritePipe)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::io_status_block isb;
 	constexpr decltype(auto) namedpipe_part{u"\\Device\\NamedPipe\\"};
@@ -1530,6 +1568,7 @@ public:
 	using char_type = ch_type;
 	basic_nt_family_file<family, ch_type> pipes[2];
 	inline basic_nt_family_pipe()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		win32::nt::details::nt_create_pipe<family == nt_family::zw>(__builtin_addressof(pipes[0].handle), __builtin_addressof(pipes[1].handle));
 	}

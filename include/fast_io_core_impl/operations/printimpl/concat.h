@@ -5,6 +5,7 @@ namespace fast_io::details::decay
 
 template <::std::integral char_type, typename T>
 inline constexpr ::std::size_t calculate_scatter_reserve_size_unit()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using real_type = ::std::remove_cvref_t<T>;
 	if constexpr (reserve_printable<char_type, real_type>)
@@ -20,6 +21,7 @@ inline constexpr ::std::size_t calculate_scatter_reserve_size_unit()
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr ::std::size_t calculate_scatter_reserve_size()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof...(Args) == 0)
 	{
@@ -34,6 +36,7 @@ inline constexpr ::std::size_t calculate_scatter_reserve_size()
 
 template <bool line, ::std::integral char_type, typename T, typename... Args>
 inline constexpr char_type *print_reserve_define_chain_impl(char_type *p, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof...(Args) == 0)
 	{
@@ -54,6 +57,7 @@ inline constexpr char_type *print_reserve_define_chain_impl(char_type *p, T t, A
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr ::std::size_t calculate_scatter_dynamic_reserve_size_with_scatter([[maybe_unused]] T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dynamic_reserve_printable<char_type, T>)
 	{
@@ -96,6 +100,7 @@ inline constexpr ::std::size_t calculate_scatter_dynamic_reserve_size_with_scatt
 
 template <bool line, ::std::integral char_type, typename T, typename... Args>
 inline constexpr char_type *print_reserve_define_chain_scatter_impl(char_type *p, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dynamic_reserve_printable<char_type, T> || reserve_printable<char_type, T>)
 	{
@@ -123,12 +128,14 @@ inline constexpr char_type *print_reserve_define_chain_scatter_impl(char_type *p
 
 template <::std::integral ch_type, typename T>
 inline constexpr basic_io_scatter_t<ch_type> print_scatter_define_extract_one(T t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_scatter_define(io_reserve_type<ch_type, ::std::remove_cvref_t<T>>, t);
 }
 
 template <bool line, ::std::integral ch_type, typename T, typename Arg>
 inline constexpr T basic_general_concat_decay_impl_precise(T &str, Arg arg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t precise_size{print_reserve_precise_size(io_reserve_type<ch_type, Arg>, arg)};
 	::std::size_t precise_size_with_line{precise_size};
@@ -155,6 +162,7 @@ inline constexpr T basic_general_concat_decay_impl_precise(T &str, Arg arg)
 
 template <bool line, ::std::integral ch_type, typename T, typename... Args>
 inline constexpr T basic_general_concat_decay_impl(Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof...(Args) == 0)
 	{
@@ -243,6 +251,7 @@ inline constexpr T basic_general_concat_decay_impl(Args... args)
 
 template <bool line, ::std::integral ch_type, typename T, typename Arg>
 inline constexpr void basic_general_concat_decay_ref_impl_precise(T &str, Arg arg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t precise_size{print_reserve_precise_size(io_reserve_type<ch_type, Arg>, arg)};
 	::std::size_t precise_size_with_line{precise_size};
@@ -268,6 +277,7 @@ inline constexpr void basic_general_concat_decay_ref_impl_precise(T &str, Arg ar
 
 template <bool line, ::std::integral ch_type, typename T, typename... Args>
 inline constexpr void basic_general_concat_decay_ref_impl(T &str, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (((reserve_printable<ch_type, Args> || scatter_printable<ch_type, Args> ||
 					dynamic_reserve_printable<ch_type, Args>) &&
@@ -328,6 +338,7 @@ inline constexpr void basic_general_concat_decay_ref_impl(T &str, Args... args)
 
 template <bool line, ::std::integral ch_type, typename T, typename... Args>
 inline constexpr T basic_general_concat_phase1_decay_impl(Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof...(Args) == 0)
 	{
@@ -392,6 +403,7 @@ namespace fast_io
 template <bool line, ::std::integral char_type, typename T, typename... Args>
 	requires strlike<char_type, T>
 inline constexpr T basic_general_concat(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::decay::basic_general_concat_phase1_decay_impl<line, char_type, T>(
 		io_print_forward<char_type>(io_print_alias(args))...);

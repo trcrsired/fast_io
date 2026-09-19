@@ -6,6 +6,7 @@ namespace details
 {
 
 inline ::std::byte *wasi_random_get_some_impl(::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using u8ptr_may_alias
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -46,6 +47,7 @@ inline ::std::byte *wasi_random_get_some_impl(::std::byte *first, ::std::byte *l
 }
 
 inline void wasi_random_get_all_impl(::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(::std::size_t) <= sizeof(__wasi_size_t))
 	{
@@ -92,12 +94,14 @@ template <::std::integral char_type>
 	requires(sizeof(__wasi_size_t) < sizeof(::std::size_t))
 inline ::std::byte *read_some_bytes_underflow_define(basic_wasi_random_get<char_type>, ::std::byte *first,
 													 ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::wasi_random_get_some_impl(first, last);
 }
 
 template <::std::integral char_type>
 inline void read_all_bytes_underflow_define(basic_wasi_random_get<char_type>, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::wasi_random_get_all_impl(first, last);
 }

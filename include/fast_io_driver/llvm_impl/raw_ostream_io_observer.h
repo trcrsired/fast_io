@@ -59,6 +59,7 @@ namespace details
 {
 
 inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_vptr, void const *last_vptr)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	char const *first{reinterpret_cast<char const *>(first_vptr)};
 	char const *last{reinterpret_cast<char const *>(last_vptr)};
@@ -79,12 +80,14 @@ inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_v
 
 template <::std::integral char_type, typename T, ::std::contiguous_iterator Iter>
 inline constexpr void write(basic_general_raw_ostream_io_observer<char_type, T> osiob, Iter first, Iter last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::llvm::details::llvm_ostream_write_impl(osiob.os, ::std::to_address(first), ::std::to_address(last));
 }
 
 template <::std::integral char_type, typename T>
 inline constexpr void flush(basic_general_raw_ostream_io_observer<char_type, T> osiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	osiob.os->flush();
 }

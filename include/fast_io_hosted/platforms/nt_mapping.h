@@ -52,6 +52,7 @@ inline constexpr nt_file_map_attribute &operator^=(nt_file_map_attribute &x, nt_
 }
 
 inline constexpr nt_file_map_attribute to_nt_file_map_attribute(file_map_attribute x)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch (x)
 	{
@@ -80,6 +81,7 @@ namespace win32::nt::details
 
 template <nt_family family>
 inline void *create_file_mapping_impl(void *handle, file_map_attribute attr)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::object_attributes objAttr{};
 	objAttr.Length = sizeof(::fast_io::win32::nt::object_attributes);
@@ -119,6 +121,7 @@ public:
 	}
 	inline nt_family_memory_map_file(nt_at_entry bf, file_map_attribute attr, ::std::size_t bytes,
 									 ::std::uintmax_t start_address = 0)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		basic_nt_family_file<family, char> mapping_file{
 			win32::nt::details::create_file_mapping_impl<family>(bf.handle, attr)};
@@ -249,6 +252,7 @@ public:
 		return *this;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->address_begin) [[likely]]
 		{

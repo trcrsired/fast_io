@@ -52,7 +52,7 @@ inline constexpr decltype(auto) transmit_bytes_some_decay(optstmtype optstm, ins
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
-	{
+{
 		return status_transmit_bytes_some_define(optstm,instm,totransmit);
 	}
 	else if constexpr(::fast_io::status_input_stream<instmtype>)

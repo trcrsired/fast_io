@@ -82,6 +82,7 @@ namespace details
 {
 
 [[noreturn]] inline void throw_posix_rtld_error(int err = EINVAL)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	int en{errno};
 	if (!en)
@@ -190,6 +191,7 @@ namespace details
 {
 
 inline void *posix_dll_load_symbol_impl(void *rtld_handle, char const *symbol)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ptr{noexcept_call(::dlsym, rtld_handle, symbol)};
 	if (ptr == nullptr) [[unlikely]]
@@ -211,6 +213,7 @@ struct posix_dll_load_impl_context
 #if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
 #if __GLIBC_PREREQ(2, 0)
 inline void *posix_dll_load_vers_symbol_impl(void *rtld_handle, char const *symbol, char const *vers)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ptr{noexcept_call(::dlvsym, rtld_handle, symbol, vers)};
 	if (ptr == nullptr) [[unlikely]]

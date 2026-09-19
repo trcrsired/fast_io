@@ -100,6 +100,7 @@ public:
 	template <typename Func, typename... Args>
 		requires(::std::invocable<Func, Args...>)
 	inline constexpr pthread_thread(Func &&func, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		using start_routine_tuple_type = ::fast_io::containers::tuple<::std::decay_t<Func>, ::std::decay_t<Args>...>;
 		using alloc = ::fast_io::native_typed_global_allocator<start_routine_tuple_type>;
@@ -161,6 +162,7 @@ public:
 	}
 
 	inline constexpr void join()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (!this->joinable()) [[unlikely]]
 		{
@@ -175,6 +177,7 @@ public:
 	}
 
 	inline constexpr void detach()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (!this->joinable()) [[unlikely]]
 		{

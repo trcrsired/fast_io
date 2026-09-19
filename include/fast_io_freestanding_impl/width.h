@@ -262,6 +262,7 @@ namespace details
 
 template <::std::integral char_type, typename T>
 inline constexpr ::std::size_t print_reserve_size_width_impl(T t, ::std::size_t wid)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (reserve_printable<char_type, ::std::remove_cvref_t<T>>)
 	{
@@ -341,6 +342,7 @@ inline constexpr char_type *handle_common_internal_ch(char_type *first, char_typ
 template <::fast_io::manipulators::scalar_placement placement, ::std::integral char_type, typename T>
 inline constexpr char_type *print_reserve_define_width_ch_impl(char_type *iter, T t, ::std::size_t wdt,
 															   char_type fillch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using value_type = ::std::remove_cvref_t<T>;
 	if constexpr (placement == ::fast_io::manipulators::scalar_placement::internal)
@@ -386,6 +388,7 @@ inline constexpr char_type *print_reserve_define_width_ch_impl(char_type *iter, 
 template <::fast_io::manipulators::scalar_placement placement, ::std::integral char_type, typename T>
 	requires ::std::is_trivially_copyable_v<T>
 inline constexpr char_type *print_reserve_define_width_impl(char_type *iter, T t, ::std::size_t wdt)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_reserve_define_width_ch_impl<placement>(iter, t, wdt, char_literal_v<u8' ', char_type>);
 }
@@ -431,6 +434,7 @@ template <::std::integral char_type, typename T>
 inline constexpr char_type *print_reserve_define_width_rt_ch_impl(char_type *iter,
 																  ::fast_io::manipulators::scalar_placement placement,
 																  T t, ::std::size_t wdt, char_type fillch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using value_type = ::std::remove_cvref_t<T>;
 	if (placement == ::fast_io::manipulators::scalar_placement::internal)
@@ -474,6 +478,7 @@ template <::std::integral char_type, typename T>
 inline constexpr char_type *print_reserve_define_rt_width_impl(char_type *iter,
 															   ::fast_io::manipulators::scalar_placement placement, T t,
 															   ::std::size_t wdt)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_reserve_define_width_rt_ch_impl(iter, placement, t, wdt, char_literal_v<u8' ', char_type>);
 }

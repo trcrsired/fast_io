@@ -49,14 +49,17 @@ public:
 		}
 	}
 	inline void update(::std::byte const *first, ::std::byte const *last)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::fast_io::details::ntbcrypt_update_impl(this->hashHandle, first, last);
 	}
 	inline void do_final()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::fast_io::details::ntbcrypt_do_final_impl(this->hashHandle, digest_buffer, bcrypt_size);
 	}
 	inline void reset()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		this->do_final();
 	}
@@ -95,6 +98,7 @@ struct bcrypt_algo_guard
 };
 
 inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t const *name)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	void *phalgo{};
 	::std::uint_least32_t status{
@@ -149,6 +153,7 @@ inline void create_nt_bcrypt_impl(nt_bcrypt_hash_file &h, T const &t)
 }
 
 inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(::std::ptrdiff_t) <= sizeof(::std::uint_least32_t))
 	{
@@ -183,6 +188,7 @@ inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::s
 }
 
 inline void ntbcrypt_do_final_impl(void *hashhandle, ::std::byte *buffer, ::std::uint_least32_t bcrypt_size)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t ntstatus{::fast_io::win32::BCryptFinishHash(hashhandle, buffer, bcrypt_size, 0u)};
 	if (ntstatus)

@@ -133,6 +133,7 @@ template <::fast_io::win32_family family>
 inline void *win32_family_load_l10n_common_impl(
 	::std::conditional_t<family == ::fast_io::win32_family::wide_nt, char16_t, char8_t> const *cstr, ::std::size_t n,
 	lc_locale &loc)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t size_restriction{256u};
 	constexpr ::std::size_t encoding_size_restriction{128u};
@@ -317,6 +318,7 @@ inline void *win32_family_load_l10n_common_impl(
 
 template <::fast_io::win32_family family, ::fast_io::constructible_to_os_c_str path_type>
 inline void *win32_family_load_l10n_impl(path_type const &p, lc_locale &loc)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32_family_api_common<family>(
 		p,
@@ -346,6 +348,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str path_type>
 	explicit win32_family_l10n(path_type const &p)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		this->hmodule = ::fast_io::details::win32_family_load_l10n_impl<family>(p, loc);
 	}

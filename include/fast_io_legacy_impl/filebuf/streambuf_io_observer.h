@@ -130,6 +130,7 @@ inline constexpr auto status(basic_filebuf_io_observer<ch_type, traits_type> cio
 
 template <::std::integral ch_type, typename traits_type>
 inline ::std::size_t file_size(basic_filebuf_io_observer<ch_type, traits_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::posix_loader_get_file_size(details::fp_to_fd(details::streambuf_hack::fp_hack(ciob.fb)));
 }

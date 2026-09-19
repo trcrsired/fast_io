@@ -64,6 +64,7 @@ template <bool noskipws, bool line, bool ctxread = false, ::std::integral char_t
 inline constexpr ::fast_io::parse_result<char_type const *>
 scan_context_define_strlike_impl(::std::conditional_t<ctxread, bool, bool &> skip_space_done, char_type const *first,
 								 char_type const *last, T ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto it{first};
 	if constexpr (!noskipws && !line)
@@ -116,6 +117,7 @@ template <bool ctxread = false, ::std::integral char_type, typename T>
 inline constexpr ::fast_io::parse_result<char_type const *>
 scan_context_define_strlike_getall_impl(::std::conditional_t<ctxread, bool, bool &> skip_space_done,
 										char_type const *first, char_type const *last, T ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!skip_space_done)
 	{
@@ -157,6 +159,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 					  ::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, char_type const *first, char_type const *last,
 	::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using value_type = ::std::remove_cvref_t<T>;
 	using undefttype_char_type = typename ::std::remove_cvref_t<value_type>::char_type;
@@ -195,6 +198,7 @@ inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type,
 					  ::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, ::fast_io::manipulators::scalar_manip_t<flags, ::fast_io::manipulators::basic_strlike_get<T>> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using value_type = ::std::remove_cvref_t<T>;
 	using undefttype_char_type = typename ::std::remove_cvref_t<value_type>::char_type;
@@ -288,6 +292,7 @@ inline constexpr parse_result<char_type const *> scan_context_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, char_type const *first, char_type const *last,
 	::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using value_type = ::std::remove_cvref_t<T>;
 	using undefttype_char_type = typename ::std::remove_cvref_t<value_type>::char_type;
@@ -325,6 +330,7 @@ template <::std::integral char_type, typename ctx_type, typename T>
 inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>>>,
 	ctx_type &ctx, ::fast_io::manipulators::whole_get_t<::fast_io::manipulators::basic_strlike_get<T>> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 
 	using value_type = ::std::remove_cvref_t<T>;

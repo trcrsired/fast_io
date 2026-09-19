@@ -34,6 +34,7 @@ struct posix_file_status
 
 template <::std::integral char_type>
 inline constexpr ::std::size_t print_reserve_size(io_reserve_type_t<char_type, fast_io::posix_file_status>)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t res{
 		print_reserve_size(io_reserve_type<char_type, ::std::uintmax_t>) * 11 + sizeof(u8"dev:") + sizeof(u8"\nino:") +
@@ -50,6 +51,7 @@ namespace details
 {
 template <::std::integral char_type>
 inline constexpr char_type *print_file_status_impl(char_type *iter, fast_io::posix_file_status const &status)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::same_as<char_type, char>)
 	{
@@ -252,6 +254,7 @@ inline constexpr char_type *print_file_status_impl(char_type *iter, fast_io::pos
 template <::std::integral char_type>
 inline constexpr char_type *print_reserve_define(io_reserve_type_t<char_type, fast_io::posix_file_status>,
 												 char_type *iter, fast_io::posix_file_status const &status)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::print_file_status_impl<char_type>(iter, status);
 }

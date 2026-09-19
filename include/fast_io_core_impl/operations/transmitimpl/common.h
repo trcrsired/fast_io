@@ -83,6 +83,7 @@ struct transmit_result
 
 template <::std::integral char_type>
 inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<char_type, transmit_result>)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t sz{print_reserve_size(::fast_io::io_reserve_type<char_type, ::fast_io::uintfpos_t>) + 1};
 	return sz;
@@ -91,6 +92,7 @@ inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<c
 template <::std::integral char_type>
 inline constexpr char_type *print_reserve_define(::fast_io::io_reserve_type_t<char_type, transmit_result>,
 												 char_type *iter, transmit_result r)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::uintfpos_t transmittedsz{r.transmitted};
 	constexpr auto mxval{::std::numeric_limits<::fast_io::uintfpos_t>::max()};

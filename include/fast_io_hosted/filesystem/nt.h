@@ -97,6 +97,7 @@ inline
 
 template <nt_family family>
 inline nt_dirent *set_nt_dirent(nt_dirent *entry, bool start)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	io_status_block block{};
 	constexpr ::std::uint_least32_t ul32_buffer_size{0x4000};
@@ -164,12 +165,14 @@ inline nt_dirent *set_nt_dirent(nt_dirent *entry, bool start)
 
 template <nt_family family>
 inline nt_dirent *set_nt_dirent_first(nt_dirent *entry)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return set_nt_dirent<family>(entry, true);
 }
 
 template <nt_family family>
 inline nt_dirent *nt_dirent_next(nt_dirent *entry)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return set_nt_dirent<family>(entry, false);
 }
@@ -322,6 +325,7 @@ using nt_family_directory_generator =
 
 template <nt_family family, typename Allocator>
 inline nt_family_directory_iterator<family> begin(basic_nt_family_directory_generator<family, Allocator> const &pdg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {win32::nt::details::set_nt_dirent_first<family>(pdg.entry)};
 }

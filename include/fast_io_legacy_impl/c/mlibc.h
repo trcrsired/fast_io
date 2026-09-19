@@ -67,6 +67,7 @@ inline constexpr void hack_obuffer_set_curr_impl(FILE *fp, char *ptr) noexcept
 }
 
 inline void hack_overflow_impl(FILE *fp, char unsigned ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (noexcept_call(putc_unlocked, ch, fp) == EOF)
 	{
@@ -75,6 +76,7 @@ inline void hack_overflow_impl(FILE *fp, char unsigned ch)
 }
 
 inline bool hack_underflow_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	int ch{noexcept_call(getc_unlocked, fp)};
 	if (ch == EOF)
@@ -112,6 +114,7 @@ inline constexpr void obuffer_set_curr(c_io_observer_unlocked ciob, char *ptr) n
 }
 
 inline void obuffer_overflow(c_io_observer_unlocked ciob, char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::mlibc_hack::hack_overflow_impl(ciob.fp, static_cast<char unsigned>(ch));
 }
@@ -146,6 +149,7 @@ inline void obuffer_set_curr(u8c_io_observer_unlocked ciob, char8_t *ptr) noexce
 }
 
 inline void obuffer_overflow(u8c_io_observer_unlocked ciob, char8_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::mlibc_hack::hack_overflow_impl(ciob.fp, static_cast<char unsigned>(ch));
 }
@@ -171,6 +175,7 @@ inline constexpr void ibuffer_set_curr(c_io_observer_unlocked ciob, char *ptr) n
 }
 
 inline bool ibuffer_underflow(c_io_observer_unlocked ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::mlibc_hack::hack_underflow_impl(ciob.fp);
 }
@@ -198,6 +203,7 @@ inline char8_t *ibuffer_end(u8c_io_observer_unlocked ciob) noexcept
 }
 
 inline bool ibuffer_underflow(u8c_io_observer_unlocked ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::mlibc_hack::hack_underflow_impl(ciob.fp);
 }

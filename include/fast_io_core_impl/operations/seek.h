@@ -71,6 +71,7 @@ template <typename T>
 #endif
 inline constexpr ::fast_io::intfpos_t input_stream_seek_bytes_decay(T t, ::fast_io::intfpos_t off,
 																	::fast_io::seekdir skd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_seek_bytes_define<T>)
 	{
@@ -172,6 +173,7 @@ requires (::fast_io::operations::decay::defines::has_io_stream_mutex_ref_define<
 [[msvc::forceinline]]
 #endif
 inline constexpr ::fast_io::intfpos_t io_stream_seek_bytes_decay(T t, ::fast_io::intfpos_t off, ::fast_io::seekdir skd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_io_stream_mutex_ref_define<T>)
 	{
@@ -315,6 +317,7 @@ template <typename T>
 [[msvc::forceinline]]
 #endif
 inline constexpr ::fast_io::intfpos_t io_stream_seek_decay(T t, ::fast_io::intfpos_t off, ::fast_io::seekdir skd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_io_stream_mutex_ref_define<T>)
 	{

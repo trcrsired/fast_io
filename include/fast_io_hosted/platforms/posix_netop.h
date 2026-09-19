@@ -5,30 +5,35 @@ namespace fast_io
 
 template <::std::integral ch_type>
 inline void posix_connect(basic_posix_io_observer<ch_type> h, void const *addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::posix_connect_posix_socket_impl(h.fd, addr, addrlen);
 }
 
 template <::std::integral ch_type>
 inline void posix_bind(basic_posix_io_observer<ch_type> h, void const *addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::posix_bind_posix_socket_impl(h.fd, addr, addrlen);
 }
 
 template <::std::integral ch_type>
 inline void posix_listen(basic_posix_io_observer<ch_type> h, int backlog)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::posix_listen_posix_socket_impl(h.fd, backlog);
 }
 
 template <::std::integral ch_type>
 inline ::std::ptrdiff_t posix_recvfrom(basic_posix_io_observer<ch_type> h, void *buf, ::std::size_t len, int flags, void *src_addr, posix_socklen_t *addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::posix_recvfrom_posix_socket_impl(h.fd, buf, len, flags, src_addr, addrlen);
 }
 
 template <::std::integral ch_type>
 inline ::std::ptrdiff_t posix_sendto(basic_posix_io_observer<ch_type> h, void const *buf, ::std::size_t len, int flags, void const *src_addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::posix_sendto_posix_socket_impl(h.fd, buf, len, flags, src_addr, addrlen);
 }
@@ -37,6 +42,7 @@ namespace details
 {
 
 inline int posix_tcp_connect_v4_impl(ipv4 v4, open_mode m)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_file soc(sock_family::inet, sock_type::stream, m, sock_protocol::tcp);
 	constexpr auto inet{to_posix_sock_family(sock_family::inet)};
@@ -48,6 +54,7 @@ inline int posix_tcp_connect_v4_impl(ipv4 v4, open_mode m)
 }
 
 inline int posix_tcp_connect_v6_impl(ipv6 v6, open_mode m)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_file soc(sock_family::inet6, sock_type::stream, m, sock_protocol::tcp);
 	constexpr auto inet6{to_posix_sock_family(sock_family::inet6)};
@@ -59,6 +66,7 @@ inline int posix_tcp_connect_v6_impl(ipv6 v6, open_mode m)
 }
 
 inline int posix_tcp_connect_ip_impl(ip v, open_mode m)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_file soc(v.address.isv4 ? sock_family::inet : sock_family::inet6, sock_type::stream, m, sock_protocol::tcp);
 	if (v.address.isv4)
@@ -78,6 +86,7 @@ inline int posix_tcp_connect_ip_impl(ip v, open_mode m)
 }
 
 inline int posix_tcp_listen_impl(::std::uint_least16_t port, open_mode m)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_file soc(sock_family::inet, sock_type::stream, m, sock_protocol::tcp);
 	constexpr auto inet{to_posix_sock_family(sock_family::inet)};
@@ -91,44 +100,53 @@ inline int posix_tcp_listen_impl(::std::uint_least16_t port, open_mode m)
 
 template <::std::integral ch_type>
 inline posix_file_factory posix_accept(basic_posix_io_observer<ch_type> h, void *addr, posix_socklen_t *addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_accept_posix_socket_impl(h.fd, addr, addrlen)};
 }
 
 template <::std::integral ch_type>
 inline posix_file_factory tcp_accept(basic_posix_io_observer<ch_type> h)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_accept_posix_socket_impl(h.fd, nullptr, nullptr)};
 }
 
 inline posix_file_factory posix_tcp_connect(ipv4 v4, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_v4_impl(v4, m)};
 }
 
 inline posix_file_factory posix_tcp_connect(ipv6 v6, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_v6_impl(v6, m)};
 }
 
 inline posix_file_factory posix_tcp_connect(ip v, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_ip_impl(v, m)};
 }
 
 inline posix_file_factory tcp_connect(ipv4 v4, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_v4_impl(v4, m)};
 }
 inline posix_file_factory tcp_connect(ipv6 v6, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_v6_impl(v6, m)};
 }
 inline posix_file_factory tcp_connect(ip v, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_connect_ip_impl(v, m)};
 }
 inline posix_file_factory tcp_listen(::std::uint_least16_t port, open_mode m = open_mode{})
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_file_factory{details::posix_tcp_listen_impl(port, m)};
 }

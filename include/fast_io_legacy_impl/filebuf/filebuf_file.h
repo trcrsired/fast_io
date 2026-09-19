@@ -39,6 +39,7 @@ public:
 	}
 
 	inline basic_filebuf_file(io_temp_t)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(::fast_io::basic_c_file_unlocked<char_type>(::fast_io::io_temp),
 							 ::fast_io::open_mode::in | ::fast_io::open_mode::out)
 	{
@@ -47,11 +48,13 @@ public:
 #if !defined(__AVR__) && !defined(_GLIBCXX_USE_STDIO_PURE)
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_filebuf_file(T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(file, om, pm), om)
 	{
 	}
 	template <posix_family family>
 	inline basic_filebuf_file(basic_posix_family_file<family, char_type> &&piohd, open_mode mode)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_c_file_unlocked<char_type>(::std::move(piohd), mode), mode)
 	{
 	}
@@ -59,40 +62,48 @@ public:
 	// windows specific. open posix file from win32 io handle
 	template <win32_family family>
 	inline basic_filebuf_file(basic_win32_family_file<family, char_type> &&win32_handle, open_mode mode)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(::std::move(win32_handle), mode), mode)
 	{
 	}
 	template <nt_family family>
 	inline basic_filebuf_file(basic_nt_family_file<family, char_type> &&nt_handle, open_mode mode)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(::std::move(nt_handle), mode), mode)
 	{
 	}
 	inline basic_filebuf_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(fsdirent, om, pm), om)
 	{
 	}
 	inline basic_filebuf_file(win32_9xa_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(fsdirent, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_filebuf_file(nt_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_filebuf_file(win32_9xa_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 #else
 	inline basic_filebuf_file(posix_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(fsdirent, om, pm), om)
 	{
 	}
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_filebuf_file(posix_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
@@ -116,7 +127,7 @@ public:
 		this->fb = bf.release();
 		return *this;
 	}
-	inline void close()
+	inline void close() FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->fb) [[likely]]
 		{

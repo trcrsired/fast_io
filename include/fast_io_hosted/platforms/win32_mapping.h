@@ -52,6 +52,7 @@ inline constexpr win32_file_map_attribute &operator^=(win32_file_map_attribute &
 }
 
 inline constexpr win32_file_map_attribute to_win32_file_map_attribute(file_map_attribute x)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch (x)
 	{
@@ -89,6 +90,7 @@ namespace win32::details
 
 template <win32_family family>
 inline void *create_file_mapping_impl(void *handle, file_map_attribute attr)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == win32_family::wide_nt)
 	{
@@ -130,11 +132,13 @@ public:
 	pointer address_begin{}, address_end{};
 	inline constexpr win32_family_memory_map_file() = default;
 	inline constexpr win32_family_memory_map_file(::std::byte *addressbegin, ::std::byte *addressend)
-		: address_begin{addressbegin}, address_end{addressend}
+		FAST_IO_HERBCEPTIONS_THROWS : address_begin{addressbegin},
+									  address_end{addressend}
 	{
 	}
 	inline win32_family_memory_map_file(nt_at_entry bf, file_map_attribute attr, ::std::size_t bytes,
-								 ::std::uintmax_t start_address = 0)
+										::std::uintmax_t start_address = 0)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		basic_win32_family_file<family, char> mapping_file{
 			win32::details::create_file_mapping_impl<family>(bf.handle, attr)};
@@ -259,6 +263,7 @@ public:
 		return *this;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->address_begin) [[likely]]
 		{

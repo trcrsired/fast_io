@@ -637,6 +637,7 @@ namespace details
 {
 
 inline int sys_socket(int domain, int type, int protocol)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_socket)
 	int fd{system_call<__NR_socket, int>(domain, type, protocol)};
@@ -653,24 +654,25 @@ inline int sys_socket(int domain, int type, int protocol)
 }
 
 inline int open_socket_impl(sock_family d, sock_type t, open_mode m, sock_protocol p)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
     int domain{to_posix_sock_family(d)};
     int type{to_posix_sock_type(t)};
     int mode{to_posix_sock_open_mode(m)};
     if (mode < 0)
-    {
-        mode = 0;
-    }
-    int fd{sys_socket(domain, type | mode, to_posix_sock_protocol(p))};
+	{
+		mode = 0;
+	}
+	int fd{sys_socket(domain, type | mode, to_posix_sock_protocol(p))};
 
 #if !defined(SOCK_NONBLOCK)
     if ((m & open_mode::no_block) == open_mode::no_block)
-    {
+	{
 #if defined(F_GETFL) && defined(F_SETFL) && defined(O_NONBLOCK)
         int flags{details::sys_fcntl(fd, F_GETFL)};
         details::sys_fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #endif
-    }
+	}
 #endif
 
 #if !defined(SOCK_CLOEXEC)
@@ -686,6 +688,7 @@ inline int open_socket_impl(sock_family d, sock_type t, open_mode m, sock_protoc
 }
 
 inline ::std::size_t posix_socket_write_impl(int fd, void const *data, ::std::size_t to_write)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_send)
 	::std::ptrdiff_t written{system_call<__NR_send, ::std::ptrdiff_t>(fd, data, to_write)};
@@ -702,6 +705,7 @@ inline ::std::size_t posix_socket_write_impl(int fd, void const *data, ::std::si
 }
 
 inline ::std::size_t posix_socket_read_impl(int fd, void *data, ::std::size_t to_write)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_recv)
 	::std::ptrdiff_t written{system_call<__NR_recv, ::std::ptrdiff_t>(fd, data, to_write)};
@@ -718,6 +722,7 @@ inline ::std::size_t posix_socket_read_impl(int fd, void *data, ::std::size_t to
 }
 
 inline void posix_connect_posix_socket_impl(int fd, void const *addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_connect)
 	system_call_throw_error(system_call<__NR_connect, int>(fd, addr, addrlen));
@@ -735,6 +740,7 @@ inline void posix_connect_posix_socket_impl(int fd, void const *addr, posix_sock
 }
 
 inline void posix_bind_posix_socket_impl(int fd, void const *addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_bind)
 	system_call_throw_error(system_call<__NR_bind, int>(fd, addr, addrlen));
@@ -752,6 +758,7 @@ inline void posix_bind_posix_socket_impl(int fd, void const *addr, posix_socklen
 }
 
 inline void posix_listen_posix_socket_impl(int fd, int backlog)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_listen)
 	system_call_throw_error(system_call<__NR_listen, int>(fd, backlog));
@@ -764,6 +771,7 @@ inline void posix_listen_posix_socket_impl(int fd, int backlog)
 }
 
 inline int posix_accept_posix_socket_impl(int fd, void *addr, posix_socklen_t *addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_accept)
 	int socfd{system_call<__NR_accept, int>(fd, addr, addrlen)};
@@ -785,6 +793,7 @@ inline int posix_accept_posix_socket_impl(int fd, void *addr, posix_socklen_t *a
 }
 
 inline ::std::ptrdiff_t posix_recvfrom_posix_socket_impl(int fd, void *buf, ::std::size_t len, int flags, void *src_addr, posix_socklen_t *addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_recvfrom)
 	::std::ptrdiff_t ret{system_call<__NR_recvfrom, ::std::ptrdiff_t>(fd, buf, len, flags, src_addr, addrlen)};
@@ -806,6 +815,7 @@ inline ::std::ptrdiff_t posix_recvfrom_posix_socket_impl(int fd, void *buf, ::st
 }
 
 inline ::std::ptrdiff_t posix_sendto_posix_socket_impl(int fd, void const *buf, ::std::size_t len, int flags, void const *src_addr, posix_socklen_t addrlen)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_sendto)
 	::std::ptrdiff_t ret{system_call<__NR_sendto, ::std::ptrdiff_t>(fd, buf, len, flags, src_addr, addrlen)};

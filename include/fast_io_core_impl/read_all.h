@@ -11,6 +11,7 @@ template <bool throweh = true, ::fast_io::input_stream input>
 #endif
 inline constexpr ::std::conditional_t<throweh, void, bool>
 read_all_impl_decay_cold(input in, typename input::char_type *first, typename input::char_type *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	while (first != last)
 	{
@@ -65,6 +66,7 @@ template <::fast_io::input_stream input, ::std::input_or_output_iterator Iter>
 	requires ::std::same_as<typename input::char_type, char> ||
 			 ::std::same_as<typename input::char_type, ::std::iter_value_t<Iter>>
 inline constexpr void read_all_impl(input in, Iter first, Iter last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using iter_char_type = ::std::iter_value_t<Iter>;
 #if 0
@@ -106,12 +108,14 @@ inline constexpr void read_all_impl(input in, Iter first, Iter last)
 
 template <typename input, ::std::forward_iterator Iter>
 inline constexpr void read_all(input &&in, Iter first, Iter last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::read_all_impl(io_ref(in), first, last);
 }
 
 template <typename input, ::std::ranges::forward_range rg>
 inline constexpr void read_all(input &&in, rg &&r)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::read_all_impl(io_ref(in), ::std::ranges::begin(r), ::std::ranges::end(r));
 }

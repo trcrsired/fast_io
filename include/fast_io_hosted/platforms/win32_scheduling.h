@@ -4,6 +4,7 @@ namespace fast_io
 {
 
 inline void io_async_wait(win32_io_observer iocp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t transferred{};
 	::std::size_t completionkey{};
@@ -20,6 +21,7 @@ inline void io_async_wait(win32_io_observer iocp)
 namespace details
 {
 inline bool iocp_io_async_wait_timeout_detail(win32_io_observer iocp, ::std::uint_least32_t millseconds)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t transferred{};
 	::std::size_t completionkey{};
@@ -41,6 +43,7 @@ inline bool iocp_io_async_wait_timeout_detail(win32_io_observer iocp, ::std::uin
 
 template <typename Rep, typename Period>
 inline bool io_async_wait_timeout(win32_io_observer iocp, ::std::chrono::duration<Rep, Period> duration)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::iocp_io_async_wait_timeout_detail(
 		iocp, ::std::chrono::duration_cast<::std::chrono::milliseconds>(duration).count());

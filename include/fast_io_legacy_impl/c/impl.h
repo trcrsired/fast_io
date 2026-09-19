@@ -414,6 +414,7 @@ inline FILE *my_c_file_open_impl(int fd, open_mode mode) FAST_IO_HERBCEPTIONS_TH
 }
 #if defined(__NEWLIB__)
 inline void my_c_io_newlib_flush_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	struct _reent ent{};
 	if (noexcept_call(_fflush_r, __builtin_addressof(ent), fp))
@@ -425,6 +426,7 @@ inline void my_c_io_newlib_flush_impl(FILE *fp)
 
 template <c_family family>
 inline void my_c_io_flush_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__NEWLIB__) && !defined(__CYGWIN__)
 	my_c_io_newlib_flush_impl(fp);
@@ -458,6 +460,7 @@ inline void my_c_io_flush_impl(FILE *fp)
 }
 
 inline void c_flush_unlocked_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	my_c_io_flush_impl<c_family::unlocked>(fp);
 }
@@ -465,12 +468,14 @@ inline void c_flush_unlocked_impl(FILE *fp)
 #if defined(__AVR__)
 
 [[noreturn]] inline void avr_libc_nosup_impl()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	throw_posix_error(EINVAL);
 }
 
 template <c_family family>
 inline ::fast_io::intfpos_t my_c_io_seek_impl(FILE *, ::fast_io::intfpos_t, seekdir)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	avr_libc_nosup_impl();
 }
@@ -478,6 +483,7 @@ inline ::fast_io::intfpos_t my_c_io_seek_impl(FILE *, ::fast_io::intfpos_t, seek
 #else
 template <c_family family>
 inline ::fast_io::intfpos_t my_c_io_seek_impl(FILE *fp, ::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 
 	/*
@@ -591,6 +597,7 @@ inline ::fast_io::intfpos_t my_c_io_seek_impl(FILE *fp, ::fast_io::intfpos_t off
 #endif
 
 inline FILE *my_c_open_tmp_file()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__AVR__) || defined(_PICOLIBC__)
 	throw_posix_error(EINVAL);
@@ -769,6 +776,7 @@ inline constexpr posix_file_status status(basic_c_family_io_observer<family, ch_
 
 template <c_family family, ::std::integral ch_type>
 inline ::std::size_t file_size(::fast_io::basic_c_family_io_observer<family, ch_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::posix_loader_get_file_size(details::my_fileno_impl<family>(ciob.fp));
 }
@@ -776,6 +784,7 @@ inline ::std::size_t file_size(::fast_io::basic_c_family_io_observer<family, ch_
 
 template <c_family family, ::std::integral ch_type>
 inline void io_stream_buffer_flush_define(basic_c_family_io_observer<family, ch_type> cfhd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::my_c_io_flush_impl<family>(cfhd.fp);
 }
@@ -783,6 +792,7 @@ inline void io_stream_buffer_flush_define(basic_c_family_io_observer<family, ch_
 template <c_family family, ::std::integral ch_type>
 inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_c_family_io_observer<family, ch_type> cfhd,
 														::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::my_c_io_seek_impl<family>(cfhd.fp, offset, s);
 }
@@ -904,6 +914,7 @@ public:
 		return *this;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->fp == nullptr) [[unlikely]]
 		{
@@ -959,45 +970,54 @@ public:
 	// windows specific. open posix file from win32 io handle
 	template <win32_family wfamily>
 	inline basic_c_family_file(basic_win32_family_file<wfamily, char_type> &&win32_handle, open_mode om)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(::std::move(win32_handle), om), om)
 	{
 	}
 	template <nt_family nfamily>
 	inline basic_c_family_file(basic_nt_family_file<nfamily, char_type> &&nt_handle, open_mode om)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(::std::move(nt_handle), om), om)
 	{
 	}
 	inline basic_c_family_file(nt_fs_dirent ent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(ent, om, pm), om)
 	{
 	}
 	inline basic_c_family_file(win32_9xa_fs_dirent ent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(ent, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_c_family_file(nt_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_c_family_file(win32_9xa_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 #else
 	inline basic_c_family_file(posix_fs_dirent ent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(ent, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_c_family_file(posix_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 #endif
 #endif
 	inline basic_c_family_file(io_temp_t)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_io_observer<family, ch_type>{::fast_io::details::my_c_open_tmp_file()}
 	{
 	}

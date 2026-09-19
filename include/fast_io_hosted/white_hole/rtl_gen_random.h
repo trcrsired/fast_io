@@ -23,6 +23,7 @@ namespace details
 {
 
 inline ::std::byte *rtl_gen_random_some_impl(::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (sizeof(::std::size_t) <= sizeof(::std::uint_least32_t))
 	{
@@ -57,6 +58,7 @@ inline ::std::byte *rtl_gen_random_some_impl(::std::byte *first, ::std::byte *la
 }
 
 inline void rtl_gen_random_all_impl(::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ret{rtl_gen_random_some_impl(first, last)};
 	if constexpr (sizeof(::std::uint_least32_t) < sizeof(::std::size_t))
@@ -75,12 +77,14 @@ template <::std::integral char_type>
 	requires(sizeof(::std::uint_least32_t) < sizeof(::std::size_t))
 inline ::std::byte *read_some_bytes_underflow_define(basic_rtl_gen_random<char_type>, ::std::byte *first,
 													 ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::rtl_gen_random_some_impl(first, last);
 }
 
 template <::std::integral char_type>
 inline void read_all_bytes_underflow_define(basic_rtl_gen_random<char_type>, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::details::rtl_gen_random_all_impl(first, last);
 }

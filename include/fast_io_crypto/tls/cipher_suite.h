@@ -85,6 +85,7 @@ inline constexpr cipher_suite_type tls_aes_128_ccm_8_sha256{{::std::byte(0x13), 
 
 template <output_stream output>
 inline constexpr void print_define(output &outp, cipher_suite_type const &e)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (e == tls_rsa_with_null_null)
 	{

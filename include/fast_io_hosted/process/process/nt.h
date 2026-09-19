@@ -330,6 +330,7 @@ inline nt_user_process_information nt_3x_process_create_impl(void *__restrict fh
 template <nt_family family>
 inline nt_user_process_information nt_6x_process_create_impl(void *__restrict fhandle, char16_t const *args, char16_t const *envs,
 															 win32_process_io const &__restrict processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 	auto const argv0_no_path_append{(mode & process_mode::argv0_no_path_append) == process_mode::argv0_no_path_append};
@@ -661,6 +662,7 @@ template <nt_family family>
 inline nt_user_process_information nt_process_create_impl(void *__restrict fhandle, char16_t const *args,
 														  char16_t const *envs, win32_process_io const &__restrict processio,
 														  process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// !defined(_WIN32_WINNT) || _WIN32_WINNT >= 0x600
 	// only support nt6x
@@ -671,6 +673,7 @@ template <nt_family family, typename path_type>
 inline nt_user_process_information nt_create_process_overloads(nt_at_entry entry, path_type const &filename,
 															   nt_process_args const &args, nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -695,6 +698,7 @@ template <nt_family family, typename path_type>
 inline nt_user_process_information nt_create_process_overloads(path_type const &filename, nt_process_args const &args,
 															   nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -719,6 +723,7 @@ template <nt_family family>
 inline nt_user_process_information nt_create_process_overloads(::fast_io::nt_fs_dirent ent, nt_process_args const &args,
 															   nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -743,6 +748,7 @@ template <nt_family family, typename path_type>
 inline nt_user_process_information nt_create_process_overloads(nt_at_entry entry, path_type const &filename,
 															   nt_process_args_with_argv0 const &args, nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -767,6 +773,7 @@ template <nt_family family, typename path_type>
 inline nt_user_process_information nt_create_process_overloads(path_type const &filename, nt_process_args_with_argv0 const &args,
 															   nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -791,6 +798,7 @@ template <nt_family family>
 inline nt_user_process_information nt_create_process_overloads(::fast_io::nt_fs_dirent ent, nt_process_args_with_argv0 const &args,
 															   nt_process_envs const &envs,
 															   win32_process_io const &processio, process_mode mode, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool const follow{(mode & process_mode::follow) == process_mode::follow};
 	open_mode curr_open_mode{open_mode::in | open_mode::excl};
@@ -912,6 +920,7 @@ inline nt_wait_status wait(nt_family_process_observer<family> ppob) noexcept(!th
 
 template <nt_family family>
 inline void kill(nt_family_process_observer<family> ppob, nt_wait_status exit_code)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const status{::fast_io::win32::nt::nt_terminate_process<family == nt_family::zw>(ppob.hnt_user_process_info.hprocess, static_cast<::std::int_least32_t>(exit_code.wait_loc))};
 

@@ -73,6 +73,7 @@ namespace details
 {
 
 inline DIR *sys_dup_dir(DIR *dirp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (dirp == nullptr)
 	{
@@ -116,6 +117,7 @@ public:
 	{
 	}
 	inline posix_directory_file(posix_file &&pioh)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: posix_directory_io_observer{noexcept_call(::fdopendir, pioh.fd)}
 	{
 		if (this->dirp == nullptr)
@@ -165,6 +167,7 @@ public:
 		this->dirp = dirp1;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -386,6 +389,7 @@ inline constexpr bool operator!=(posix_directory_iterator const &b, ::std::defau
 }
 
 inline posix_directory_generator current(posix_at_entry pate)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {.dir_fl = posix_directory_file(posix_file(details::sys_dup(pate.fd)))};
 }
@@ -561,6 +565,7 @@ inline bool operator!=(basic_posix_recursive_directory_iterator<StackType> const
 }
 
 inline posix_recursive_directory_generator recursive(posix_at_entry pate)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {.dir_fl = posix_directory_file(posix_file(details::sys_dup(pate.fd)))};
 }

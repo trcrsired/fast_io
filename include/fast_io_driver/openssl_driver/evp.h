@@ -250,6 +250,7 @@ template <output_stream output>
 			 (::std::derived_from<::std::remove_cvref_t<output>, bio_io_observer> ||
 			  buffer_output_stream<::std::remove_cvref_t<output>>))
 inline void print_define(io_reserve_type_t<typename output::char_type, private_key>, output out, private_key const &key)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::derived_from<::std::remove_cvref_t<output>, bio_io_observer>)
 	{
@@ -270,6 +271,7 @@ template <output_stream output>
 			 (::std::derived_from<::std::remove_cvref_t<output>, bio_io_observer> ||
 			  buffer_output_stream<::std::remove_cvref_t<output>>))
 inline void print_define(io_reserve_type_t<typename output::char_type, public_key>, output out, public_key key)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::derived_from<::std::remove_cvref_t<output>, bio_io_observer>)
 	{

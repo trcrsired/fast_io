@@ -33,6 +33,7 @@ public:
 };
 template <typename T, ::std::integral ch_type, ::std::contiguous_iterator Iter>
 inline Iter read(basic_socket_io_observer<T, ch_type> iob, Iter begin, Iter end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::error_code ec{}; // WTF??? WHY?? WHY??WHY??WHY??WHY??WHY??WHY??WHY?? FUCK YOU ASIO
 	::std::size_t sz{iob.handle->read_some(asio::buffer(::std::to_address(begin), (end - begin) * sizeof(*begin)), ec)};
@@ -49,6 +50,7 @@ inline Iter read(basic_socket_io_observer<T, ch_type> iob, Iter begin, Iter end)
 
 template <typename T, ::std::integral ch_type, ::std::contiguous_iterator Iter>
 inline Iter write(basic_socket_io_observer<T, ch_type> iob, Iter begin, Iter end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return begin + iob.handle->write_some(asio::buffer(::std::to_address(begin), (end - begin) * sizeof(*begin))) /
 					   sizeof(*begin);

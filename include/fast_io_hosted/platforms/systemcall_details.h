@@ -23,6 +23,7 @@ inline int dup2(int old_fd, int new_fd) noexcept
 } // namespace posix
 
 inline int sys_dup(int old_fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_dup)
 	int fd{::fast_io::system_call<__NR_dup, int>(old_fd)};
@@ -160,6 +161,7 @@ extern int fcntl(int fd, int cmd, ... /* arg */) noexcept
 template <typename... Args>
 	requires(::std::is_scalar_v<Args> && ...)
 inline int sys_fcntl(int fd, int op, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_fcntl)
 	auto result{::fast_io::system_call<__NR_fcntl, int>(fd, op, args...)};

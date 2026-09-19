@@ -49,7 +49,9 @@ struct file_lock_guard
 	file_lock_type lock;
 	request_type request;
 	inline explicit constexpr file_lock_guard(file_lock_type const &lk, request_type const &flk)
-		: lock(lk), request(flk)
+		FAST_IO_HERBCEPTIONS_THROWS
+		: lock(lk),
+		  request(flk)
 	{
 		lock.lock(request);
 	}

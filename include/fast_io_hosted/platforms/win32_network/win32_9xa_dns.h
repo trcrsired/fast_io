@@ -172,6 +172,7 @@ inline constexpr ::fast_io::ip_address to_ip_address(win32_9xa_dns_iterator d) n
 namespace details
 {
 inline ::fast_io::win32::hostent *win32_9xa_gethostbyname_impl(char const *name)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::hostent *ret{::fast_io::win32::gethostbyname(name)};
 	if (ret == nullptr)

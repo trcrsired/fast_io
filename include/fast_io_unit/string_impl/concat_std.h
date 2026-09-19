@@ -10,6 +10,7 @@ template <typename... Args>
 #endif
 	::std::string
 	concat_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char>,
@@ -34,6 +35,7 @@ template <typename... Args>
 #endif
 	::std::basic_string<wchar_t>
 	wconcat_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<wchar_t>,
@@ -58,6 +60,7 @@ template <typename... Args>
 #endif
 	::std::u8string
 	u8concat_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char8_t>,
@@ -81,6 +84,7 @@ template <typename... Args>
 #endif
 	::std::u16string
 	u16concat_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<
 		::fast_io::details::dummy_buffer_output_stream<char16_t>, Args...>};
@@ -103,6 +107,7 @@ template <typename... Args>
 #endif
 	::std::u32string
 	u32concat_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<
 		::fast_io::details::dummy_buffer_output_stream<char32_t>, Args...>};
@@ -125,6 +130,7 @@ template <typename... Args>
 #endif
 	::std::basic_string<char>
 	concatln_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char>,
@@ -149,6 +155,7 @@ template <typename... Args>
 #endif
 	::std::basic_string<wchar_t>
 	wconcatln_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<wchar_t>,
@@ -173,6 +180,7 @@ template <typename... Args>
 #endif
 	::std::u8string
 	u8concatln_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{
 		::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char8_t>,
@@ -196,6 +204,7 @@ template <typename... Args>
 #endif
 	::std::u16string
 	u16concatln_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<
 		::fast_io::details::dummy_buffer_output_stream<char16_t>, Args...>};
@@ -218,6 +227,7 @@ template <typename... Args>
 #endif
 	::std::u32string
 	u32concatln_std(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<
 		::fast_io::details::dummy_buffer_output_stream<char32_t>, Args...>};

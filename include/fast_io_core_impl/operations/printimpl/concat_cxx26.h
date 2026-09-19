@@ -16,6 +16,7 @@ concept strlike_construct_single_character_define_nothrow =
 
 template <::std::integral char_type, typename T>
 inline constexpr ::std::size_t calculate_scatter_reserve_size_unit()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using real_type = ::std::remove_cvref_t<T>;
 	if constexpr (reserve_printable<char_type, real_type>)
@@ -31,6 +32,7 @@ inline constexpr ::std::size_t calculate_scatter_reserve_size_unit()
 
 template <::std::integral char_type, typename... Args>
 inline constexpr ::std::size_t calculate_scatter_reserve_size()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t total{};
 	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)

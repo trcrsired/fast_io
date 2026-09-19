@@ -24,6 +24,7 @@ struct contiguous_scatter_result
 
 template <::std::integral char_type, typename Arg, typename... Args>
 inline constexpr contiguous_scatter_result find_continuous_scatters_n()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	contiguous_scatter_result ret{};
 	if constexpr (::fast_io::scatter_printable<char_type, Arg>)
@@ -111,6 +112,7 @@ struct scatter_rsv_result
 
 template <bool findscatter, ::std::integral char_type, typename Arg, typename... Args>
 inline constexpr scatter_rsv_result find_continuous_scatters_reserve_n()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::reserve_printable<char_type, Arg> && !findscatter)
 	{
@@ -217,6 +219,7 @@ inline auto prrsvsct_byte_common_impl(io_scatter_t *pscatters, char_type *buffer
 template <bool line = false, typename output, typename T>
 	requires(::std::is_trivially_copyable_v<output> && ::std::is_trivially_copyable_v<T>)
 inline constexpr void print_control_single(output outstm, T t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename output::output_char_type;
 	using value_type = ::std::remove_cvref_t<T>;
@@ -646,6 +649,7 @@ inline constexpr void print_control_single(output outstm, T t)
 #if 0
 template<bool ln,::std::integral char_type,::std::size_t n,typename Arg,typename ...Args>
 inline constexpr char_type* printrsvcontiguousimpl(char_type* iter,Arg arg,Args... args)
+ FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr(sizeof...(Args)!=0)
 	{
@@ -708,6 +712,7 @@ template <::std::size_t n, ::std::integral char_type, typename T, typename... Ar
 [[msvc::forceinline]]
 #endif
 inline constexpr char_type *print_n_reserve(char_type *ptr, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (n == 0)
 	{
@@ -756,6 +761,7 @@ inline constexpr void print_n_scatters(basic_io_scatter_t<scattertype> *pscatter
 									   [[maybe_unused]]
 #endif
 									   Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (n != 0)
 	{
@@ -804,6 +810,7 @@ template <::std::size_t n, ::std::integral char_type, typename T, typename... Ar
 [[msvc::forceinline]]
 #endif
 inline constexpr ::std::size_t ndynamic_print_reserve_size(T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using nocvreft = ::std::remove_cvref_t<T>;
 	if constexpr (n == 0)
@@ -876,6 +883,7 @@ template <bool needprintlf, ::std::size_t n, ::std::integral char_type, typename
 #endif
 inline constexpr auto print_n_scatters_reserve_cont(basic_io_scatter_t<scattertype> *pscatters, char_type *base,
 													char_type *ptr, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (n != 0)
 	{
@@ -943,6 +951,7 @@ template <bool needprintlf, ::std::size_t n, ::std::integral char_type, typename
 #endif
 inline constexpr auto print_n_scatters_reserve(basic_io_scatter_t<scattertype> *pscatters, char_type *ptr, T t,
 											   Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (n != 0)
 	{
@@ -1071,6 +1080,7 @@ inline constexpr auto print_n_scatters_reserve(basic_io_scatter_t<scattertype> *
 
 template <bool line, typename outputstmtype, ::std::size_t skippings = 0, typename T, typename... Args>
 inline constexpr void print_controls_impl(outputstmtype optstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename outputstmtype::output_char_type;
 	using scatter_type = ::std::conditional_t<
@@ -1227,6 +1237,7 @@ inline constexpr void print_controls_impl(outputstmtype optstm, T t, Args... arg
 
 template <bool line, typename outputstmtype, ::std::size_t skippings = 0, typename T, typename... Args>
 inline constexpr void print_controls_buffer_impl(outputstmtype optstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (skippings != 0)
 	{
@@ -1358,6 +1369,7 @@ namespace decay
 
 template <bool line, typename outputstmtype, typename... Args>
 inline constexpr decltype(auto) print_freestanding_decay(outputstmtype optstm, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::operations::decay::defines::has_status_print_define<outputstmtype>)
 	{

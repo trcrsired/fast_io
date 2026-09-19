@@ -22,6 +22,7 @@ inline char const *my_u8getenv(char8_t const *env) noexcept
 }
 
 inline void *posix_load_l10n_common_impl(char8_t const *cstr, ::std::size_t n, lc_locale &loc)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t size_restriction{256u};
 	constexpr ::std::size_t encoding_size_restriction{128u};
@@ -136,6 +137,7 @@ inline void *posix_load_l10n_common_impl(char8_t const *cstr, ::std::size_t n, l
 
 template <::fast_io::constructible_to_os_c_str path_type>
 inline void *posix_load_l10n_impl(path_type const &p, lc_locale &loc)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::posix_api_common(p,
 									   [&loc](auto const *cstr_ptr, ::std::size_t n) {
@@ -163,6 +165,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str path_type>
 	explicit posix_l10n(path_type const &p)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		this->rtld_handle = ::fast_io::details::posix_load_l10n_impl(p, loc);
 	}

@@ -772,6 +772,7 @@ inline constexpr posix_file_status struct_stat_to_posix_file_status(stat_model &
 }
 
 inline posix_file_status fstat_impl(int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 	struct __stat64 st;
@@ -836,7 +837,7 @@ namespace details
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 
 template <posix_open_mode_text_behavior behavior>
-inline int open_fd_from_handle_impl(void *handle, open_mode md)
+inline int open_fd_from_handle_impl(void *handle, open_mode md) FAST_IO_HERBCEPTIONS_THROWS
 {
 	int fd{::fast_io::noexcept_call(_open_osfhandle, reinterpret_cast<::std::ptrdiff_t>(handle),
 									details::calculate_posix_open_mode_for_win32_handle<behavior>(md))};
@@ -848,7 +849,7 @@ inline int open_fd_from_handle_impl(void *handle, open_mode md)
 }
 
 template <::std::integral ch_type>
-inline int open_fd_from_handle(void *handle, open_mode md)
+inline int open_fd_from_handle(void *handle, open_mode md) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (is_ebcdic<ch_type>)
 	{
@@ -891,6 +892,7 @@ using dos_path_tlc_string = ::fast_io::containers::basic_string<char, ::fast_io:
 
 template <typename... Args>
 constexpr inline dos_path_tlc_string concat_dos_path_tlc_string(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char>, Args...>};
 	if constexpr (type_error)
@@ -1033,6 +1035,7 @@ inline constexpr unsigned calculate_win32_cygwin_open_mode(open_mode value)
 }
 
 inline int cygwin_create_fd_with_win32_handle(void *handle, open_mode mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	int fd{my_cygwin_attach_handle_to_fd(nullptr, -1, handle, true,
 										 static_cast<int>(calculate_win32_cygwin_open_mode(mode)))};
@@ -1101,6 +1104,7 @@ struct my_posix_open_paramter
 
 template <::fast_io::constructible_to_os_c_str T>
 inline constexpr int posix_openat_file_impl(int, T const &, open_mode, perms)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	throw_posix_error(EINVAL);
 	return -1;
@@ -1132,6 +1136,7 @@ inline constexpr int posix_open_file_impl(T const &t, open_mode om, perms pm) FA
 #endif
 
 inline int my_open_posix_fd_temp_file()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 	::fast_io::basic_win32_file<char> wf(::fast_io::io_temp);
@@ -1203,6 +1208,7 @@ public:
 	}
 
 	inline basic_posix_family_file(io_dup_t, basic_posix_family_io_observer<family, ch_type> piob)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, ch_type>{::fast_io::details::sys_dup(piob.fd)}
 	{
 	}
@@ -1216,36 +1222,42 @@ public:
 	// windows specific. open posix file from win32/nt/zw file
 	template <win32_family fam>
 	inline basic_posix_family_file(basic_win32_family_file<fam, char_type> &&hd, open_mode m)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{details::open_fd_from_handle<ch_type>(hd.handle, m)}
 	{
 		hd.release();
 	}
 	template <nt_family fam>
-	inline basic_posix_family_file(basic_nt_family_file<fam, char_type> &&hd, open_mode m)
+	inline basic_posix_family_file(basic_nt_family_file<fam, char_type> &&hd, open_mode m) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{details::open_fd_from_handle<ch_type>(hd.handle, m)}
 	{
 		hd.release();
 	}
 	inline basic_posix_family_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(basic_win32_file<char_type>(fsdirent, om, pm), om)
 	{
 	}
 	inline basic_posix_family_file(win32_9xa_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(basic_win32_file<char_type>(fsdirent, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_posix_family_file(T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(basic_win32_file<char_type>(file, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_posix_family_file(nt_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(basic_win32_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 	template <::fast_io::constructible_to_os_c_str T>
 	inline basic_posix_family_file(win32_9xa_at_entry nate, T const &file, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(basic_win32_file<char_type>(nate, file, om, pm), om)
 	{
 	}
@@ -1266,23 +1278,27 @@ public:
 #if defined(__CYGWIN__)
 	template <win32_family fam>
 	inline basic_posix_family_file(basic_win32_family_file<fam, char_type> &&hd, open_mode m)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{details::cygwin_create_fd_with_win32_handle(hd.handle, m)}
 	{
 		hd.release();
 	}
 	template <nt_family fam>
 	inline basic_posix_family_file(basic_nt_family_file<fam, char_type> &&hd, open_mode m)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{details::cygwin_create_fd_with_win32_handle(hd.handle, m)}
 	{
 		hd.release();
 	}
 #endif
 	inline basic_posix_family_file(posix_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_file(details::my_posix_openat_file_internal_impl(fsdirent.fd, fsdirent.filename, om, pm))
 	{
 	}
 #if !defined(__wasi__) && __has_include(<sys/socket.h>) && __has_include(<netinet/in.h>)
 	inline basic_posix_family_file(sock_family d, sock_type t, open_mode m, sock_protocol p)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{::fast_io::details::open_socket_impl(d, t, m, p)}
 	{
 	}
@@ -1302,6 +1318,7 @@ public:
 
 #endif
 	inline basic_posix_family_file(io_temp_t)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{::fast_io::details::my_open_posix_fd_temp_file()}
 	{
 	}
@@ -1310,6 +1327,7 @@ public:
 	inline constexpr basic_posix_family_file &operator=(basic_posix_family_io_observer<family, ch_type>) noexcept = delete;
 
 	inline basic_posix_family_file(basic_posix_family_file const &dp)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, ch_type>{::fast_io::details::sys_dup(dp.fd)}
 	{}
 	inline basic_posix_family_file &operator=(basic_posix_family_file const &dp)
@@ -1398,6 +1416,7 @@ extern int ftruncate(int, off_t) noexcept
 #endif
 
 inline void posix_truncate_impl(int fd, ::fast_io::uintfpos_t size)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 #if (!defined(__MINGW32__) || __has_include(<_mingw_stat64.h>))
@@ -1550,6 +1569,7 @@ template <::fast_io::posix_family family, ::std::integral ch_type>
 [[__gnu__::__always_inline__]]
 #endif
 inline void truncate(basic_posix_family_io_observer<family, ch_type> h, ::fast_io::uintfpos_t size)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::posix_truncate_impl(h.fd, size);
 }
@@ -1562,6 +1582,7 @@ public:
 	using char_type = ch_type;
 	basic_posix_family_file<family, ch_type> pipes[2];
 	inline basic_posix_family_pipe()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 #if defined(__wasi__)
 		throw_posix_error(ENOTSUP);

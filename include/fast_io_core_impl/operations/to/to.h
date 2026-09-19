@@ -15,6 +15,7 @@ template <::std::integral char_type, typename state, typename T, typename Arg1, 
 inline constexpr void
 inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_output_buffer<char_type>> buffer, state &s,
 							  T t, Arg1 arg, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::decay::print_control_single<false>(buffer, arg);
 #if 0
@@ -54,6 +55,7 @@ template <::std::integral char_type, typename state, typename T, typename Arg1, 
 [[msvc::forceinline]]
 #endif
 inline constexpr void inplace_to_decay_buffer_scatter_context_impl(state &s, T t, Arg1 arg, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	basic_io_scatter_t<char_type> scatter{print_scatter_define(io_reserve_type<char_type, Arg1>, arg)};
 	char_type const *buffer_begin{scatter.base};
@@ -88,6 +90,7 @@ template <::std::integral char_type, typename state, typename T, typename Arg1, 
 [[msvc::forceinline]]
 #endif
 inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, state &s, T t, Arg1 arg, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (scatter_printable<char_type, Arg1> && ((scatter_printable<char_type, Args> && ...)))
 	{
@@ -199,6 +202,7 @@ inline constexpr ::std::size_t calculate_print_normal_dynamic_maxium_main(::std:
 
 template <::std::integral char_type, typename T>
 inline constexpr void deal_with_single_to(char_type const *buffer_begin, char_type const *buffer_end, T t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto code{scan_contiguous_define(io_reserve_type<char_type, T>, buffer_begin, buffer_end, t).code};
 	if (code != ::fast_io::freestanding::parse_errc::ok)
@@ -209,6 +213,7 @@ inline constexpr void deal_with_single_to(char_type const *buffer_begin, char_ty
 
 template <::std::integral char_type, typename T, typename Arg>
 inline constexpr void to_deal_with_contiguous_single_scatter(T t, Arg arg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	basic_io_scatter_t<char_type> scatter{print_scatter_define(io_reserve_type<char_type, Arg>, arg)};
 	auto base{scatter.base};
@@ -217,6 +222,7 @@ inline constexpr void to_deal_with_contiguous_single_scatter(T t, Arg arg)
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr char_type *to_impl_with_reserve_recursive(char_type *p, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (scatter_printable<char_type, T>)
 	{
@@ -238,6 +244,7 @@ inline constexpr char_type *to_impl_with_reserve_recursive(char_type *p, T t, Ar
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr ::std::size_t calculate_scatter_dynamic_reserve_size_with_scatter([[maybe_unused]] T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dynamic_reserve_printable<char_type, T>)
 	{
@@ -289,6 +296,7 @@ concept inplace_to_decay_detect =
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr void basic_inplace_to_decay(T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::inplace_to_decay_detect<char_type, T, Args...>};
 	if constexpr (failed)
@@ -396,6 +404,7 @@ concept can_do_inplace_to = requires(T &t, Args &&...args) {
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr void basic_inplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char_type, T, Args...>};
 	if constexpr (failed)
@@ -411,6 +420,7 @@ inline constexpr void basic_inplace_to(T &&t, Args &&...args)
 
 template <typename T, typename... Args>
 inline constexpr void inplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char, T, Args...>};
 	if constexpr (failed)
@@ -426,6 +436,7 @@ inline constexpr void inplace_to(T &&t, Args &&...args)
 
 template <typename T, typename... Args>
 inline constexpr void winplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<wchar_t, T, Args...>};
 	if constexpr (failed)
@@ -441,6 +452,7 @@ inline constexpr void winplace_to(T &&t, Args &&...args)
 
 template <typename T, typename... Args>
 inline constexpr void u8inplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char8_t, T, Args...>};
 	if constexpr (failed)
@@ -456,6 +468,7 @@ inline constexpr void u8inplace_to(T &&t, Args &&...args)
 
 template <typename T, typename... Args>
 inline constexpr void u16inplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char16_t, T, Args...>};
 	if constexpr (failed)
@@ -471,6 +484,7 @@ inline constexpr void u16inplace_to(T &&t, Args &&...args)
 
 template <typename T, typename... Args>
 inline constexpr void u32inplace_to(T &&t, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char32_t, T, Args...>};
 	if constexpr (failed)
@@ -489,6 +503,7 @@ namespace decay
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr T basic_to_decay(Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char_type, T, Args...>};
 	if constexpr (sizeof...(Args) == 0)
@@ -523,6 +538,7 @@ inline constexpr T basic_to_decay(Args... args)
 
 template <::std::integral char_type, typename T, typename... Args>
 inline constexpr T basic_to(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char_type, T, Args...>};
 	if constexpr (failed)
@@ -538,6 +554,7 @@ inline constexpr T basic_to(Args &&...args)
 
 template <typename T, typename... Args>
 [[nodiscard]] inline constexpr T to(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char, T, Args...>};
 	if constexpr (failed)
@@ -553,6 +570,7 @@ template <typename T, typename... Args>
 
 template <typename T, typename... Args>
 [[nodiscard]] inline constexpr T wto(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<wchar_t, T, Args...>};
 	if constexpr (failed)
@@ -568,6 +586,7 @@ template <typename T, typename... Args>
 
 template <typename T, typename... Args>
 [[nodiscard]] inline constexpr T u8to(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char8_t, T, Args...>};
 	if constexpr (failed)
@@ -583,6 +602,7 @@ template <typename T, typename... Args>
 
 template <typename T, typename... Args>
 [[nodiscard]] inline constexpr T u16to(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char16_t, T, Args...>};
 	if constexpr (failed)
@@ -598,6 +618,7 @@ template <typename T, typename... Args>
 
 template <typename T, typename... Args>
 [[nodiscard]] inline constexpr T u32to(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool failed{::fast_io::details::can_do_inplace_to<char32_t, T, Args...>};
 	if constexpr (failed)

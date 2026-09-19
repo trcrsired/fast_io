@@ -36,6 +36,7 @@ enum class win32_memory_page_protect : ::std::uint_least32_t
 #if 0
 template<reserve_output_stream output>
 constexpr void print_define(output& out,win32_memory_page_protect info)
+ FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch(info)
 	{
@@ -172,6 +173,7 @@ struct win32_memory_basic_information
 #if 0
 template<reserve_output_stream output>
 constexpr void print_define(output& out,win32_memory_basic_information const& info)
+ FAST_IO_HERBCEPTIONS_THROWS
 {
 	print_freestanding(out,"win32_memory_basic_information:"
 	"\nbase address:",info.base_address,
@@ -268,10 +270,11 @@ public:
 	using char_type = ch_type;
 	constexpr basic_win32_memory_io_handle() = default;
 	constexpr basic_win32_memory_io_handle(native_handle_type hd, base_address_type base)
-		: basic_win32_memory_io_observer<ch_type>(hd, base)
+		FAST_IO_HERBCEPTIONS_THROWS : basic_win32_memory_io_observer<ch_type>(hd, base)
 	{
 	}
 	basic_win32_memory_io_handle(basic_win32_memory_io_handle const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto const current_process(win32::GetCurrentProcess());
 		if (!win32::DuplicateHandle(current_process, other.native_handle(), current_process,
@@ -380,6 +383,7 @@ inline constexpr win32_desired_access &operator^=(win32_desired_access &x, win32
 }
 
 inline ::std::uint_least32_t get_process_id_from_window_name(cstring_view name)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	void *hwnd{win32::FindWindowA(nullptr, name.data())};
 	if (hwnd == nullptr)
@@ -400,11 +404,13 @@ public:
 	using char_type = ch_type;
 	constexpr basic_win32_memory_file() = default;
 	constexpr basic_win32_memory_file(native_handle_type hd, base_address_type base)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_memory_io_handle<ch_type>(hd, base)
 	{
 	}
 	basic_win32_memory_file(win32_desired_access dw_desired_access, bool inherit_handle,
 							::std::uint_least32_t process_id, base_address_type base_addr = {})
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_memory_io_handle<ch_type>(
 			  win32::OpenProcess(static_cast<::std::uint_least32_t>(dw_desired_access), inherit_handle, process_id),
 			  base_addr)
@@ -415,6 +421,7 @@ public:
 		}
 	}
 	void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->native_handle()) [[likely]]
 		{
@@ -441,6 +448,7 @@ public:
 
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 [[nodiscard]] inline Iter read(basic_win32_memory_io_observer<char_type> &iob, Iter begin, Iter end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t readed{};
 	if (!win32::ReadProcessMemory(iob.handle, bit_cast<void const *>(iob.base_addr), ::std::to_address(begin),
@@ -463,6 +471,7 @@ template <::std::integral char_type>
 }
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 inline Iter write(basic_win32_memory_io_observer<char_type> &iob, Iter begin, Iter end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t written{};
 	if (!win32::WriteProcessMemory(iob.handle, bit_cast<void *>(iob.base_addr), ::std::to_address(begin),
@@ -482,6 +491,7 @@ static_assert(output_stream<win32_memory_file>);
 
 template <::std::integral char_type>
 inline win32_memory_basic_information win32_virtual_query(basic_win32_memory_io_observer<char_type> iob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	win32_memory_basic_information mem{};
 	if (win32::VirtualQueryEx(iob.handle, bit_cast<void const *>(iob.base_addr), __builtin_addressof(mem),
@@ -495,6 +505,7 @@ inline win32_memory_basic_information win32_virtual_query(basic_win32_memory_io_
 template <::std::integral char_type>
 inline win32_memory_page_protect win32_virtual_protect(basic_win32_memory_io_observer<char_type> iob,
 													   ::std::size_t size, win32_memory_page_protect new_protect)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t old_protect{};
 	if (!win32::VirtualProtectEx(iob.handle, bit_cast<void const *>(iob.base_addr), size,
@@ -507,6 +518,7 @@ inline win32_memory_page_protect win32_virtual_protect(basic_win32_memory_io_obs
 
 template <::std::integral char_type>
 [[nodiscard]] inline auto find_usable_region(basic_win32_memory_io_observer<char_type> wmf)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (;;)
 	{
@@ -539,7 +551,10 @@ public:
 	template <::std::integral char_type>
 	win32_virtual_protect_guard(basic_win32_memory_io_observer<char_type> iob, ::std::size_t size,
 								win32_memory_page_protect new_protect)
-		: process_handle(iob.native_handle()), address(iob.base_addr), region_size(size),
+		FAST_IO_HERBCEPTIONS_THROWS
+		: process_handle(iob.native_handle()),
+		  address(iob.base_addr),
+		  region_size(size),
 		  oprotect(win32_virtual_protect(iob, size, new_protect))
 	{
 	}

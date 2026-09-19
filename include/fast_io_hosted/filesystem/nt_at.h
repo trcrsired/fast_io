@@ -88,6 +88,7 @@ inline constexpr nt_open_mode calculate_nt_delete_flag(nt_at_flags flags) noexce
 
 template <bool zw>
 inline void nt_unlinkat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::basic_nt_family_file<(zw ? nt_family::zw : nt_family::nt), char> file{
 		nt_call_determine_kernel_callback(dirhd, path_c_str, path_size, kernel, nt_create_callback<zw>{calculate_nt_delete_flag(flags)})};
@@ -109,6 +110,7 @@ inline void nt_unlinkat_impl(void *dirhd, char16_t const *path_c_str, ::std::siz
 
 template <bool zw>
 inline void nt_mkdirat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, perms pm, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode m_dir_mode{
 		.DesiredAccess = 0x00100000 | 0x0001, // SYNCHRONIZE | FILE_LIST_DIRECTORY
@@ -133,6 +135,7 @@ inline void nt_mkdirat_impl(void *dirhd, char16_t const *path_c_str, ::std::size
 
 template <bool zw>
 inline void nt_faccessat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, access_how mode, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch (mode)
 	{
@@ -200,6 +203,7 @@ inline void nt_faccessat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 
 template <bool zw>
 inline void nt_fchmodat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, perms pm, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x00000100 | 0x0080, // SYNCHRONIZE | FILE_WRITE_ATTRIBUTES | FILE_READ_ATTRIBUTES
@@ -258,6 +262,7 @@ inline void nt_fchmodat_impl(void *dirhd, char16_t const *path_c_str, ::std::siz
 template <bool zw>
 [[noreturn]] inline void nt_fchownat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size,
 										  [[maybe_unused]] ::std::uintmax_t owner, [[maybe_unused]] ::std::uintmax_t group, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x0080, // SYNCHRONIZE | FILE_READ_ATTRIBUTES
@@ -282,6 +287,7 @@ template <bool zw>
 
 template <bool zw>
 inline posix_file_status nt_fstatat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x0080, // SYNCHRONIZE | FILE_READ_ATTRIBUTES
@@ -304,6 +310,7 @@ inline posix_file_status nt_fstatat_impl(void *dirhd, char16_t const *path_c_str
 template <bool zw>
 inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, unix_timestamp_option creation_time,
 							  unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x00000100 | 0x0080, // SYNCHRONIZE | FILE_WRITE_ATTRIBUTES | FILE_READ_ATTRIBUTES
@@ -460,6 +467,7 @@ template <bool zw>
 inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[maybe_unused]] ::std::size_t oldpath_size,
 							  [[maybe_unused]] void *newdirhd, [[maybe_unused]] char16_t const *newpath_c_str,
 							  [[maybe_unused]] ::std::size_t newpath_size, [[maybe_unused]] bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT > 0x0600
 
@@ -681,6 +689,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 template <bool zw>
 inline void nt_renameat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std::size_t oldpath_size,
 							 void *newdirhd, char16_t const *newpath_c_str, ::std::size_t newpath_size, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x0080 | 0x00010000, // SYNCHRONIZE | FILE_READ_ATTRIBUTES | DELETE
@@ -740,6 +749,7 @@ inline constexpr nt_open_mode calculate_nt_link_flag(nt_at_flags flags) noexcept
 template <bool zw>
 inline void nt_linkat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std::size_t oldpath_size, void *newdirhd,
 						   char16_t const *newpath_c_str, ::std::size_t newpath_size, nt_at_flags flags, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode const md{calculate_nt_link_flag(flags)};
 	::fast_io::basic_nt_family_file<(zw ? nt_family::zw : nt_family::nt), char> basic_file{};
@@ -791,6 +801,7 @@ inline void nt_linkat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std:
 
 template <bool zw, ::std::integral char_type>
 inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, bool kernel)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT > 0x0600
 	constexpr ::fast_io::win32::nt::details::nt_open_mode md{
@@ -877,6 +888,7 @@ inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *d
 template <bool zw, ::fast_io::details::posix_api_22 dsp, typename... Args>
 inline auto nt22_api_dispatcher(void *olddirhd, char16_t const *oldpath_c_str, ::std::size_t oldpath_size,
 								void *newdirhd, char16_t const *newpath_c_str, ::std::size_t newpath_size, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dsp == ::fast_io::details::posix_api_22::renameat)
 	{
@@ -891,6 +903,7 @@ inline auto nt22_api_dispatcher(void *olddirhd, char16_t const *oldpath_c_str, :
 template <bool zw, ::fast_io::details::posix_api_12 dsp, typename... Args>
 inline auto nt12_api_dispatcher(char16_t const *oldpath_c_str, ::std::size_t oldpath_size,
 								void *newdirhd, char16_t const *newpath_c_str, ::std::size_t newpath_size, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dsp == ::fast_io::details::posix_api_12::symlinkat)
 	{
@@ -900,6 +913,7 @@ inline auto nt12_api_dispatcher(char16_t const *oldpath_c_str, ::std::size_t old
 
 template <bool zw, ::fast_io::details::posix_api_1x dsp, typename... Args>
 inline auto nt1x_api_dispatcher(void *dir_handle, char16_t const *path_c_str, ::std::size_t path_size, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 
 	if constexpr (dsp == ::fast_io::details::posix_api_1x::faccessat)
@@ -934,6 +948,7 @@ inline auto nt1x_api_dispatcher(void *dir_handle, char16_t const *path_c_str, ::
 
 template <bool zw, ::std::integral char_type, ::fast_io::details::posix_api_ct dsp, typename... Args>
 inline auto ntct_api_dispatcher(void *dir_handle, char16_t const *path_c_str, ::std::size_t path_size, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (dsp == ::fast_io::details::posix_api_ct::readlinkat)
 	{
@@ -943,6 +958,7 @@ inline auto ntct_api_dispatcher(void *dir_handle, char16_t const *path_c_str, ::
 
 template <nt_family family, ::fast_io::details::posix_api_1x dsp, typename path_type, typename... Args>
 inline auto nt_deal_with1x(void *dir_handle, path_type const &path, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(
 		path, [&](char16_t const *path_c_str, ::std::size_t path_size) {
@@ -953,6 +969,7 @@ inline auto nt_deal_with1x(void *dir_handle, path_type const &path, Args... args
 template <nt_family family, ::fast_io::details::posix_api_12 dsp, ::fast_io::constructible_to_os_c_str old_path_type,
 		  ::fast_io::constructible_to_os_c_str new_path_type, typename... Args>
 inline auto nt_deal_with12(old_path_type const &oldpath, void *newdirfd, new_path_type const &newpath, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(
 		oldpath,
@@ -966,6 +983,7 @@ inline auto nt_deal_with12(old_path_type const &oldpath, void *newdirfd, new_pat
 
 template <nt_family family, ::fast_io::details::posix_api_22 dsp, typename oldpath_type, typename newpath_type, typename... Args>
 inline auto nt_deal_with22(void *olddirhd, oldpath_type const &oldpath, void *newdirhd, newpath_type const &newpath, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(oldpath,
 						 [&](char16_t const *oldpath_c_str, ::std::size_t oldpath_size) {
@@ -979,6 +997,7 @@ inline auto nt_deal_with22(void *olddirhd, oldpath_type const &oldpath, void *ne
 
 template <nt_family family, ::std::integral char_type, ::fast_io::details::posix_api_ct dsp, ::fast_io::constructible_to_os_c_str path_type, typename... Args>
 inline auto nt_deal_withct(void *dir_handle, path_type const &path, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(
 		path, [&](char16_t const *path_c_str, ::std::size_t path_size) {

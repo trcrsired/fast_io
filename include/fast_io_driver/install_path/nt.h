@@ -12,6 +12,7 @@ namespace fast_io::details
 [[__gnu__::__const__]]
 #endif
 inline ::fast_io::install_path get_module_install_path()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto c_peb{::fast_io::win32::nt::nt_get_current_peb()};
 	auto const &NtImagePath{c_peb->ProcessParameters->ImagePathName};

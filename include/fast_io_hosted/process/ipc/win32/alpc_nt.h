@@ -22,6 +22,7 @@ using nt_alpc_communication_tlc_strvw = ::fast_io::containers::basic_string_view
 
 template <typename... Args>
 constexpr inline nt_alpc_internal_str concat_nt_alpc_internal_str(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<nt_alpc_internal_char_type>, Args...>};
 	if constexpr (type_error)
@@ -38,6 +39,7 @@ constexpr inline nt_alpc_internal_str concat_nt_alpc_internal_str(Args &&...args
 
 template <typename... Args>
 constexpr inline nt_alpc_internal_tlc_str concat_nt_alpc_internal_tlc_str(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<nt_alpc_internal_char_type>, Args...>};
 	if constexpr (type_error)
@@ -228,7 +230,7 @@ struct nt_alpc_handle FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 		status = {};
 	}
 
-	inline void close()
+	inline void close() FAST_IO_HERBCEPTIONS_THROWS
 	{
 		constexpr bool zw{family == nt_family::zw};
 
@@ -294,6 +296,7 @@ struct nt_ipc_alpc_thread_local_heap_allocate_guard
 // SERVER
 template <nt_family family>
 inline void *nt_family_create_alpc_ipc_server_port_impl(nt_alpc_char_type const *server_name, ::std::size_t server_name_size, [[maybe_unused]] ::fast_io::ipc_mode mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 
@@ -356,6 +359,7 @@ inline void *nt_create_alpc_ipc_server_impl(T const &t, ipc_mode im)
 
 template <nt_family family>
 inline ::fast_io::win32::nt::alpc_message_attributes *nt_family_create_alpc_ipc_server_message_attribute_view_impl(void *__restrict server_port)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 
@@ -503,6 +507,7 @@ template <nt_family family>
 inline nt_alpc_connect_handle nt_family_alpc_ipc_server_wait_for_connect_and_write_bv_impl(
 	void *__restrict server_pipe_handle, ::fast_io::win32::nt::alpc_message_attributes *__restrict ama,
 	nt_alpc_byte_vector &connect_recv_message)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 
@@ -646,6 +651,7 @@ inline void nt_family_alpc_ipc_server_disconnect_impl(void *__restrict client_pi
 // CLIENT
 template <nt_family family>
 inline ::fast_io::win32::nt::alpc_message_attributes *nt_family_create_alpc_ipc_client_message_attribute_view_impl()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// constexpr bool zw{family == nt_family::zw};
 
@@ -687,6 +693,7 @@ template <nt_family family>
 inline void *nt_family_ipc_alpc_client_connect_impl(nt_alpc_char_type const *server_name, ::std::size_t server_name_size, [[maybe_unused]] ::fast_io::ipc_mode mode,
 													::std::byte const *message_begin, ::std::byte const *message_end, ::fast_io::win32::nt::alpc_message_attributes *__restrict message_attribute,
 													nt_alpc_byte_vector &connect_recv_message)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 
@@ -808,6 +815,7 @@ inline void *nt_connect_alpc_ipc_server_impl(T const &t, ipc_mode im, ::std::byt
 
 template <nt_family family>
 inline ::std::byte *nt_alpc_read_or_pread_some_bytes_common_impl(void *__restrict port_handle, ::std::byte *first, ::std::byte *last, ::fast_io::win32::nt::alpc_message_attributes *ama)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 
@@ -939,6 +947,7 @@ public:
 template <nt_family family, ::std::integral ch_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_alpc_ipc_universal_observer<family, ch_type> wiob,
 													 ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!wiob) [[unlikely]]
 	{
@@ -996,6 +1005,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_alpc_ipc_un
 template <nt_family family, ::std::integral ch_type>
 inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_alpc_ipc_universal_observer<family, ch_type> wiob,
 														   ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!wiob) [[unlikely]]
 	{
@@ -1100,7 +1110,7 @@ public:
 		}
 		this->handle = newhandle;
 	}
-	inline void close()
+	inline void close() FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -1125,6 +1135,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_nt_family_alpc_ipc_server(T const &server_name, ipc_mode im)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		this->handle = tls_native_handle_rmptr_type_alloc::allocate_zero(1);
 		this->handle->port_handle = ::fast_io::win32::nt::details::nt_create_alpc_ipc_server_impl<family>(server_name, im);
@@ -1191,7 +1202,7 @@ public:
 		}
 		this->handle = newhandle;
 	}
-	inline void close()
+	inline void close() FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -1216,6 +1227,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_nt_family_alpc_ipc_client(T const &client_name, ipc_mode im)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		this->handle = tls_native_handle_rmptr_type_alloc::allocate_zero(1);
 		this->handle->message_attribute = ::fast_io::win32::nt::details::nt_family_create_alpc_ipc_client_message_attribute_view_impl<family>();
@@ -1225,6 +1237,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_nt_family_alpc_ipc_client(T const &client_name, ipc_mode im, ::fast_io::win32::nt::details::nt_alpc_communication_tlc_strvw<ch_type> message)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto const str_begin{reinterpret_cast<::std::byte const *>(message.data())};
 		auto const str_size{message.size_bytes()};
@@ -1252,6 +1265,7 @@ public:
 template <nt_family server_family, ::std::integral server_ch_type, nt_family client_family = nt_family::nt, ::std::integral client_ch_type = char>
 inline basic_nt_family_alpc_ipc_client<client_family, client_ch_type> wait_for_connect(
 	basic_nt_family_alpc_ipc_server_observer<server_family, server_ch_type> server)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (server) [[likely]]
 	{
@@ -1278,6 +1292,7 @@ inline void accept_connect(
 	basic_nt_family_alpc_ipc_server_observer<server_family, server_ch_type> server,
 	basic_nt_family_alpc_ipc_client_observer<client_family, client_ch_type> client,
 	bool accept)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (server /*check handle and handle->port_handle*/ && client.handle) [[likely]]
 	{
@@ -1297,6 +1312,7 @@ inline void accept_connect(
 
 template <nt_family client_family, ::std::integral client_ch_type>
 inline void disconnect(basic_nt_family_alpc_ipc_universal_observer<client_family, client_ch_type> client)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (client) [[likely]]
 	{

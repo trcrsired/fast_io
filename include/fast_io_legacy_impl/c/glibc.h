@@ -53,6 +53,7 @@ inline constexpr void obuffer_set_curr(c_io_observer_unlocked cio, char *ptr) no
 extern int glibc_overflow(FILE *, int) noexcept __asm__("__overflow");
 
 inline void obuffer_overflow(c_io_observer_unlocked cio, char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (glibc_overflow(cio.fp, static_cast<int>(static_cast<unsigned char>(ch))) == EOF) [[unlikely]]
 	{
@@ -107,6 +108,7 @@ inline void obuffer_set_curr(u8c_io_observer_unlocked cio, [[__gnu__::__may_alia
 }
 
 inline void obuffer_overflow(u8c_io_observer_unlocked cio, char8_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (glibc_overflow(cio.fp, static_cast<int>(ch)) == EOF) [[unlikely]]
 	{
@@ -207,6 +209,7 @@ extern ::std::uint_least32_t glibc_woverflow(FILE *, ::std::uint_least32_t) noex
 }
 
 inline void obuffer_overflow(wc_io_observer_unlocked cio, wchar_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (details::glibc_woverflow(cio.fp, static_cast<::std::uint_least32_t>(ch)) ==
 		static_cast<::std::uint_least32_t>(0xffffffffu)) [[unlikely]]
@@ -262,6 +265,7 @@ inline void obuffer_set_curr(u32c_io_observer_unlocked cio, [[__gnu__::__may_ali
 }
 
 inline void obuffer_overflow(u32c_io_observer_unlocked cio, char32_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (details::glibc_woverflow(cio.fp, static_cast<::std::uint_least32_t>(ch)) ==
 		static_cast<::std::uint_least32_t>(0xffffffffu)) [[unlikely]]

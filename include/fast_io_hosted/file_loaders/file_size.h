@@ -12,6 +12,7 @@ namespace win32
 namespace details
 {
 inline ::std::size_t win32_load_file_get_file_size(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::by_handle_file_information bhdi;
 	if (!::fast_io::win32::GetFileInformationByHandle(handle, __builtin_addressof(bhdi)))
@@ -45,6 +46,7 @@ namespace nt::details
 {
 template <bool zw>
 inline ::std::size_t nt_load_file_get_file_size(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::file_standard_information fsi;
 	::fast_io::win32::nt::io_status_block block;
@@ -105,6 +107,7 @@ struct linux_struct_statx
 inline constexpr ::std::uint_least32_t linux_statx_size{0x200U};
 
 inline ::std::size_t posix_loader_get_file_size(int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32) && !defined(__BIONIC__) && !defined(__WINE__)
 	// windows 95 and windows 98 msvcrt do not provide struct __stat64. Directly invoke win32 api
@@ -169,12 +172,14 @@ inline ::std::size_t posix_loader_get_file_size(int fd)
 #if (defined(_WIN32) && !defined(__BIONIC__)) || defined(__CYGWIN__)
 template <win32_family family, ::std::integral char_type>
 inline ::std::size_t file_size(::fast_io::basic_win32_family_io_observer<family, char_type> observer)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32::details::win32_load_file_get_file_size(observer.handle);
 }
 
 template <nt_family family, ::std::integral char_type>
 inline ::std::size_t file_size(::fast_io::basic_nt_family_io_observer<family, char_type> observer)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 	return win32::nt::details::nt_load_file_get_file_size<zw>(observer.handle);
@@ -183,6 +188,7 @@ inline ::std::size_t file_size(::fast_io::basic_nt_family_io_observer<family, ch
 
 template <posix_family family, ::std::integral char_type>
 inline ::std::size_t file_size(::fast_io::basic_posix_family_io_observer<family, char_type> observer)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::posix_loader_get_file_size(observer.fd);
 }

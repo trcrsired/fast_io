@@ -33,6 +33,7 @@ struct task
 template <win32_family fam>
 inline constexpr auto async_write(basic_win32_family_io_observer<fam, char> wiob, nt_at_entry ent, void const *buffer,
 								  ::std::size_t buffersize, ::std::ptrdiff_t diff)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	struct awaiter
 	{

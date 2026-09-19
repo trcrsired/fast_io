@@ -8,6 +8,7 @@ struct win32_wsa_service
 	using native_handle_type = ::fast_io::win32::wsadata;
 	native_handle_type wsa_data;
 	inline explicit win32_wsa_service(::std::uint_least16_t version)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		// The WSAStartup function directly returns the extended error code in its return value. Calling the WSAGetLastError function is unnecessary and should not be used.
 		
@@ -18,9 +19,10 @@ struct win32_wsa_service
 			throw_win32_error(static_cast<::std::uint_least32_t>(res));
 		}
 	}
-	inline win32_wsa_service()
+	inline win32_wsa_service() FAST_IO_HERBCEPTIONS_THROWS
 		: win32_wsa_service(514)
-	{}
+	{
+	}
 	inline win32_wsa_service(win32_wsa_service const &) = delete;
 	inline win32_wsa_service &operator=(win32_wsa_service const &) = delete;
 	inline ~win32_wsa_service()

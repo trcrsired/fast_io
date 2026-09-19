@@ -49,6 +49,7 @@ namespace details
 {
 
 inline ::std::byte *posix_getrandom_read_some_bytes_define_impl(unsigned flags, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t sz{static_cast<::std::size_t>(last - first)};
 
@@ -65,6 +66,7 @@ inline ::std::byte *posix_getrandom_read_some_bytes_define_impl(unsigned flags, 
 extern void glibc_arc4random_buf(void *, size_t) noexcept __asm__("arc4random_buf");
 
 inline ::std::byte *bsd_arc4random_read_some_bytes_define_impl(::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr auto *glibc_arc4random_bufptr{::fast_io::details::glibc_arc4random_buf};
 	if (glibc_arc4random_bufptr == nullptr)
@@ -82,6 +84,7 @@ inline ::std::byte *bsd_arc4random_read_some_bytes_define_impl(::std::byte *firs
 template <::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_bsd_arc4random<char_type>, ::std::byte *first,
 													 ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::bsd_arc4random_read_some_bytes_define_impl(first, last);
 }

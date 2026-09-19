@@ -26,6 +26,7 @@ inline void nt_unload_address(void *address) noexcept
 template <::fast_io::nt_family family>
 inline nt_file_loader_return_value_t nt_load_address_options_impl(::fast_io::nt_mmap_options const &options,
 																  void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using secattr_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -79,6 +80,7 @@ inline constexpr auto create_nt_default_load_address_option() noexcept
 
 template <::fast_io::nt_family family>
 inline nt_file_loader_return_value_t nt_load_address_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr auto nt_file_loader_default_option{create_nt_default_load_address_option()};
 	return nt_load_address_options_impl<family>(nt_file_loader_default_option, handle);
@@ -86,6 +88,7 @@ inline nt_file_loader_return_value_t nt_load_address_impl(void *handle)
 
 template <::fast_io::nt_family family, typename... Args>
 inline auto nt_load_file_impl(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::basic_nt_family_file<family, char> nf(::fast_io::freestanding::forward<Args>(args)...);
 	return nt_load_address_impl<family>(nf.handle);
@@ -93,6 +96,7 @@ inline auto nt_load_file_impl(Args &&...args)
 
 template <::fast_io::nt_family family, typename... Args>
 inline auto nt_load_file_options_impl(nt_mmap_options const &options, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::basic_nt_family_file<family, char> wf(::fast_io::freestanding::forward<Args>(args)...);
 	return nt_load_address_options_impl<family>(options, wf.handle);
@@ -122,6 +126,7 @@ public:
 
 	inline constexpr nt_family_file_loader() noexcept = default;
 	inline explicit nt_family_file_loader(::fast_io::nt_at_entry ent)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_address_impl<family>(ent.handle)};
 		address_begin = ret.address_begin;
@@ -172,6 +177,7 @@ public:
 	}
 
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, ::fast_io::nt_at_entry ent)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_address_options_impl<family>(options, ent.handle)};
 		address_begin = ret.address_begin;
@@ -180,6 +186,7 @@ public:
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, ::fast_io::nt_fs_dirent fsdirent,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_file_options_impl<family>(options, fsdirent, om, pm)};
 		address_begin = ret.address_begin;
@@ -189,6 +196,7 @@ public:
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, T const &filename,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_file_options_impl<family>(options, filename, om, pm)};
 		address_begin = ret.address_begin;
@@ -198,6 +206,7 @@ public:
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, ::fast_io::nt_at_entry ent, T const &filename,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_file_options_impl<family>(options, ent, filename, om, pm)};
 		address_begin = ret.address_begin;
@@ -207,6 +216,7 @@ public:
 	inline explicit nt_family_file_loader(nt_mmap_options const &options, ::fast_io::io_kernel_t, T const &t,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{
 			::fast_io::win32::nt::details::nt_load_file_options_impl<family>(options, ::fast_io::io_kernel, t, om, pm)};
@@ -218,6 +228,7 @@ public:
 										  ::fast_io::nt_at_entry ent, T const &t,
 										  ::fast_io::open_mode om = ::fast_io::open_mode::in,
 										  ::fast_io::perms pm = static_cast<::fast_io::perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::win32::nt::details::nt_load_file_options_impl<family>(options, ::fast_io::io_kernel, ent, t,
 																				  om, pm)};

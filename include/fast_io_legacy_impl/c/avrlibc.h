@@ -5,6 +5,7 @@ namespace fast_io
 namespace details
 {
 inline void avr_libc_write_common_impl(FILE *fp, char const *first, char const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (; first != last; ++first)
 	{
@@ -16,6 +17,7 @@ inline void avr_libc_write_common_impl(FILE *fp, char const *first, char const *
 }
 
 inline void avr_libc_scatter_write_impl_with_normal_write(FILE *fp, io_scatter_t const *scatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto put_func{fp->put};
 	if (put_func == nullptr)
@@ -29,6 +31,7 @@ inline void avr_libc_scatter_write_impl_with_normal_write(FILE *fp, io_scatter_t
 	}
 }
 inline void avr_libc_write_internal_impl(FILE *fp, char const *first, char const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto put_func{fp->put};
 	if (put_func == nullptr)
@@ -39,6 +42,7 @@ inline void avr_libc_write_internal_impl(FILE *fp, char const *first, char const
 }
 
 inline char *avr_libc_read_internal_impl(FILE *fp, char *first, char *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto get_func{fp->get};
 	if (get_func == nullptr)
@@ -62,6 +66,7 @@ inline char *avr_libc_read_internal_impl(FILE *fp, char *first, char *last)
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 inline constexpr void write(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob, Iter first,
 							Iter last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::avr_libc_write_internal_impl(ciob.fp, reinterpret_cast<char const *>(::std::to_address(first)),
 													 reinterpret_cast<char const *>(::std::to_address(last)));
@@ -70,6 +75,7 @@ inline constexpr void write(basic_c_family_io_observer<c_family::emulated_unlock
 template <::std::integral char_type>
 inline constexpr void scatter_write(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob,
 									io_scatters_t scatters)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::avr_libc_scatter_write_impl_with_normal_write(ciob.fp, scatters.base, scatters.len);
 }
@@ -77,6 +83,7 @@ inline constexpr void scatter_write(basic_c_family_io_observer<c_family::emulate
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 inline constexpr Iter read(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob, Iter first,
 						   Iter last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto first_addr{reinterpret_cast<char *>(::std::to_address(first))};
 	return (::fast_io::details::avr_libc_read_internal_impl(ciob.fp, first_addr,

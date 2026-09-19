@@ -13,7 +13,9 @@ struct timer
 	[[__gnu__::__cold__]]
 #endif
 	inline explicit timer(::fast_io::u8string_view strvw)
-		: s(strvw), t0(posix_clock_gettime(posix_clock_id::monotonic_raw))
+		FAST_IO_HERBCEPTIONS_THROWS
+		: s(strvw),
+		  t0(posix_clock_gettime(posix_clock_id::monotonic_raw))
 	{
 	}
 	inline timer(timer const &) = delete;
@@ -22,6 +24,7 @@ struct timer
 	[[__gnu__::__cold__]]
 #endif
 	inline ~timer()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::fast_io::io::perr(::fast_io::u8err(), s, u8":", posix_clock_gettime(posix_clock_id::monotonic_raw) - t0, u8"s\n");
 	}

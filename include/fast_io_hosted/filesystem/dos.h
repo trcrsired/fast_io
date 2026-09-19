@@ -72,6 +72,7 @@ namespace details
 {
 
 inline void check_dos_fd_is_dir(int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const dir{::fast_io::posix::my_dos_fdopendir(fd)};
 	if (dir == nullptr) [[unlikely]]
@@ -82,6 +83,7 @@ inline void check_dos_fd_is_dir(int fd)
 }
 
 inline dos_DIR sys_dup_dir(dos_DIR dirp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (dirp.dirp == nullptr) [[unlikely]]
 	{
@@ -121,6 +123,7 @@ public:
 	}
 
 	inline dos_directory_file(posix_file &&pioh)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: dos_directory_io_observer{posix::my_dos_fdopendir(pioh.fd), pioh.fd}
 	{
 		if (this->dirp.dirp == nullptr)
@@ -185,6 +188,7 @@ public:
 	}
 
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -397,6 +401,7 @@ inline constexpr bool operator!=(dos_directory_iterator const &b, ::std::default
 }
 
 inline posix_directory_generator current(posix_at_entry pate)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {.dir_fl = dos_directory_file(posix_file(details::sys_dup(pate.fd)))};
 }
@@ -567,6 +572,7 @@ inline bool operator!=(basic_dos_recursive_directory_iterator<StackType> const &
 }
 
 inline posix_recursive_directory_generator recursive(posix_at_entry pate)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {.dir_fl = dos_directory_file(posix_file(details::sys_dup(pate.fd)))};
 }

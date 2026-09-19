@@ -85,6 +85,7 @@ inline void serenity_obuffer_overflow(serenity_file_model *
 #endif
 									  fp,
 									  char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using file_ptr_may_alias
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -140,6 +141,7 @@ inline bool serenity_ibuffer_underflow(serenity_file_model *
 									   [[__gnu__::__may_alias__]]
 #endif
 									   fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	fp->m_buffer.m_begin = fp->m_buffer.m_end;
 	using file_ptr_may_alias

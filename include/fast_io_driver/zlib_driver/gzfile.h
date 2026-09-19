@@ -131,7 +131,7 @@ public:
 	}
 
 	basic_gz_file(native_interface_t, int fd, char const *mode)
-		: basic_gz_io_observer<char_type>(gzdopen(pfd, mode.data()))
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_io_observer<char_type>(gzdopen(pfd, mode.data()))
 	{
 		if (this->native_handle() == nullptr)
 		{
@@ -141,7 +141,7 @@ public:
 	}
 
 	basic_gz_file(basic_posix_file<char_type> &&posix_handle, open_mode om)
-		: basic_gz_file(native_interface, posix_handle.fd, to_native_c_mode(om))
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_file(native_interface, posix_handle.fd, to_native_c_mode(om))
 	{
 		posix_handle.release();
 	}
@@ -150,12 +150,12 @@ public:
 	// windows specific. open posix file from win32 io handle
 	template <win32_family family>
 	basic_gz_file(basic_win32_family_file<family, char_type> &&win32_handle, open_mode om)
-		: basic_gz_file(basic_posix_file<char_type>(::std::move(win32_handle), om), to_native_c_mode(om))
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_file(basic_posix_file<char_type>(::std::move(win32_handle), om), to_native_c_mode(om))
 	{
 	}
 	template <nt_family family>
 	basic_gz_file(basic_nt_family_file<family, char_type> &&nt_handle, open_mode om)
-		: basic_gz_file(basic_posix_file<char_type>(::std::move(nt_handle), om), to_native_c_mode(om))
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_file(basic_posix_file<char_type>(::std::move(nt_handle), om), to_native_c_mode(om))
 	{
 	}
 #endif
@@ -170,11 +170,11 @@ public:
 	}
 
 	basic_gz_file(cstring_view file, open_mode om, perms pm = static_cast<perms>(436))
-		: basic_gz_file(basic_posix_file<char_type>(file, om, pm), om)
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_file(basic_posix_file<char_type>(file, om, pm), om)
 	{
 	}
 	basic_gz_file(native_at_entry nate, cstring_view file, open_mode om, perms pm = static_cast<perms>(436))
-		: basic_gz_file(basic_posix_file<char_type>(nate, file, om, pm), om)
+		FAST_IO_HERBCEPTIONS_THROWS : basic_gz_file(basic_posix_file<char_type>(nate, file, om, pm), om)
 	{
 	}
 };
@@ -185,6 +185,7 @@ using gz_file = basic_gz_file<char>;
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 	requires(::std::same_as<char_type, ::std::iter_value_t<Iter>> || ::std::same_as<char, char_type>)
 inline Iter read(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::same_as<char_type, ::std::iter_value_t<Iter>>)
 	{
@@ -215,6 +216,7 @@ inline Iter read(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
 	requires(::std::same_as<char_type, ::std::iter_value_t<Iter>> || ::std::same_as<char, char_type>)
 inline Iter write(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::same_as<char_type, ::std::iter_value_t<Iter>>)
 	{
@@ -244,6 +246,7 @@ inline Iter write(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
 
 template <::std::integral char_type>
 inline void flush(basic_gz_io_observer<char_type> giob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (gzflush(giob.gzfile))
 	{

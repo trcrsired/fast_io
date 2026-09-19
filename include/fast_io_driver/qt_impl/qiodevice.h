@@ -53,6 +53,7 @@ namespace details
 {
 
 inline ::std::size_t qio_device_write_impl(QIODevice *__restrict qdevice, void const *data, ::std::size_t bytes)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::int_least64_t res{
 		qdevice->write(reinterpret_cast<char const *>(data), static_cast<::std::int_least64_t>(bytes))};
@@ -64,6 +65,7 @@ inline ::std::size_t qio_device_write_impl(QIODevice *__restrict qdevice, void c
 }
 
 inline ::std::size_t qio_device_read_impl(QIODevice *__restrict qdevice, void *data, ::std::size_t bytes)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::int_least64_t res{qdevice->read(reinterpret_cast<char *>(data), static_cast<::std::int_least64_t>(bytes))};
 	if (res < 0)
@@ -94,6 +96,7 @@ inline ::std::uintmax_t qio_device_seek_impl(QIODevice *__restrict qdevice, ::st
 
 template <::std::integral ch_type, typename T>
 inline ::std::byte const *write_some_bytes_define(basic_general_qdevice_io_observer<ch_type, T> qiob, ::std::byte const *begin, ::std::byte const *end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return begin + ::fast_io::details::qio_device_write_impl(
 					   qiob.qdevice, begin, static_cast<::std::size_t>(end - begin));
@@ -101,6 +104,7 @@ inline ::std::byte const *write_some_bytes_define(basic_general_qdevice_io_obser
 
 template <::std::integral ch_type, typename T>
 inline ::std::byte *read_some_bytes_define(basic_general_qdevice_io_observer<ch_type, T> qiob, , ::std::byte *begin, ::std::byte *end)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return begin + ::fast_io::details::qio_device_read_impl(
 					   qiob.qdevice, begin, static_cast<::std::size_t>(end - begin));

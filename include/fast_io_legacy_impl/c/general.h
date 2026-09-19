@@ -313,6 +313,7 @@ inline auto ungetc_unlocked_impl(char_type ch, FILE *fp) noexcept
 	}
 }
 inline void ferror_throw_ex_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (
 #if (defined(__NEWLIB__) && __GNU_VISIBLE) || (!defined(__NEWLIB__) && (_POSIX_C_SOURCE >= 199309L || _XOPEN_SOURCE || \
@@ -333,6 +334,7 @@ template <::std::integral char_type>
 #endif
 			 || ::std::same_as<char_type, char8_t>)
 inline ::fast_io::try_get_result<char_type> try_get(::fast_io::basic_c_io_observer_unlocked<char_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ret{::fast_io::details::fgetc_unlocked_impl<char_type>(ciob.fp)};
 	if (::fast_io::details::equals_to_eof_macro<char_type>(ret))

@@ -517,6 +517,7 @@ namespace details
 {
 
 inline ::fast_io::intfpos_t bio_io_seekbytes_impl(BIO *bio, ::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto fd{bio_to_fd(bio)};
 	if (fd == -1)
@@ -527,6 +528,7 @@ inline ::fast_io::intfpos_t bio_io_seekbytes_impl(BIO *bio, ::fast_io::intfpos_t
 }
 
 inline ::std::byte *bio_pread_impl(BIO *bio, ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t offset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto fd{bio_to_fd(bio)};
 	if (fd == -1)
@@ -539,6 +541,7 @@ inline ::std::byte *bio_pread_impl(BIO *bio, ::std::byte *first, ::std::byte *la
 
 inline ::std::byte const *bio_pwrite_impl(BIO *bio, ::std::byte const *first, ::std::byte const *last,
 										  ::fast_io::intfpos_t offset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto fd{bio_to_fd(bio)};
 	if (fd == -1)
@@ -554,6 +557,7 @@ inline ::std::byte const *bio_pwrite_impl(BIO *bio, ::std::byte const *first, ::
 template <::std::integral ch_type>
 inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_bio_io_observer<ch_type> iob, ::fast_io::intfpos_t offset,
 														seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::bio_io_seekbytes_impl(iob.bio, offset, s);
 }
@@ -561,6 +565,7 @@ inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_bio_io_observer<ch
 template <::std::integral ch_type>
 inline ::std::byte *pread_some_bytes_underflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte *first,
 													  ::std::byte *last, ::fast_io::intfpos_t offset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::bio_pread_impl(iob.bio, first, last, offset);
 }
@@ -569,6 +574,7 @@ template <::std::integral ch_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_bio_io_observer<ch_type> iob,
 															::std::byte const *first, ::std::byte const *last,
 															::fast_io::intfpos_t offset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::bio_pwrite_impl(iob.bio, first, last, offset);
 }

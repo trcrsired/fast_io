@@ -251,6 +251,7 @@ inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch) FAST_IO_
 [[__gnu__::__cold__]]
 #endif
 inline void wincrt_fp_flush_stdout_impl()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(::fast_io::win32::wincrt_acrt_iob_func(1))};
 	if (fp->_ptr == fp->_base) [[unlikely]]
@@ -266,6 +267,7 @@ inline void wincrt_fp_flush_stdout_impl()
 [[__gnu__::__cold__]]
 #endif
 inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::size_t diff)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (fpp == ::fast_io::win32::wincrt_acrt_iob_func(0))
 	{

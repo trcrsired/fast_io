@@ -32,6 +32,7 @@ public:
 
 template <::std::integral char_type>
 inline void write(basic_avio_context_io_observer<char_type> baciob, char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
 	if constexpr (INT_MAX < SIZE_MAX)
@@ -62,6 +63,7 @@ inline void write(basic_avio_context_io_observer<char_type> baciob, char_type co
 
 template <::std::integral char_type>
 inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_type *first, char_type *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
 	int ret;
@@ -242,6 +244,7 @@ concept has_file_status_impl = requires(T t) {
 
 template <typename rftype>
 inline basic_avio_buffer_context<typename rftype::char_type> create_avio_context_impl(rftype rf)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename rftype::char_type;
 	constexpr int buffersize{16384};
@@ -344,6 +347,7 @@ template <stream stm>
 	requires(io_stream<::std::remove_cvref_t<stm>> && random_access_stream<::std::remove_cvref_t<stm>> &&
 			 sizeof(typename ::std::remove_cvref_t<stm>::char_type) == 1)
 inline basic_avio_buffer_context<typename ::std::remove_cvref_t<stm>::char_type> create_avio_context(stm &sm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::create_avio_context_impl(io_ref(sm));
 }

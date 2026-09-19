@@ -99,7 +99,7 @@ struct load_file_allocation_guard
 {
 	void *address{};
 	inline explicit constexpr load_file_allocation_guard() noexcept = default;
-	inline explicit load_file_allocation_guard(::std::size_t file_size)
+	inline explicit load_file_allocation_guard(::std::size_t file_size) FAST_IO_HERBCEPTIONS_THROWS
 		: address(
 #if FAST_IO_HAS_BUILTIN(__builtin_malloc)
 			  __builtin_malloc
@@ -126,6 +126,7 @@ struct load_file_allocation_guard
 };
 
 inline allocation_file_loader_ret allocation_load_address_impl(int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t filesize{::fast_io::details::posix_loader_get_file_size(fd)};
 	load_file_allocation_guard guard{filesize};
@@ -139,6 +140,7 @@ inline allocation_file_loader_ret allocation_load_address_impl(int fd)
 }
 
 inline void rewind_allocation_file_loader(int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__WINE__) && !defined(__BIONIC__)
 	auto seekret = ::fast_io::noexcept_call(::_lseeki64, fd, 0, 0);
@@ -157,6 +159,7 @@ inline void rewind_allocation_file_loader(int fd)
 
 template <typename... Args>
 inline allocation_file_loader_ret allocation_load_file_impl(bool writeback, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::posix_file pf(::fast_io::freestanding::forward<Args>(args)...);
 	auto ret{allocation_load_address_impl(pf.fd)};
@@ -173,6 +176,7 @@ inline allocation_file_loader_ret allocation_load_file_impl(bool writeback, Args
 }
 
 inline allocation_file_loader_ret allocation_load_file_fd_impl(bool writeback, int fd)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::posix_file pf(::fast_io::io_dup, ::fast_io::posix_io_observer{fd});
 	rewind_allocation_file_loader(pf.fd);
@@ -213,6 +217,7 @@ public:
 	inline explicit constexpr allocation_file_loader() noexcept = default;
 
 	inline explicit allocation_file_loader(posix_at_entry pate)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_fd_impl(false, pate.fd)};
 		address_begin = ret.address_begin;
@@ -221,6 +226,7 @@ public:
 	}
 	inline explicit allocation_file_loader(native_fs_dirent fsdirent, open_mode om = open_mode::in,
 										   perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(false, fsdirent, om, pm)};
 		address_begin = ret.address_begin;
@@ -230,6 +236,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit allocation_file_loader(T const &filename, open_mode om = open_mode::in,
 										   perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(false, filename, om, pm)};
 		address_begin = ret.address_begin;
@@ -239,6 +246,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit allocation_file_loader(native_at_entry ent, T const &filename, open_mode om = open_mode::in,
 										   perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(false, ent, filename, om, pm)};
 		address_begin = ret.address_begin;
@@ -246,6 +254,7 @@ public:
 		address_capacity = ret.address_capacity;
 	}
 	inline explicit allocation_file_loader(allocation_mmap_options options, posix_at_entry pate)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_fd_impl(options.write_back, pate.fd)};
 		address_begin = ret.address_begin;
@@ -255,6 +264,7 @@ public:
 	}
 	inline explicit allocation_file_loader(allocation_mmap_options options, native_fs_dirent fsdirent,
 										   open_mode om = open_mode::in, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(options.write_back, fsdirent, om, pm)};
 		address_begin = ret.address_begin;
@@ -265,6 +275,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit allocation_file_loader(allocation_mmap_options options, T const &filename,
 										   open_mode om = open_mode::in, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(options.write_back, filename, om, pm)};
 		address_begin = ret.address_begin;
@@ -275,6 +286,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit allocation_file_loader(allocation_mmap_options options, native_at_entry ent, T const &filename,
 										   open_mode om = open_mode::in, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto ret{::fast_io::details::allocation_load_file_impl(options.write_back, ent, filename, om, pm)};
 		address_begin = ret.address_begin;

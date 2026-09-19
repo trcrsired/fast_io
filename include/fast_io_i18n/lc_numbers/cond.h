@@ -30,6 +30,7 @@ template <::std::integral char_type, typename T1, typename T2>
 			 ::fast_io::details::cond_ok_lc_scatter_printable_impl<char_type, T2, T1>)
 inline constexpr basic_io_scatter_t<char_type> print_scatter_define(basic_lc_all<char_type> const *__restrict all,
 																	::fast_io::manipulators::condition<T1, T2> c)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (c.pred)
 	{
@@ -60,6 +61,7 @@ namespace details
 
 template <::std::integral char_type, typename T1>
 inline constexpr ::std::size_t cond_lc_print_reserve_size_impl(basic_lc_all<char_type> const *__restrict all, T1 c)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (lc_scatter_printable<char_type, T1>)
 	{
@@ -87,6 +89,7 @@ inline constexpr ::std::size_t cond_lc_print_reserve_size_impl(basic_lc_all<char
 template <::std::integral char_type, typename T1>
 inline constexpr char_type *cond_lc_print_reserve_define_impl(basic_lc_all<char_type> const *__restrict all,
 															  char_type *iter, T1 c)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (lc_scatter_printable<char_type, T1>)
 	{
@@ -117,6 +120,7 @@ template <::std::integral char_type, typename T1, typename T2>
 			 ::fast_io::details::cond_ok_lc_dynamic_reserve_printable_impl<char_type, T2, T1>)
 inline constexpr ::std::size_t print_reserve_size(basic_lc_all<char_type> const *__restrict all,
 												  ::fast_io::manipulators::condition<T1, T2> c)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (c.pred)
 	{
@@ -133,6 +137,7 @@ template <::std::integral char_type, typename T1, typename T2>
 			 ::fast_io::details::cond_ok_lc_dynamic_reserve_printable_impl<char_type, T2, T1>)
 inline constexpr char_type *print_reserve_define(basic_lc_all<char_type> const *__restrict all, char_type *iter,
 												 ::fast_io::manipulators::condition<T1, T2> c)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (c.pred)
 	{

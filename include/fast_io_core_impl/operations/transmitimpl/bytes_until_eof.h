@@ -53,7 +53,7 @@ inline constexpr decltype(auto) transmit_bytes_until_eof_generic_decay(optstmtyp
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
-	{
+{
 		return status_transmit_bytes_until_eof_generic_define(
 			optstm,instm,resultint);
 	}
@@ -90,7 +90,7 @@ inline constexpr decltype(auto) transmit_bytes_until_eof_decay(optstmtype optstm
 {
 #if 0
 	if constexpr(::fast_io::status_output_stream<optstmtype>)
-	{
+{
 		return status_transmit_bytes_until_eof_define(optstm,instm);
 	}
 	else if constexpr(::fast_io::status_input_stream<instmtype>)

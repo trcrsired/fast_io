@@ -77,6 +77,7 @@ public:
 	template <typename Func, typename... Args>
 		requires std::invocable<Func, Args...>
 	inline constexpr linux_clone3_thread(Func &&func, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		// Assume the returned address is 16 aligned
 		this->stack_ = thread_stack_type_allocator::allocate(1u);
@@ -176,6 +177,7 @@ public:
 	}
 
 	inline constexpr void join()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (!this->joinable()) [[unlikely]]
 		{

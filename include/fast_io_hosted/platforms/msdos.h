@@ -10,6 +10,7 @@ namespace details
 {
 
 inline io_scatter_status_t posix_scatter_read_impl_with_normal_read(int fd, io_scatters_t scatters)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t total_size{};
 	for (::std::size_t i{}; i != scatters.len; ++i)
@@ -31,6 +32,7 @@ inline io_scatter_status_t posix_scatter_read_impl_with_normal_read(int fd, io_s
 }
 
 inline io_scatter_status_t posix_scatter_write_impl_with_normal_write(int fd, io_scatters_t scatters)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t total_size{};
 	for (::std::size_t i{}; i != scatters.len; ++i)
@@ -55,12 +57,14 @@ inline io_scatter_status_t posix_scatter_write_impl_with_normal_write(int fd, io
 
 template <::std::integral char_type>
 inline io_scatter_status_t scatter_read(basic_posix_io_observer<char_type> piob, io_scatters_t scatters)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::posix_scatter_read_impl_with_normal_read(piob.fd, scatters);
 }
 
 template <::std::integral char_type>
 inline io_scatter_status_t scatter_write(basic_posix_io_observer<char_type> piob, io_scatters_t scatters)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::posix_scatter_write_impl_with_normal_write(piob.fd, scatters);
 }

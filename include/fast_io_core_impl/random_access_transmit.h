@@ -35,6 +35,7 @@ inline constexpr ::std::uintmax_t zero_copy_random_access_transmit_impl(output &
 
 template <output_stream output, input_stream input, typename... Args>
 inline constexpr auto random_access_transmit_impl(output &outp, input &inp, ::std::intmax_t offset, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (mutex_stream<input>)
 	{
@@ -86,6 +87,7 @@ inline constexpr auto random_access_transmit_impl(output &outp, input &inp, ::st
 template <output_stream output, input_stream input, ::std::integral sz_type, ::std::integral offset_type>
 	requires fast_io::random_access_stream<input>
 inline constexpr void print_define(output &outp, manip::random_access_transmission<input, sz_type, offset_type> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	ref.transmitted = static_cast<sz_type>(details::random_access_transmit_impl(outp, ref.reference, ref.offset));
 }
@@ -94,6 +96,7 @@ template <output_stream output, input_stream input, ::std::integral sz_type, ::s
 	requires fast_io::random_access_stream<input>
 inline constexpr void print_define(output &outp,
 								   manip::random_access_transmission_with_size<input, sz_type, offset_type> ref)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	ref.transmitted =
 		static_cast<sz_type>(details::random_access_transmit_impl(outp, ref.reference, ref.offset, ref.bytes));
@@ -102,6 +105,7 @@ inline constexpr void print_define(output &outp,
 template <output_stream output, ::std::integral offset_type, input_stream input>
 	requires fast_io::random_access_stream<input>
 inline constexpr ::std::uintmax_t random_access_transmit(output &&outp, offset_type offset, input &&in)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uintmax_t transmitted{};
 	print_freestanding(
@@ -113,6 +117,7 @@ inline constexpr ::std::uintmax_t random_access_transmit(output &&outp, offset_t
 template <output_stream output, ::std::integral offset_type, input_stream input, ::std::integral sz_type>
 	requires fast_io::random_access_stream<input>
 inline constexpr sz_type random_access_transmit(output &&outp, offset_type offset, input &&in, sz_type bytes)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	sz_type transmitted{};
 	print_freestanding(::std::forward<output>(outp),

@@ -12,7 +12,9 @@ public:
 	char_type *begin_ptr{}, *curr_ptr{}, *end_ptr{};
 	inline constexpr basic_omemory_map() = default;
 	inline constexpr basic_omemory_map(native_memory_map_file const &iob, ::std::size_t offset = 0)
-		: begin_ptr(reinterpret_cast<char_type *>(iob.address_begin + offset)), curr_ptr(begin_ptr),
+		FAST_IO_HERBCEPTIONS_THROWS
+		: begin_ptr(reinterpret_cast<char_type *>(iob.address_begin + offset)),
+		  curr_ptr(begin_ptr),
 		  end_ptr(begin_ptr + iob.size() / sizeof(char_type))
 	{
 	}
@@ -101,7 +103,9 @@ public:
 	char_type *begin_ptr{}, *curr_ptr{}, *end_ptr{};
 	inline constexpr basic_imemory_map() = default;
 	inline constexpr basic_imemory_map(native_memory_map_file const &iob, ::std::size_t offset = 0)
-		: begin_ptr(reinterpret_cast<char_type *>(iob.address_begin + offset)), curr_ptr(this->begin_ptr),
+		FAST_IO_HERBCEPTIONS_THROWS
+		: begin_ptr(reinterpret_cast<char_type *>(iob.address_begin + offset)),
+		  curr_ptr(this->begin_ptr),
 		  end_ptr(this->begin_ptr + iob.size() / sizeof(char_type))
 	{
 	}

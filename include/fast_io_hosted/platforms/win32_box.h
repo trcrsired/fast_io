@@ -64,6 +64,7 @@ template <::fast_io::win32_family family, ::std::integral ch_type, ::std::integr
 #endif
 inline void win32_box_converter_scatter_path_impl(basic_win32_family_box_t<family, ch_type> bx,
 												  basic_io_scatter_t<write_ch_type> const *scatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using chtypenocref = ::std::remove_cvref_t<write_ch_type>;
 	if constexpr (family == ::fast_io::win32_family::ansi_9x &&

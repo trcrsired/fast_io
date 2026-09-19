@@ -25,6 +25,7 @@ inline constexpr basic_linux_getrandom<char_type> input_stream_ref_define(basic_
 namespace details
 {
 inline ::std::byte *linux_getrandom_read_some_bytes_define_impl(unsigned flags, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t sz{static_cast<::std::size_t>(last - first)};
 #if defined(__linux__) && defined(__NR_getrandom)
@@ -44,6 +45,7 @@ inline ::std::byte *linux_getrandom_read_some_bytes_define_impl(unsigned flags, 
 template <::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_linux_getrandom<char_type> g, ::std::byte *first,
 													 ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::details::linux_getrandom_read_some_bytes_define_impl(g.flags, first, last);
 }

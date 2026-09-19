@@ -14,6 +14,7 @@ concept lc_dynamic_reserve_printable =
 template <::std::integral char_type, typename value_type>
 	requires lc_dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr auto print_reserve_size(::fast_io::basic_lc_object<char_type> const *lc, parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_reserve_size(lc, para.reference);
 }
@@ -21,6 +22,7 @@ inline constexpr auto print_reserve_size(::fast_io::basic_lc_object<char_type> c
 template <::std::integral char_type, typename value_type>
 	requires lc_dynamic_reserve_printable<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr auto print_reserve_define(::fast_io::basic_lc_object<char_type> const *lc, char_type *begin, ::fast_io::parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_reserve_define(lc, begin, para.reference);
 }
@@ -43,6 +45,7 @@ concept lc_printable_internal_shift = requires(::fast_io::basic_lc_object<char_t
 template <::std::integral char_type, typename value_type>
 	requires lc_printable_internal_shift<char_type, ::std::remove_cvref_t<value_type>>
 inline constexpr auto print_define_internal_shift(::fast_io::basic_lc_object<char_type> const *lc, parameter<value_type> para)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return print_define_internal_shift(lc, para.reference);
 }
@@ -105,6 +108,7 @@ inline constexpr ::std::size_t calculate_all_lc_and_nonlc_dynamic_reserve_printa
 template <::std::integral char_type, ::std::size_t beg_ind, ::std::size_t end_ind, typename T, typename... Args>
 	requires(end_ind <= sizeof...(Args) + 1)
 inline constexpr ::std::size_t calculate_all_lc_and_nonlc_dynamic_reserve_printable_size(::fast_io::basic_lc_object<char_type> const *lc, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (end_ind == 0)
 	{
@@ -267,6 +271,7 @@ inline constexpr ::std::size_t calculate_next_n_lc_and_nonlc_any_reserve_printab
 template <::std::integral char_type, ::std::size_t beg_ind, ::std::size_t end_ind, typename T, typename... Args>
 	requires(end_ind <= sizeof...(Args) + 1)
 inline constexpr ::std::size_t calculate_next_n_lc_and_nonlc_any_reserve_printable_size(::fast_io::basic_lc_object<char_type> const *lc, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (end_ind == 0)
 	{
@@ -308,6 +313,7 @@ inline constexpr char_type *print_next_n_continuous_any_reserve_printable(
 template <::std::integral char_type, ::std::size_t N, typename T, typename... Args>
 	requires(N <= sizeof...(Args) + 1)
 inline constexpr char_type *lc_print_next_n_continuous_any_reserve_printable(::fast_io::basic_lc_object<char_type> const *lc, char_type *buffer, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (N == 0)
 	{
@@ -330,6 +336,7 @@ inline constexpr char_type *lc_print_next_n_continuous_any_reserve_printable(::f
 
 template <bool line = false, typename output, typename T>
 inline constexpr void lc_print_control_fallback_single(::fast_io::basic_lc_object<typename output::output_char_type> const *lc, output outstm, T t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename output::output_char_type;
 	constexpr bool write_bytes{::fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<output>};
@@ -395,11 +402,13 @@ inline constexpr ::fast_io::basic_reserve_scatters_define_result<typename output
 	[[maybe_unused]]
 #endif
 	output outstm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return {scatters, buffer};
 }
 template <::std::size_t beg_ind, ::std::size_t end_ind, typename output, typename T, typename... Args>
 inline constexpr ::fast_io::basic_reserve_scatters_define_result<typename output::output_char_type> lc_print_control_main_loop_impl(::fast_io::basic_lc_object<typename output::output_char_type> const *lc, ::fast_io::basic_io_scatter_t<typename output::output_char_type> *scatters_base, ::fast_io::basic_io_scatter_t<typename output::output_char_type> *scatters, typename output::output_char_type *buffer, output outstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (end_ind == 0)
 	{
@@ -455,6 +464,7 @@ inline constexpr void lc_print_control_impl(
 }
 template <bool line, ::std::size_t beg_ind, ::std::size_t end_ind, typename output, typename T, typename... Args>
 inline constexpr void lc_print_control_impl(::fast_io::basic_lc_object<typename output::output_char_type> const *lc, output outstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (end_ind == 0)
 	{
@@ -526,11 +536,13 @@ inline constexpr void lc_pcb_continuious_n_lc_or_nonlc_any_reserve_printable_imp
 	[[maybe_unused]]
 #endif
 	output outstm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return;
 }
 template <::std::size_t N, typename output, typename T, typename... Args>
-inline constexpr void lc_pcb_continuious_n_lc_or_nonlc_any_reserve_printable_impl(::fast_io::basic_lc_object<typename output::output_char_type>* lc, output outstm, T t, Args... args)
+inline constexpr void lc_pcb_continuious_n_lc_or_nonlc_any_reserve_printable_impl(::fast_io::basic_lc_object<typename output::output_char_type> *lc, output outstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename output::output_char_type;
 	auto const curr{obuffer_curr(outstm)};
@@ -660,6 +672,7 @@ inline constexpr void lc_print_control_buffer_impl(output outstm)
 template <bool line, ::std::size_t beg_ind, ::std::size_t end_ind, typename output, typename T, typename... Args>
 	requires(end_ind <= sizeof...(Args) + 1)
 inline constexpr void lc_print_control_buffer_impl(::fast_io::basic_lc_object<typename output::output_char_type> const *lc, output outstm, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (end_ind == 0)
 	{

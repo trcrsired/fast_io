@@ -133,6 +133,7 @@ inline constexpr ::fast_io::ip posix_to_ip_with_ai_addr_impl(int ai_family, posi
 }
 
 inline posix_addrinfo *my_getaddrinfo_impl(char const *node, char const *service, posix_addrinfo const *hints)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_addrinfo *res{};
 	int ec{libc_getaddrinfo(node, service, hints, __builtin_addressof(res))};
@@ -145,6 +146,7 @@ inline posix_addrinfo *my_getaddrinfo_impl(char const *node, char const *service
 }
 
 inline auto posix_dns_open_internal_impl(char const *node)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr posix_addrinfo info{.ai_family = AF_UNSPEC};
 	return my_getaddrinfo_impl(node, nullptr, __builtin_addressof(info));
@@ -193,6 +195,7 @@ public:
 	}
 	explicit constexpr posix_dns_file(decltype(nullptr)) noexcept = delete;
 	inline posix_dns_file(char_type const *node, char_type const *service, posix_addrinfo const *hints)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: posix_dns_io_observer{details::my_getaddrinfo_impl(node, service, hints)}
 	{
 	}

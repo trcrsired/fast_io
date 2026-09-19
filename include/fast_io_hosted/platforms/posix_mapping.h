@@ -9,21 +9,22 @@ namespace details
 {
 
 inline ::std::byte *sys_mmap(void *addr, ::std::size_t len, int prot, int flags, int fd, ::std::uintmax_t offset)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__linux__) && defined(__NR_mmap) && !defined(__NR_mmap2)
 #if defined(__s390__) || defined(__s390x__)
     // s390 __NR_mmap is the old single-argument entry; pass the kernel's mmap argument block.
     struct s390_mmap_arg_struct
-    {
-        unsigned long addr;
+	{
+		unsigned long addr;
         unsigned long len;
         unsigned long prot;
         unsigned long flags;
         unsigned long fd;
         unsigned long offset;
-    };
+	};
 
-    if constexpr (sizeof(::std::uintmax_t) > sizeof(unsigned long))
+	if constexpr (sizeof(::std::uintmax_t) > sizeof(unsigned long))
     {
         if (offset > static_cast<::std::uintmax_t>(::std::numeric_limits<unsigned long>::max()))
         {
@@ -85,6 +86,7 @@ inline ::std::byte *sys_mmap(void *addr, ::std::size_t len, int prot, int flags,
 }
 
 inline int sys_mprotect(void *start, ::std::size_t len, int prot)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const result{
 #if defined(__linux__) && defined(__NR_mprotect)
@@ -117,6 +119,7 @@ inline int sys_munmap_nothrow(void *addr, ::std::size_t len)
 }
 
 inline void sys_munmap(void *addr, ::std::size_t len)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const ret{sys_munmap_nothrow(addr, len)};
 #if defined(__linux__) && defined(__NR_munmap)
@@ -178,6 +181,7 @@ inline constexpr posix_file_map_attribute &operator^=(posix_file_map_attribute &
 }
 
 inline constexpr posix_file_map_attribute to_posix_file_map_attribute(file_map_attribute x)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch (x)
 	{
@@ -220,6 +224,7 @@ public:
 	}
 	inline posix_memory_map_file(posix_at_entry bf, file_map_attribute attr, ::std::size_t bytes,
 								 ::std::uintmax_t start_address = 0)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: address_begin{details::sys_mmap(nullptr, bytes, static_cast<int>(to_posix_file_map_attribute(attr)),
 										  MAP_SHARED, bf.fd, start_address)},
 		  address_end{address_begin + bytes}
@@ -337,6 +342,7 @@ public:
 		return address_begin[pos];
 	}
 	inline constexpr void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->address_begin != MAP_FAILED) [[likely]]
 		{

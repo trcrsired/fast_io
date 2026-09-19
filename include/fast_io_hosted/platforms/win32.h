@@ -17,6 +17,7 @@ _ZN7fast_io7details5win3230crypt_acquire_context_fallbackILNS_12win32_familyE0EE
 */
 template <::fast_io::win32_family family>
 inline ::std::size_t crypt_acquire_context_fallback()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t hprov{};
 	if constexpr (family == ::fast_io::win32_family::ansi_9x)
@@ -67,6 +68,7 @@ struct win32_family_hcryptprov_guard
 {
 	::std::size_t hprov{};
 	inline win32_family_hcryptprov_guard()
+		FAST_IO_HERBCEPTIONS_THROWS
 		: hprov{crypt_acquire_context_fallback<family>()}
 	{}
 	inline win32_family_hcryptprov_guard(win32_family_hcryptprov_guard const &) = delete;
@@ -81,6 +83,7 @@ struct win32_family_hcryptprov_guard
 
 template <win32_family family>
 inline void *create_win32_temp_file_impl()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool is_nt{family == win32_family::wide_nt};
 	using char_type = ::std::conditional_t<is_nt, char16_t, char>;
@@ -201,6 +204,7 @@ inline void *create_win32_temp_file_impl()
 
 inline void *create_io_completion_port(void *filehandle, void *existing_completionport, ::std::size_t completionkey,
 									   ::std::uint_least32_t numberofconcurrentthreads)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	void *ptr{::fast_io::win32::CreateIoCompletionPort(filehandle, existing_completionport, completionkey,
 													   numberofconcurrentthreads)};
@@ -212,6 +216,7 @@ inline void *create_io_completion_port(void *filehandle, void *existing_completi
 }
 
 inline void *create_io_completion_port_impl()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return create_io_completion_port(reinterpret_cast<void *>(static_cast<::std::size_t>(-1)), nullptr, 0, 0);
 }
@@ -229,6 +234,7 @@ template <win32_family family>
 inline void *win32_family_create_file_internal_impl(
 	::std::conditional_t<family == win32_family::wide_nt, char16_t, char> const *lpFileName,
 	win32_open_mode const &mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == win32_family::wide_nt)
 	{
@@ -511,6 +517,7 @@ inline constexpr win32_open_mode calculate_win32_open_mode(open_mode_perms ompm)
 template <win32_family family>
 inline void *win32_family_create_file_impl(
 	::std::conditional_t<family == win32_family::wide_nt, char16_t, char> const *filename_c_str, open_mode_perms ompm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32_family_create_file_internal_impl<family>(filename_c_str, calculate_win32_open_mode(ompm));
 }
@@ -543,6 +550,7 @@ inline void *win32_create_file_at_impl(void *directory_handle, T const &t, open_
 template <win32_family, ::std::integral char_type>
 inline void *win32_create_file_at_fs_dirent_impl(void *directory_handle, char_type const *filename_c_str,
 												 ::std::size_t filename_c_str_len, open_mode_perms ompm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_family_create_file_fs_dirent_impl<false>(directory_handle, filename_c_str,
 																					  filename_c_str_len, ompm);
@@ -642,6 +650,7 @@ namespace win32::details
 {
 
 inline void *win32_dup_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	void *current_process{reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))};
 	void *new_handle{};
@@ -654,6 +663,7 @@ inline void *win32_dup_impl(void *handle)
 }
 
 inline void *win32_dup2_impl(void *handle, void *newhandle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto temp{win32_dup_impl(handle)};
 	if (newhandle) [[likely]]
@@ -664,6 +674,7 @@ inline void *win32_dup2_impl(void *handle, void *newhandle)
 }
 
 inline void win32_flush_impl(void *__restrict handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!::fast_io::win32::FlushFileBuffers(handle))
 	{
@@ -672,6 +683,7 @@ inline void win32_flush_impl(void *__restrict handle)
 }
 
 inline void win32_data_sync_impl(void *__restrict handle, data_sync_flags flags [[maybe_unused]])
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32_WINDOWS)
 	win32_flush_impl(handle);
@@ -687,6 +699,7 @@ template <win32_family family, ::std::integral char_type>
 [[__gnu__::__always_inline__]]
 #endif
 inline void flush(basic_win32_family_io_observer<family, char_type> wiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::details::win32_flush_impl(wiob.handle);
 }
@@ -696,6 +709,7 @@ template <win32_family family, ::std::integral char_type>
 [[__gnu__::__always_inline__]]
 #endif
 inline void data_sync(basic_win32_family_io_observer<family, char_type> wiob, data_sync_flags flags)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::details::win32_data_sync_impl(wiob.handle, flags);
 }
@@ -704,6 +718,7 @@ namespace win32::details
 {
 
 inline ::fast_io::intfpos_t seek_impl(void *handle, ::fast_io::intfpos_t offset, seekdir s)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x0500) || defined(_WIN32_WINDOWS)
 	if constexpr (sizeof(::fast_io::intfpos_t) > sizeof(::std::int_least32_t))
@@ -755,6 +770,7 @@ inline ::fast_io::intfpos_t seek_impl(void *handle, ::fast_io::intfpos_t offset,
 
 inline void win32_calculate_offset_impl([[maybe_unused]] void *__restrict handle, ::fast_io::win32::overlapped &overlap,
 										::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least64_t u64off{static_cast<::std::uint_least64_t>(
 		::fast_io::win32::nt::details::nt_calculate_offset_impl(off))};
@@ -764,6 +780,7 @@ inline void win32_calculate_offset_impl([[maybe_unused]] void *__restrict handle
 
 inline ::std::byte *read_or_pread_some_bytes_common_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last,
 														 ::fast_io::win32::overlapped *lpoverlapped)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t number_of_bytes{};
 	if (!::fast_io::win32::ReadFile(handle, first,
@@ -781,12 +798,14 @@ inline ::std::byte *read_or_pread_some_bytes_common_impl(void *__restrict handle
 }
 
 inline ::std::byte *win32_read_some_bytes_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::read_or_pread_some_bytes_common_impl(handle, first, last, nullptr);
 }
 
 inline ::std::byte *win32_ntw_pread_some_bytes_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last,
 													::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
 	// the functions will advance the position by the number of bytes written or read after each write/read operation.
@@ -801,6 +820,7 @@ inline ::std::byte *win32_ntw_pread_some_bytes_impl(void *__restrict handle, ::s
 inline ::std::byte const *write_or_pwrite_some_bytes_common_impl(void *__restrict handle, ::std::byte const *first,
 																 ::std::byte const *last,
 																 ::fast_io::win32::overlapped *lpoverlapped)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::uint_least32_t number_of_bytes{};
 	if (!::fast_io::win32::WriteFile(handle, first,
@@ -814,12 +834,14 @@ inline ::std::byte const *write_or_pwrite_some_bytes_common_impl(void *__restric
 
 inline ::std::byte const *win32_write_some_bytes_impl(void *__restrict handle, ::std::byte const *first,
 													  ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::write_or_pwrite_some_bytes_common_impl(handle, first, last, nullptr);
 }
 
 inline ::std::byte const *win32_ntw_pwrite_some_bytes_impl(void *__restrict handle, ::std::byte const *first,
 														   ::std::byte const *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
 	// the functions will advance the position by the number of bytes written or read after each write/read operation.
@@ -836,6 +858,7 @@ inline ::std::byte const *win32_ntw_pwrite_some_bytes_impl(void *__restrict hand
 template <win32_family family, ::std::integral ch_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_win32_family_io_observer<family, ch_type> wiob,
 													 ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::win32_read_some_bytes_impl(wiob.handle, first, last);
 }
@@ -843,6 +866,7 @@ inline ::std::byte *read_some_bytes_underflow_define(basic_win32_family_io_obser
 template <win32_family family, ::std::integral ch_type>
 inline ::std::byte const *write_some_bytes_overflow_define(basic_win32_family_io_observer<family, ch_type> wiob,
 														   ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::win32_write_some_bytes_impl(wiob.handle, first, last);
 }
@@ -850,6 +874,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_win32_family_io
 template <win32_family family, ::std::integral ch_type>
 inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_win32_family_io_observer<family, ch_type> wiob,
 														::fast_io::intfpos_t off, ::fast_io::seekdir sdir)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::seek_impl(wiob.handle, off, sdir);
 }
@@ -865,6 +890,7 @@ I am not confident that i understand semantics correctly. Disabled first and tes
 template <win32_family family, ::std::integral ch_type>
 inline ::std::byte *pread_some_bytes_underflow_define(basic_win32_family_io_observer<family, ch_type> niob,
 													  ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::win32_ntw_pread_some_bytes_impl(niob.handle, first, last, off);
 }
@@ -873,6 +899,7 @@ template <win32_family family, ::std::integral ch_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_win32_family_io_observer<family, ch_type> niob,
 															::std::byte const *first, ::std::byte const *last,
 															::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::details::win32_ntw_pwrite_some_bytes_impl(niob.handle, first, last, off);
 }
@@ -911,6 +938,7 @@ template <win32_family family, ::std::integral ch_type, typename... Args>
 		::fast_io::win32::DeviceIoControl(h.handle, ::std::forward<Args>(args)...);
 	}
 inline void io_control(basic_win32_family_io_observer<family, ch_type> h, Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!fast_io::win32::DeviceIoControl(h.handle, ::std::forward<Args>(args)...))
 	{
@@ -942,6 +970,7 @@ using tlc_win32_9xa_dir_handle_path_str = ::fast_io::containers::basic_string<ch
 
 template <typename... Args>
 constexpr inline win32_9xa_dir_handle_path_str concat_win32_9xa_dir_handle_path_str(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char8_t>, Args...>};
 	if constexpr (type_error)
@@ -958,6 +987,7 @@ constexpr inline win32_9xa_dir_handle_path_str concat_win32_9xa_dir_handle_path_
 
 template <typename... Args>
 constexpr inline tlc_win32_9xa_dir_handle_path_str concat_tlc_win32_9xa_dir_handle_path_str(Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char8_t>, Args...>};
 	if constexpr (type_error)
@@ -1000,6 +1030,7 @@ struct find_struct_guard
 };
 
 inline void check_win32_9xa_dir_is_valid(win32_9xa_dir_handle const &h)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::win32_find_dataa wfda{};
 	tlc_win32_9xa_dir_handle_path_str temp_find_path{concat_tlc_win32_9xa_dir_handle_path_str(h.path, u8"\\*")};
@@ -1050,12 +1081,14 @@ inline void close_win32_9xa_dir_handle(win32_9xa_dir_handle &h) noexcept(!throw_
 }
 
 inline win32_9xa_dir_handle win32_9xa_dir_dup_impl(win32_9xa_dir_handle const &h)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	check_win32_9xa_dir_is_valid(h);
 	return {h.path};
 }
 
 inline win32_9xa_dir_handle win32_9xa_dir_dup2_impl(win32_9xa_dir_handle const &h1, win32_9xa_dir_handle &h2)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto temp{win32_9xa_dir_dup_impl(h1)};
 	close_win32_9xa_dir_handle(h2);
@@ -1063,6 +1096,7 @@ inline win32_9xa_dir_handle win32_9xa_dir_dup2_impl(win32_9xa_dir_handle const &
 }
 
 inline win32_9xa_dir_handle basic_win32_9xa_create_dir_file_impl(char const *filename_c_str, ::std::size_t filename_c_str_len)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char8_t_const_may_alias_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -1094,6 +1128,7 @@ inline win32_9xa_dir_handle basic_win32_9xa_create_dir_file_impl(char const *fil
 
 inline win32_9xa_dir_handle basic_win32_9xa_create_dir_file_at_fs_dirent_impl(win32_9xa_dir_handle const *directory_handle, char const *filename_c_str,
 																			  ::std::size_t filename_c_str_len)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char8_t_const_may_alias_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -1105,7 +1140,7 @@ inline win32_9xa_dir_handle basic_win32_9xa_create_dir_file_at_fs_dirent_impl(wi
 
 #if 0
 	if (::fast_io::details::is_invalid_dos_pathname_with_size(beg, filename_c_str_len)) [[unlikely]]
-	{
+{
 		throw_win32_error(3);
 	}
 #endif
@@ -1119,6 +1154,7 @@ inline win32_9xa_dir_handle basic_win32_9xa_create_dir_file_at_fs_dirent_impl(wi
 
 inline void *basic_win32_9xa_create_file_at_fs_dirent_impl(win32_9xa_dir_handle const *directory_handle, char const *filename_c_str,
 														   ::std::size_t filename_c_str_len, open_mode_perms ompm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char8_t_const_may_alias_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -1130,7 +1166,7 @@ inline void *basic_win32_9xa_create_file_at_fs_dirent_impl(win32_9xa_dir_handle 
 
 #if 0
 	if (::fast_io::details::is_invalid_dos_pathname_with_size(beg, filename_c_str_len)) [[unlikely]]
-	{
+{
 		throw_win32_error(3);
 	}
 #endif
@@ -1142,12 +1178,13 @@ inline void *basic_win32_9xa_create_file_at_fs_dirent_impl(win32_9xa_dir_handle 
 }
 
 inline ::fast_io::win32::details::tlc_win32_9xa_dir_handle_path_str concat_tlc_win32_9xa_path_uncheck_whether_exist(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const beg{path_c_str};
 
 #if 0
 	if (::fast_io::details::is_invalid_dos_pathname_with_size(beg, path_size)) [[unlikely]]
-	{
+{
 		throw_win32_error(3);
 	}
 #endif
@@ -1331,6 +1368,7 @@ public:
 	inline constexpr win32_9xa_dir_file &operator=(win32_9xa_dir_io_observer) noexcept = delete;
 
 	inline win32_9xa_dir_file(win32_9xa_dir_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dir_io_observer{win32::details::win32_9xa_dir_dup_impl(other.handle)}
 	{
 	}
@@ -1369,6 +1407,7 @@ public:
 		this->handle = ::std::move(newhandle);
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -1384,6 +1423,7 @@ public:
 	}
 
 	inline win32_9xa_dir_file(io_dup_t, win32_9xa_dir_io_observer wiob)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dir_io_observer{::fast_io::win32::details::win32_9xa_dir_dup_impl(wiob.handle)}
 	{
 	}
@@ -1446,6 +1486,7 @@ public:
 	inline constexpr basic_win32_family_file &operator=(basic_win32_family_io_observer<family, ch_type>) noexcept = delete;
 
 	inline basic_win32_family_file(basic_win32_family_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, ch_type>{::fast_io::win32::details::win32_dup_impl(other.handle)}
 	{
 	}
@@ -1485,6 +1526,7 @@ public:
 		this->handle = newhandle;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (*this) [[likely]]
 		{
@@ -1505,6 +1547,7 @@ public:
 	}
 
 	inline basic_win32_family_file(io_dup_t, basic_win32_family_io_observer<family, ch_type> wiob)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, ch_type>{::fast_io::win32::details::win32_dup_impl(wiob.handle)}
 	{
 	}
@@ -1518,11 +1561,13 @@ public:
 	inline explicit constexpr basic_win32_family_file(decltype(nullptr)) noexcept = delete;
 
 	inline explicit basic_win32_family_file(io_temp_t)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{::fast_io::details::create_win32_temp_file_impl<family>()}
 	{
 	}
 
 	inline explicit basic_win32_family_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{
 			  ::fast_io::details::win32_create_file_at_fs_dirent_impl<family>(
 				  fsdirent.handle, fsdirent.filename.c_str(), fsdirent.filename.size(), {om, pm})}
@@ -1576,6 +1621,7 @@ public:
 
 template <win32_family family, ::std::integral ch_type>
 inline void truncate(basic_win32_family_io_observer<family, ch_type> handle, ::fast_io::uintfpos_t size)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	win32::details::seek_impl(handle.handle, size, seekdir::beg);
 	if (!::fast_io::win32::SetEndOfFile(handle.handle))
@@ -1637,6 +1683,7 @@ struct map_guard
 };
 
 inline file_type file_type_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	/*
 	https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfiletype
@@ -1668,6 +1715,7 @@ inline file_type file_type_impl(void *handle)
 }
 
 inline posix_file_status win32_status_impl(void *__restrict handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	file_type ft{file_type_impl(handle)};
 	if (ft == file_type::fifo || ft == file_type::character)
@@ -1731,6 +1779,7 @@ inline posix_file_status win32_status_impl(void *__restrict handle)
 }
 
 inline posix_file_status win32_9xa_dir_file_status_impl(win32_9xa_dir_handle const &handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::posix_file_status tmp_file{};
 
@@ -1819,6 +1868,7 @@ struct win32_console_mode_guard
 	void *out_hdl{};
 	::std::uint_least32_t mode{};
 	inline win32_console_mode_guard(void *hd)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: out_hdl{hd}
 	{
 		if (!::fast_io::win32::GetConsoleMode(out_hdl, __builtin_addressof(mode)))
@@ -1839,6 +1889,7 @@ struct win32_console_mode_guard
 };
 
 inline void win32_clear_screen_main(void *out_hdl)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	/*
 	Since many people are using console like msys2, we need to first write something to this console
@@ -1855,6 +1906,7 @@ inline void win32_clear_screen_main(void *out_hdl)
 }
 
 inline void win32_clear_screen_impl(void *handle)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!win32_is_character_device(handle)) [[unlikely]]
 	{
@@ -1883,6 +1935,7 @@ public:
 	using char_type = ch_type;
 	basic_win32_family_file<family, ch_type> pipes[2];
 	inline basic_win32_family_pipe()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		win32::security_attributes sec_attr{sizeof(win32::security_attributes), nullptr, 1};
 		if (!::fast_io::win32::CreatePipe(__builtin_addressof(pipes[0].handle),
@@ -1909,6 +1962,7 @@ inline constexpr win32_io_redirection redirect(basic_win32_family_pipe<family, c
 
 template <win32_family family, ::std::integral ch_type>
 inline void clear_screen(basic_win32_family_io_observer<family, ch_type> wiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	win32::details::win32_clear_screen_impl(wiob.handle);
 }
@@ -1921,6 +1975,7 @@ inline bool is_character_device(basic_win32_family_io_observer<family, ch_type> 
 
 template <nt_family family, ::std::integral ch_type>
 inline void clear_screen(basic_nt_family_io_observer<family, ch_type> niob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	win32::details::win32_clear_screen_impl(niob.handle);
 }

@@ -226,6 +226,7 @@ namespace details::fp_hack
 extern int libc_uflow(FILE *) noexcept __asm__("__uflow");
 
 inline bool musl_fp_underflow_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (fp == stdin)
 	{
@@ -243,11 +244,13 @@ inline bool musl_fp_underflow_impl(FILE *fp)
 } // namespace details::fp_hack
 
 inline bool ibuffer_underflow(c_io_observer_unlocked cio)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::fp_hack::musl_fp_underflow_impl(cio.fp);
 }
 
 inline bool ibuffer_underflow(u8c_io_observer_unlocked cio)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::fp_hack::musl_fp_underflow_impl(cio.fp);
 }
@@ -311,6 +314,7 @@ extern int libc_overflow(_IO_FILE *, int) noexcept __asm__("__overflow");
 }
 
 inline void obuffer_overflow(c_io_observer_unlocked cio, char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (details::libc_overflow(cio.fp, static_cast<int>(static_cast<unsigned char>(ch))) == EOF) [[unlikely]]
 	{
@@ -319,6 +323,7 @@ inline void obuffer_overflow(c_io_observer_unlocked cio, char ch)
 }
 
 inline void obuffer_overflow(u8c_io_observer_unlocked cio, char8_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (details::libc_overflow(cio.fp, static_cast<int>(static_cast<unsigned char>(ch))) == EOF) [[unlikely]]
 	{

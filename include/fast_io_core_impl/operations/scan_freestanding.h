@@ -11,6 +11,7 @@ template<typename input,typename T,typename P>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr bool scan_single_status_impl(input in,T& state_machine,P arg)
+ FAST_IO_HERBCEPTIONS_THROWS
 {
 	for(;state_machine.code==::fast_io::freestanding::parse_errc::partial;)
 	{
@@ -87,7 +88,7 @@ template <typename input, typename T>
 	using char_type = typename input::input_char_type;
 #if 0
 	if constexpr(contiguous_input_stream<input>)
-	{
+{
 		if constexpr(precise_reserve_scannable<char_type,T>)
 		{
 			constexpr ::std::size_t n{scan_precise_reserve_size(io_reserve_type<char_type,T>)};

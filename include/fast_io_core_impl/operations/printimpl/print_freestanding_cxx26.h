@@ -412,7 +412,7 @@ print_freestanding_decay(outputstmtype optstm,
 		else
 #if 0
 		else if constexpr (::fast_io::operations::decay::defines::has_obuffer_basic_operations<outputstmtype>)
-		{
+{
 
 		}
 		else

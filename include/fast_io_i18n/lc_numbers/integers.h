@@ -392,6 +392,7 @@ inline constexpr char_type *lc_print_reserve_integral_define(basic_lc_all<char_t
 
 template <::std::integral char_type>
 inline constexpr ::std::size_t print_reserve_size_grouping_timestamp_impl(basic_lc_all<char_type> const *__restrict all)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t static_size{print_reserve_size(io_reserve_type<char_type, ::std::int_least64_t>)};
 	constexpr ::std::size_t static_sizem1{static_size - 1};

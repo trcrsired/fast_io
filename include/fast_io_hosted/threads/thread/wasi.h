@@ -294,6 +294,7 @@ public:
 	template <typename Func, typename... Args>
 		requires(::std::invocable<Func, Args...>)
 	inline wasi_thread(Func &&func, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto *cb{::fast_io::wasi::details::make_control_block(::std::forward<Func>(func),
 											 ::std::forward<Args>(args)...)};

@@ -96,6 +96,7 @@ inline void *create_win32_dll_9xa(char const *filename) // 9x kernel does not su
 	return hmodule;
 }
 inline void *create_win32_dll_ntw(char16_t const *filename, [[maybe_unused]] dll_mode mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto hmodule{
 #if (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x0500)
@@ -182,6 +183,7 @@ public:
 		return *this;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->hmodule) [[likely]]
 		{
@@ -205,6 +207,7 @@ public:
 namespace details
 {
 inline void *win32_dll_load_symbol_impl(void *hmodule, char const *symbol)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto ptr{::fast_io::win32::GetProcAddress(hmodule, symbol)};
 	if (ptr == nullptr) [[unlikely]]

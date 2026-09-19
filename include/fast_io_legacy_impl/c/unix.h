@@ -152,6 +152,7 @@ extern int _flsbuf(int, FILE *) noexcept __asm__("__flsbuf");
 #endif
 
 inline bool bsd_underflow_impl(FILE *__restrict fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__NEWLIB__)
 // untested
@@ -216,6 +217,7 @@ inline bool bsd_underflow_impl(FILE *__restrict fp)
 }
 
 inline void bsd_overflow(FILE *__restrict fp, char unsigned ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__MSDOS__)
 	fp->_flag |= 0x010000;
@@ -265,6 +267,7 @@ inline void obuffer_set_curr(c_io_observer_unlocked cio, char *ptr) noexcept
 }
 
 inline void obuffer_overflow(c_io_observer_unlocked cio, char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::bsd_overflow(cio.fp, static_cast<char unsigned>(ch));
 }
@@ -290,6 +293,7 @@ inline void ibuffer_set_curr(c_io_observer_unlocked cio, char *__restrict ptr) n
 }
 
 inline bool ibuffer_underflow(c_io_observer_unlocked cio)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::bsd_underflow_impl(cio.fp);
 }
@@ -328,6 +332,7 @@ inline void obuffer_set_curr(u8c_io_observer_unlocked cio,
 }
 
 inline void obuffer_overflow(u8c_io_observer_unlocked cio, char8_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::bsd_overflow(cio.fp, static_cast<char unsigned>(ch));
 }
@@ -366,6 +371,7 @@ inline void ibuffer_set_curr(u8c_io_observer_unlocked cio,
 }
 
 inline bool ibuffer_underflow(u8c_io_observer_unlocked cio)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::bsd_underflow_impl(cio.fp);
 }

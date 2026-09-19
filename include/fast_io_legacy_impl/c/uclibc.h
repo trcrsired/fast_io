@@ -78,6 +78,7 @@ extern int uclibc_fgetc_unlocked(FILE *) noexcept __asm__("__fgetc_unlocked");
 extern int uclibc_fputc_unlocked(int, FILE *) noexcept __asm__("__fputc_unlocked");
 
 inline bool uclibc_underflow_impl(FILE *fp)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	bool eof{uclibc_fgetc_unlocked(fp) == EOF};
 	if (eof && ((fp->__modeflags & __FLAG_ERROR) == __FLAG_ERROR))
@@ -89,6 +90,7 @@ inline bool uclibc_underflow_impl(FILE *fp)
 }
 
 inline void uclibc_overflow_impl(FILE *fp, char unsigned ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (uclibc_fputc_unlocked(static_cast<int>(ch), fp) == EOF)
 	{
@@ -125,6 +127,7 @@ inline void ibuffer_set_curr(c_io_observer_unlocked ciob, char *ptr) noexcept
 }
 
 inline bool ibuffer_underflow(c_io_observer_unlocked ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::uclibc_underflow_impl(ciob.fp);
 }
@@ -150,6 +153,7 @@ inline void obuffer_set_curr(c_io_observer_unlocked ciob, char *ptr) noexcept
 }
 
 inline void obuffer_overflow(c_io_observer_unlocked ciob, char ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::uclibc_overflow_impl(ciob.fp, static_cast<char unsigned>(ch));
 }
@@ -187,6 +191,7 @@ inline void ibuffer_set_curr(u8c_io_observer_unlocked ciob, char8_t *ptr) noexce
 }
 
 inline bool ibuffer_underflow(u8c_io_observer_unlocked ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::uclibc_underflow_impl(ciob.fp);
 }
@@ -221,6 +226,7 @@ inline void obuffer_set_curr(u8c_io_observer_unlocked ciob, char8_t *ptr) noexce
 }
 
 inline void obuffer_overflow(u8c_io_observer_unlocked ciob, char8_t ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::uclibc_overflow_impl(ciob.fp, static_cast<char unsigned>(ch));
 }
