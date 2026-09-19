@@ -138,7 +138,7 @@ inline void wincrt_fp_allocate_buffer_impl(FILE *__restrict fpp) noexcept
 [[__gnu__::__cold__]]
 #endif
 inline void wincrt_fp_write_cold_malloc_case_impl(FILE *__restrict fpp, char const *__restrict first,
-												  ::std::size_t diff)
+												  ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (diff == 0)
 	{
@@ -157,7 +157,8 @@ inline void wincrt_fp_write_cold_malloc_case_impl(FILE *__restrict fpp, char con
 
 	if (diff >= allocated_buffer_size)
 	{
-		::fast_io::details::posix_write_bytes_impl(fp->_file, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+		::fast_io::posix_io_observer piob{fp->_file};
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
 		return;
 	}
 
@@ -171,7 +172,7 @@ inline void wincrt_fp_write_cold_malloc_case_impl(FILE *__restrict fpp, char con
 }
 
 inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char const *__restrict first,
-												  ::std::size_t diff)
+												  ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
 	fp->_flag |= crt_dirty_value;
@@ -183,9 +184,10 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 	}
 	else
 	{
+		::fast_io::posix_io_observer piob{fp->_file};
 		// flush
-		::fast_io::details::posix_write_bytes_impl(fp->_file, reinterpret_cast<::std::byte *>(fp->_base), reinterpret_cast<::std::byte *>(fp->_ptr));
 
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
 		if (::std::size_t const bufsiz{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz))}; diff >= bufsiz)
 		{
 			// set to begin
@@ -193,7 +195,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz);
 
 			// directly output
-			::fast_io::details::posix_write_bytes_impl(fp->_file, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+			::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
 		}
 		else
 		{
@@ -225,7 +227,7 @@ template <::std::integral char_type>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch)
+inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
 	if (fp->_base == nullptr)
@@ -235,7 +237,8 @@ inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch)
 	else
 	{
 		// output all content
-		::fast_io::details::posix_write_bytes_impl(fp->_file, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_base + fp->_bufsiz));
+		::fast_io::posix_io_observer piob{fp->_file};
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_base + fp->_bufsiz));
 	}
 	fp->_ptr = fp->_base;
 	::fast_io::freestanding::my_memcpy(fp->_ptr, __builtin_addressof(ch), sizeof(ch));
@@ -468,7 +471,7 @@ inline void obuffer_set_curr(basic_c_io_observer_unlocked<char_type> ciob, char_
 }
 
 template <::std::integral char_type>
-inline void obuffer_overflow(basic_c_io_observer_unlocked<char_type> ciob, char_type ch)
+inline void obuffer_overflow(basic_c_io_observer_unlocked<char_type> ciob, char_type ch) FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::wincrt_fp_overflow_impl(ciob.fp, ch);
 }
