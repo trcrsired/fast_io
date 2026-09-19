@@ -140,25 +140,25 @@ concept has_any_of_pwrite_operations =
 template <typename stmtype>
 concept has_any_of_write_or_seek_pwrite_bytes_operations =
 	::fast_io::operations::decay::defines::has_any_of_write_bytes_operations<stmtype> ||
-	(::fast_io::operations::decay::defines::has_output_stream_seek_bytes_define<stmtype> &&
+	(::fast_io::operations::decay::defines::has_output_or_io_stream_seek_bytes_define<stmtype> &&
 	 ::fast_io::operations::decay::defines::has_any_of_pwrite_bytes_operations<stmtype>);
 
 template <typename stmtype>
 concept has_any_of_pwrite_or_seek_write_bytes_operations =
 	::fast_io::operations::decay::defines::has_any_of_pwrite_bytes_operations<stmtype> ||
-	(::fast_io::operations::decay::defines::has_output_stream_seek_bytes_define<stmtype> &&
+	(::fast_io::operations::decay::defines::has_output_or_io_stream_seek_bytes_define<stmtype> &&
 	 ::fast_io::operations::decay::defines::has_any_of_write_bytes_operations<stmtype>);
 
 template <typename stmtype>
 concept has_any_of_write_or_seek_pwrite_operations =
 	::fast_io::operations::decay::defines::has_any_of_write_operations<stmtype> ||
-	(::fast_io::operations::decay::defines::has_output_stream_seek_define<stmtype> &&
+	(::fast_io::operations::decay::defines::has_output_or_io_stream_seek_define<stmtype> &&
 	 ::fast_io::operations::decay::defines::has_any_of_pwrite_operations<stmtype>);
 
 template <typename stmtype>
 concept has_any_of_pwrite_or_seek_write_operations =
 	::fast_io::operations::decay::defines::has_any_of_pwrite_operations<stmtype> ||
-	(::fast_io::operations::decay::defines::has_output_stream_seek_define<stmtype> &&
+	(::fast_io::operations::decay::defines::has_output_or_io_stream_seek_define<stmtype> &&
 	 ::fast_io::operations::decay::defines::has_any_of_write_operations<stmtype>);
 
 template <typename stmtype>

@@ -22,6 +22,7 @@ template <::std::integral char_type, typename optstmtype>
 inline constexpr char_type const *write_some_typical_case(optstmtype optstm,
 														  basic_io_buffer_pointers<char_type> &__restrict pointers,
 														  char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<optstmtype>)
 	{
@@ -79,6 +80,7 @@ template <::std::integral char_type, typename optstmtype>
 inline constexpr void write_all_typical_case(optstmtype optstm,
 											 basic_io_buffer_pointers<char_type> &__restrict pointers,
 											 char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_any_of_write_bytes_operations<optstmtype>)
 	{
@@ -104,6 +106,7 @@ template <::std::integral char_type, typename allocator_type, ::std::size_t buff
 inline constexpr char_type const *write_some_overflow_impl(optstmtype optstm,
 														   basic_io_buffer_pointers<char_type> &pointers,
 														   char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	::std::size_t const diff{static_cast<::std::size_t>(last - first)};
 	if (pointers.buffer_begin == nullptr)
@@ -124,6 +127,7 @@ inline constexpr char_type const *write_some_overflow_impl(optstmtype optstm,
 template <::std::integral char_type, typename optstmtype>
 inline constexpr void write_all_nullptr_case(optstmtype optstm, basic_io_buffer_pointers<char_type> &__restrict pointers,
 											 char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_any_of_write_bytes_operations<optstmtype>)
 	{
@@ -152,6 +156,7 @@ inline constexpr void write_all_nullptr_case(optstmtype optstm, basic_io_buffer_
 template <::std::integral char_type, typename allocator_type, ::std::size_t buffer_size, typename optstmtype>
 inline constexpr void write_all_overflow_impl(optstmtype optstm, basic_io_buffer_pointers<char_type> &pointers,
 											  char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	::std::size_t const diff{static_cast<::std::size_t>(last - first)};
 	if (pointers.buffer_begin == nullptr)
@@ -171,6 +176,7 @@ inline constexpr void write_all_overflow_impl(optstmtype optstm, basic_io_buffer
 
 template <::std::integral char_type, typename optstmtype>
 inline constexpr void output_stream_buffer_flush_impl(optstmtype optstm, basic_io_buffer_pointers<char_type> &pointers)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	if (pointers.buffer_begin == pointers.buffer_curr)
 	{
@@ -183,6 +189,7 @@ inline constexpr void output_stream_buffer_flush_impl(optstmtype optstm, basic_i
 template <::std::integral char_type, typename allocator_type, ::std::size_t buffer_size, typename optstmtype>
 inline constexpr void obuffer_minimum_size_flush_prepare_impl(optstmtype optstm,
 															  basic_io_buffer_pointers<char_type> &pointers)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<optstmtype>)
 {
 	if (pointers.buffer_begin == pointers.buffer_curr)
 	{
@@ -208,6 +215,7 @@ inline constexpr typename io_buffer_type::output_char_type const *
 write_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 						   typename io_buffer_type::output_char_type const *first,
 						   typename io_buffer_type::output_char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	return ::fast_io::details::io_buffer::write_some_overflow_impl<typename io_buffer_type::output_char_type,
 																   typename io_buffer_type::traits_type::allocator_type,
@@ -219,6 +227,7 @@ template <typename io_buffer_type>
 inline constexpr void write_all_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 												typename io_buffer_type::output_char_type const *first,
 												typename io_buffer_type::output_char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	return ::fast_io::details::io_buffer::write_all_overflow_impl<typename io_buffer_type::output_char_type,
 																  typename io_buffer_type::traits_type::allocator_type,
@@ -233,6 +242,7 @@ pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 							typename io_buffer_type::output_char_type const *first,
 							typename io_buffer_type::output_char_type const *last,
 							::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	return ::fast_io::operations::decay::pwrite_some_decay(::fast_io::operations::output_stream_ref(iobref.iobptr->handle), first, last, off);
 }
@@ -242,6 +252,7 @@ inline constexpr void pwrite_all_overflow_define(basic_io_buffer_ref<io_buffer_t
 												 typename io_buffer_type::output_char_type const *first,
 												 typename io_buffer_type::output_char_type const *last,
 												 ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	::fast_io::operations::decay::pwrite_all_decay(::fast_io::operations::output_stream_ref(iobref.iobptr->handle), first, last, off);
 }
@@ -251,6 +262,7 @@ inline constexpr ::fast_io::io_scatter_status_t
 scatter_pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 									::fast_io::basic_io_scatter_t<typename io_buffer_type::output_char_type> pscatters,
 									::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	return ::fast_io::operations::decay::scatter_pwrite_some_decay(::fast_io::operations::output_stream_ref(iobref.iobptr->handle), pscatters, n, off);
 }
@@ -259,12 +271,14 @@ template <typename io_buffer_type>
 inline constexpr void scatter_pwrite_all_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														 ::fast_io::basic_io_scatter_t<typename io_buffer_type::output_char_type> pscatters,
 														 ::std::size_t n, ::fast_io::intfpos_t off)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	::fast_io::operations::decay::scatter_pwrite_all_decay(::fast_io::operations::output_stream_ref(iobref.iobptr->handle), pscatters, n, off);
 }
 
 template <typename io_buffer_type>
 inline constexpr void output_stream_buffer_flush_define(basic_io_buffer_ref<io_buffer_type> iobref)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	::fast_io::details::io_buffer::output_stream_buffer_flush_impl<typename io_buffer_type::output_char_type>(
 		::fast_io::operations::output_stream_ref(iobref.iobptr->handle), iobref.iobptr->output_buffer);
@@ -305,6 +319,7 @@ inline constexpr ::std::size_t
 
 template <typename io_buffer_type>
 inline constexpr void obuffer_minimum_size_flush_prepare_define(basic_io_buffer_ref<io_buffer_type> iobref)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 {
 	::fast_io::details::io_buffer::obuffer_minimum_size_flush_prepare_impl<
 		typename io_buffer_type::output_char_type, typename io_buffer_type::traits_type::allocator_type,

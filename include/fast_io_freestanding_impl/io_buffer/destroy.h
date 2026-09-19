@@ -5,6 +5,10 @@ namespace fast_io::details
 
 template <typename T>
 inline constexpr void close_basic_io_buffer(T &t)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		(T::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
+		!::fast_io::operations::decay::defines::output_stream_operations_nothrow<
+			decltype(::fast_io::operations::output_stream_ref(::std::declval<typename T::handle_type &>()))>)
 {
 	using traits_type = typename T::traits_type;
 	constexpr auto mode{traits_type::mode};
@@ -37,13 +41,17 @@ inline constexpr void destroy_basic_io_buffer(T &t) noexcept
 	constexpr auto mode{traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out)
 	{
-#ifdef FAST_IO_CPP_EXCEPTIONS
+#if defined(__HERBCEPTIONS__) || defined(FAST_IO_CPP_EXCEPTIONS)
 		try
 #endif
 		{
 			::fast_io::details::close_basic_io_buffer(t);
 		}
-#ifdef FAST_IO_CPP_EXCEPTIONS
+#ifdef __HERBCEPTIONS__
+		catch throws(::std::error)
+		{
+		}
+#elif defined(FAST_IO_CPP_EXCEPTIONS)
 		catch (...)
 		{
 		}

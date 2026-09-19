@@ -9,31 +9,42 @@ template <typename outstmtype>
 inline constexpr typename outstmtype::output_char_type const *
 pwrite_some_cold_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 					  typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::pwritable<outstmtype>
 ;
 template <typename outstmtype>
 inline constexpr ::std::byte const *pwrite_some_bytes_cold_impl(outstmtype outsm, ::std::byte const *first,
 																::std::byte const *last, ::fast_io::intfpos_t off)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>
+;
 
 template <typename outstmtype>
 inline constexpr void pwrite_all_cold_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 										   typename outstmtype::output_char_type const *last, ::fast_io::intfpos_t off)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::pwritable<outstmtype>
+;
 
 template <typename outstmtype>
 inline constexpr void pwrite_all_bytes_cold_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last,
 												 ::fast_io::intfpos_t)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>
+;
 
 template <typename outstmtype>
 inline constexpr ::std::byte const *write_some_bytes_cold_impl(outstmtype outsm, ::std::byte const *first,
 															   ::std::byte const *last)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_writable<outstmtype>
+;
 
 template <typename outstmtype>
 inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>);
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_writable<outstmtype>
+;
 
 template <typename outstmtype>
 #if __has_cpp_attribute(__gnu__::__cold__)
@@ -43,6 +54,7 @@ inline constexpr typename outstmtype::output_char_type const *
 write_some_cold_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 					 typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::writable<outstmtype>
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_write_some_overflow_define<outstmtype>)
@@ -131,6 +143,7 @@ template <typename outstmtype>
 inline constexpr ::std::byte const *write_some_bytes_cold_impl(outstmtype outsm, ::std::byte const *first,
 															   ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_writable<outstmtype>
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_write_some_bytes_overflow_define<outstmtype>)
@@ -233,6 +246,7 @@ template <typename outstmtype>
 inline constexpr void write_all_cold_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 										  typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::writable<outstmtype>
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_write_all_overflow_define<outstmtype>)
@@ -349,6 +363,7 @@ template <typename outstmtype>
 #endif
 inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_writable<outstmtype>
 {
 	using char_type = typename outstmtype::output_char_type;
 	using char_type_const_ptr
@@ -472,6 +487,7 @@ inline constexpr typename outstmtype::output_char_type const *
 write_some_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -506,6 +522,7 @@ template <typename outstmtype>
 inline constexpr void write_all_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									 typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -535,6 +552,7 @@ template <typename outstmtype>
 inline constexpr ::std::byte const *write_some_bytes_impl(outstmtype outsm, ::std::byte const *first,
 														  ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -570,6 +588,7 @@ inline constexpr ::std::byte const *write_some_bytes_impl(outstmtype outsm, ::st
 template <typename outstmtype>
 inline constexpr void write_all_bytes_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -617,6 +636,7 @@ inline constexpr void
 char_put_cold_impl(outstmtype outstm,
 				   typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
+	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>)
 	{
@@ -632,6 +652,7 @@ template <typename outstm>
 inline constexpr void
 char_put_impl(outstm outsm, typename decltype(::fast_io::operations::output_stream_ref(outsm))::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstm>)
+	requires ((::fast_io::operations::decay::defines::writable<outstm> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstm>) || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstm>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstm>)
 	{

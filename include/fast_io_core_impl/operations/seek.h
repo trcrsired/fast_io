@@ -14,6 +14,9 @@ template <typename T>
 [[msvc::forceinline]]
 #endif
 inline constexpr void input_stream_buffer_flush_decay(T t)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<T> ||
+								   (!::fast_io::operations::decay::defines::has_input_stream_buffer_flush_define<T> &&
+									!::fast_io::operations::decay::defines::output_stream_operations_nothrow<T>))
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_stream_buffer_flush_define<T>)
 	{
@@ -53,6 +56,8 @@ template <typename T>
 [[msvc::forceinline]]
 #endif
 inline constexpr void io_stream_buffer_flush_decay(T t)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<T> ||
+								   !::fast_io::operations::decay::defines::output_stream_operations_nothrow<T>)
 {
 	return io_stream_buffer_flush_define(t);
 }
@@ -494,6 +499,10 @@ template <typename T>
 [[msvc::forceinline]]
 #endif
 inline constexpr void input_stream_buffer_flush(T &&t)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<T> ||
+								   (!::fast_io::operations::decay::defines::has_input_stream_buffer_flush_define<
+										decltype(::fast_io::operations::input_stream_ref(t))> &&
+									!::fast_io::operations::defines::output_stream_operations_nothrow<T>))
 {
 	::fast_io::operations::decay::input_stream_buffer_flush_decay(::fast_io::operations::input_stream_ref(t));
 }
@@ -517,6 +526,8 @@ template <typename T>
 [[msvc::forceinline]]
 #endif
 inline constexpr void io_stream_buffer_flush(T &&t)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<T> ||
+								   !::fast_io::operations::defines::output_stream_operations_nothrow<T>)
 {
 	::fast_io::operations::decay::io_stream_buffer_flush_decay(::fast_io::operations::io_stream_ref(t));
 }

@@ -7,7 +7,11 @@ namespace details
 {
 
 template <typename T>
-inline constexpr void close_basic_io_buffer(T &);
+inline constexpr void close_basic_io_buffer(T &)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		(T::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
+		!::fast_io::operations::decay::defines::output_stream_operations_nothrow<
+			decltype(::fast_io::operations::output_stream_ref(::std::declval<typename T::handle_type &>()))>);
 template <typename T>
 inline constexpr void clear_basic_io_buffer_pointers(T &) noexcept;
 template <typename T>
@@ -84,7 +88,11 @@ public:
 			!noexcept(handle_type(::std::declval<Args>()...)) ||
 			requires { requires !noexcept(::std::declval<handle_type &>().reopen(::std::declval<Args>()...)); } ||
 			requires { requires !noexcept(::std::declval<handle_type &>() = ::std::declval<handle_type>()); } ||
-			requires { requires !noexcept(::std::declval<handle_type &>().close()); })
+			requires { requires !noexcept(::std::declval<handle_type &>().close()); } ||
+			((traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
+			 requires { ::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()); } &&
+			 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
+				 decltype(::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()))>))
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);
@@ -100,7 +108,11 @@ public:
 
 	inline constexpr void close()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(
-			requires { requires !noexcept(::std::declval<handle_type &>().close()); })
+			requires { requires !noexcept(::std::declval<handle_type &>().close()); } ||
+			((traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
+			 requires { ::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()); } &&
+			 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
+				 decltype(::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()))>))
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);

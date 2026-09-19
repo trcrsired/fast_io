@@ -4,6 +4,7 @@
 #include "lockguard.h"
 #include "common.h"
 #include "writeimpl/throws_if.h"
+#include "readimpl/throws_if.h"
 #include "seek.h"
 #include "multiblock_iterator_view/impl.h"
 

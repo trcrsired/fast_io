@@ -103,6 +103,13 @@ inline constexpr void ibuffer_set_curr(basic_ibuffer_view_ref<ch_type> view, ch_
 }
 
 template <::std::integral ch_type>
+[[nodiscard]] inline constexpr ch_type *read_some_underflow_define(basic_ibuffer_view_ref<ch_type>, ch_type *first,
+																  ch_type *) noexcept
+{
+	return first;
+}
+
+template <::std::integral ch_type>
 [[nodiscard]] inline constexpr bool ibuffer_underflow(basic_ibuffer_view_ref<ch_type>) noexcept
 {
 	return false;
@@ -255,6 +262,14 @@ template <::std::integral ch_type>
 inline constexpr void obuffer_set_curr(basic_obuffer_view_ref<ch_type> view, ch_type *ptr) noexcept
 {
 	view.ptr->curr_ptr = ptr;
+}
+
+template <::std::integral ch_type>
+inline constexpr ch_type const *write_some_overflow_define(basic_obuffer_view_ref<ch_type>, ch_type const *first,
+														   ch_type const *) noexcept
+{
+	::fast_io::fast_terminate();
+	return first;
 }
 
 template <::std::integral ch_type>

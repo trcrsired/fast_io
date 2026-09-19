@@ -4,8 +4,8 @@ namespace fast_io::details
 {
 
 template <typename char_type, typename T>
-concept has_any_print_define_operations_not_noexcept = ::std::integral<char_type> && ((::fast_io::printable<char_type, T> && !requires() {
-																						  { print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>) } noexcept;
+concept has_any_print_define_operations_not_noexcept = ::std::integral<char_type> && ((::fast_io::printable<char_type, T> && !requires(::fast_io::details::dummy_buffer_output_stream<char_type> out, T t) {
+																						  { print_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, out, t) } noexcept;
 																					  }) || (::fast_io::reserve_printable<char_type, T> && !requires(char_type *ptr, T t) {
 																						  { print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>, ptr, t) } noexcept;
 																					  }) || (::fast_io::dynamic_reserve_printable<char_type, T> && !requires(char_type *ptr, T t) {

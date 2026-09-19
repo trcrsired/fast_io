@@ -9,12 +9,14 @@ namespace operations::decay
 template <typename instmtype>
 inline constexpr ::std::byte *read_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 ;
 
 template <typename instmtype>
 inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
 													 ::fast_io::intfpos_t)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::bytes_preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 ;
 
 } // namespace operations::decay
@@ -28,6 +30,7 @@ template <typename instmtype>
 inline constexpr io_scatter_status_t scatter_read_some_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters,
 																	   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_readable<instmtype>
 ;
 
 template <typename instmtype>
@@ -36,6 +39,7 @@ template <typename instmtype>
 #endif
 inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_readable<instmtype>
 ;
 
 template <typename instmtype>
@@ -46,6 +50,7 @@ inline constexpr void
 scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::readable<instmtype>
 ;
 
 template <typename instmtype>
@@ -56,6 +61,7 @@ inline constexpr io_scatter_status_t
 scatter_read_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 							::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::readable<instmtype>
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_read_some_underflow_define<instmtype>)
@@ -151,6 +157,7 @@ inline constexpr io_scatter_status_t
 scatter_read_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 					   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -207,6 +214,7 @@ inline constexpr void
 scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::readable<instmtype>
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_read_all_underflow_define<instmtype>)
@@ -300,6 +308,7 @@ inline constexpr void scatter_read_all_impl(instmtype insm,
 											basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

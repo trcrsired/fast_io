@@ -12,6 +12,7 @@ template <typename instmtype>
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters,
 																		::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_preadable<instmtype>
 ;
 
 template <typename instmtype>
@@ -21,6 +22,7 @@ template <typename instmtype>
 inline constexpr void scatter_pread_all_bytes_cold_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
 														::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::bytes_preadable<instmtype>
 ;
 
 template <typename instmtype>
@@ -31,6 +33,7 @@ inline constexpr io_scatter_status_t
 scatter_pread_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 							 ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::preadable<instmtype>
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_some_underflow_define<instmtype>)
@@ -131,6 +134,7 @@ inline constexpr io_scatter_status_t
 scatter_pread_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -153,6 +157,7 @@ inline constexpr void
 scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 							::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires ::fast_io::operations::decay::defines::preadable<instmtype>
 {
 	if constexpr (::fast_io::operations::decay::defines::has_scatter_pread_all_underflow_define<instmtype>)
 	{
@@ -252,6 +257,7 @@ inline constexpr void scatter_pread_all_impl(instmtype insm,
 											 basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											 ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
+	requires (::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
