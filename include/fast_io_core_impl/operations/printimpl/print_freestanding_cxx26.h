@@ -67,8 +67,7 @@ inline consteval ::std::size_t first_print_define_index() noexcept
 				  ::fast_io::details::index_array_range<0, sizeof...(Args)>)
 	{
 		using ArgsIType = ::std::remove_cvref_t<Args...[i]>;
-		if constexpr (!(::fast_io::printable<char_type, ArgsIType> ||
-						::fast_io::reserve_printable<char_type, ArgsIType> ||
+		if constexpr (!(::fast_io::reserve_printable<char_type, ArgsIType> ||
 						::fast_io::dynamic_reserve_printable<char_type,
 															 ArgsIType> ||
 						::fast_io::scatter_printable<char_type, ArgsIType> ||
@@ -93,8 +92,7 @@ first_print_define_index_range() noexcept
 				  ::fast_io::details::index_array_range<0, sizeof...(Args)>)
 	{
 		using ArgsIType = ::std::remove_cvref_t<Args...[i]>;
-		if constexpr (::fast_io::printable<char_type, ArgsIType> ||
-					  ::fast_io::reserve_printable<char_type, ArgsIType> ||
+		if constexpr (::fast_io::reserve_printable<char_type, ArgsIType> ||
 					  ::fast_io::dynamic_reserve_printable<char_type,
 														   ArgsIType> ||
 					  ::fast_io::scatter_printable<char_type, ArgsIType> ||
@@ -378,7 +376,7 @@ print_freestanding_decay(outputstmtype optstm,
 			// Left side: 0 .. startpos-1
 			if constexpr (printdefine_startpos != 0)
 			{
-				[&]<::std::size_t... pos>(::std::index_sequence<pos...>) {
+				[&]<::std::size_t... pos>(::std::index_sequence<pos...>) FAST_IO_HERBCEPTIONS_THROWS {
 					::fast_io::operations::decay::print_freestanding_decay<line>(
 						optstm, args...[pos]...);
 				}(::std::make_index_sequence<printdefine_startpos>{});
@@ -387,7 +385,8 @@ print_freestanding_decay(outputstmtype optstm,
 			template for (constexpr auto i :
 						  ::fast_io::details::index_array_range<printdefine_startpos, printdefine_endpos>)
 			{
-				print_define(optstm, args...[i]);
+				print_define(::fast_io::io_reserve_type<output_char_type, ::std::remove_cvref_t<Args...[i]>>,
+							 optstm, args...[i]);
 			}
 			// Right side: split_pos+1 .. n-1
 			if constexpr (printdefine_endpos == sizeof...(Args))
@@ -404,7 +403,7 @@ print_freestanding_decay(outputstmtype optstm,
 			}
 			else
 			{
-				[&]<::std::size_t... pos>(::std::index_sequence<pos...>) {
+				[&]<::std::size_t... pos>(::std::index_sequence<pos...>) FAST_IO_HERBCEPTIONS_THROWS {
 					::fast_io::operations::decay::print_freestanding_decay<line>(
 						optstm, args...[printdefine_endpos + pos]...);
 				}(::std::make_index_sequence<sizeof...(Args) - printdefine_endpos>{});
