@@ -1,6 +1,8 @@
 ﻿// Please keep it in reverse order with the macros in push_macros.h
 
 #pragma pop_macro("FAST_IO_INDETERMINATE")
+#pragma pop_macro("FAST_IO_HERBCEPTIONS_CATCH_ALL")
+#pragma pop_macro("FAST_IO_HERBCEPTIONS_TRY")
 #pragma pop_macro("FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT")
 #pragma pop_macro("FAST_IO_HERBCEPTIONS_THROWS_IF")
 #pragma pop_macro("FAST_IO_HERBCEPTIONS_THROWS")

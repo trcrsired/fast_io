@@ -270,17 +270,30 @@ Internal assert macros for fuzzing fast_io.
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS")
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS_IF")
 #pragma push_macro("FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT")
+#pragma push_macro("FAST_IO_HERBCEPTIONS_TRY")
+#pragma push_macro("FAST_IO_HERBCEPTIONS_CATCH_ALL")
 #undef FAST_IO_HERBCEPTIONS_THROWS
 #undef FAST_IO_HERBCEPTIONS_THROWS_IF
-#undef FAST_IO_HERBCEPTIONS_THROWS_THROWS
+#undef FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT
+#undef FAST_IO_HERBCEPTIONS_TRY
+#undef FAST_IO_HERBCEPTIONS_CATCH_ALL
 #ifdef __HERBCEPTIONS__
 #define FAST_IO_HERBCEPTIONS_THROWS throws
 #define FAST_IO_HERBCEPTIONS_THROWS_IF(...) throws(__VA_ARGS__)
 #define FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(...) throws(!noexcept(__VA_ARGS__))
+#define FAST_IO_HERBCEPTIONS_TRY try
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL catch throws(::std::error)
 #else
 #define FAST_IO_HERBCEPTIONS_THROWS
 #define FAST_IO_HERBCEPTIONS_THROWS_IF(...) noexcept(!(__VA_ARGS__))
 #define FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(...) noexcept(noexcept(__VA_ARGS__))
+#ifdef FAST_IO_CPP_EXCEPTIONS
+#define FAST_IO_HERBCEPTIONS_TRY try
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL catch (...)
+#else
+#define FAST_IO_HERBCEPTIONS_TRY if constexpr (true)
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL if constexpr (false)
+#endif
 #endif
 
 #pragma push_macro("FAST_IO_INDETERMINATE")

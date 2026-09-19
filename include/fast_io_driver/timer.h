@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "../fast_io.h"
 #include "../fast_io_dsal/string_view.h"
+#include "../fast_io_dsal/impl/misc/push_warnings.h"
+#include "../fast_io_dsal/impl/misc/push_macros.h"
 
 namespace fast_io
 {
@@ -24,9 +26,16 @@ struct timer
 	[[__gnu__::__cold__]]
 #endif
 	inline ~timer()
-		FAST_IO_HERBCEPTIONS_THROWS
 	{
-		::fast_io::io::perr(::fast_io::u8err(), s, u8":", posix_clock_gettime(posix_clock_id::monotonic_raw) - t0, u8"s\n");
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+			::fast_io::io::perr(::fast_io::u8err(), s, u8":", posix_clock_gettime(posix_clock_id::monotonic_raw) - t0, u8"s\n");
+		}
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
+		{}
 	}
 };
 } // namespace fast_io
+
+#include "../fast_io_dsal/impl/misc/pop_macros.h"
+#include "../fast_io_dsal/impl/misc/pop_warnings.h"
