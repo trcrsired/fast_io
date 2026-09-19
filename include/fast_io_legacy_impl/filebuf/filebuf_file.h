@@ -25,13 +25,13 @@ public:
 	inline basic_filebuf_file(decltype(nullptr)) = delete;
 
 	template <c_family family>
-	inline basic_filebuf_file(::fast_io::io_construct_t, basic_c_family_io_observer<family, char_type> ciob, open_mode mode)
+	inline basic_filebuf_file(::fast_io::io_construct_t, basic_c_family_io_observer<family, char_type> ciob, open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_io_observer<CharT, Traits>{
 			  ::fast_io::details::streambuf_hack::open_hacked_basic_filebuf<CharT, Traits>(ciob.fp, mode)}
 	{
 	}
 	template <c_family family>
-	inline basic_filebuf_file(basic_c_family_file<family, char_type> &&chd, open_mode mode)
+	inline basic_filebuf_file(basic_c_family_file<family, char_type> &&chd, open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_io_observer<CharT, Traits>{
 			  ::fast_io::details::streambuf_hack::open_hacked_basic_filebuf<CharT, Traits>(chd.fp, mode)}
 	{

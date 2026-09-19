@@ -570,7 +570,7 @@ inline void set_dos_unix_timestamp(unix_timestamp tsp)
 } // namespace details
 #endif
 
-inline unix_timestamp posix_clock_gettime([[maybe_unused]] posix_clock_id pclk_id)
+inline unix_timestamp posix_clock_gettime([[maybe_unused]] posix_clock_id pclk_id) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__CYGWIN__))
 	switch (pclk_id)
@@ -987,7 +987,7 @@ extern char *m_tzname[2] __asm__("_tzname");
 extern int m_daylight __asm__("_daylight");
 #endif
 
-inline bool posix_daylight()
+inline bool posix_daylight() FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__MSDOS__) || (defined(__wasi__) && !defined(__wasilibc_unmodified_upstream)) || defined(__AVR__)
 	return 0;

@@ -140,7 +140,7 @@ template <typename CharT, typename Traits>
 [[nodiscard]]
 #endif
 inline ::std::basic_filebuf<CharT, Traits> *
-open_libstdcxx_basic_filebuf_ios_base_open_mode(::std::__c_file *fp, ::std::ios_base::openmode mode)
+open_libstdcxx_basic_filebuf_ios_base_open_mode(::std::__c_file *fp, ::std::ios_base::openmode mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (fp == nullptr)
 	{
@@ -164,7 +164,8 @@ template <typename CharT, typename Traits>
 #if __has_cpp_attribute(nodiscard)
 [[nodiscard]]
 #endif
-inline ::std::basic_filebuf<CharT, Traits> *open_hacked_basic_filebuf(::std::__c_file *fp, ::fast_io::open_mode mode)
+inline ::std::basic_filebuf<CharT, Traits> *open_hacked_basic_filebuf(::std::__c_file *fp,
+																	 ::fast_io::open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return open_libstdcxx_basic_filebuf_ios_base_open_mode<CharT, Traits>(
 		fp, ::fast_io::details::calculate_fstream_file_open_mode(mode));
