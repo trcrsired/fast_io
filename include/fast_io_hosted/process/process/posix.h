@@ -630,7 +630,7 @@ inline pid_t pipefork_execveat_common_impl(int dirfd, char const *cstr, char con
 		// subprocess
 		if ((mode & process_mode::new_session) == process_mode::new_session)
 		{
-			posix_setsid();
+			(void)posix_setsid();
 		}
 
 		error_pipe.in().close();
@@ -774,23 +774,23 @@ struct fd_remapper
 		auto &m = fds[fd];
 		m.original = fd;
 		m.backup = sys_dup(m.original);
-		sys_fcntl(m.backup, F_SETFD, FD_CLOEXEC);
+		(void)sys_fcntl(m.backup, F_SETFD, FD_CLOEXEC);
 		bool const is_stdin{fd == 0};
 		if (io.pipe_fds) // fastio pipes are always with CLOEXEC
 		{
-			sys_dup2(io.pipe_fds[is_stdin ? 0 : 1], m.original);
+			(void)sys_dup2(io.pipe_fds[is_stdin ? 0 : 1], m.original);
 		}
 		else if (io.dev_null)
 		{
-			sys_dup2(devnull(), m.original);
+			(void)sys_dup2(devnull(), m.original);
 		}
 		else
 		{
 			m.newfd = io.fd;
 			m.newfd_flag = sys_fcntl(m.newfd, F_GETFD);
-			sys_fcntl(m.newfd, F_SETFD, m.newfd_flag | FD_CLOEXEC);
+			(void)sys_fcntl(m.newfd, F_SETFD, m.newfd_flag | FD_CLOEXEC);
 			m.setfd_needed = true;
-			sys_dup2(io.fd, m.original);
+			(void)sys_dup2(io.fd, m.original);
 		}
 	}
 
@@ -859,7 +859,7 @@ inline pid_t vfork_execveat_common_impl(int dirfd, char const *cstr, char const 
 
 	if (t_errno)
 	{
-		posix_waitpid(pid);
+		(void)posix_waitpid(pid);
 		throw_posix_error(t_errno);
 	}
 	return pid;
