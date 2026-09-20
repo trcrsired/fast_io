@@ -1,0 +1,5 @@
+["scatter_write.cc"]
+platform = "windows"
+
+["scatter_write_seq.cc"]
+platform = "windows"

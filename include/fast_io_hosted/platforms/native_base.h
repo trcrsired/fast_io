@@ -15,8 +15,6 @@ inline constexpr ::std::uint_least32_t win32_stderr_number(static_cast<::std::ui
 #include "win32_code.h"
 #include "win32_io_redirection.h"
 #include "nt/impl.h"
-
-#include "nt.h"
 // #include"win32_iocp_overlapped.h"
 
 #include "win32.h"

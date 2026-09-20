@@ -22,12 +22,194 @@ inline constexpr io_scatter_status_t scatter_size_to_status(::std::size_t sz, ba
 
 namespace details
 {
+// A buffer holds `inbuf` bytes which are a contiguous slice of the scatter stream ending
+// `lastendpos` bytes into scatter `base[n - 1]` (pass `lastendpos == base[n - 1].len` when
+// the slice ends at that scatter's end). `unwritten` bytes at the buffer tail were not
+// transferred. Walk backwards to locate the scatter position of the first untransferred
+// byte.
+template <typename T>
+inline constexpr io_scatter_status_t scatter_locate_backward(basic_io_scatter_t<T> const *base, ::std::size_t n,
+															 ::std::size_t lastendpos, ::std::size_t unwritten,
+															 ::std::size_t inbuf) noexcept
+{
+	::std::size_t endpos{lastendpos};
+	for (auto pj{base + n};;)
+	{
+		--pj;
+		::std::size_t copied{endpos < inbuf ? endpos : inbuf};
+		if (unwritten <= copied)
+		{
+			return {static_cast<::std::size_t>(pj - base), endpos - unwritten};
+		}
+		unwritten -= copied;
+		inbuf -= copied;
+		endpos = pj[-1].len;
+	}
+}
+
 template <typename T>
 struct basic_scatter_total_size_overflow_result
 {
 	T total_size{};
 	::std::size_t position{};
 };
+
+// Emulates scatter-write on platforms without a vectored-write syscall.
+// buftype is a buffer_alloc_arr_ptr-like type; op(handle, first, last) performs one
+// chunk transfer and returns the end of the written range (carrying offset state itself).
+template <typename buftype, typename func>
+inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restrict handle,
+																  io_scatter_t const *__restrict pscatters,
+																  ::std::size_t n, func op)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (!n)
+	{
+		return {};
+	}
+	constexpr ::std::size_t buffersz{4096zu};
+	constexpr ::std::size_t directsz{(buffersz >> 2) * 3};
+	buftype buffer;
+	::std::byte *buf_currptr{}, *buf_endptr{};
+	auto psci{pscatters}, psce{psci + n};
+	for (; psci != psce; ++psci)
+	{
+		::std::size_t len{psci->len};
+		if (!len)
+		{
+			continue;
+		}
+		auto base{reinterpret_cast<::std::byte const *>(psci->base)};
+		::std::size_t to_copied{len};
+		::std::size_t remained_size{static_cast<::std::size_t>(buf_endptr - buf_currptr)};
+		if (remained_size < to_copied)
+		{
+			to_copied = remained_size;
+		}
+		buf_currptr = ::fast_io::freestanding::nonoverlapped_bytes_copy_n(base, to_copied, buf_currptr);
+		if (buf_currptr != buf_endptr)
+		{
+			continue;
+		}
+		if (buf_currptr != buffer.ptr)
+		{
+			auto written{op(handle, buffer.ptr, buf_currptr)};
+			if (written != buf_currptr)
+			{
+				return scatter_locate_backward(pscatters, static_cast<::std::size_t>(psci - pscatters + 1), to_copied,
+											   static_cast<::std::size_t>(buf_currptr - written),
+											   static_cast<::std::size_t>(buf_currptr - buffer.ptr));
+			}
+			buf_currptr = buffer.ptr;
+		}
+		auto newbase{base + to_copied};
+		auto pied{base + len};
+		if (newbase == pied)
+		{
+			continue;
+		}
+		bool islast{psci == psce - 1};
+		::std::size_t after_to_copied{len - to_copied};
+		if (directsz <= after_to_copied || islast)
+		{
+			auto written{op(handle, newbase, pied)};
+			if (written != pied)
+			{
+				return {static_cast<::std::size_t>(psci - pscatters), static_cast<::std::size_t>(written - base)};
+			}
+			if (islast)
+			{
+				return {n, 0zu};
+			}
+			continue;
+		}
+		if (buffer.ptr == nullptr)
+		{
+			buf_endptr = (buf_currptr = buffer.allocate_new(buffersz)) + buffersz;
+		}
+		buf_currptr = ::fast_io::freestanding::nonoverlapped_bytes_copy_n(newbase, after_to_copied, buf_currptr);
+	}
+	if (buffer.ptr != buf_currptr)
+	{
+		auto written{op(handle, buffer.ptr, buf_currptr)};
+		if (written != buf_currptr)
+		{
+			return scatter_locate_backward(pscatters, n, psce[-1].len,
+										   static_cast<::std::size_t>(buf_currptr - written),
+										   static_cast<::std::size_t>(buf_currptr - buffer.ptr));
+		}
+	}
+	return {n, 0zu};
+}
+
+// write-all variant of scatter_write_pwrite_some_bytes_common: op(handle, first, last) must
+// transfer the whole chunk or throw, so no partial-write location tracking is needed.
+template <typename buftype, typename func>
+inline void scatter_write_pwrite_all_bytes_common(void *__restrict handle,
+												  io_scatter_t const *__restrict pscatters,
+												  ::std::size_t n, func op) FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (!n)
+	{
+		return;
+	}
+	constexpr ::std::size_t buffersz{4096zu};
+	constexpr ::std::size_t directsz{(buffersz >> 2) * 3};
+	buftype buffer;
+	::std::byte *buf_currptr{}, *buf_endptr{};
+	auto psci{pscatters}, psce{psci + n};
+	for (; psci != psce; ++psci)
+	{
+		::std::size_t len{psci->len};
+		if (!len)
+		{
+			continue;
+		}
+		auto base{reinterpret_cast<::std::byte const *>(psci->base)};
+		::std::size_t to_copied{len};
+		::std::size_t remained_size{static_cast<::std::size_t>(buf_endptr - buf_currptr)};
+		if (remained_size < to_copied)
+		{
+			to_copied = remained_size;
+		}
+		buf_currptr = ::fast_io::freestanding::nonoverlapped_bytes_copy_n(base, to_copied, buf_currptr);
+		if (buf_currptr != buf_endptr)
+		{
+			continue;
+		}
+		if (buf_currptr != buffer.ptr)
+		{
+			op(handle, buffer.ptr, buf_currptr);
+			buf_currptr = buffer.ptr;
+		}
+		auto newbase{base + to_copied};
+		auto pied{base + len};
+		if (newbase == pied)
+		{
+			continue;
+		}
+		bool islast{psci == psce - 1};
+		::std::size_t after_to_copied{len - to_copied};
+		if (directsz <= after_to_copied || islast)
+		{
+			op(handle, newbase, pied);
+			if (islast)
+			{
+				return;
+			}
+			continue;
+		}
+		if (buffer.ptr == nullptr)
+		{
+			buf_endptr = (buf_currptr = buffer.allocate_new(buffersz)) + buffersz;
+		}
+		buf_currptr = ::fast_io::freestanding::nonoverlapped_bytes_copy_n(newbase, after_to_copied, buf_currptr);
+	}
+	if (buffer.ptr != buf_currptr)
+	{
+		op(handle, buffer.ptr, buf_currptr);
+	}
+}
 } // namespace details
 using scatter_total_size_overflow_result = ::fast_io::details::basic_scatter_total_size_overflow_result<::std::size_t>;
 

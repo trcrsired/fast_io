@@ -100,7 +100,7 @@ template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters,
 																	::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -158,7 +158,8 @@ inline constexpr void scatter_pwrite_all_bytes_cold_impl(outstmtype outsm, io_sc
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::fast_io::details::pwrite_all_bytes_impl(outsm, pi.base + pisc, pi.base + pi.len, off);
+				::std::byte const *pibase{reinterpret_cast<::std::byte const *>(pi.base) + pisc};
+				::fast_io::details::pwrite_all_bytes_impl(outsm, pibase, pibase + (pi.len - pisc), off);
 				off = ::fast_io::fposoffadd_nonegative(off, pi.len - pisc);
 				++retpos;
 			}
@@ -221,7 +222,7 @@ template <typename outstmtype>
 inline constexpr void scatter_pwrite_all_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n,
 													::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
