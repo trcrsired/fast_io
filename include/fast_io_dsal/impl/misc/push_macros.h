@@ -267,6 +267,23 @@ Internal assert macros for fuzzing fast_io.
 #endif
 #endif
 
+#pragma push_macro("FAST_IO_HERBCEPTIONS_TRY")
+#undef FAST_IO_HERBCEPTIONS_TRY
+#if defined(__HERBCEPTIONS__) || defined(FAST_IO_CPP_EXCEPTIONS)
+#define FAST_IO_HERBCEPTIONS_TRY try
+#else
+#define FAST_IO_HERBCEPTIONS_TRY
+#endif
+
+#pragma push_macro("FAST_IO_HERBCEPTIONS_CATCH_ALL")
+#undef FAST_IO_HERBCEPTIONS_CATCH_ALL
+#if defined(__HERBCEPTIONS__)
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL catch throws(::std::error)
+#elif defined(FAST_IO_CPP_EXCEPTIONS)
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL catch(...)
+#else
+#define FAST_IO_HERBCEPTIONS_CATCH_ALL if constexpr(false)
+#endif
 
 #pragma push_macro("FAST_IO_INDETERMINATE")
 #undef FAST_IO_INDETERMINATE
