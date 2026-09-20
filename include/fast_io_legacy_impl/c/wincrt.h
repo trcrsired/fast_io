@@ -258,7 +258,8 @@ inline void wincrt_fp_flush_stdout_impl()
 	{
 		return;
 	}
-	::fast_io::details::posix_write_bytes_impl(fp->_file, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
+	::fast_io::posix_io_observer piob{fp->_file};
+	::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
 
 	fp->_ptr = fp->_base;
 }

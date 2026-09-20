@@ -51,7 +51,7 @@ inline void wasi_random_get_all_impl(::std::byte *first, ::std::byte *last)
 {
 	if constexpr (sizeof(::std::size_t) <= sizeof(__wasi_size_t))
 	{
-		wasi_random_get_some_impl(first, last);
+		(void)wasi_random_get_some_impl(first, last);
 	}
 	else
 	{
