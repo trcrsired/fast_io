@@ -1058,7 +1058,7 @@ inline void posix_clock_settime([[maybe_unused]] posix_clock_id pclk_id, [[maybe
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32) && !defined(__NEWLIB__)
-	nt_clock_settime(pclk_id, timestamp);
+	(void)nt_clock_settime(pclk_id, timestamp);
 #elif defined(__MSDOS__)
 	switch (pclk_id)
 	{
