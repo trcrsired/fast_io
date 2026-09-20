@@ -6,12 +6,23 @@ namespace fast_io
 namespace details
 {
 
+/*
+Whether the handle_type's output stream operations may throw. The requires
+expression inside the concept must stay: unlike a requires-clause, the
+subexpression of a noexcept-specifier does not short-circuit, so the decltype
+would be a hard error for handle types without output_stream_ref.
+*/
+template <typename T>
+concept io_buffer_output_operations_may_throw =
+	requires { ::fast_io::operations::output_stream_ref(::std::declval<T &>()); } &&
+	!::fast_io::operations::decay::defines::output_stream_operations_nothrow<
+		decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>;
+
 template <typename T>
 inline constexpr void close_basic_io_buffer(T &)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
 		(T::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
-		!::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			decltype(::fast_io::operations::output_stream_ref(::std::declval<typename T::handle_type &>()))>);
+		io_buffer_output_operations_may_throw<typename T::handle_type>);
 template <typename T>
 inline constexpr void clear_basic_io_buffer_pointers(T &) noexcept;
 template <typename T>
@@ -90,9 +101,7 @@ public:
 			requires { requires !noexcept(::std::declval<handle_type &>() = ::std::declval<handle_type>()); } ||
 			requires { requires !noexcept(::std::declval<handle_type &>().close()); } ||
 			((traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
-			 requires { ::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()); } &&
-			 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-				 decltype(::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()))>))
+			 ::fast_io::details::io_buffer_output_operations_may_throw<handle_type>))
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);
@@ -110,9 +119,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(
 			requires { requires !noexcept(::std::declval<handle_type &>().close()); } ||
 			((traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
-			 requires { ::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()); } &&
-			 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-				 decltype(::fast_io::operations::output_stream_ref(::std::declval<handle_type &>()))>))
+			 ::fast_io::details::io_buffer_output_operations_may_throw<handle_type>))
 	{
 		::fast_io::details::close_basic_io_buffer(*this);
 		::fast_io::details::clear_basic_io_buffer_pointers(*this);

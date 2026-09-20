@@ -137,9 +137,7 @@ inline constexpr char_type *read_some_underflow_define(basic_io_buffer_ref<io_bu
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -159,9 +157,7 @@ inline constexpr char_type *pread_some_underflow_define(basic_io_buffer_ref<io_b
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -179,9 +175,7 @@ inline constexpr void pread_all_underflow_define(basic_io_buffer_ref<io_buffer_t
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -199,9 +193,7 @@ inline constexpr ::fast_io::io_scatter_status_t scatter_pread_some_underflow_def
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -219,9 +211,7 @@ inline constexpr void scatter_pread_all_underflow_define(basic_io_buffer_ref<io_
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -239,9 +229,7 @@ inline constexpr char_type *pread_all_underflow_define(basic_io_buffer_ref<io_bu
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -258,9 +246,7 @@ inline constexpr bool ibuffer_underflow(basic_io_buffer_ref<io_buffer_type> iobr
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	constexpr auto mode{io_buffer_type::traits_type::mode};
 	if constexpr ((mode & buffer_mode::out) == buffer_mode::out && (mode & buffer_mode::tie) == buffer_mode::tie)
@@ -313,9 +299,7 @@ inline constexpr void ibuffer_minimum_size_underflow_all_prepare_define(basic_io
 			decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))> ||
 		((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
 		 (io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::tie) == ::fast_io::buffer_mode::tie &&
-		 requires { ::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()); } &&
-		 !::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>))
+		 ::fast_io::details::io_buffer_output_operations_may_throw<typename io_buffer_type::handle_type>))
 {
 	::fast_io::details::io_buffer::ibuffer_minimum_size_underflow_all_prepare_impl<
 		io_buffer_type::traits_type::input_buffer_size, typename io_buffer_type::traits_type::input_char_type,

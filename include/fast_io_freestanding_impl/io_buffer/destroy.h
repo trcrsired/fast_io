@@ -7,8 +7,7 @@ template <typename T>
 inline constexpr void close_basic_io_buffer(T &t)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
 		(T::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
-		!::fast_io::operations::decay::defines::output_stream_operations_nothrow<
-			decltype(::fast_io::operations::output_stream_ref(::std::declval<typename T::handle_type &>()))>)
+		io_buffer_output_operations_may_throw<typename T::handle_type>)
 {
 	using traits_type = typename T::traits_type;
 	constexpr auto mode{traits_type::mode};
