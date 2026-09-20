@@ -423,6 +423,157 @@ inline constexpr ::fast_io::intfpos_t adjust_instm_offset(::std::ptrdiff_t remai
 	return requested - remainspace;
 }
 
+// read counterpart of scatter_write_pwrite_some_bytes_common: op(handle, first, last)
+// fills [first, last) and returns the end of the filled range; a short or empty return
+// is EOF, not an error. [buf_currptr, buf_endptr) holds fetched-but-undistributed data.
+// Buffered fills are demand-bounded: fetching past the scatters' total size would
+// consume bytes from the handle and silently discard them.
+template <typename buftype, typename func>
+inline io_scatter_status_t scatter_read_pread_some_bytes_common(void *__restrict handle,
+																io_scatter_t const *__restrict pscatters,
+																::std::size_t n, func op)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (!n)
+	{
+		return {};
+	}
+	constexpr ::std::size_t buffersz{4096zu};
+	constexpr ::std::size_t directsz{(buffersz >> 2) * 3};
+	::std::size_t remained{::fast_io::find_scatter_total_size_overflow(pscatters, n).total_size};
+	buftype buffer;
+	::std::byte *buf_currptr{}, *buf_endptr{};
+	auto psci{pscatters}, psce{psci + n};
+	for (; psci != psce; ++psci)
+	{
+		::std::size_t len{psci->len};
+		if (!len)
+		{
+			continue;
+		}
+		auto base{static_cast<::std::byte *>(const_cast<void *>(psci->base))};
+		::std::size_t to_copied{len};
+		::std::size_t available{static_cast<::std::size_t>(buf_endptr - buf_currptr)};
+		if (available < to_copied)
+		{
+			to_copied = available;
+		}
+		::fast_io::freestanding::nonoverlapped_bytes_copy_n(buf_currptr, to_copied, base);
+		buf_currptr += to_copied;
+		if (to_copied == len)
+		{
+			continue;
+		}
+		auto newbase{base + to_copied};
+		auto pied{base + len};
+		::std::size_t after_to_copied{len - to_copied};
+		bool islast{psci == psce - 1};
+		if (directsz <= after_to_copied || islast)
+		{
+			auto written{op(handle, newbase, pied)};
+			remained -= static_cast<::std::size_t>(written - newbase);
+			if (written != pied)
+			{
+				return {static_cast<::std::size_t>(psci - pscatters),
+						to_copied + static_cast<::std::size_t>(written - newbase)};
+			}
+			if (islast)
+			{
+				return {n, 0zu};
+			}
+			continue;
+		}
+		if (buffer.ptr == nullptr)
+		{
+			buffer.allocate_new(buffersz);
+		}
+		::std::size_t request{remained < buffersz ? remained : buffersz};
+		auto written{op(handle, buffer.ptr, buffer.ptr + request)};
+		remained -= static_cast<::std::size_t>(written - buffer.ptr);
+		buf_currptr = buffer.ptr;
+		buf_endptr = written;
+		::std::size_t copied{after_to_copied};
+		available = static_cast<::std::size_t>(buf_endptr - buf_currptr);
+		if (available < copied)
+		{
+			copied = available;
+		}
+		::fast_io::freestanding::nonoverlapped_bytes_copy_n(buf_currptr, copied, newbase);
+		buf_currptr += copied;
+		if (copied < after_to_copied)
+		{
+			return {static_cast<::std::size_t>(psci - pscatters), to_copied + copied};
+		}
+	}
+	return {n, 0zu};
+}
+
+// read-all variant of scatter_read_pread_some_bytes_common: op(handle, first, last)
+// fills the whole range or throws, so no partial-read location tracking is needed.
+// Fills stay demand-bounded for the same reason as the some variant.
+template <typename buftype, typename func>
+inline void scatter_read_pread_all_bytes_common(void *__restrict handle,
+												io_scatter_t const *__restrict pscatters,
+												::std::size_t n, func op) FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (!n)
+	{
+		return;
+	}
+	constexpr ::std::size_t buffersz{4096zu};
+	constexpr ::std::size_t directsz{(buffersz >> 2) * 3};
+	::std::size_t remained{::fast_io::find_scatter_total_size_overflow(pscatters, n).total_size};
+	buftype buffer;
+	::std::byte *buf_currptr{}, *buf_endptr{};
+	auto psci{pscatters}, psce{psci + n};
+	for (; psci != psce; ++psci)
+	{
+		::std::size_t len{psci->len};
+		if (!len)
+		{
+			continue;
+		}
+		auto base{static_cast<::std::byte *>(const_cast<void *>(psci->base))};
+		::std::size_t to_copied{len};
+		::std::size_t available{static_cast<::std::size_t>(buf_endptr - buf_currptr)};
+		if (available < to_copied)
+		{
+			to_copied = available;
+		}
+		::fast_io::freestanding::nonoverlapped_bytes_copy_n(buf_currptr, to_copied, base);
+		buf_currptr += to_copied;
+		if (to_copied == len)
+		{
+			continue;
+		}
+		auto newbase{base + to_copied};
+		auto pied{base + len};
+		::std::size_t after_to_copied{len - to_copied};
+		bool islast{psci == psce - 1};
+		if (directsz <= after_to_copied || islast)
+		{
+			op(handle, newbase, pied);
+			remained -= after_to_copied;
+			if (islast)
+			{
+				return;
+			}
+			continue;
+		}
+		if (buffer.ptr == nullptr)
+		{
+			buffer.allocate_new(buffersz);
+		}
+		::std::size_t request{remained < buffersz ? remained : buffersz};
+		op(handle, buffer.ptr, buffer.ptr + request);
+		remained -= request;
+		buf_currptr = buffer.ptr;
+		buf_endptr = buffer.ptr + request;
+		::fast_io::freestanding::nonoverlapped_bytes_copy_n(buf_currptr, after_to_copied, newbase);
+		buf_currptr += after_to_copied;
+	}
+}
+
 } // namespace details
 
 } // namespace fast_io

@@ -106,55 +106,6 @@ public:
 };
 
 template <nt_family family, ::std::integral ch_type>
-inline ::std::byte *read_some_bytes_underflow_define(basic_nt_family_io_observer<family, ch_type> niob,
-													 ::std::byte *first, ::std::byte *last)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	return ::fast_io::win32::nt::details::nt_read_some_bytes_impl<family>(niob.handle, first, last);
-}
-
-template <nt_family family, ::std::integral ch_type>
-inline ::std::byte const *write_some_bytes_overflow_define(basic_nt_family_io_observer<family, ch_type> niob,
-														   ::std::byte const *first, ::std::byte const *last)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	return ::fast_io::win32::nt::details::nt_write_some_bytes_impl<family>(niob.handle, first, last);
-}
-
-template <nt_family family, ::std::integral ch_type>
-inline void write_all_bytes_overflow_define(basic_nt_family_io_observer<family, ch_type> niob,
-											::std::byte const *first, ::std::byte const *last)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	while (first != last)
-	{
-		auto written{::fast_io::win32::nt::details::nt_write_some_bytes_impl<family>(niob.handle, first, last)};
-		if (written == first) [[unlikely]]
-		{
-			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000185); // STATUS_IO_DEVICE_ERROR
-		}
-		first = written;
-	}
-}
-
-template <nt_family family, ::std::integral ch_type>
-inline ::std::byte *pread_some_bytes_underflow_define(basic_nt_family_io_observer<family, ch_type> niob,
-													  ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	return ::fast_io::win32::nt::details::nt_pread_some_bytes_impl<family>(niob.handle, first, last, off);
-}
-
-template <nt_family family, ::std::integral ch_type>
-inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_nt_family_io_observer<family, ch_type> niob,
-															::std::byte const *first, ::std::byte const *last,
-															::fast_io::intfpos_t off)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	return ::fast_io::win32::nt::details::nt_pwrite_some_bytes_impl<family>(niob.handle, first, last, off);
-}
-
-template <nt_family family, ::std::integral ch_type>
 inline constexpr bool operator==(basic_nt_family_io_observer<family, ch_type> a,
 								 basic_nt_family_io_observer<family, ch_type> b) noexcept
 {

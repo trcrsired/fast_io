@@ -15,48 +15,6 @@ using nt_buffer_alloc_ptr = ::fast_io::details::buffer_alloc_arr_ptr<
 #endif
 		>>;
 
-template <::fast_io::nt_family family>
-inline ::std::byte const *nt_write_pwrite_some_thunk(void *__restrict handle, ::std::byte const *first,
-													 ::std::byte const *last, ::std::int_least64_t *__restrict pbyteoffset) FAST_IO_HERBCEPTIONS_THROWS
-{
-	::std::int_least64_t off{};
-	if (pbyteoffset != nullptr && 0 <= (off = *pbyteoffset))
-	{
-		auto request{static_cast<::std::int_least64_t>(last - first)};
-#if FAST_IO_HAS_BUILTIN(__builtin_add_overflow)
-		::std::int_least64_t nxt;
-		if (__builtin_add_overflow(off, request, __builtin_addressof(nxt))) [[unlikely]]
-#else
-		constexpr ::std::int_least64_t mx{::std::numeric_limits<::std::int_least64_t>::max()};
-		if (mx - off < request) [[unlikely]]
-#endif
-		{
-			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000095); // STATUS_INTEGER_OVERFLOW
-		}
-	}
-	auto written{::fast_io::nt::details::nt_write_pwrite_some_bytes_common_impl<family>(
-		handle, first, last, pbyteoffset == nullptr ? nullptr : __builtin_addressof(off))};
-	if (pbyteoffset != nullptr && 0 <= off)
-	{
-		*pbyteoffset = off + static_cast<::std::int_least64_t>(written - first);
-	}
-	return written;
-}
-
-template <::fast_io::nt_family family>
-inline void nt_write_pwrite_all_thunk(void *__restrict handle, ::std::byte const *first,
-									  ::std::byte const *last, ::std::int_least64_t *__restrict pbyteoffset) FAST_IO_HERBCEPTIONS_THROWS
-{
-	while (first != last)
-	{
-		auto written{::fast_io::nt::details::nt_write_pwrite_some_thunk<family>(handle, first, last, pbyteoffset)};
-		if (written == first) [[unlikely]]
-		{
-			::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000185); // STATUS_IO_DEVICE_ERROR
-		}
-		first = written;
-	}
-}
 
 // The kernel only takes a per-call ByteOffset; it cannot advance an offset across the
 // chunked syscalls this emulation issues, so the offset accumulation and the pre-write
@@ -132,6 +90,80 @@ inline void nt_scatter_pwrite_all_bytes_overflow_define_impl(void *handle,
 	return ::fast_io::nt::details::nt_scatter_write_pwrite_all_bytes_overflow_define_impl<family>(handle, pscatters, n, __builtin_addressof(offs));
 }
 
+// read counterpart of nt_scatter_write_pwrite_chunk_impl: offset tracking is identical,
+// and a short read means EOF, which the common loop reports as a partial status.
+template <::fast_io::nt_family family>
+struct nt_scatter_read_pread_chunk_impl
+{
+	::std::int_least64_t *pbyteoffset{};
+	inline ::std::byte *operator()(void *__restrict handle, ::std::byte *first,
+								   ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return ::fast_io::nt::details::nt_read_pread_some_thunk<family>(handle, first, last, pbyteoffset);
+	}
+};
+
+template <::fast_io::nt_family family>
+inline ::fast_io::io_scatter_status_t nt_scatter_read_pread_some_bytes_underflow_define_impl(void *handle,
+																							 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::std::int_least64_t *__restrict pbyteoffset) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::details::scatter_read_pread_some_bytes_common<
+		::fast_io::win32::nt::details::nt_buffer_alloc_ptr<::std::byte>>(
+		handle, pscatters, n, ::fast_io::nt::details::nt_scatter_read_pread_chunk_impl<family>{pbyteoffset});
+}
+
+template <::fast_io::nt_family family>
+inline ::fast_io::io_scatter_status_t nt_scatter_read_some_bytes_underflow_define_impl(void *handle,
+																					   ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::nt::details::nt_scatter_read_pread_some_bytes_underflow_define_impl<family>(handle, pscatters, n, nullptr);
+}
+
+template <::fast_io::nt_family family>
+inline ::fast_io::io_scatter_status_t nt_scatter_pread_some_bytes_underflow_define_impl(void *handle,
+																						::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_t byteoffset) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::int_least64_t offs{::fast_io::nt::details::nt_calculate_offset_impl(byteoffset)};
+	return ::fast_io::nt::details::nt_scatter_read_pread_some_bytes_underflow_define_impl<family>(handle, pscatters, n, __builtin_addressof(offs));
+}
+
+// read-all variant: a chunk is only done when fully filled; EOF before that throws
+// end_of_file inside nt_read_pread_all_thunk.
+template <::fast_io::nt_family family>
+struct nt_scatter_read_all_pread_chunk_impl
+{
+	::std::int_least64_t *pbyteoffset{};
+	inline void operator()(void *__restrict handle, ::std::byte *first,
+						   ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+	{
+		::fast_io::nt::details::nt_read_pread_all_thunk<family>(handle, first, last, pbyteoffset);
+	}
+};
+
+template <::fast_io::nt_family family>
+inline void nt_scatter_read_pread_all_bytes_underflow_define_impl(void *handle,
+																  ::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::std::int_least64_t *__restrict pbyteoffset) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::scatter_read_pread_all_bytes_common<
+		::fast_io::win32::nt::details::nt_buffer_alloc_ptr<::std::byte>>(
+		handle, pscatters, n, ::fast_io::nt::details::nt_scatter_read_all_pread_chunk_impl<family>{pbyteoffset});
+}
+
+template <::fast_io::nt_family family>
+inline void nt_scatter_read_all_bytes_underflow_define_impl(void *handle,
+															::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::nt::details::nt_scatter_read_pread_all_bytes_underflow_define_impl<family>(handle, pscatters, n, nullptr);
+}
+
+template <::fast_io::nt_family family>
+inline void nt_scatter_pread_all_bytes_underflow_define_impl(void *handle,
+															 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_t byteoffset) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::int_least64_t offs{::fast_io::nt::details::nt_calculate_offset_impl(byteoffset)};
+	::fast_io::nt::details::nt_scatter_read_pread_all_bytes_underflow_define_impl<family>(handle, pscatters, n, __builtin_addressof(offs));
+}
+
 } // namespace fast_io::win32::nt::details
 
 namespace fast_io
@@ -170,6 +202,41 @@ scatter_pwrite_all_bytes_overflow_define(::fast_io::basic_nt_family_io_observer<
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::nt::details::nt_scatter_pwrite_all_bytes_overflow_define_impl<family>(niob.handle, pscatters, n, byteoffset);
+}
+
+template <::fast_io::nt_family family, ::std::integral char_type>
+inline ::fast_io::io_scatter_status_t
+scatter_read_some_bytes_underflow_define(::fast_io::basic_nt_family_io_observer<family, char_type> niob,
+										 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::nt::details::nt_scatter_read_some_bytes_underflow_define_impl<family>(niob.handle, pscatters, n);
+}
+
+template <::fast_io::nt_family family, ::std::integral char_type>
+inline ::fast_io::io_scatter_status_t
+scatter_pread_some_bytes_underflow_define(::fast_io::basic_nt_family_io_observer<family, char_type> niob,
+										  ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
+										  ::fast_io::intfpos_t byteoffset) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::nt::details::nt_scatter_pread_some_bytes_underflow_define_impl<family>(niob.handle, pscatters, n, byteoffset);
+}
+
+template <::fast_io::nt_family family, ::std::integral char_type>
+inline void
+scatter_read_all_bytes_underflow_define(::fast_io::basic_nt_family_io_observer<family, char_type> niob,
+										::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::nt::details::nt_scatter_read_all_bytes_underflow_define_impl<family>(niob.handle, pscatters, n);
+}
+
+template <::fast_io::nt_family family, ::std::integral char_type>
+inline void
+scatter_pread_all_bytes_underflow_define(::fast_io::basic_nt_family_io_observer<family, char_type> niob,
+										 ::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_t byteoffset)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::nt::details::nt_scatter_pread_all_bytes_underflow_define_impl<family>(niob.handle, pscatters, n, byteoffset);
 }
 
 } // namespace fast_io

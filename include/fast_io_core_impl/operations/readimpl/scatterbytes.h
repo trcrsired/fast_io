@@ -79,7 +79,7 @@ template <typename instmtype>
 inline constexpr io_scatter_status_t scatter_read_some_bytes_impl(instmtype insm, io_scatter_t const *pscatters,
 																  ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -181,7 +181,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::std::byte *base{reinterpret_cast<::std::byte *>(pi.base)};
+				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(pi.base))};
 				::fast_io::details::read_all_bytes_impl(insm, base + pisc, base + pi.len);
 				++retpos;
 			}
@@ -233,7 +233,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 template <typename instmtype>
 inline constexpr void scatter_read_all_bytes_impl(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

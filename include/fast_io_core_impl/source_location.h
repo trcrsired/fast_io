@@ -24,7 +24,6 @@ inline constexpr ::std::size_t prrsv_reserve_size_source_location_impl(::std::so
 	::std::size_t filenamesz{::fast_io::cstr_len(location.file_name())};
 	::std::size_t functionnamesz{::fast_io::cstr_len(location.function_name())};
 	constexpr ::std::size_t szmx{::std::numeric_limits<::std::size_t>::max()};
-	constexpr ::std::size_t szmx_noknown{szmx - known_size_at_compilation};
 #if FAST_IO_HAS_BUILTIN(__builtin_add_overflow)
 	::std::size_t total_sum FAST_IO_INDETERMINATE;
 	if (__builtin_add_overflow(known_size_at_compilation, filenamesz, __builtin_addressof(total_sum)))
@@ -37,6 +36,7 @@ inline constexpr ::std::size_t prrsv_reserve_size_source_location_impl(::std::so
 	}
 	return total_sum;
 #else
+	constexpr ::std::size_t szmx_noknown{szmx - known_size_at_compilation};
 	if (szmx_noknown < filenamesz)
 	{
 		::fast_io::fast_terminate();

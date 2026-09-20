@@ -14,7 +14,7 @@ struct nt_file_position_status
 
 template <bool zw>
 inline nt_file_position_status nt_get_file_position_impl(void *__restrict handle, ::std::int_least64_t offset,
-														 seekdir s)
+														 seekdir s) noexcept
 {
 	::std::uint_least64_t file_position{static_cast<::std::uint_least64_t>(offset)};
 	::fast_io::win32::nt::io_status_block block;
