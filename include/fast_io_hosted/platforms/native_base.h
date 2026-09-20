@@ -3,7 +3,7 @@
 #include "util.h"
 #include "dos_filename.h"
 #if defined(_WIN32) || defined(__CYGWIN__)
-#include "win32/impl.h"
+#include "win32/api/impl.h"
 namespace fast_io
 {
 

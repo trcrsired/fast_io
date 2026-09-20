@@ -11,7 +11,7 @@ enum class wine_family : ::std::uint_least32_t
 
 using wine_host_fd_t = ::std::common_type_t<::std::size_t, ::std::uint_least32_t>;
 
-template <wine_family family, ::std::integral ch_type>
+template <::fast_io::wine_family family, ::std::integral ch_type>
 class basic_wine_family_io_observer
 {
 public:
@@ -34,7 +34,7 @@ public:
 	}
 };
 
-template <wine_family family>
+template <::fast_io::wine_family family>
 struct wine_family_file_factory FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 {
 	using native_handle_type = ::fast_io::wine_host_fd_t;
@@ -53,9 +53,9 @@ struct wine_family_file_factory FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 	}
 };
 
-using wine_file_factory = wine_family_file_factory<wine_family::native>;
+using wine_file_factory = wine_family_file_factory<::fast_io::wine_family::native>;
 
-template <wine_family family, ::std::integral ch_type>
+template <::fast_io::wine_family family, ::std::integral ch_type>
 class basic_wine_family_file : public basic_wine_family_io_observer<family, ch_type>
 {
 public:
@@ -83,7 +83,7 @@ public:
 
 namespace freestanding
 {
-template <wine_family family>
+template <::fast_io::wine_family family>
 struct is_trivially_copyable_or_relocatable<wine_family_file_factory<family>>
 {
 	inline static constexpr bool value = true;
