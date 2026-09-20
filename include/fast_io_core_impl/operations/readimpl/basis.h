@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -178,7 +178,7 @@ inline constexpr ::std::byte *read_some_bytes_cold_impl(instmtype insm, ::std::b
 	else if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_seek_bytes_define<instmtype> &&
 					   (::fast_io::operations::decay::defines::has_any_of_pread_bytes_operations<instmtype>))
 	{
-		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm, first, last)};
+		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm, first, last, 0)};
 		::fast_io::operations::decay::input_stream_seek_bytes_decay(insm, ret - first, ::fast_io::seekdir::cur);
 		return ret;
 	}
@@ -187,7 +187,7 @@ inline constexpr ::std::byte *read_some_bytes_cold_impl(instmtype insm, ::std::b
 					   (::fast_io::operations::decay::defines::has_any_of_pread_operations<instmtype>))
 	{
 
-		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm, first, last)};
+		auto ret{::fast_io::details::pread_some_bytes_cold_impl(insm, first, last, 0)};
 		::fast_io::operations::decay::input_stream_seek_decay(insm, ret - first, ::fast_io::seekdir::cur);
 		return ret;
 	}
@@ -229,7 +229,8 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
 				}
@@ -271,7 +272,8 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
 				}
@@ -354,7 +356,8 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
 				}
@@ -396,7 +399,8 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
 				}
@@ -460,7 +464,7 @@ template <typename instmtype>
 inline constexpr typename instmtype::input_char_type *
 read_some_impl(instmtype insm, typename instmtype::input_char_type *first, typename instmtype::input_char_type *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -496,7 +500,7 @@ template <typename instmtype>
 inline constexpr void read_all_impl(instmtype insm, typename instmtype::input_char_type *first,
 									typename instmtype::input_char_type *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -531,7 +535,7 @@ inline constexpr void read_all_impl(instmtype insm, typename instmtype::input_ch
 template <typename instmtype>
 inline constexpr ::std::byte *read_some_bytes_impl(instmtype insm, ::std::byte *first, ::std::byte *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -572,7 +576,7 @@ inline constexpr ::std::byte *read_some_bytes_impl(instmtype insm, ::std::byte *
 template <typename instmtype>
 inline constexpr void read_all_bytes_impl(instmtype insm, ::std::byte *first, ::std::byte *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

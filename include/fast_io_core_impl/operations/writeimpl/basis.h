@@ -221,8 +221,8 @@ inline constexpr ::std::byte const *write_some_bytes_cold_impl(outstmtype outsm,
 						::fast_io::operations::decay::defines::has_scatter_pwrite_some_bytes_overflow_define<
 							outstmtype>))
 	{
-		auto ret{::fast_io::details::pwrite_some_bytes_cold_impl(outsm, first, last)};
-		::fast_io::operations::decay::output_stream_seek_bytes_decay(outsm, ret - first, ::fast_io::seekdir::cur);
+		auto ret{::fast_io::details::pwrite_some_bytes_cold_impl(outsm, first, last, 0)};
+		(void)::fast_io::operations::decay::output_stream_seek_bytes_decay(outsm, ret - first, ::fast_io::seekdir::cur);
 		return ret;
 	}
 	else if constexpr (sizeof(char_type) == 1 &&
@@ -233,8 +233,8 @@ inline constexpr ::std::byte const *write_some_bytes_cold_impl(outstmtype outsm,
 						::fast_io::operations::decay::defines::has_scatter_pwrite_some_overflow_define<outstmtype>))
 	{
 
-		auto ret{::fast_io::details::pwrite_some_bytes_cold_impl(outsm, first, last)};
-		::fast_io::operations::decay::output_stream_seek_decay(outsm, ret - first, ::fast_io::seekdir::cur);
+		auto ret{::fast_io::details::pwrite_some_bytes_cold_impl(outsm, first, last, 0)};
+		(void)::fast_io::operations::decay::output_stream_seek_decay(outsm, ret - first, ::fast_io::seekdir::cur);
 		return ret;
 	}
 }
@@ -487,7 +487,7 @@ inline constexpr typename outstmtype::output_char_type const *
 write_some_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 				typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -522,7 +522,7 @@ template <typename outstmtype>
 inline constexpr void write_all_impl(outstmtype outsm, typename outstmtype::output_char_type const *first,
 									 typename outstmtype::output_char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -552,7 +552,7 @@ template <typename outstmtype>
 inline constexpr ::std::byte const *write_some_bytes_impl(outstmtype outsm, ::std::byte const *first,
 														  ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	using char_type = typename outstmtype::output_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -588,7 +588,7 @@ inline constexpr ::std::byte const *write_some_bytes_impl(outstmtype outsm, ::st
 template <typename outstmtype>
 inline constexpr void write_all_bytes_impl(outstmtype outsm, ::std::byte const *first, ::std::byte const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -636,7 +636,7 @@ inline constexpr void
 char_put_cold_impl(outstmtype outstm,
 				   typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>)
 	{
@@ -652,7 +652,7 @@ template <typename outstm>
 inline constexpr void
 char_put_impl(outstm outsm, typename decltype(::fast_io::operations::output_stream_ref(outsm))::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstm>)
-	requires ((::fast_io::operations::decay::defines::writable<outstm> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstm>) || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstm>)
+	requires((::fast_io::operations::decay::defines::writable<outstm> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstm>) || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstm>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstm>)
 	{

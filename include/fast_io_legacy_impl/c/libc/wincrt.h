@@ -481,11 +481,11 @@ inline void obuffer_overflow(basic_c_io_observer_unlocked<char_type> ciob, char_
 
 template <::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
-													 ::std::byte *first, ::std::byte *last)
+													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return reinterpret_cast<::std::byte *>(::fast_io::details::wincrt_fp_read_cold_impl(ciob.fp,
-																						reinterpret_cast<char *>(first),
-																						reinterpret_cast<char *>(last)));
+	return reinterpret_cast<::std::byte *>(::fast_io::details::wincrt_fp_read_cold_impl(
+		ciob.fp, reinterpret_cast<char *>(first),
+		static_cast<::std::size_t>(reinterpret_cast<char *>(last) - reinterpret_cast<char *>(first))));
 }
 
 template <::std::integral char_type>
