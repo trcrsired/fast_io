@@ -16,7 +16,13 @@ namespace fast_io::details
  * and clone mirroring are computed with `& cap`.
  */
 
-inline constexpr ::std::size_t swiss_table_group_counts{16u};
+// Group width is the widest simd_vector size for which mask countr is
+// supported: 16 with sse2/wasm simd128, 32 with avx2. The generic fallback
+// (8 lanes, scalar code) is used when no mask countr support exists.
+inline constexpr ::std::size_t swiss_table_group_counts{
+	::fast_io::intrinsics::optimal_simd_vector_run_with_cpu_instruction_size_with_mask_countr != 0
+		? ::fast_io::intrinsics::optimal_simd_vector_run_with_cpu_instruction_size_with_mask_countr
+		: 8u};
 inline constexpr ::std::size_t swiss_table_cloned_counts{swiss_table_group_counts - 1u};
 inline constexpr ::std::size_t swiss_table_min_capacity{swiss_table_cloned_counts};
 
@@ -58,6 +64,11 @@ inline constexpr bool swiss_table_ctrl_is_empty_or_deleted(::std::uint_least8_t 
 		   static_cast<signed char>(::fast_io::details::swiss_table_ctrl::sentinel);
 }
 
+using swiss_table_group_vec_type =
+	::fast_io::intrinsics::simd_vector<::std::uint_least8_t, ::fast_io::details::swiss_table_group_counts>;
+using swiss_table_group_svec_type =
+	::fast_io::intrinsics::simd_vector<signed char, ::fast_io::details::swiss_table_group_counts>;
+
 template <::std::integral T>
 inline constexpr ::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_counts>
 swiss_table_group_splat(T v) noexcept
@@ -70,79 +81,59 @@ swiss_table_group_splat(T v) noexcept
 	return pat;
 }
 
-// Bit i of the result is the most significant bit of byte lane i.
-template <::std::integral T>
-inline constexpr ::std::uint_least32_t swiss_table_group_bitmask(
-	::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_counts> const &v) noexcept
+// Lane indices 0 .. group_counts-1, for masking off a lane prefix.
+inline constexpr ::fast_io::details::swiss_table_group_vec_type swiss_table_group_ramp() noexcept
 {
-	static_assert(sizeof(T) == sizeof(char));
-#if defined(__SSE2__) && defined(__x86_64__) && __has_cpp_attribute(__gnu__::__vector_size__) && \
-	FAST_IO_HAS_BUILTIN(__builtin_ia32_pmovmskb128)
-#if __cpp_if_consteval >= 202106L
-	if !consteval
-#else
-	if (!__builtin_is_constant_evaluated())
-#endif
+	::fast_io::details::swiss_table_group_vec_type ramp{};
+	for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_counts; ++i)
 	{
-		using x86_64_v16qi [[__gnu__::__vector_size__(16)]] = char;
-		return static_cast<::std::uint_least32_t>(__builtin_ia32_pmovmskb128((x86_64_v16qi)v.value));
+		ramp.value[i] = static_cast<::std::uint_least8_t>(i);
 	}
-#endif
-	auto const arr{static_cast<::fast_io::intrinsics::simd_vector<::std::uint_least64_t, 2>>(v)};
-	::std::uint_least64_t lo{arr[0]};
-	::std::uint_least64_t hi{arr[1]};
-	if constexpr (::std::endian::native != ::std::endian::little)
-	{
-		lo = ::fast_io::byte_swap(lo);
-		hi = ::fast_io::byte_swap(hi);
-	}
-	constexpr ::std::uint_least64_t msbs{0x8080808080808080ULL};
-	constexpr ::std::uint_least64_t gatherer{0x0002040810204081ULL};
-	return static_cast<::std::uint_least32_t>(
-		(((lo & msbs) * gatherer) >> 56u) |
-		((((hi & msbs) * gatherer) >> 56u) << 8u));
+	return ramp;
 }
 
 struct swiss_table_group
 {
-	::fast_io::intrinsics::simd_vector<::std::uint_least8_t, ::fast_io::details::swiss_table_group_counts> ctrlv;
+	::fast_io::details::swiss_table_group_vec_type ctrlv;
 
 	inline explicit swiss_table_group(::std::uint_least8_t const *pos) noexcept
 	{
 		ctrlv.load(pos);
 	}
 
-	inline constexpr ::std::uint_least32_t match(::std::uint_least8_t h2) const noexcept
+	// 0xff lanes where the control byte equals h2
+	inline constexpr ::fast_io::details::swiss_table_group_vec_type match(::std::uint_least8_t h2) const noexcept
 	{
-		return ::fast_io::details::swiss_table_group_bitmask(
-			ctrlv == ::fast_io::details::swiss_table_group_splat(h2));
+		return ctrlv == ::fast_io::details::swiss_table_group_splat(h2);
 	}
 
-	inline constexpr ::std::uint_least32_t mask_empty() const noexcept
+	// 0xff lanes where the control byte is empty
+	inline constexpr ::fast_io::details::swiss_table_group_vec_type mask_empty() const noexcept
 	{
-		return ::fast_io::details::swiss_table_group_bitmask(
-			ctrlv == ::fast_io::details::swiss_table_group_splat(
-						 static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty)));
+		return ctrlv == ::fast_io::details::swiss_table_group_splat(
+							static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty));
 	}
 
-	inline constexpr ::std::uint_least32_t mask_empty_or_deleted() const noexcept
+	// 0xff lanes where the control byte is empty or deleted
+	inline constexpr ::fast_io::details::swiss_table_group_svec_type mask_empty_or_deleted() const noexcept
 	{
-		using svec_type = ::fast_io::intrinsics::simd_vector<signed char, ::fast_io::details::swiss_table_group_counts>;
-		auto const cmp{static_cast<svec_type>(ctrlv) <
-					   ::fast_io::details::swiss_table_group_splat<signed char>(static_cast<signed char>(-1))};
-		return ::fast_io::details::swiss_table_group_bitmask(cmp);
+		return static_cast<::fast_io::details::swiss_table_group_svec_type>(ctrlv) <
+			   ::fast_io::details::swiss_table_group_splat<signed char>(static_cast<signed char>(-1));
 	}
 
 	// special (empty/deleted/sentinel) -> empty, full -> deleted.
 	// Used by drop-deletes rehash before reinsertion.
 	inline constexpr void convert_special_to_empty_and_full_to_deleted(::std::uint_least8_t *dst) const noexcept
 	{
-		for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_counts; ++i)
-		{
-			dst[i] = ::fast_io::details::swiss_table_ctrl_is_full(ctrlv[i])
-						 ? static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted)
-						 : static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
-		}
+		// special lanes are negative as signed char; full lanes are not.
+		// res = special ? empty(0x80) : deleted(0xfe) = 0x80 | (~special & 0x7e)
+		auto const special{static_cast<::fast_io::details::swiss_table_group_svec_type>(ctrlv) <
+						   ::fast_io::details::swiss_table_group_splat<signed char>(static_cast<signed char>(0))};
+		auto const res{::fast_io::details::swiss_table_group_splat(
+						   static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty)) |
+					   (static_cast<::fast_io::details::swiss_table_group_vec_type>(~special) &
+						::fast_io::details::swiss_table_group_splat(static_cast<::std::uint_least8_t>(0x7eu)))};
+		res.store(dst);
 	}
 };
 
@@ -228,21 +219,29 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 	auto controls{imp.controls};
 	auto slots{imp.slots};
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
+	constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
 	::fast_io::details::swiss_table_probe_seq seq{cap, ::fast_io::details::swiss_table_hash_h1(hash) & cap, {}};
 	for (;;)
 	{
 		::fast_io::details::swiss_table_group const group{controls + seq.offset};
-		for (auto m{group.match(h2)}; m; m &= static_cast<::std::uint_least32_t>(m - 1u))
+		for (auto match{group.match(h2)};;)
 		{
-			auto const pos{seq.offset_at(static_cast<::std::size_t>(::std::countr_zero(m)))};
+			auto const i{::fast_io::intrinsics::vector_mask_countr_zero(match)};
+			if (i == group_counts)
+			{
+				break;
+			}
+			auto const pos{seq.offset_at(static_cast<::std::size_t>(i))};
 			if (key == slots[pos].key())
 			{
 				return {pos, true};
 			}
+			match.value[i] = 0;
 		}
-		if (auto const emptymask{group.mask_empty()}; emptymask)
+		if (auto const emptyidx{::fast_io::intrinsics::vector_mask_countr_zero(group.mask_empty())};
+			emptyidx != group_counts)
 		{
-			return {seq.offset_at(static_cast<::std::size_t>(::std::countr_zero(emptymask))), false};
+			return {seq.offset_at(static_cast<::std::size_t>(emptyidx)), false};
 		}
 		seq.next();
 	}
@@ -271,12 +270,15 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 inline constexpr ::std::size_t swiss_table_find_first_non_full(::std::uint_least8_t const *controls, ::std::size_t cap,
 															   ::std::uint_least64_t hash) noexcept
 {
+	constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
 	::fast_io::details::swiss_table_probe_seq seq{cap, ::fast_io::details::swiss_table_hash_h1(hash) & cap, {}};
 	for (;;)
 	{
-		if (auto const mask{::fast_io::details::swiss_table_group{controls + seq.offset}.mask_empty_or_deleted()}; mask)
+		if (auto const i{::fast_io::intrinsics::vector_mask_countr_zero(
+				::fast_io::details::swiss_table_group{controls + seq.offset}.mask_empty_or_deleted())};
+			i != group_counts)
 		{
-			return seq.offset_at(static_cast<::std::size_t>(::std::countr_zero(mask)));
+			return seq.offset_at(static_cast<::std::size_t>(i));
 		}
 		seq.next();
 	}
@@ -293,12 +295,25 @@ inline constexpr bool swiss_table_was_never_full(::std::uint_least8_t const *con
 	{
 		return true;
 	}
-	auto const index_before{static_cast<::std::size_t>((index - group_counts) & cap)};
 	auto const empty_after{::fast_io::details::swiss_table_group{controls + index}.mask_empty()};
+	auto const empty_after_index{::fast_io::intrinsics::vector_mask_countr_zero(empty_after)};
+	if (empty_after_index == group_counts)
+	{
+		return false;
+	}
+	auto const index_before{static_cast<::std::size_t>((index - group_counts) & cap)};
 	auto const empty_before{::fast_io::details::swiss_table_group{controls + index_before}.mask_empty()};
-	return empty_after && empty_before &&
-		   (static_cast<::std::size_t>(::std::countr_zero(empty_after)) +
-			static_cast<::std::size_t>(::std::countl_zero(static_cast<::std::uint16_t>(empty_before)))) < group_counts;
+	// Abseil tests trailing_zeros(empty_after) + leading_zeros(empty_before) <
+	// group width, i.e. the run of non-empty control bytes containing the erased
+	// slot is shorter than a group. leading_zeros(empty_before) < width -
+	// empty_after_index is the same as asking whether empty_before has a set
+	// lane at index >= empty_after_index, so mask off the prefix lanes instead
+	// of counting from the end.
+	auto const suffix{empty_before &
+					  (::fast_io::details::swiss_table_group_ramp() >=
+					   ::fast_io::details::swiss_table_group_splat(
+						   static_cast<::std::uint_least8_t>(empty_after_index)))};
+	return ::fast_io::intrinsics::vector_mask_countr_zero(suffix) != group_counts;
 }
 
 // Marks slot pos as erased: empty when the slot was never full (reclaimable),
@@ -331,7 +346,7 @@ inline constexpr ::std::size_t swiss_table_capacity_to_growth(::std::size_t cap)
 	constexpr ::std::size_t kmax_capacity_for_load_factor_one{::fast_io::details::swiss_table_group_counts * 4u - 1u};
 	if (cap <= kmax_capacity_for_load_factor_one)
 	{
-		return cap - 1u;
+		return cap - (cap >= swiss_table_group_counts - 1u);
 	}
 	return cap - (cap >> 3u);
 }
@@ -389,18 +404,31 @@ inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::siz
 template <bool isprev>
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
 {
-	do
+	if constexpr (isprev)
 	{
-		if constexpr (isprev)
+		do
 		{
 			--controlpos;
-		}
-		else
+		} while (::fast_io::details::swiss_table_ctrl_is_empty_or_deleted(*controlpos));
+		return controlpos;
+	}
+	else
+	{
+		// Skip over runs of empty/deleted control bytes a group at a time.
+		// Stops at full slots and at the sentinel, which is not
+		// empty-or-deleted and therefore terminates the walk at end().
+		++controlpos;
+		for (;;)
 		{
-			++controlpos;
+			auto const skipped{::fast_io::intrinsics::vector_mask_countr_one(
+				::fast_io::details::swiss_table_group{controlpos}.mask_empty_or_deleted())};
+			controlpos += skipped;
+			if (skipped != ::fast_io::details::swiss_table_group_counts)
+			{
+				return controlpos;
+			}
 		}
-	} while (::fast_io::details::swiss_table_ctrl_is_empty_or_deleted(*controlpos));
-	return controlpos;
+	}
 }
 
 } // namespace fast_io::details

@@ -334,13 +334,12 @@ inline constexpr void str_swiss_map_rehash_in_place(
 	auto const controls{imp.controls};
 	auto const slots{imp.slots};
 	auto const cap{imp.cap};
-	// special -> empty, full -> deleted (live slots are now tombstones)
-	for (::std::size_t i{}; i != cap; ++i)
+	// special -> empty, full -> deleted (live slots are now tombstones).
+	// Strides cover cap+1 control bytes including the sentinel.
+	for (::std::uint_least8_t *pos{controls}; pos != controls + cap + 1u;
+		 pos += ::fast_io::details::swiss_table_group_counts)
 	{
-		auto &ci{controls[i]};
-		ci = ::fast_io::details::swiss_table_ctrl_is_full(ci)
-				 ? static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted)
-				 : static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
+		::fast_io::details::swiss_table_group{pos}.convert_special_to_empty_and_full_to_deleted(pos);
 	}
 	controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
 	__builtin_memcpy(controls + cap + 1u, controls, ::fast_io::details::swiss_table_cloned_counts);
