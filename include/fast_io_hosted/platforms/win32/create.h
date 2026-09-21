@@ -527,7 +527,7 @@ struct win32_family_open_file_parameter
 {
 	using family_char_type = ::std::conditional_t<family == win32_family::wide_nt, char16_t, char>;
 	open_mode_perms ompm{};
-	inline void *operator()(family_char_type const *filename)
+	inline void *operator()(family_char_type const *filename) FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return win32_family_create_file_impl<family>(filename, ompm);
 	}
@@ -535,7 +535,7 @@ struct win32_family_open_file_parameter
 
 template <win32_family family, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline void *win32_create_file_impl(T const &t, open_mode_perms ompm)
+inline void *win32_create_file_impl(T const &t, open_mode_perms ompm) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32_family_api_common<family>(t, win32_family_open_file_parameter<family>{ompm});
 }
@@ -543,6 +543,7 @@ inline void *win32_create_file_impl(T const &t, open_mode_perms ompm)
 template <win32_family, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
 inline void *win32_create_file_at_impl(void *directory_handle, T const &t, open_mode_perms ompm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32::nt::details::nt_create_file_at_impl<false>(directory_handle, t, ompm);
 }

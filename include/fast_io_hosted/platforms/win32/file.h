@@ -125,6 +125,7 @@ public:
 	}
 
 	inline explicit basic_win32_family_file(win32_9xa_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{
 			  ::fast_io::win32::details::win32_9xa_create_file_at_fs_dirent_impl(
 				  fsdirent.handle, fsdirent.filename.c_str(), fsdirent.filename.size(), {om, pm})}
@@ -133,6 +134,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_win32_family_file(T const &filename, open_mode om, perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{
 			  ::fast_io::details::win32_create_file_impl<family>(filename, {om, pm})}
 	{
@@ -141,6 +143,7 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_win32_family_file(nt_at_entry nate, T const &filename, open_mode om,
 											perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{
 			  ::fast_io::details::win32_create_file_at_impl<family>(nate.handle, filename, {om, pm})}
 	{
@@ -149,12 +152,13 @@ public:
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit basic_win32_family_file(win32_9xa_at_entry nate, T const &filename, open_mode om,
 											perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_win32_family_io_observer<family, char_type>{
 			  ::fast_io::win32::details::win32_9xa_create_file_at_impl(nate.handle, filename, {om, pm})}
 	{
 	}
 
-	inline explicit basic_win32_family_file(io_async_t)
+	inline explicit basic_win32_family_file(io_async_t) FAST_IO_HERBCEPTIONS_THROWS
 		requires(::std::same_as<char_type, char>)
 		: basic_win32_family_io_observer<family, char_type>{details::create_io_completion_port_impl()}
 	{

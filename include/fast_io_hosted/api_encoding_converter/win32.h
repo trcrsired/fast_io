@@ -116,14 +116,14 @@ inline auto nt_api_common(T const &t, Func callback) FAST_IO_HERBCEPTIONS_THROWS
 
 template <typename allocator_type = typename win32_api_encoding_converter::allocator_type, typename T, typename Func>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline auto win32_api_common_9xa(T const &t, Func callback)
+inline auto win32_api_common_9xa(T const &t, Func callback) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return posix_api_common<allocator_type>(t, callback);
 }
 
 template <typename allocator_type = typename win32_api_encoding_converter::allocator_type, typename T, typename Func>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline auto win32_api_common(T const &t, Func callback)
+inline auto win32_api_common(T const &t, Func callback) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::fast_io::win32_family::native == win32_family::ansi_9x)
 	{
@@ -138,7 +138,7 @@ inline auto win32_api_common(T const &t, Func callback)
 template <win32_family family, typename allocator_type = typename win32_api_encoding_converter::allocator_type,
 		  typename T, typename Func>
 	requires(::fast_io::constructible_to_os_c_str<T>)
-inline auto win32_family_api_common(T const &t, Func callback)
+inline auto win32_family_api_common(T const &t, Func callback) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == win32_family::ansi_9x)
 	{
