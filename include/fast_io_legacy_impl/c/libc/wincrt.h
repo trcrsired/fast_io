@@ -641,7 +641,7 @@ inline void ibuffer_set_curr(basic_c_io_observer_unlocked<char_type> ciob, char_
 }
 
 template <::std::integral char_type>
-inline bool ibuffer_underflow(basic_c_io_observer_unlocked<char_type> ciob)
+inline bool ibuffer_underflow(basic_c_io_observer_unlocked<char_type> ciob) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::wincrt_fp_underflow_impl<char_type>(ciob.fp);
 }
