@@ -183,12 +183,12 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 	auto oldslots{imp.slots};
 	auto const oldcap{imp.cap};
 
-	auto newcontrols{typed_ctrl_allocator_type::allocate(static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_group_counts))};
+	auto newcontrols{typed_ctrl_allocator_type::allocate(static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts))};
 	auto newslots{typed_slot_allocator_type::allocate(newcap)};
 
 	::fast_io::freestanding::my_memset(newcontrols,
 									   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
-									   static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_group_counts));
+									   static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts));
 	newcontrols[newcap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
 
 	imp.controls = newcontrols;
@@ -224,7 +224,7 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 			}
 		}
 		imp.leftmost = leftmost;
-		typed_ctrl_allocator_type::deallocate_n(oldcontrols, static_cast<::std::size_t>(oldcap + ::fast_io::details::swiss_table_group_counts));
+		typed_ctrl_allocator_type::deallocate_n(oldcontrols, static_cast<::std::size_t>(oldcap + ::fast_io::details::swiss_table_ctrl_tail_counts));
 		typed_slot_allocator_type::deallocate_n(oldslots, oldcap);
 	}
 	imp.growth_left = ::fast_io::details::swiss_table_capacity_to_growth(newcap) - imp.counts;
@@ -335,17 +335,12 @@ inline constexpr void str_swiss_map_rehash_in_place(
 	auto const slots{imp.slots};
 	auto const cap{imp.cap};
 	// special -> empty, full -> deleted (live slots are now tombstones).
-	// Strides cover cap+1 control bytes including the sentinel.
-	for (::std::uint_least8_t *pos{controls}; pos != controls + cap + 1u;
-		 pos += ::fast_io::details::swiss_table_group_counts)
-	{
-		::fast_io::details::swiss_table_group{pos}.convert_special_to_empty_and_full_to_deleted(pos);
-	}
-	controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
-	__builtin_memcpy(controls + cap + 1u, controls, ::fast_io::details::swiss_table_cloned_counts);
+	::fast_io::details::swiss_table_convert_special_to_empty_and_full_to_deleted(controls, cap);
 
+	// Probe distance in steps; scalar probing counts single slots so the
+	// same-group test degenerates to target == i.
 	auto const probe_index{[cap](::std::size_t pos, ::std::size_t offset) noexcept {
-		return ((pos - offset) & cap) / ::fast_io::details::swiss_table_group_counts;
+		return ((pos - offset) & cap) / ::fast_io::details::swiss_table_probe_stride;
 	}};
 	::std::size_t leftmost{cap};
 	for (::std::size_t i{}; i != cap; ++i)
@@ -436,7 +431,7 @@ inline constexpr void str_swiss_map_clear_impl(
 	}
 	if constexpr (needdestroy)
 	{
-		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts));
+		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts));
 		typed_slot_allocator_type::deallocate_n(slots, cap);
 		imp = {};
 	}
@@ -444,7 +439,7 @@ inline constexpr void str_swiss_map_clear_impl(
 	{
 		::fast_io::freestanding::my_memset(controls,
 										   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
-										   static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts));
+										   static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts));
 		controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
 		imp.counts = 0u;
 		imp.leftmost = cap;
@@ -553,7 +548,7 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 	}
 	auto othercontrols{other.controls};
 	auto otherslots{other.slots};
-	::std::size_t const ctrlsz{static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts)};
+	::std::size_t const ctrlsz{static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts)};
 	auto controls{typed_ctrl_allocator_type::allocate(ctrlsz)};
 	auto slots{typed_slot_allocator_type::allocate(cap)};
 

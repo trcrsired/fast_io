@@ -16,15 +16,27 @@ namespace fast_io::details
  * and clone mirroring are computed with `& cap`.
  */
 
-// Group width is the widest simd_vector size for which mask countr is
-// supported: 16 with sse2/wasm simd128, 32 with avx2. The generic fallback
-// (8 lanes, scalar code) is used when no mask countr support exists.
+// Group width is the simd_vector size mask countr accelerates: 16 with
+// sse2/wasm simd128, 32 with avx2. Values below 16 mean group probing is
+// unsupported and the table falls back to scalar probing.
 inline constexpr ::std::size_t swiss_table_group_counts{
-	::fast_io::intrinsics::optimal_simd_vector_run_with_cpu_instruction_size_with_mask_countr != 0
+	::fast_io::intrinsics::optimal_simd_vector_run_with_cpu_instruction_size_with_mask_countr >= 16u
 		? ::fast_io::intrinsics::optimal_simd_vector_run_with_cpu_instruction_size_with_mask_countr
-		: 8u};
-inline constexpr ::std::size_t swiss_table_cloned_counts{swiss_table_group_counts - 1u};
-inline constexpr ::std::size_t swiss_table_min_capacity{swiss_table_cloned_counts};
+		: 0u};
+
+// Clone bytes after the sentinel; only group probing needs them.
+inline constexpr ::std::size_t swiss_table_cloned_counts{
+	swiss_table_group_counts != 0 ? swiss_table_group_counts - 1u : 0u};
+
+// Sentinel plus clones: control bytes allocated beyond the cap real ones.
+inline constexpr ::std::size_t swiss_table_ctrl_tail_counts{swiss_table_cloned_counts + 1u};
+
+// Probe index grows by a group each step; scalar probing advances by one.
+inline constexpr ::std::size_t swiss_table_probe_stride{
+	swiss_table_group_counts != 0 ? swiss_table_group_counts : 1u};
+
+inline constexpr ::std::size_t swiss_table_min_capacity{
+	swiss_table_group_counts != 0 ? swiss_table_cloned_counts : 3u};
 
 enum class swiss_table_ctrl : ::std::uint_least8_t
 {
@@ -64,17 +76,23 @@ inline constexpr bool swiss_table_ctrl_is_empty_or_deleted(::std::uint_least8_t 
 		   static_cast<signed char>(::fast_io::details::swiss_table_ctrl::sentinel);
 }
 
+// Width of the group vectors. When group probing is unsupported the group
+// is never used, but a valid width keeps discarded if constexpr branches
+// instantiable in non-template functions.
+inline constexpr ::std::size_t swiss_table_group_vec_counts{
+	swiss_table_group_counts != 0 ? swiss_table_group_counts : 16u};
+
 using swiss_table_group_vec_type =
-	::fast_io::intrinsics::simd_vector<::std::uint_least8_t, ::fast_io::details::swiss_table_group_counts>;
+	::fast_io::intrinsics::simd_vector<::std::uint_least8_t, ::fast_io::details::swiss_table_group_vec_counts>;
 using swiss_table_group_svec_type =
-	::fast_io::intrinsics::simd_vector<signed char, ::fast_io::details::swiss_table_group_counts>;
+	::fast_io::intrinsics::simd_vector<signed char, ::fast_io::details::swiss_table_group_vec_counts>;
 
 template <::std::integral T>
-inline constexpr ::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_counts>
+inline constexpr ::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_vec_counts>
 swiss_table_group_splat(T v) noexcept
 {
-	::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_counts> pat{};
-	for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_counts; ++i)
+	::fast_io::intrinsics::simd_vector<T, ::fast_io::details::swiss_table_group_vec_counts> pat{};
+	for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_vec_counts; ++i)
 	{
 		pat.value[i] = v;
 	}
@@ -85,7 +103,7 @@ swiss_table_group_splat(T v) noexcept
 inline constexpr ::fast_io::details::swiss_table_group_vec_type swiss_table_group_ramp() noexcept
 {
 	::fast_io::details::swiss_table_group_vec_type ramp{};
-	for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_counts; ++i)
+	for (::std::size_t i{}; i != ::fast_io::details::swiss_table_group_vec_counts; ++i)
 	{
 		ramp.value[i] = static_cast<::std::uint_least8_t>(i);
 	}
@@ -94,6 +112,7 @@ inline constexpr ::fast_io::details::swiss_table_group_vec_type swiss_table_grou
 
 struct swiss_table_group
 {
+	static constexpr ::std::size_t counts{::fast_io::details::swiss_table_group_vec_counts};
 	::fast_io::details::swiss_table_group_vec_type ctrlv;
 
 	inline explicit swiss_table_group(::std::uint_least8_t const *pos) noexcept
@@ -152,7 +171,7 @@ struct swiss_table_probe_seq
 
 	inline constexpr void next() noexcept
 	{
-		index += ::fast_io::details::swiss_table_group_counts;
+		index += ::fast_io::details::swiss_table_probe_stride;
 		offset = (offset + index) & cap;
 	}
 };
@@ -219,31 +238,51 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 	auto controls{imp.controls};
 	auto slots{imp.slots};
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
-	constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
 	::fast_io::details::swiss_table_probe_seq seq{cap, ::fast_io::details::swiss_table_hash_h1(hash) & cap, {}};
-	for (;;)
+	if constexpr (::fast_io::details::swiss_table_group_counts != 0)
 	{
-		::fast_io::details::swiss_table_group const group{controls + seq.offset};
-		for (auto match{group.match(h2)};;)
+		constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
+		for (;;)
 		{
-			auto const i{::fast_io::intrinsics::vector_mask_countr_zero(match)};
-			if (i == group_counts)
+			::fast_io::details::swiss_table_group const group{controls + seq.offset};
+			for (auto match{group.match(h2)};;)
 			{
-				break;
+				auto const i{::fast_io::intrinsics::vector_mask_countr_zero(match)};
+				if (i == group_counts)
+				{
+					break;
+				}
+				auto const pos{seq.offset_at(static_cast<::std::size_t>(i))};
+				if (key == slots[pos].key())
+				{
+					return {pos, true};
+				}
+				match.value[i] = 0;
 			}
-			auto const pos{seq.offset_at(static_cast<::std::size_t>(i))};
-			if (key == slots[pos].key())
+			if (auto const emptyidx{::fast_io::intrinsics::vector_mask_countr_zero(group.mask_empty())};
+				emptyidx != group_counts)
 			{
-				return {pos, true};
+				return {seq.offset_at(static_cast<::std::size_t>(emptyidx)), false};
 			}
-			match.value[i] = 0;
+			seq.next();
 		}
-		if (auto const emptyidx{::fast_io::intrinsics::vector_mask_countr_zero(group.mask_empty())};
-			emptyidx != group_counts)
+	}
+	else
+	{
+		for (;;)
 		{
-			return {seq.offset_at(static_cast<::std::size_t>(emptyidx)), false};
+			auto const offset{seq.offset};
+			auto const c{controls[offset]};
+			if (::fast_io::details::swiss_table_ctrl_is_empty(c))
+			{
+				return {offset, false};
+			}
+			if (c == h2 && key == slots[offset].key())
+			{
+				return {offset, true};
+			}
+			seq.next();
 		}
-		seq.next();
 	}
 }
 
@@ -270,17 +309,31 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 inline constexpr ::std::size_t swiss_table_find_first_non_full(::std::uint_least8_t const *controls, ::std::size_t cap,
 															   ::std::uint_least64_t hash) noexcept
 {
-	constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
 	::fast_io::details::swiss_table_probe_seq seq{cap, ::fast_io::details::swiss_table_hash_h1(hash) & cap, {}};
-	for (;;)
+	if constexpr (::fast_io::details::swiss_table_group_counts != 0)
 	{
-		if (auto const i{::fast_io::intrinsics::vector_mask_countr_zero(
-				::fast_io::details::swiss_table_group{controls + seq.offset}.mask_empty_or_deleted())};
-			i != group_counts)
+		constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
+		for (;;)
 		{
-			return seq.offset_at(static_cast<::std::size_t>(i));
+			if (auto const i{::fast_io::intrinsics::vector_mask_countr_zero(
+					::fast_io::details::swiss_table_group{controls + seq.offset}.mask_empty_or_deleted())};
+				i != group_counts)
+			{
+				return seq.offset_at(static_cast<::std::size_t>(i));
+			}
+			seq.next();
 		}
-		seq.next();
+	}
+	else
+	{
+		for (;;)
+		{
+			if (::fast_io::details::swiss_table_ctrl_is_empty_or_deleted(controls[seq.offset]))
+			{
+				return seq.offset;
+			}
+			seq.next();
+		}
 	}
 }
 
@@ -291,29 +344,38 @@ inline constexpr bool swiss_table_was_never_full(::std::uint_least8_t const *con
 												 ::std::size_t index) noexcept
 {
 	constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
-	if (cap <= group_counts)
+	if constexpr (group_counts == 0)
 	{
-		return true;
-	}
-	auto const empty_after{::fast_io::details::swiss_table_group{controls + index}.mask_empty()};
-	auto const empty_after_index{::fast_io::intrinsics::vector_mask_countr_zero(empty_after)};
-	if (empty_after_index == group_counts)
-	{
+		// Without group probing there is no group window to test; always mark
+		// deleted. Tombstones are reclaimed by the in-place rehash.
 		return false;
 	}
-	auto const index_before{static_cast<::std::size_t>((index - group_counts) & cap)};
-	auto const empty_before{::fast_io::details::swiss_table_group{controls + index_before}.mask_empty()};
-	// Abseil tests trailing_zeros(empty_after) + leading_zeros(empty_before) <
-	// group width, i.e. the run of non-empty control bytes containing the erased
-	// slot is shorter than a group. leading_zeros(empty_before) < width -
-	// empty_after_index is the same as asking whether empty_before has a set
-	// lane at index >= empty_after_index, so mask off the prefix lanes instead
-	// of counting from the end.
-	auto const suffix{empty_before &
-					  (::fast_io::details::swiss_table_group_ramp() >=
-					   ::fast_io::details::swiss_table_group_splat(
-						   static_cast<::std::uint_least8_t>(empty_after_index)))};
-	return ::fast_io::intrinsics::vector_mask_countr_zero(suffix) != group_counts;
+	else
+	{
+		if (cap <= group_counts)
+		{
+			return true;
+		}
+		auto const empty_after{::fast_io::details::swiss_table_group{controls + index}.mask_empty()};
+		auto const empty_after_index{::fast_io::intrinsics::vector_mask_countr_zero(empty_after)};
+		if (empty_after_index == group_counts)
+		{
+			return false;
+		}
+		auto const index_before{static_cast<::std::size_t>((index - group_counts) & cap)};
+		auto const empty_before{::fast_io::details::swiss_table_group{controls + index_before}.mask_empty()};
+		// Abseil tests trailing_zeros(empty_after) + leading_zeros(empty_before) <
+		// group width, i.e. the run of non-empty control bytes containing the erased
+		// slot is shorter than a group. leading_zeros(empty_before) < width -
+		// empty_after_index is the same as asking whether empty_before has a set
+		// lane at index >= empty_after_index, so mask off the prefix lanes instead
+		// of counting from the end.
+		auto const suffix{empty_before &
+						  (::fast_io::details::swiss_table_group_ramp() >=
+						   ::fast_io::details::swiss_table_group_splat(
+							   static_cast<::std::uint_least8_t>(empty_after_index)))};
+		return ::fast_io::intrinsics::vector_mask_countr_zero(suffix) != group_counts;
+	}
 }
 
 // Marks slot pos as erased: empty when the slot was never full (reclaimable),
@@ -343,12 +405,20 @@ inline constexpr ::std::size_t swiss_table_capacity_to_growth(::std::size_t cap)
 	{
 		return 0u;
 	}
-	constexpr ::std::size_t kmax_capacity_for_load_factor_one{::fast_io::details::swiss_table_group_counts * 4u - 1u};
-	if (cap <= kmax_capacity_for_load_factor_one)
+	if constexpr (::fast_io::details::swiss_table_group_counts == 0)
 	{
-		return cap - (cap >= swiss_table_group_counts - 1u);
+		// Scalar probing needs at least one empty slot to terminate.
+		return cap <= 63u ? cap - 1u : cap - (cap >> 3u);
 	}
-	return cap - (cap >> 3u);
+	else
+	{
+		constexpr ::std::size_t kmax_capacity_for_load_factor_one{::fast_io::details::swiss_table_group_counts * 4u - 1u};
+		if (cap <= kmax_capacity_for_load_factor_one)
+		{
+			return cap - (cap >= swiss_table_group_counts - 1u);
+		}
+		return cap - (cap >> 3u);
+	}
 }
 
 // Smallest valid capacity whose growth bound can hold `size` elements.
@@ -360,7 +430,11 @@ inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) 
 		return 0u;
 	}
 	constexpr ::std::size_t digits{static_cast<::std::size_t>(::std::numeric_limits<::std::size_t>::digits)};
-	constexpr ::std::size_t kmax_capacity_for_load_factor_one{::fast_io::details::swiss_table_group_counts * 4u - 1u};
+	// For scalar probing always leave at least one empty slot.
+	constexpr ::std::size_t kmax_capacity_for_load_factor_one{
+		::fast_io::details::swiss_table_group_counts != 0
+			? ::fast_io::details::swiss_table_group_counts * 4u - 1u
+			: 63u};
 	if (size >= (::std::numeric_limits<::std::size_t>::max() >> 3u))
 	{
 		::fast_io::fast_terminate();
@@ -404,11 +478,18 @@ inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::siz
 template <bool isprev>
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
 {
-	if constexpr (isprev)
+	if constexpr (isprev || ::fast_io::details::swiss_table_group_counts == 0)
 	{
 		do
 		{
-			--controlpos;
+			if constexpr (isprev)
+			{
+				--controlpos;
+			}
+			else
+			{
+				++controlpos;
+			}
 		} while (::fast_io::details::swiss_table_ctrl_is_empty_or_deleted(*controlpos));
 		return controlpos;
 	}
@@ -429,6 +510,34 @@ inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::
 			}
 		}
 	}
+}
+
+// special -> empty, full -> deleted over the whole control array, then
+// restores the sentinel and clones. Used by drop-deletes rehash.
+inline constexpr void
+swiss_table_convert_special_to_empty_and_full_to_deleted(::std::uint_least8_t *controls, ::std::size_t cap) noexcept
+{
+	if constexpr (::fast_io::details::swiss_table_group_counts != 0)
+	{
+		// Strides cover cap+1 control bytes including the sentinel.
+		for (::std::uint_least8_t *pos{controls}; pos != controls + cap + 1u;
+			 pos += ::fast_io::details::swiss_table_group_counts)
+		{
+			::fast_io::details::swiss_table_group{pos}.convert_special_to_empty_and_full_to_deleted(pos);
+		}
+	}
+	else
+	{
+		for (::std::uint_least8_t *pos{controls}; pos != controls + cap + 1u; ++pos)
+		{
+			auto &c{*pos};
+			c = ::fast_io::details::swiss_table_ctrl_is_full(c)
+					? static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted)
+					: static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
+		}
+	}
+	controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
+	__builtin_memcpy(controls + cap + 1u, controls, ::fast_io::details::swiss_table_cloned_counts);
 }
 
 } // namespace fast_io::details
