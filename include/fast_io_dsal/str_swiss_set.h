@@ -20,6 +20,12 @@
 #include "../fast_io_core_impl/freestanding/impl.h"
 #include "../fast_io_core_impl/terminate.h"
 #include "../fast_io_core_impl/intrinsics/msvc/impl.h"
+#if __has_cpp_attribute(__gnu__::__vector_size__)
+#include "../fast_io_core_impl/simd/gcc_clang.h"
+#else
+#include "../fast_io_core_impl/simd/generic_operations.h"
+#include "../fast_io_core_impl/simd/generic.h"
+#endif
 #include "../fast_io_core_impl/allocation/impl.h"
 
 #include "impl/freestanding.h"

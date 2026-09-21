@@ -80,6 +80,7 @@ struct str_swiss_map_imp_common
 	::std::size_t cap;
 	::std::size_t counts;
 	::std::size_t leftmost;
+	::std::size_t growth_left;
 	::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> *slots;
 };
 
@@ -182,15 +183,13 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 	auto oldslots{imp.slots};
 	auto const oldcap{imp.cap};
 
-	auto newcontrols{typed_ctrl_allocator_type::allocate(newcap + 1u)};
+	auto newcontrols{typed_ctrl_allocator_type::allocate(static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_group_counts))};
 	auto newslots{typed_slot_allocator_type::allocate(newcap)};
 
-	auto newcontrols_ed{newcontrols + newcap};
-	for (auto i{newcontrols}; i != newcontrols_ed; ++i)
-	{
-		*i = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
-	}
-	*newcontrols_ed = 0u;
+	::fast_io::freestanding::my_memset(newcontrols,
+									   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
+									   static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_group_counts));
+	newcontrols[newcap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
 
 	imp.controls = newcontrols;
 	imp.cap = newcap;
@@ -199,35 +198,24 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 	// Rehash existing entries
 	if (oldcap == 0)
 	{
-		imp.leftmost = 0;
+		imp.leftmost = newcap;
 	}
 	else
 	{
 		::std::size_t leftmost{newcap};
-		::std::size_t newcapm1{static_cast<::std::size_t>(newcap - 1u)};
 		for (::std::size_t i{}; i != oldcap; ++i)
 		{
-			auto oldctrl{oldcontrols[i]};
-			if (oldctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
-				oldctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
+			if (::fast_io::details::swiss_table_ctrl_is_full(oldcontrols[i]))
 			{
-				auto const &oldslot{oldslots[i]};
+				auto &oldslot{oldslots[i]};
 				auto const oldhash{hash.do_hash(reinterpret_cast<::std::byte const *>(oldslot.ky.ptr), reinterpret_cast<::std::byte const *>(oldslot.ky.ptr + oldslot.ky.n))};
-				auto h1{::fast_io::details::swiss_table_hash_h1(oldhash)};
-				auto h2{::fast_io::details::swiss_table_hash_h2(oldhash)};
-				auto pos{h1 & newcapm1};
-				for (;;)
+				auto pos{::fast_io::details::swiss_table_find_first_non_full(newcontrols, newcap, oldhash)};
+				::fast_io::details::swiss_table_set_ctrl(newcontrols, newcap, pos,
+														 ::fast_io::details::swiss_table_hash_h2(oldhash));
+				::std::construct_at(newslots + pos, ::std::move(oldslot));
+				if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
 				{
-					if (newcontrols[pos] == static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty))
-					{
-						newcontrols[pos] = h2;
-						::std::construct_at(newslots + pos, ::std::move(oldslot));
-						break;
-					}
-					if ((++pos) == newcap) [[unlikely]]
-					{
-						pos = 0;
-					}
+					::std::destroy_at(__builtin_addressof(oldslot));
 				}
 				if (pos < leftmost)
 				{
@@ -236,17 +224,17 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 			}
 		}
 		imp.leftmost = leftmost;
-		typed_ctrl_allocator_type::deallocate_n(oldcontrols, oldcap + 1u);
+		typed_ctrl_allocator_type::deallocate_n(oldcontrols, static_cast<::std::size_t>(oldcap + ::fast_io::details::swiss_table_group_counts));
 		typed_slot_allocator_type::deallocate_n(oldslots, oldcap);
 	}
+	imp.growth_left = ::fast_io::details::swiss_table_capacity_to_growth(newcap) - imp.counts;
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_reserve(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t n, hasher hash) noexcept
 {
-	::std::size_t const counts{imp.counts};
-	if (n <= counts)
+	if (n <= imp.counts + imp.growth_left)
 	{
 		return;
 	}
@@ -313,22 +301,17 @@ inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 {
 	using char_type = chtype;
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
-	*pcontrol = h2;
+	if (::fast_io::details::swiss_table_ctrl_is_empty(*pcontrol))
+	{
+		--imp.growth_left;
+	}
+	::fast_io::details::swiss_table_set_ctrl(imp.controls, imp.cap, pos, h2);
 	pslot->ky = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
-	auto newleftmost{pos};
-	auto counts{imp.counts};
-	if (counts)
+	if (pos < imp.leftmost)
 	{
-		if (newleftmost < imp.leftmost)
-		{
-			imp.leftmost = newleftmost;
-		}
+		imp.leftmost = pos;
 	}
-	else
-	{
-		imp.leftmost = newleftmost;
-	}
-	imp.counts = static_cast<::std::size_t>(counts + 1u);
+	++imp.counts;
 }
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
@@ -337,6 +320,91 @@ inline constexpr void str_swiss_map_insert_key_internal(
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
 {
 	::fast_io::details::str_swiss_map_insert_key_internal_computed_slot_controls<allocator_type>(imp, pos, keybase, keylen, hash, imp.controls + pos, imp.slots + pos);
+}
+
+// Drops tombstones by rehashing the table in place without resizing.
+// References abseil DropDeletesWithoutResize.
+template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline constexpr void str_swiss_map_rehash_in_place(
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) noexcept
+{
+	auto const controls{imp.controls};
+	auto const slots{imp.slots};
+	auto const cap{imp.cap};
+	// special -> empty, full -> deleted (live slots are now tombstones)
+	for (::std::size_t i{}; i != cap; ++i)
+	{
+		auto &ci{controls[i]};
+		ci = ::fast_io::details::swiss_table_ctrl_is_full(ci)
+				 ? static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted)
+				 : static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty);
+	}
+	controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
+	__builtin_memcpy(controls + cap + 1u, controls, ::fast_io::details::swiss_table_cloned_counts);
+
+	auto const probe_index{[cap](::std::size_t pos, ::std::size_t offset) noexcept {
+		return ((pos - offset) & cap) / ::fast_io::details::swiss_table_group_counts;
+	}};
+	::std::size_t leftmost{cap};
+	for (::std::size_t i{}; i != cap; ++i)
+	{
+		if (!::fast_io::details::swiss_table_ctrl_is_deleted(controls[i]))
+		{
+			continue;
+		}
+		for (;;)
+		{
+			auto const h{hash.do_hash(reinterpret_cast<::std::byte const *>(slots[i].ky.ptr),
+									  reinterpret_cast<::std::byte const *>(slots[i].ky.ptr + slots[i].ky.n))};
+			auto const offset{::fast_io::details::swiss_table_hash_h1(h) & cap};
+			auto const target{::fast_io::details::swiss_table_find_first_non_full(controls, cap, h)};
+			if (probe_index(target, offset) == probe_index(i, offset))
+			{
+				// target is within the same group: the slot stays
+				::fast_io::details::swiss_table_set_ctrl(controls, cap, i,
+														 ::fast_io::details::swiss_table_hash_h2(h));
+				if (i < leftmost)
+				{
+					leftmost = i;
+				}
+				break;
+			}
+			if (::fast_io::details::swiss_table_ctrl_is_empty(controls[target]))
+			{
+				::fast_io::details::swiss_table_set_ctrl(controls, cap, target,
+														 ::fast_io::details::swiss_table_hash_h2(h));
+				::std::construct_at(slots + target, ::std::move(slots[i]));
+				if constexpr (!::std::is_trivially_destructible_v<mappedtype>)
+				{
+					::std::destroy_at(__builtin_addressof(slots[i].val));
+				}
+				::fast_io::details::swiss_table_set_ctrl(controls, cap, i,
+														 static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty));
+				if (target < leftmost)
+				{
+					leftmost = target;
+				}
+				break;
+			}
+			// swap element at i into its probe position and reprocess i
+			::fast_io::details::swiss_table_set_ctrl(controls, cap, target,
+													 ::fast_io::details::swiss_table_hash_h2(h));
+			{
+				auto tmp{::std::move(slots[i])};
+				slots[i] = ::std::move(slots[target]);
+				slots[target] = ::std::move(tmp);
+			}
+			if (target < leftmost)
+			{
+				leftmost = target;
+			}
+		}
+	}
+	imp.leftmost = leftmost;
+	imp.growth_left = ::fast_io::details::swiss_table_capacity_to_growth(cap) - imp.counts;
 }
 
 template <bool needdestroy, typename allocator_type, ::std::integral chtype, typename mappedtype>
@@ -357,10 +425,7 @@ inline constexpr void str_swiss_map_clear_impl(
 	auto slots{imp.slots};
 	for (::std::size_t i{}; i != cap; ++i)
 	{
-		auto &ci{controls[i]};
-		auto ctrl{ci};
-		if (ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
-			ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
+		if (::fast_io::details::swiss_table_ctrl_is_full(controls[i]))
 		{
 			auto &si{slots[i]};
 			::fast_io::details::deallocate_associative_string<allocator_type, char_type>(si.ky.ptr, si.ky.n);
@@ -368,22 +433,23 @@ inline constexpr void str_swiss_map_clear_impl(
 			{
 				::std::destroy_at(__builtin_addressof(si.val));
 			}
-			if constexpr (!needdestroy)
-			{
-				ci = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
-			}
 		}
 	}
 	if constexpr (needdestroy)
 	{
-		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + 1u));
+		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts));
 		typed_slot_allocator_type::deallocate_n(slots, cap);
 		imp = {};
 	}
 	else
 	{
+		::fast_io::freestanding::my_memset(controls,
+										   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
+										   static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts));
+		controls[cap] = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::sentinel);
 		imp.counts = 0u;
-		imp.leftmost = imp.cap;
+		imp.leftmost = cap;
+		imp.growth_left = ::fast_io::details::swiss_table_capacity_to_growth(cap);
 	}
 }
 
@@ -404,11 +470,8 @@ inline constexpr ::std::size_t str_swiss_map_erase_rg(::fast_io::details::str_sw
 		{
 			::std::destroy_at(__builtin_addressof(si.val));
 		}
-
-		auto controls{imp.controls};
-		auto controlspos{controls + i};
-		*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
-		i = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
+		::fast_io::details::swiss_table_erase_meta_only(imp, i);
+		i = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(imp.controls + i) - imp.controls);
 	}
 	if (!(imp.counts -= counting) || imp.leftmost == first)
 	{
@@ -426,9 +489,9 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 	{
 		::std::destroy_at(__builtin_addressof(si.val));
 	}
+	::fast_io::details::swiss_table_erase_meta_only(imp, pos);
 	auto controls{imp.controls};
 	auto controlspos{controls + pos};
-	*controlspos = static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted);
 	if constexpr (compute_next)
 	{
 		::std::size_t next{imp.cap};
@@ -450,7 +513,6 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 	{
 		if (--imp.counts)
 		{
-			auto leftmost{imp.leftmost};
 			if (imp.leftmost == pos)
 			{
 				imp.leftmost = static_cast<::std::size_t>(::fast_io::details::swiss_table_iterator_common<false>(controlspos) - controls);
@@ -492,16 +554,14 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 	}
 	auto othercontrols{other.controls};
 	auto otherslots{other.slots};
-	::std::size_t capp1{static_cast<::std::size_t>(cap + 1u)};
-	auto controls{typed_ctrl_allocator_type::allocate(capp1)};
+	::std::size_t const ctrlsz{static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_group_counts)};
+	auto controls{typed_ctrl_allocator_type::allocate(ctrlsz)};
 	auto slots{typed_slot_allocator_type::allocate(cap)};
 
-	::fast_io::freestanding::non_overlapped_copy_n(othercontrols, capp1, controls);
+	::fast_io::freestanding::non_overlapped_copy_n(othercontrols, ctrlsz, controls);
 	for (::std::size_t i{}; i != cap; ++i)
 	{
-		auto ctrl{othercontrols[i]};
-		if (ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::empty) &&
-			ctrl != static_cast<::std::uint_least8_t>(::fast_io::details::swiss_table_ctrl::deleted))
+		if (::fast_io::details::swiss_table_ctrl_is_full(othercontrols[i]))
 		{
 			auto &othersi{otherslots[i]};
 			auto &si{slots[i]};
@@ -509,7 +569,7 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 			::std::construct_at(__builtin_addressof(si.val), othersi.val);
 		}
 	}
-	return {controls, cap, other.counts, other.leftmost, slots};
+	return {controls, cap, other.counts, other.leftmost, other.growth_left, slots};
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
@@ -520,13 +580,28 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename
 		imp, key, keyn, hval)};
 	::std::size_t pos{result.pos};
 	bool inserted{!result.found};
-	if (inserted && ::fast_io::details::str_swiss_table_need_grow(imp.counts, imp.cap)) [[likely]]
+	if (inserted) [[likely]]
 	{
-		::fast_io::details::str_swiss_map_grow<allocator_type, hasher, char_type>(
-			imp, hash);
-		pos = ::fast_io::details::swiss_table_find_common_with_str<char_type>(
-				  imp, key, keyn, hval)
-				  .pos;
+		if (!imp.growth_left)
+		{
+			if (imp.counts < ::fast_io::details::swiss_table_capacity_to_growth(imp.cap))
+			{
+				// tombstones consume the growth budget: rehash in place
+				::fast_io::details::str_swiss_map_rehash_in_place<allocator_type, hasher, char_type>(
+					imp, hash);
+			}
+			else
+			{
+				::fast_io::details::str_swiss_map_grow<allocator_type, hasher, char_type>(
+					imp, hash);
+			}
+			pos = ::fast_io::details::swiss_table_find_first_non_full(imp.controls, imp.cap, hval);
+		}
+		else if (::fast_io::details::swiss_table_capacity_to_growth(imp.cap) != imp.growth_left + imp.counts)
+		{
+			// tombstones exist: reuse the first non-full slot in probe order
+			pos = ::fast_io::details::swiss_table_find_first_non_full(imp.controls, imp.cap, hval);
+		}
 	}
 	return {hval, pos, inserted};
 }
@@ -813,14 +888,11 @@ public:
 			{
 				bool inserted{res.inserted};
 				auto newptr{__builtin_addressof(res.position.slots->val)};
-				if (inserted)
+				if (!inserted)
 				{
-					::std::construct_at(newptr, ::std::forward<Args>(args)...);
+					::std::destroy_at(newptr);
 				}
-				else
-				{
-					::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
-				}
+				::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
 			}
 
 			return res;
@@ -840,6 +912,7 @@ public:
 			}
 			else
 			{
+				::std::destroy_at(newptr);
 				::std::construct_at(newptr, mapped_type(::std::forward<Args>(args)...));
 			}
 			return {{ctrlptr, slotptr}, inserted};
