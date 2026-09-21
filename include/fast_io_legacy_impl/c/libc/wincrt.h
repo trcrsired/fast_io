@@ -130,6 +130,31 @@ inline void wincrt_fp_allocate_buffer_impl(FILE *__restrict fpp) noexcept
 	fp->_flag |= crt_mybuf_value;
 }
 
+/*
+The CRT refuses to give certain streams a stdio buffer (msvcrt_alloc_buffer returns FALSE).
+For UCRT (msvcr >= 140): stderr is never buffered, stdout is unbuffered only when it refers
+to a character device. For old msvcrt (< 140): stdout/stderr are unbuffered only when they
+refer to a character device. File descriptors >= 3 always receive a buffer, even for
+character devices like CONOUT$.
+*/
+inline bool wincrt_fp_is_unbuffered_fd_impl(::std::int_least32_t fd) noexcept
+{
+#if defined(_MSC_VER) || defined(_UCRT)
+	if (fd == 2)
+	{
+		return true;
+	}
+	if (fd == 1)
+#else
+	if (fd == 1 || fd == 2)
+#endif
+	{
+		::fast_io::posix_io_observer piob{fd};
+		return ::fast_io::is_character_device(piob);
+	}
+	return false;
+}
+
 
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
@@ -285,9 +310,9 @@ inline ::std::byte const *wincrt_fp_write_some_cold_impl(FILE *__restrict fp, ch
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
 	if (fpp->_base == nullptr)
 	{
-		::fast_io::posix_io_observer piob{fpp->_file};
-		if (::fast_io::is_character_device(piob))
+		if (::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file))
 		{
+			::fast_io::posix_io_observer piob{fpp->_file};
 			return ::fast_io::operations::write_some_bytes(piob,
 														   reinterpret_cast<::std::byte const *>(first),
 														   reinterpret_cast<::std::byte const *>(last));
@@ -325,9 +350,9 @@ inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, ch
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
 	if (fpp->_base == nullptr)
 	{
-		::fast_io::posix_io_observer piob{fpp->_file};
-		if (::fast_io::is_character_device(piob))
+		if (::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file))
 		{
+			::fast_io::posix_io_observer piob{fpp->_file};
 			::fast_io::operations::write_all_bytes(piob,
 												   reinterpret_cast<::std::byte const *>(first),
 												   reinterpret_cast<::std::byte const *>(last));
@@ -363,9 +388,9 @@ inline void wincrt_fp_write_cold_for_scatter_impl(FILE *__restrict fp, char cons
 inline ::fast_io::io_scatter_status_t wincrt_fp_scatter_write_some_cold_impl(FILE *__restrict fp, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
-	::fast_io::posix_io_observer piob{fpp->_file};
-	if (::fast_io::is_character_device(piob)) [[unlikely]]
+	if (fpp->_base == nullptr && ::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file)) [[unlikely]]
 	{
+		::fast_io::posix_io_observer piob{fpp->_file};
 		return ::fast_io::operations::scatter_write_some_bytes(piob, pscatters, n);
 	}
 	for (auto psci{pscatters}, psce{pscatters + n}; psci != psce; ++psci)
@@ -387,9 +412,9 @@ inline ::fast_io::io_scatter_status_t wincrt_fp_scatter_write_some_cold_impl(FIL
 inline void wincrt_fp_scatter_write_all_cold_impl(FILE *__restrict fp, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
-	::fast_io::posix_io_observer piob{fpp->_file};
-	if (::fast_io::is_character_device(piob)) [[unlikely]]
+	if (fpp->_base == nullptr && ::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file)) [[unlikely]]
 	{
+		::fast_io::posix_io_observer piob{fpp->_file};
 		return ::fast_io::operations::scatter_write_all_bytes(piob, pscatters, n);
 	}
 	for (auto psci{pscatters}, psce{pscatters + n}; psci != psce; ++psci)
@@ -409,6 +434,14 @@ inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch) FAST_IO_
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
 	if (fp->_base == nullptr)
 	{
+		if (::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fp->_file))
+		{
+			::fast_io::posix_io_observer piob{fp->_file};
+			::fast_io::operations::write_all_bytes(piob,
+												   reinterpret_cast<::std::byte const *>(__builtin_addressof(ch)),
+												   reinterpret_cast<::std::byte const *>(__builtin_addressof(ch)) + sizeof(ch));
+			return;
+		}
 		wincrt_fp_allocate_buffer_impl(fpp);
 	}
 	else
