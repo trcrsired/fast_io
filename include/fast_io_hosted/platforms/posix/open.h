@@ -534,7 +534,7 @@ struct my_posix_open_paramter
 {
 	int om{};
 	mode_t pm{};
-	inline int operator()(char const *filename) const
+	inline int operator()(char const *filename) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return my_posix_open(filename, om, pm);
 	}

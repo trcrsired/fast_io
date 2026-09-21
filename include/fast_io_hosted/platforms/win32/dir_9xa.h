@@ -5,8 +5,8 @@ namespace fast_io
 
 namespace win32::details
 {
-using win32_9xa_dir_handle_path_str = ::fast_io::containers::basic_string<char8_t, ::fast_io::native_global_allocator>;
-using tlc_win32_9xa_dir_handle_path_str = ::fast_io::containers::basic_string<char8_t, ::fast_io::native_thread_local_allocator>;
+using win32_9xa_dir_handle_path_str =
+	::fast_io::containers::basic_string<char8_t, ::fast_io::generic_allocator_adapter<::fast_io::win32_heapalloc_allocator>>;
 
 template <typename... Args>
 constexpr inline win32_9xa_dir_handle_path_str concat_win32_9xa_dir_handle_path_str(Args &&...args)
@@ -25,22 +25,6 @@ constexpr inline win32_9xa_dir_handle_path_str concat_win32_9xa_dir_handle_path_
 	}
 }
 
-template <typename... Args>
-constexpr inline tlc_win32_9xa_dir_handle_path_str concat_tlc_win32_9xa_dir_handle_path_str(Args &&...args)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char8_t>, Args...>};
-	if constexpr (type_error)
-	{
-		return ::fast_io::basic_general_concat<false, char8_t, tlc_win32_9xa_dir_handle_path_str>(
-			::fast_io::io_print_forward<char8_t>(::fast_io::io_print_alias(args))...);
-	}
-	else
-	{
-		static_assert(type_error, "some types are not printable, so we cannot concat ::fast_io::win32::details::tlc_win32_9xa_dir_handle_path_str");
-		return {};
-	}
-}
 } // namespace win32::details
 
 struct win32_9xa_dir_handle
@@ -73,7 +57,7 @@ inline void check_win32_9xa_dir_is_valid(win32_9xa_dir_handle const &h)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::win32_find_dataa wfda{};
-	tlc_win32_9xa_dir_handle_path_str temp_find_path{concat_tlc_win32_9xa_dir_handle_path_str(h.path, u8"\\*")};
+	win32_9xa_dir_handle_path_str temp_find_path{concat_win32_9xa_dir_handle_path_str(h.path, u8"\\*")};
 	auto find_struct{::fast_io::win32::FindFirstFileA(reinterpret_cast<char const *>(temp_find_path.c_str()), __builtin_addressof(wfda))};
 	if (find_struct == reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))) [[unlikely]]
 	{
@@ -85,10 +69,11 @@ inline void check_win32_9xa_dir_is_valid(win32_9xa_dir_handle const &h)
 	}
 }
 
-[[nodiscard]] inline bool get_win32_9xa_dir_validity(win32_9xa_dir_handle const &h) noexcept
+[[nodiscard]] inline bool get_win32_9xa_dir_validity(win32_9xa_dir_handle const &h)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::win32_find_dataa wfda{};
-	tlc_win32_9xa_dir_handle_path_str temp_find_path{concat_tlc_win32_9xa_dir_handle_path_str(h.path, u8"\\*")};
+	win32_9xa_dir_handle_path_str temp_find_path{concat_win32_9xa_dir_handle_path_str(h.path, u8"\\*")};
 	auto find_struct{::fast_io::win32::FindFirstFileA(reinterpret_cast<char const *>(temp_find_path.c_str()), __builtin_addressof(wfda))};
 	if (find_struct == reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))) [[unlikely]]
 	{
@@ -102,7 +87,7 @@ inline void check_win32_9xa_dir_is_valid(win32_9xa_dir_handle const &h)
 }
 
 template <bool throw_eh = false>
-inline void close_win32_9xa_dir_handle(win32_9xa_dir_handle &h) noexcept(!throw_eh)
+inline void close_win32_9xa_dir_handle(win32_9xa_dir_handle &h) FAST_IO_HERBCEPTIONS_THROWS_IF(throw_eh)
 {
 	if constexpr (throw_eh)
 	{
@@ -212,12 +197,12 @@ inline void *basic_win32_9xa_create_file_at_fs_dirent_impl(win32_9xa_dir_handle 
 #endif
 
 	check_win32_9xa_dir_is_valid(*directory_handle);
-	tlc_win32_9xa_dir_handle_path_str str{concat_tlc_win32_9xa_dir_handle_path_str(directory_handle->path, u8"\\", ::fast_io::mnp::os_c_str_with_known_size(beg, filename_c_str_len))};
+	win32_9xa_dir_handle_path_str str{concat_win32_9xa_dir_handle_path_str(directory_handle->path, u8"\\", ::fast_io::mnp::os_c_str_with_known_size(beg, filename_c_str_len))};
 	auto handle{::fast_io::details::win32_create_file_impl<win32_family::ansi_9x>(str, ompm)};
 	return handle;
 }
 
-inline ::fast_io::win32::details::tlc_win32_9xa_dir_handle_path_str concat_tlc_win32_9xa_path_uncheck_whether_exist(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size)
+inline ::fast_io::win32::details::win32_9xa_dir_handle_path_str concat_win32_9xa_path_uncheck_whether_exist(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const beg{path_c_str};
@@ -229,7 +214,7 @@ inline ::fast_io::win32::details::tlc_win32_9xa_dir_handle_path_str concat_tlc_w
 	}
 #endif
 
-	return ::fast_io::win32::details::concat_tlc_win32_9xa_dir_handle_path_str(dirhd.path, u8"\\", ::fast_io::mnp::os_c_str_with_known_size(beg, path_size));
+	return ::fast_io::win32::details::concat_win32_9xa_dir_handle_path_str(dirhd.path, u8"\\", ::fast_io::mnp::os_c_str_with_known_size(beg, path_size));
 }
 
 struct win32_9xa_create_dir_file
@@ -329,7 +314,8 @@ struct win32_9xa_at_entry
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline win32_9xa_at_entry win32_9xa_at_fdcwd() noexcept
+inline win32_9xa_at_entry win32_9xa_at_fdcwd()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32_9xa_at_entry{{win32::details::concat_win32_9xa_dir_handle_path_str(u8".")}};
 }
@@ -340,7 +326,8 @@ inline win32_9xa_at_entry win32_9xa_at_fdcwd() noexcept
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline win32_9xa_at_entry at_fdcwd() noexcept
+inline win32_9xa_at_entry at_fdcwd()
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32_9xa_at_fdcwd();
 }
@@ -420,6 +407,7 @@ public:
 	{
 	}
 	inline win32_9xa_dir_file &operator=(win32_9xa_dir_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
 		{
@@ -483,6 +471,7 @@ public:
 	inline explicit constexpr win32_9xa_dir_file(decltype(nullptr)) noexcept = delete;
 
 	inline explicit win32_9xa_dir_file(win32_9xa_fs_dirent fsdirent, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_at_fs_dirent_impl(
 				  fsdirent.handle, fsdirent.filename.c_str(), fsdirent.filename.size())}
@@ -491,6 +480,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit win32_9xa_dir_file(T const &filename, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_impl(filename)}
 	{
@@ -498,6 +488,7 @@ public:
 
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit win32_9xa_dir_file(win32_9xa_at_entry nate, T const &filename, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_at_impl(nate.handle, filename)}
 	{

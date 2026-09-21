@@ -41,6 +41,7 @@ public:
 	{
 	}
 	inline basic_win32_family_file &operator=(basic_win32_family_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
 		{

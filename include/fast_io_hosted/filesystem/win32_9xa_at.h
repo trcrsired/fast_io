@@ -55,7 +55,7 @@ namespace win32::details
 inline void win32_9xa_unlinkat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, win32_9xa_at_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto file_or_path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto file_or_path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	if ((flags & ::fast_io::win32_9xa_at_flags::removedir) == ::fast_io::win32_9xa_at_flags::removedir)
 	{
@@ -76,7 +76,7 @@ inline void win32_9xa_unlinkat_impl(::fast_io::win32_9xa_dir_handle const &dirhd
 inline void win32_9xa_mkdirat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, perms pm)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	if (!::fast_io::win32::CreateDirectoryA(reinterpret_cast<char const *>(path.c_str()), nullptr)) [[unlikely]]
 	{
@@ -123,7 +123,7 @@ inline void win32_9xa_faccessat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 		throw_win32_error(0x57);
 	}
 
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	auto const attr{::fast_io::win32::GetFileAttributesA(reinterpret_cast<char const *>(path.c_str()))};
 
@@ -157,7 +157,7 @@ inline void win32_9xa_faccessat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 inline void win32_9xa_fchmodat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, perms pm)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	auto const attr{::fast_io::win32::GetFileAttributesA(reinterpret_cast<char const *>(path.c_str()))};
 
@@ -186,7 +186,7 @@ inline void win32_9xa_fchmodat_impl(::fast_io::win32_9xa_dir_handle const &dirhd
 												 [[maybe_unused]] ::std::uintmax_t owner, [[maybe_unused]] ::std::uintmax_t group)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	auto const attr{::fast_io::win32::GetFileAttributesA(reinterpret_cast<char const *>(path.c_str()))};
 
@@ -222,7 +222,7 @@ inline constexpr auto calculate_win32_9xa_readonly_open_mode(bool write_attribut
 inline posix_file_status win32_9xa_fstatat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, win32_9xa_at_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 	auto md{calculate_win32_9xa_readonly_open_mode(false, (flags & win32_9xa_at_flags::symlink_nofollow) == win32_9xa_at_flags::symlink_nofollow)};
 	::fast_io::win32_file_9xa f{::fast_io::details::win32_family_create_file_internal_impl<win32_family::ansi_9x>(reinterpret_cast<char const *>(path.c_str()), md)};
 
@@ -233,7 +233,7 @@ inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 									 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time, win32_9xa_at_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 	auto md{calculate_win32_9xa_readonly_open_mode(true, (flags & win32_9xa_at_flags::symlink_nofollow) == win32_9xa_at_flags::symlink_nofollow)};
 	::fast_io::win32_file_9xa f{::fast_io::details::win32_family_create_file_internal_impl<win32_family::ansi_9x>(reinterpret_cast<char const *>(path.c_str()), md)};
 
@@ -331,7 +331,7 @@ inline void win32_9xa_symlinkat_impl([[maybe_unused]] char8_t const *oldpath_c_s
 
 	::fast_io::operations::write_all(f, buffer, buffer + 510);
 
-#else 
+#else
 	throw_win32_error(0x1);
 #endif
 }
@@ -340,8 +340,8 @@ inline void win32_9xa_linkat_impl(::fast_io::win32_9xa_dir_handle const &olddirh
 								  ::fast_io::win32_9xa_dir_handle const &newdirhd, char8_t const *newpath_c_str, ::std::size_t newpath_size)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto oldpath{concat_tlc_win32_9xa_path_uncheck_whether_exist(olddirhd, oldpath_c_str, oldpath_size)};
-	auto newpath{concat_tlc_win32_9xa_path_uncheck_whether_exist(newdirhd, newpath_c_str, newpath_size)};
+	auto oldpath{concat_win32_9xa_path_uncheck_whether_exist(olddirhd, oldpath_c_str, oldpath_size)};
+	auto newpath{concat_win32_9xa_path_uncheck_whether_exist(newdirhd, newpath_c_str, newpath_size)};
 
 	// Because of limitations of win32_9xa, this function doesn't really link two files together.
 	// However, it simulates a real link by copying the file at exists to new.
@@ -356,8 +356,8 @@ inline void win32_9xa_renameat_impl(::fast_io::win32_9xa_dir_handle const &olddi
 									::fast_io::win32_9xa_dir_handle const &newdirhd, char8_t const *newpath_c_str, ::std::size_t newpath_size)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto oldpath{concat_tlc_win32_9xa_path_uncheck_whether_exist(olddirhd, oldpath_c_str, oldpath_size)};
-	auto newpath{concat_tlc_win32_9xa_path_uncheck_whether_exist(newdirhd, newpath_c_str, newpath_size)};
+	auto oldpath{concat_win32_9xa_path_uncheck_whether_exist(olddirhd, oldpath_c_str, oldpath_size)};
+	auto newpath{concat_win32_9xa_path_uncheck_whether_exist(newdirhd, newpath_c_str, newpath_size)};
 
 	if (!::fast_io::win32::MoveFileA(reinterpret_cast<char const *>(oldpath.c_str()), reinterpret_cast<char const *>(newpath.c_str())))
 	{
@@ -369,7 +369,7 @@ template <::std::integral char_type>
 inline ::fast_io::details::basic_ct_string<char_type> win32_9xa_readlinkat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto const path{concat_tlc_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
+	auto const path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
 
 	auto const attr{::fast_io::win32::GetFileAttributesA(reinterpret_cast<char const *>(path.c_str()))};
 	if (attr == static_cast<::std::uint_least32_t>(-1)) [[unlikely]]

@@ -87,6 +87,7 @@ namespace details
 {
 
 inline void *create_win32_dll_9xa(char const *filename) // 9x kernel does not support Ex apis
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto hmodule{::fast_io::win32::LoadLibraryA(filename)};
 	if (hmodule == nullptr)
@@ -119,6 +120,7 @@ struct win32_family_win32_dll_parameter
 	using family_char_type = ::std::conditional_t<family == win32_family::wide_nt, char16_t, char>;
 	dll_mode mode{};
 	inline void *operator()(family_char_type const *filename_c_str)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if constexpr (family == win32_family::wide_nt)
 		{
@@ -134,6 +136,7 @@ struct win32_family_win32_dll_parameter
 template <win32_family family, typename T>
 	requires(::fast_io::constructible_to_os_c_str<T>)
 inline void *create_win32_family_dll_impl(T const &t, dll_mode mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32_family_api_common<family>(t, win32_family_win32_dll_parameter<family>{mode});
 }
@@ -158,6 +161,7 @@ public:
 	inline constexpr win32_family_dll_file &operator=(win32_family_dll_io_observer<family>) noexcept = delete;
 	template <::fast_io::constructible_to_os_c_str T>
 	inline explicit win32_family_dll_file(T const &t, dll_mode mode)
+		FAST_IO_HERBCEPTIONS_THROWS
 		: win32_family_dll_io_observer<family>{::fast_io::details::create_win32_family_dll_impl<family>(t, mode)}
 	{
 	}
@@ -221,6 +225,7 @@ struct win32_dll_load_impl_context
 {
 	void *hmodule{};
 	inline void *operator()(char const *symbol) const
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return win32_dll_load_symbol_impl(hmodule, symbol);
 	}

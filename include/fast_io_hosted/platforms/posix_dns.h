@@ -154,7 +154,7 @@ inline auto posix_dns_open_internal_impl(char const *node)
 
 struct posix_dns_open_parameter
 {
-	inline auto operator()(char const *node_name_c_str)
+	inline auto operator()(char const *node_name_c_str) FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return ::fast_io::details::posix_dns_open_internal_impl(node_name_c_str);
 	}

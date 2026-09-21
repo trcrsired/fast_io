@@ -162,6 +162,7 @@ public:
 		: basic_posix_family_io_observer<family, ch_type>{::fast_io::details::sys_dup(dp.fd)}
 	{}
 	inline basic_posix_family_file &operator=(basic_posix_family_file const &dp)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(dp) == this) [[unlikely]]
 		{

@@ -159,7 +159,7 @@ inline posix_file_status win32_9xa_dir_file_status_impl(win32_9xa_dir_handle con
 
 	// find data
 	::fast_io::win32::win32_find_dataa wfda{};
-	tlc_win32_9xa_dir_handle_path_str temp_find_path{concat_tlc_win32_9xa_dir_handle_path_str(handle.path, u8"\\*")};
+	win32_9xa_dir_handle_path_str temp_find_path{concat_win32_9xa_dir_handle_path_str(handle.path, u8"\\*")};
 	auto find_struct{::fast_io::win32::FindFirstFileA(reinterpret_cast<char const *>(temp_find_path.c_str()), __builtin_addressof(wfda))};
 	if (find_struct == reinterpret_cast<void *>(static_cast<::std::ptrdiff_t>(-1))) [[unlikely]]
 	{
@@ -233,11 +233,13 @@ inline posix_file_status win32_9xa_dir_file_status_impl(win32_9xa_dir_handle con
 
 template <win32_family family, ::std::integral ch_type>
 inline posix_file_status status(basic_win32_family_io_observer<family, ch_type> wiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32::details::win32_status_impl(wiob.handle);
 }
 
 inline posix_file_status status(win32_9xa_dir_io_observer w9xiob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32::details::win32_9xa_dir_file_status_impl(w9xiob.handle);
 }

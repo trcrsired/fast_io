@@ -628,6 +628,7 @@ public:
 	}
 
 	inline basic_win32_family_socket_file &operator=(basic_win32_family_socket_file const &dp)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(dp) == this) [[unlikely]]
 		{

@@ -936,7 +936,8 @@ struct nt_process_id
 };
 
 template <nt_family family>
-inline nt_process_id get_process_id(nt_family_process_observer<family> ppob) noexcept
+inline nt_process_id get_process_id(nt_family_process_observer<family> ppob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr bool zw{family == nt_family::zw};
 

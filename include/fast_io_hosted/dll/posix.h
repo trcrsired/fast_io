@@ -93,6 +93,7 @@ namespace details
 }
 
 inline void *create_posix_rtld(char const *filename, dll_mode mode)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	errno = {};
 	auto hd{noexcept_call(::dlopen, filename, ::fast_io::dll_mode_to_posix_rtld_mode(mode))};
@@ -166,6 +167,7 @@ public:
 		return *this;
 	}
 	inline void close()
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (this->rtld_handle) [[likely]]
 		{
@@ -204,7 +206,7 @@ inline void *posix_dll_load_symbol_impl(void *rtld_handle, char const *symbol)
 struct posix_dll_load_impl_context
 {
 	void *rtld_handle{};
-	inline void *operator()(char const *symbol) const
+	inline void *operator()(char const *symbol) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return posix_dll_load_symbol_impl(rtld_handle, symbol);
 	}
@@ -227,7 +229,7 @@ struct posix_dll_load_versioned_symbol_impl_context
 {
 	void *rtld_handle{};
 	char const *vers{};
-	inline void *operator()(char const *symbol) const
+	inline void *operator()(char const *symbol) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return posix_dll_load_vers_symbol_impl(rtld_handle, symbol, vers);
 	}

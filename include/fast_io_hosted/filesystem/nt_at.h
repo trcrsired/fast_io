@@ -703,7 +703,7 @@ inline void nt_renameat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::st
 
 	nt_call_determine_kernel_callback(
 		newdirhd, newpath_c_str, newpath_size, kernel,
-		[&](void *directory_hd, win32::nt::unicode_string const *ustr) {
+		[&](void *directory_hd, win32::nt::unicode_string const *ustr) FAST_IO_HERBCEPTIONS_THROWS {
 			char16_t const *pth_cstr{ustr->Buffer};
 			::std::uint_least32_t pth_size2{ustr->Length};
 			::fast_io::details::local_operator_new_array_ptr<char> buffer(sizeof(::fast_io::win32::nt::file_rename_information) + pth_size2 + sizeof(char16_t));
@@ -768,7 +768,7 @@ inline void nt_linkat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std:
 
 	nt_call_determine_kernel_callback(
 		newdirhd, newpath_c_str, newpath_size, kernel,
-		[&](void *directory_hd, win32::nt::unicode_string const *ustr) {
+		[&](void *directory_hd, win32::nt::unicode_string const *ustr) FAST_IO_HERBCEPTIONS_THROWS {
 			char16_t const *pth_cstr{ustr->Buffer};
 			::std::uint_least32_t pth_size2{ustr->Length};
 			::fast_io::details::local_operator_new_array_ptr<char> buffer(sizeof(::fast_io::win32::nt::file_link_information) + pth_size2 + sizeof(char16_t));

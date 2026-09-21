@@ -476,6 +476,7 @@ inline posix_file_status fstat_impl(int fd)
 
 template <::fast_io::posix_family family, ::std::integral ch_type>
 inline posix_file_status status(basic_posix_family_io_observer<family, ch_type> piob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 	return status(static_cast<basic_win32_io_observer<ch_type>>(piob));

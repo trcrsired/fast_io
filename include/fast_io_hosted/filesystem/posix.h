@@ -9,19 +9,19 @@ namespace details
 #if defined(__CYGWIN__)
 struct my_cygwin_DIR
 {
-  /* This is first to set alignment in non _LIBC case.  */
-  unsigned long	__d_cookie;
-  struct dirent	*__d_dirent;
-  char		*__d_dirname;		/* use for internal caching */
-  ::std::int32_t	 __d_position;		/* used by telldir/seekdir */
-  int		 __d_fd;
-  ::std::uintptr_t	 __d_internal;
-  void		*__handle;
-  void		*__fh;
-  unsigned	 __flags;
+	/* This is first to set alignment in non _LIBC case.  */
+	unsigned long __d_cookie;
+	struct dirent *__d_dirent;
+	char *__d_dirname;           /* use for internal caching */
+	::std::int32_t __d_position; /* used by telldir/seekdir */
+	int __d_fd;
+	::std::uintptr_t __d_internal;
+	void *__handle;
+	void *__fh;
+	unsigned __flags;
 };
 
-using my_cygwin_DIR_may_alias_ptr = 
+using my_cygwin_DIR_may_alias_ptr =
 #if __has_cpp_attribute(__gnu__::__may_alias__)
 	[[__gnu__::__may_alias__]]
 #endif
@@ -127,6 +127,7 @@ public:
 		pioh.release();
 	}
 	inline posix_directory_file &operator=(posix_directory_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
 		{
@@ -330,6 +331,7 @@ inline posix_directory_entry operator*(posix_directory_iterator pdit) noexcept
 }
 
 inline posix_directory_iterator &operator++(posix_directory_iterator &pdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	/*
 	To fix: avoid setting errno
@@ -431,6 +433,7 @@ inline ::std::size_t depth(basic_posix_recursive_directory_iterator<StackType> c
 template <typename StackType>
 inline basic_posix_recursive_directory_iterator<StackType> &
 operator++(basic_posix_recursive_directory_iterator<StackType> &prdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (;;)
 	{
