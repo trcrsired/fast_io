@@ -95,7 +95,7 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	if (bob.begin_ptr != bob.buffer)
 	{
 		// heap
-		pbuffer = typed_allocator::reallocate_n(bob.begin_ptr, to_allocate);
+		pbuffer = typed_allocator::reallocate_n(bob.begin_ptr, bfsz, to_allocate);
 	}
 	else
 	{
@@ -134,7 +134,7 @@ grow_twice_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize
 	if (bob.begin_ptr != bob.buffer)
 	{
 		// heap
-		pbuffer = typed_allocator::reallocate_n(bob.begin_ptr, twicebfsz);
+		pbuffer = typed_allocator::reallocate_n(bob.begin_ptr, bfsz, twicebfsz);
 	}
 	else
 	{

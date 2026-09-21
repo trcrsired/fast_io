@@ -17,13 +17,10 @@ inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_outp
 							  T t, Arg1 arg, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::decay::print_control_single<false>(buffer, arg);
-#if 0
-	::fast_io::details::decay::print_control_fallback_single(buffer, arg);
-#endif
-	char_type *buffer_beg{buffer.ptr->buffer_begin};
+	::fast_io::operations::decay::print_freestanding_decay<false>(buffer, arg);
+	char_type *buffer_beg{buffer.dob_ptr->begin_ptr};
 	char_type const *buffer_begin{buffer_beg};
-	char_type const *buffer_curr{buffer.ptr->buffer_curr};
+	char_type const *buffer_curr{buffer.dob_ptr->curr_ptr};
 	auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
 	if (it != buffer_curr)
 	{
@@ -35,7 +32,7 @@ inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_outp
 	}
 	if constexpr (sizeof...(Args) != 0)
 	{
-		buffer.ptr->buffer_curr = buffer_beg;
+		buffer.dob_ptr->curr_ptr = buffer_beg;
 		inplace_to_decay_context_impl(buffer, s, t, args...);
 	}
 	else
@@ -369,7 +366,7 @@ inline constexpr void basic_inplace_to_decay(T t, Args... args)
 			else if constexpr (contiguous_scannable<char_type, T>)
 			{
 				::fast_io::operations::decay::print_freestanding_decay<false>(ref, args...);
-				::fast_io::details::deal_with_single_to<char_type>(buffer.buffer_begin, buffer.buffer_curr, t);
+				::fast_io::details::deal_with_single_to<char_type>(buffer.begin_ptr, buffer.curr_ptr, t);
 			}
 			else
 			{
