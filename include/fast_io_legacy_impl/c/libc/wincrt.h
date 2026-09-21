@@ -20,10 +20,6 @@ inline FILE *wincrt_acrt_iob_func(::std::uint_least32_t index) noexcept
 
 namespace details
 {
-/*
-the entire stdio on windows is too broken. I want to add tie semantics to stdin and stdout to avoid troubles.
-*/
-
 struct
 #if __has_cpp_attribute(__gnu__::__may_alias__)
 	[[__gnu__::__may_alias__]]
@@ -134,6 +130,79 @@ inline void wincrt_fp_allocate_buffer_impl(FILE *__restrict fpp) noexcept
 	fp->_flag |= crt_mybuf_value;
 }
 
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline ::std::byte const *wincrt_fp_write_some_cold_malloc_case_impl(FILE *__restrict fpp, char const *__restrict first,
+																	 ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (diff == 0)
+	{
+		return reinterpret_cast<::std::byte const *>(first);
+	}
+
+	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
+
+	::std::size_t allocated_buffer_size{wincrt_internal_buffer_size};
+
+	if (fp->_bufsiz >= 4)
+	{
+		allocated_buffer_size = static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz));
+		allocated_buffer_size &= ~static_cast<::std::size_t>(0b11);
+	}
+
+	if (diff >= allocated_buffer_size)
+	{
+		::fast_io::posix_io_observer piob{fp->_file};
+		return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+	}
+
+	auto newbuffer{my_malloc_crt(allocated_buffer_size)};
+	::fast_io::freestanding::my_memcpy(newbuffer, first, diff);
+	fp->_ptr = (fp->_base = reinterpret_cast<char *>(newbuffer)) + diff;
+	fp->_flag |= crt_mybuf_value;
+	fp->_bufsiz = static_cast<::std::int_least32_t>(allocated_buffer_size);
+	fp->_cnt = fp->_bufsiz - static_cast<::std::int_least32_t>(diff);
+	fp->_flag |= crt_dirty_value;
+	return reinterpret_cast<::std::byte const *>(first + diff);
+}
+
+inline ::std::byte const *wincrt_fp_write_some_cold_normal_case_impl(FILE *__restrict fpp, char const *__restrict first,
+																	 ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
+	fp->_flag |= crt_dirty_value;
+
+	if (::std::size_t const remain{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_cnt))}; diff < remain)
+	{
+		fp->_ptr = non_overlapped_copy_n(first, diff, fp->_ptr);
+		fp->_cnt -= static_cast<::std::int_least32_t>(diff);
+	}
+	else
+	{
+		::fast_io::posix_io_observer piob{fp->_file};
+		// flush must use write all for sure
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
+		if (::std::size_t const bufsiz{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz))}; diff >= bufsiz)
+		{
+			// set to begin
+			fp->_ptr = fp->_base;
+			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz);
+
+			// directly output
+			return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+		}
+		else
+		{
+			// Write from buffer begin
+			fp->_ptr = non_overlapped_copy_n(first, diff, fp->_base);
+			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz - diff);
+		}
+	}
+	return reinterpret_cast<::std::byte const *>(first + diff);
+}
+
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
@@ -205,6 +274,48 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 		}
 	}
 }
+
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline ::std::byte const *wincrt_fp_write_some_cold_impl(FILE *__restrict fp, char const *first, char const *last) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::size_t diff{static_cast<::std::size_t>(last - first)};
+	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
+	if (fpp->_base == nullptr)
+	{
+		::fast_io::posix_io_observer piob{fpp->_file};
+		if (::fast_io::is_character_device(piob))
+		{
+			return ::fast_io::operations::write_some_bytes(piob,
+														   reinterpret_cast<::std::byte const *>(first),
+														   reinterpret_cast<::std::byte const *>(last));
+		}
+		return wincrt_fp_write_some_cold_malloc_case_impl(fp, first, diff);
+	}
+	else
+	{
+		return wincrt_fp_write_some_cold_normal_case_impl(fp, first, diff);
+	}
+}
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline ::std::byte const *wincrt_fp_write_some_cold_for_scatter_impl(FILE *__restrict fp, char const *first, ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
+	if (fpp->_base == nullptr)
+	{
+		return wincrt_fp_write_some_cold_malloc_case_impl(fp, first, diff);
+	}
+	else
+	{
+		return wincrt_fp_write_some_cold_normal_case_impl(fp, first, diff);
+	}
+}
+
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
@@ -214,11 +325,77 @@ inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, ch
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
 	if (fpp->_base == nullptr)
 	{
+		::fast_io::posix_io_observer piob{fpp->_file};
+		if (::fast_io::is_character_device(piob))
+		{
+			::fast_io::operations::write_all_bytes(piob,
+												   reinterpret_cast<::std::byte const *>(first),
+												   reinterpret_cast<::std::byte const *>(last));
+			return;
+		}
 		wincrt_fp_write_cold_malloc_case_impl(fp, first, diff);
 	}
 	else
 	{
 		wincrt_fp_write_cold_normal_case_impl(fp, first, diff);
+	}
+}
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline void wincrt_fp_write_cold_for_scatter_impl(FILE *__restrict fp, char const *first, ::std::size_t diff) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
+	if (fpp->_base == nullptr)
+	{
+		wincrt_fp_write_cold_malloc_case_impl(fp, first, diff);
+	}
+	else
+	{
+		wincrt_fp_write_cold_normal_case_impl(fp, first, diff);
+	}
+}
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline ::fast_io::io_scatter_status_t wincrt_fp_scatter_write_some_cold_impl(FILE *__restrict fp, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
+	::fast_io::posix_io_observer piob{fpp->_file};
+	if (::fast_io::is_character_device(piob)) [[unlikely]]
+	{
+		return ::fast_io::operations::scatter_write_some_bytes(piob, pscatters, n);
+	}
+	for (auto psci{pscatters}, psce{pscatters + n}; psci != psce; ++psci)
+	{
+		auto baseptr{reinterpret_cast<char const *>(psci->base)};
+		auto pscilen{psci->len};
+		auto ret{static_cast<::std::size_t>(::fast_io::details::wincrt_fp_write_some_cold_for_scatter_impl(fp, baseptr, pscilen) - reinterpret_cast<::std::byte const *>(baseptr))};
+		if (ret != pscilen)
+		{
+			return {static_cast<::std::size_t>(psci - pscatters), ret};
+		}
+	}
+	return {n, 0};
+}
+
+#if __has_cpp_attribute(__gnu__::__cold__)
+[[__gnu__::__cold__]]
+#endif
+inline void wincrt_fp_scatter_write_all_cold_impl(FILE *__restrict fp, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
+	::fast_io::posix_io_observer piob{fpp->_file};
+	if (::fast_io::is_character_device(piob)) [[unlikely]]
+	{
+		return ::fast_io::operations::scatter_write_all_bytes(piob, pscatters, n);
+	}
+	for (auto psci{pscatters}, psce{pscatters + n}; psci != psce; ++psci)
+	{
+		auto baseptr{reinterpret_cast<char const *>(psci->base)};
+		::fast_io::details::wincrt_fp_write_cold_for_scatter_impl(fp, baseptr, psci->len);
 	}
 }
 
@@ -270,10 +447,6 @@ inline void wincrt_fp_flush_stdout_impl()
 inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::size_t diff)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (fpp == ::fast_io::win32::wincrt_acrt_iob_func(0))
-	{
-		wincrt_fp_flush_stdout_impl();
-	}
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
 	::std::size_t cnt{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_cnt))};
 	non_overlapped_copy_n(fp->_ptr, cnt, first);
@@ -494,6 +667,30 @@ inline void write_all_bytes_overflow_define(::fast_io::basic_c_io_observer_unloc
 {
 	::fast_io::details::wincrt_fp_write_cold_impl(ciob.fp, reinterpret_cast<char const *>(first),
 												  reinterpret_cast<char const *>(last));
+}
+
+template <::std::integral char_type>
+inline ::std::byte const *write_some_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
+														   ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::details::wincrt_fp_write_some_cold_impl(ciob.fp, reinterpret_cast<char const *>(first),
+															  reinterpret_cast<char const *>(last));
+}
+
+template <::std::integral char_type>
+inline ::fast_io::io_scatter_status_t scatter_write_some_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
+																			   ::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::details::wincrt_fp_scatter_write_some_cold_impl(ciob.fp, pscatters, n);
+}
+
+template <::std::integral char_type>
+inline void scatter_write_all_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
+													::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::details::wincrt_fp_scatter_write_all_cold_impl(ciob.fp, pscatters, n);
 }
 
 inline c_io_observer c_stdin() noexcept

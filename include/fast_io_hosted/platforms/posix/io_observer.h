@@ -484,6 +484,17 @@ inline posix_file_status status(basic_posix_family_io_observer<family, ch_type> 
 #endif
 }
 
+template <::fast_io::posix_family family, ::std::integral ch_type>
+inline bool is_character_device(basic_posix_family_io_observer<family, ch_type> piob) noexcept
+{
+#if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
+	// _isatty is what the CRT itself uses to decide whether a file gets a stdio buffer.
+	return ::fast_io::noexcept_call(::_isatty, piob.fd) != 0;
+#else
+	return ::fast_io::noexcept_call(::isatty, piob.fd) != 0;
+#endif
+}
+
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 template <::fast_io::posix_family family, ::std::integral ch_type>
 inline auto redirect_handle(basic_posix_family_io_observer<family, ch_type> h) noexcept
