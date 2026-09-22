@@ -13,7 +13,7 @@ int main()
 		::fast_io::timer t(u8"insert_key");
 		for (::std::size_t i{}; i != vec.size(); ++i)
 		{
-			bmap.insert_key(::fast_io::string_view{vec[i].data(), vec[i].size()}, i);
+			bmap.insert_key(::fast_io::string_view(::std::from_range, vec[i]), i);
 		}
 	}
 	{
@@ -22,7 +22,7 @@ int main()
 			::fast_io::timer t(u8"contains");
 			for (auto const &e : vec)
 			{
-				count += static_cast<::std::size_t>(bmap.contains(::fast_io::string_view{e.data(), e.size()}));
+				count += static_cast<::std::size_t>(bmap.contains(::fast_io::string_view(::std::from_range, e)));
 			}
 		}
 		::fast_io::io::perrln("count=", count);
