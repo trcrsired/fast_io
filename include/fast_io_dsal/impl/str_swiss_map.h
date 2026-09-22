@@ -877,7 +877,7 @@ namespace fast_io
 namespace containers
 {
 template <::std::integral chtype, ::std::movable mappedtype, typename Hash, typename Allocator>
-	requires(::std::is_nothrow_move_constructible_v<mappedtype>)
+	requires(::std::is_nothrow_move_constructible_v<mappedtype> && ::std::is_nothrow_move_assignable_v<mappedtype>)
 class basic_str_swiss_map
 {
 public:
