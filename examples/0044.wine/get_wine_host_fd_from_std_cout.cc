@@ -6,7 +6,7 @@ int main()
 	::fast_io::streambuf_io_observer siob{std::cout.rdbuf()};
 	::fast_io::wine_io_observer wniob{static_cast<::fast_io::wine_io_observer>(siob)};
 	using namespace fast_io::iomnp;
-	println("std::cout.rdbuf():", handlevw(siob.fb),
+	println(wniob, "std::cout.rdbuf():", handlevw(siob.fb),
 			"\n"
 			"FILE*:",
 			handlevw(static_cast<fast_io::c_io_observer>(siob).fp),
@@ -29,7 +29,6 @@ int main()
 			handlevw(wniob.host_fd)
 #endif
 	);
-	print(wniob, "Hello World to wine host_fd of C++ std::cout from Windows C++ standard library\n");
 }
 
 /*
@@ -42,5 +41,4 @@ win32 HANDLE:0x0000000000000010
 nt HANDLE:0x0000000000000010
 zw HANDLE:0x0000000000000010
 wine host_fd:2
-Hello World to wine host_fd of C++ std::cout from Windows C++ standard library
 */
