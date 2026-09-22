@@ -289,4 +289,13 @@ inline void *dll_load_versioned_symbol(posix_dll_io_observer pdliob, T const &sy
 using native_dll_io_observer = posix_dll_io_observer;
 using native_dll_file = posix_dll_file;
 
+namespace freestanding
+{
+template <>
+struct is_zero_default_constructible<posix_dll_io_observer>
+{
+	inline static constexpr bool value = true;
+};
+
+} // namespace freestanding
 } // namespace fast_io
