@@ -58,6 +58,15 @@ public:
 		return static_cast<basic_nt_family_io_observer<fam, char_type>>(
 			static_cast<basic_posix_io_observer<char_type>>(*this));
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <wine_family fam>
+	inline explicit operator basic_wine_family_io_observer<fam, char_type>() const
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return {::fast_io::details::my_fp_to_wine_host_fd_impl<::fast_io::c_family::standard>(
+			::fast_io::details::streambuf_hack::fp_hack(fb))};
+	}
+#endif
 #endif
 #endif
 #endif
