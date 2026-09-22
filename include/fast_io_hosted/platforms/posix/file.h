@@ -148,6 +148,13 @@ public:
 	}
 
 #endif
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <::fast_io::wine_family fam>
+	inline basic_posix_family_file(basic_wine_family_file<fam, char_type> &&wnf, open_mode m) FAST_IO_HERBCEPTIONS_THROWS
+		: basic_posix_family_file(basic_nt_file<char_type>(::std::move(wnf), m), m)
+	{
+	}
+#endif
 	inline basic_posix_family_file(io_temp_t)
 		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_posix_family_io_observer<family, char_type>{::fast_io::details::my_open_posix_fd_temp_file()}

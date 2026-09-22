@@ -105,6 +105,27 @@ namespace details
 		static_cast<__wine_unix_errc>(static_cast<::std::uint_least32_t>(status)));
 }
 
+/*
+Converts a wine host_fd into an nt HANDLE, transferring ownership: the abi
+consumes host_fd (a wineserver-registered HANDLE on the unixcall impl, the same
+HANDLE bits on the nt impl). Pass a released fd — after the call the source is
+gone either way, even on failure.
+*/
+inline void *wine_host_fd_to_nt_handle(__wine_host_fd_t host_fd) FAST_IO_HERBCEPTIONS_THROWS
+{
+#if defined(__HERBCEPTIONS__)
+	return reinterpret_cast<void *>(static_cast<::std::uintptr_t>(
+		try(__wine_unix_host_fd_to_nt_handle(host_fd))));
+#else
+	auto const ret{__wine_unix_host_fd_to_nt_handle_returns_status(host_fd)};
+	if (ret.status)
+	{
+		throw_wine_error_status(ret.status);
+	}
+	return reinterpret_cast<void *>(static_cast<::std::uintptr_t>(ret.handle));
+#endif
+}
+
 inline __wine_host_fd_t wine_openat_impl(__wine_host_fd_t host_dirfd, char const *filename, ::std::size_t filenamelen,
 										 __wine_host_flags_t flags, __wine_host_mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
 {

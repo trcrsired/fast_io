@@ -55,6 +55,14 @@ public:
 			  ::fast_io::win32::nt::details::nt_dup_impl<family == nt_family::zw>(wiob.handle)}
 	{
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <::fast_io::wine_family fam>
+	inline basic_nt_family_file(basic_wine_family_file<fam, char_type> &&wnf, open_mode) FAST_IO_HERBCEPTIONS_THROWS
+		: basic_nt_family_io_observer<family, char_type>{
+			  ::fast_io::details::wine_host_fd_to_nt_handle(wnf.release())}
+	{
+	}
+#endif
 	inline explicit basic_nt_family_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
 		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_nt_family_io_observer<family, char_type>{

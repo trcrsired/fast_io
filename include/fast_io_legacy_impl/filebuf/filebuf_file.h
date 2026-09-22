@@ -72,6 +72,14 @@ public:
 		: basic_filebuf_file(basic_posix_file<char_type>(::std::move(nt_handle), mode), mode)
 	{
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <wine_family family>
+	inline basic_filebuf_file(basic_wine_family_file<family, char_type> &&wnf, open_mode mode)
+		FAST_IO_HERBCEPTIONS_THROWS
+		: basic_filebuf_file(basic_c_file_unlocked<char_type>(::std::move(wnf), mode), mode)
+	{
+	}
+#endif
 	inline basic_filebuf_file(nt_fs_dirent fsdirent, open_mode om, perms pm = static_cast<perms>(436))
 		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_filebuf_file(basic_posix_file<char_type>(fsdirent, om, pm), om)

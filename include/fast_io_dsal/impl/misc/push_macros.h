@@ -311,7 +311,9 @@ detected once here so every wine header/tests just check the macro.
 #pragma push_macro("FAST_IO_HAS_WINE_UNIX")
 #undef FAST_IO_HAS_WINE_UNIX
 #if defined(__has_include)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 #if __has_include(<__wine_unix/__wine_unix.h>)
 #define FAST_IO_HAS_WINE_UNIX
+#endif
 #endif
 #endif

@@ -103,6 +103,15 @@ public:
 	{
 	}
 
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <::fast_io::wine_family fam>
+	inline basic_win32_family_file(basic_wine_family_file<fam, char_type> &&wnf, open_mode) FAST_IO_HERBCEPTIONS_THROWS
+		: basic_win32_family_io_observer<family, char_type>{
+			  ::fast_io::details::wine_host_fd_to_nt_handle(wnf.release())}
+	{
+	}
+#endif
+
 	inline explicit constexpr basic_win32_family_file(win32_file_factory &&fact) noexcept
 		: basic_win32_family_io_observer<family, ch_type>{fact.handle}
 	{

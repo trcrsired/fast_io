@@ -144,6 +144,14 @@ public:
 		: basic_c_family_file(basic_posix_file<char_type>(::std::move(nt_handle), om), om)
 	{
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <::fast_io::wine_family wfamily>
+	inline basic_c_family_file(basic_wine_family_file<wfamily, char_type> &&wnf, open_mode om)
+		FAST_IO_HERBCEPTIONS_THROWS
+		: basic_c_family_file(basic_posix_file<char_type>(::std::move(wnf), om), om)
+	{
+	}
+#endif
 	inline basic_c_family_file(nt_fs_dirent ent, open_mode om, perms pm = static_cast<perms>(436))
 		FAST_IO_HERBCEPTIONS_THROWS
 		: basic_c_family_file(basic_posix_file<char_type>(ent, om, pm), om)
