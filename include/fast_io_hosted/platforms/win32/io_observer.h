@@ -50,6 +50,16 @@ public:
 	{
 		return basic_win32_family_io_observer<family2, char_type>{handle};
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <wine_family family2>
+	inline explicit operator basic_wine_family_io_observer<family2, char_type>() const
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return basic_wine_family_io_observer<family2, char_type>{
+			::fast_io::wine::wine_unix_nt_handle_to_host_fd_ref(
+				static_cast<::std::ptrdiff_t>(reinterpret_cast<::std::uintptr_t>(handle)))};
+	}
+#endif
 	inline constexpr native_handle_type release() noexcept
 	{
 		auto temp{handle};

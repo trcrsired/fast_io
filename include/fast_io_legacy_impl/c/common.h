@@ -308,6 +308,14 @@ inline void *my_fp_to_win32_handle_impl(FILE *fp) noexcept
 {
 	return my_get_osfile_handle(my_fileno_impl<family>(fp));
 }
+
+#if defined(FAST_IO_HAS_WINE_UNIX)
+template <c_family family>
+inline ::fast_io::wine_host_fd_t my_fp_to_wine_host_fd_impl(FILE *fp) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return my_fd_to_wine_host_fd_impl(my_fileno_impl<family>(fp));
+}
+#endif
 #endif
 
 template <c_family family>

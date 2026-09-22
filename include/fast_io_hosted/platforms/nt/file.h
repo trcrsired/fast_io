@@ -58,8 +58,8 @@ public:
 #if defined(FAST_IO_HAS_WINE_UNIX)
 	template <::fast_io::wine_family fam>
 	inline basic_nt_family_file(basic_wine_family_file<fam, char_type> &&wnf, open_mode) FAST_IO_HERBCEPTIONS_THROWS
-		: basic_nt_family_io_observer<family, char_type>{
-			  ::fast_io::details::wine_host_fd_to_nt_handle(wnf.release())}
+		: basic_nt_family_io_observer<family, char_type>{reinterpret_cast<void *>(
+			  static_cast<::std::uintptr_t>(::fast_io::wine::wine_unix_host_fd_to_nt_handle(wnf.release())))}
 	{
 	}
 #endif

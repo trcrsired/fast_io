@@ -129,6 +129,14 @@ inline void *my_get_osfile_handle(int fd) noexcept
 #endif
 }
 
+#if defined(FAST_IO_HAS_WINE_UNIX)
+inline ::fast_io::wine_host_fd_t my_fd_to_wine_host_fd_impl(int fd) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::wine::wine_unix_nt_handle_to_host_fd_ref(
+		static_cast<::std::ptrdiff_t>(reinterpret_cast<::std::uintptr_t>(my_get_osfile_handle(fd))));
+}
+#endif
+
 } // namespace details
 #endif
 
@@ -160,6 +168,14 @@ public:
 	{
 		return {details::my_get_osfile_handle(fd)};
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <wine_family fam>
+	inline explicit operator basic_wine_family_io_observer<fam, char_type>() const
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return {details::my_fd_to_wine_host_fd_impl(fd)};
+	}
+#endif
 #endif
 
 	template <posix_family fam>

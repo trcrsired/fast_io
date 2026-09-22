@@ -19,7 +19,7 @@ struct wine_family_file_factory FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 	{
 		if (host_fd) [[likely]]
 		{
-			__wine_unix_close_returns_status(host_fd);
+			::fast_io::wine::wine_unix_close_returns_status(host_fd);
 		}
 	}
 };
@@ -75,7 +75,7 @@ public:
 	{
 		if (this->host_fd) [[likely]]
 		{
-			__wine_unix_close_returns_status(this->host_fd);
+			::fast_io::wine::wine_unix_close_returns_status(this->host_fd);
 		}
 		this->host_fd = other.release();
 		return *this;
@@ -87,7 +87,7 @@ public:
 	{
 		if (this->host_fd) [[likely]]
 		{
-			__wine_unix_close_returns_status(this->host_fd);
+			::fast_io::wine::wine_unix_close_returns_status(this->host_fd);
 		}
 	}
 };

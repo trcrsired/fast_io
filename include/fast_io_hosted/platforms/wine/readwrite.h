@@ -10,8 +10,9 @@ inline ::std::byte const *write_some_bytes_overflow_define(::fast_io::basic_wine
 														   ::std::byte const *first,
 														   ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto const done{::fast_io::details::wine_write_impl(wiob.host_fd, first,
-													  static_cast<::std::size_t>(last - first))};
+	auto const done{::fast_io::wine::wine_unix_write(wiob.host_fd, first,
+													 static_cast<::std::size_t>(last - first))
+						.total};
 	return first + done;
 }
 
@@ -19,8 +20,9 @@ template <::fast_io::wine_family family, ::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observer<family, char_type> wiob,
 													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto const done{::fast_io::details::wine_read_impl(wiob.host_fd, first,
-													 static_cast<::std::size_t>(last - first))};
+	auto const done{::fast_io::wine::wine_unix_read(wiob.host_fd, first,
+													static_cast<::std::size_t>(last - first))
+						.total};
 	return first + done;
 }
 
@@ -30,7 +32,7 @@ scatter_write_some_bytes_overflow_define(::fast_io::basic_wine_family_io_observe
 										 ::fast_io::io_scatter_t const *pscatter,
 										 ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto ret{::fast_io::details::wine_writev_impl(
+	auto ret{::fast_io::wine::wine_unix_writev(
 		wiob.host_fd, reinterpret_cast<::fast_io::details::wine_iovec_may_alias_const_ptr>(pscatter), n)};
 	return {ret.baseindex, ret.index};
 }
@@ -41,7 +43,7 @@ scatter_read_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observe
 										 ::fast_io::io_scatter_t const *pscatter,
 										 ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto ret{::fast_io::details::wine_readv_impl(
+	auto ret{::fast_io::wine::wine_unix_readv(
 		wiob.host_fd, reinterpret_cast<::fast_io::details::wine_iovec_may_alias_const_ptr>(pscatter), n)};
 	return {ret.baseindex, ret.index};
 }
@@ -51,10 +53,10 @@ inline ::std::byte const *pwrite_some_bytes_overflow_define(::fast_io::basic_win
 															::std::byte const *first, ::std::byte const *last,
 															::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	__wine_unix_iovec_t iov{first, static_cast<::std::size_t>(last - first)};
-	auto ret{::fast_io::details::wine_pwritev_impl(wiob.host_fd, __builtin_addressof(iov), 1,
-												  static_cast<__wine_off_t>(off))};
-	return first + ret.total;
+	::fast_io::wine_unix::iovec_t iov{first, static_cast<::std::size_t>(last - first)};
+	auto ret{::fast_io::wine::wine_unix_pwritev(wiob.host_fd, __builtin_addressof(iov), 1,
+												static_cast<::fast_io::wine_unix::off_t>(off))};
+	return first + (ret.baseindex ? last - first : ret.index);
 }
 
 template <::fast_io::wine_family family, ::std::integral char_type>
@@ -62,10 +64,10 @@ inline ::std::byte *pread_some_bytes_underflow_define(::fast_io::basic_wine_fami
 													  ::std::byte *first, ::std::byte *last,
 													  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	__wine_unix_iovec_t iov{first, static_cast<::std::size_t>(last - first)};
-	auto ret{::fast_io::details::wine_preadv_impl(wiob.host_fd, __builtin_addressof(iov), 1,
-												 static_cast<__wine_off_t>(off))};
-	return first + ret.total;
+	::fast_io::wine_unix::iovec_t iov{first, static_cast<::std::size_t>(last - first)};
+	auto ret{::fast_io::wine::wine_unix_preadv(wiob.host_fd, __builtin_addressof(iov), 1,
+											   static_cast<::fast_io::wine_unix::off_t>(off))};
+	return first + (ret.baseindex ? last - first : ret.index);
 }
 
 template <::fast_io::wine_family family, ::std::integral char_type>
@@ -74,9 +76,9 @@ scatter_pwrite_some_bytes_overflow_define(::fast_io::basic_wine_family_io_observ
 										  ::fast_io::io_scatter_t const *pscatter, ::std::size_t n,
 										  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto ret{::fast_io::details::wine_pwritev_impl(
+	auto ret{::fast_io::wine::wine_unix_pwritev(
 		wiob.host_fd, reinterpret_cast<::fast_io::details::wine_iovec_may_alias_const_ptr>(pscatter), n,
-		static_cast<__wine_off_t>(off))};
+		static_cast<::fast_io::wine_unix::off_t>(off))};
 	return {ret.baseindex, ret.index};
 }
 
@@ -86,9 +88,9 @@ scatter_pread_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observ
 										  ::fast_io::io_scatter_t const *pscatter, ::std::size_t n,
 										  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto ret{::fast_io::details::wine_preadv_impl(
+	auto ret{::fast_io::wine::wine_unix_preadv(
 		wiob.host_fd, reinterpret_cast<::fast_io::details::wine_iovec_may_alias_const_ptr>(pscatter), n,
-		static_cast<__wine_off_t>(off))};
+		static_cast<::fast_io::wine_unix::off_t>(off))};
 	return {ret.baseindex, ret.index};
 }
 

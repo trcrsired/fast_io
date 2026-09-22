@@ -24,36 +24,28 @@ using u16wine_file = basic_wine_file<char16_t>;
 using u32wine_io_observer = basic_wine_io_observer<char32_t>;
 using u32wine_file = basic_wine_file<char32_t>;
 
-namespace details
-{
-template <int which>
-inline ::fast_io::wine_host_fd_t wine_get_std_host_fd() noexcept
-{
-	return __wine_unix_get_std_host_fd_returns_status(which).host_fd;
-}
-} // namespace details
-
 /*
 std streams through whichever wineunix.dll is loaded: unixcall impl returns
 unix fd + 1, nt impl returns the process's Standard{Input,Output,Error}
-handle — both wrapped as a host_fd.
+handle — both wrapped as a host_fd. infallible, so the status api is used
+directly and the status dropped.
 */
 template <::std::integral char_type = char>
 inline basic_wine_io_observer<char_type> wine_stdin() noexcept
 {
-	return {::fast_io::details::wine_get_std_host_fd<0>()};
+	return {::fast_io::wine::wine_unix_get_std_host_fd_returns_status(0).host_fd};
 }
 
 template <::std::integral char_type = char>
 inline basic_wine_io_observer<char_type> wine_stdout() noexcept
 {
-	return {::fast_io::details::wine_get_std_host_fd<1>()};
+	return {::fast_io::wine::wine_unix_get_std_host_fd_returns_status(1).host_fd};
 }
 
 template <::std::integral char_type = char>
 inline basic_wine_io_observer<char_type> wine_stderr() noexcept
 {
-	return {::fast_io::details::wine_get_std_host_fd<2>()};
+	return {::fast_io::wine::wine_unix_get_std_host_fd_returns_status(2).host_fd};
 }
 
 namespace freestanding

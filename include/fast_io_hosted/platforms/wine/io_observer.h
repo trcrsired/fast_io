@@ -1,9 +1,5 @@
 ﻿#pragma once
 
-#include "../../../fast_io_dsal/impl/misc/push_macros.h"
-
-#include <__wine_unix/__wine_unix.h>
-
 namespace fast_io
 {
 
@@ -12,8 +8,6 @@ enum class wine_family : ::std::uint_least32_t
 	unspecified_host = 0,
 	native = unspecified_host
 };
-
-using wine_host_fd_t = __wine_host_fd_t;
 
 struct wine_at_entry
 {
@@ -32,7 +26,7 @@ the unixcall impl, fast_io's -3 sentinel on the nt impl.
 */
 inline wine_at_entry wine_at_fdcwd() noexcept
 {
-	return wine_at_entry{__wine_unix_at_fdcwd()};
+	return wine_at_entry{::fast_io::wine::wine_unix_at_fdcwd()};
 }
 
 template <::fast_io::wine_family family, ::std::integral ch_type>
@@ -99,148 +93,12 @@ io_bytes_stream_ref_define(basic_wine_family_io_observer<family, ch_type> other)
 namespace details
 {
 
-[[noreturn]] inline void throw_wine_error_status(__wine_unix_status_t status) FAST_IO_HERBCEPTIONS_THROWS
-{
-	::fast_io::herbceptions::throws_errc_generic(
-		static_cast<__wine_unix_errc>(static_cast<::std::uint_least32_t>(status)));
-}
-
-/*
-Converts a wine host_fd into an nt HANDLE, transferring ownership: the abi
-consumes host_fd (a wineserver-registered HANDLE on the unixcall impl, the same
-HANDLE bits on the nt impl). Pass a released fd — after the call the source is
-gone either way, even on failure.
-*/
-inline void *wine_host_fd_to_nt_handle(__wine_host_fd_t host_fd) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return reinterpret_cast<void *>(static_cast<::std::uintptr_t>(
-		try(__wine_unix_host_fd_to_nt_handle(host_fd))));
-#else
-	auto const ret{__wine_unix_host_fd_to_nt_handle_returns_status(host_fd)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return reinterpret_cast<void *>(static_cast<::std::uintptr_t>(ret.handle));
-#endif
-}
-
-inline __wine_host_fd_t wine_openat_impl(__wine_host_fd_t host_dirfd, char const *filename, ::std::size_t filenamelen,
-										 __wine_host_flags_t flags, __wine_host_mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return try(__wine_unix_openat(host_dirfd, filename, filenamelen, flags, mode));
-#else
-	auto ret{__wine_unix_openat_returns_status(host_dirfd, filename, filenamelen, flags, mode)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return ret.host_fd;
-#endif
-}
-
-inline ::std::size_t wine_write_impl(__wine_host_fd_t host_fd, void const *buf,
-									 ::std::size_t len) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	auto ret{try(__wine_unix_write(host_fd, buf, len))};
-	return ret.total;
-#else
-	auto ret{__wine_unix_write_returns_status(host_fd, buf, len)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return ret.total;
-#endif
-}
-
-inline ::std::size_t wine_read_impl(__wine_host_fd_t host_fd, void *buf,
-									::std::size_t len) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	auto ret{try(__wine_unix_read(host_fd, buf, len))};
-	return ret.total;
-#else
-	auto ret{__wine_unix_read_returns_status(host_fd, buf, len)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return ret.total;
-#endif
-}
-
-inline __wine_unix_rwv_result_t wine_writev_impl(__wine_host_fd_t host_fd, __wine_unix_iovec_t const *iovs,
-												 ::std::size_t iovsize) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return try(__wine_unix_writev(host_fd, iovs, iovsize));
-#else
-	auto ret{__wine_unix_writev_returns_status(host_fd, iovs, iovsize)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return {ret.total, ret.baseindex, ret.index};
-#endif
-}
-
-inline __wine_unix_rwv_result_t wine_readv_impl(__wine_host_fd_t host_fd, __wine_unix_iovec_t const *iovs,
-												::std::size_t iovsize) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return try(__wine_unix_readv(host_fd, iovs, iovsize));
-#else
-	auto ret{__wine_unix_readv_returns_status(host_fd, iovs, iovsize)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return {ret.total, ret.baseindex, ret.index};
-#endif
-}
-
-inline __wine_unix_rwv_result_t wine_pwritev_impl(__wine_host_fd_t host_fd, __wine_unix_iovec_t const *iovs,
-												  ::std::size_t iovsize, __wine_off_t offset) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return try(__wine_unix_pwritev(host_fd, iovs, iovsize, offset));
-#else
-	auto ret{__wine_unix_pwritev_returns_status(host_fd, iovs, iovsize, offset)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return {ret.total, ret.baseindex, ret.index};
-#endif
-}
-
-inline __wine_unix_rwv_result_t wine_preadv_impl(__wine_host_fd_t host_fd, __wine_unix_iovec_t const *iovs,
-												 ::std::size_t iovsize, __wine_off_t offset) FAST_IO_HERBCEPTIONS_THROWS
-{
-#if defined(__HERBCEPTIONS__)
-	return try(__wine_unix_preadv(host_fd, iovs, iovsize, offset));
-#else
-	auto ret{__wine_unix_preadv_returns_status(host_fd, iovs, iovsize, offset)};
-	if (ret.status)
-	{
-		throw_wine_error_status(ret.status);
-	}
-	return {ret.total, ret.baseindex, ret.index};
-#endif
-}
-
 using wine_iovec_may_alias_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
 	[[__gnu__::__may_alias__]]
 #endif
-	= __wine_unix_iovec_t const *;
+	= ::fast_io::wine_unix::iovec_t const *;
 
 } // namespace details
 
 } // namespace fast_io
-
-#include "../../../fast_io_dsal/impl/misc/pop_macros.h"

@@ -37,13 +37,21 @@ public:
 	template <win32_family fam>
 	inline explicit operator basic_win32_family_io_observer<fam, char_type>() const noexcept
 	{
-		return {details::my_fp_to_win32_handle_impl<family>(fp)};
+		return {::fast_io::details::my_fp_to_win32_handle_impl<family>(fp)};
 	}
 	template <nt_family fam>
 	inline explicit operator basic_nt_family_io_observer<fam, char_type>() const noexcept
 	{
-		return {details::my_fp_to_win32_handle_impl<family>(fp)};
+		return {::fast_io::details::my_fp_to_win32_handle_impl<family>(fp)};
 	}
+#if defined(FAST_IO_HAS_WINE_UNIX)
+	template <wine_family fam>
+	inline explicit operator basic_wine_family_io_observer<fam, char_type>() const
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return {::fast_io::details::my_fp_to_wine_host_fd_impl<family>(fp)};
+	}
+#endif
 #endif
 #endif
 	inline void lock() const noexcept
