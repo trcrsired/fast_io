@@ -37,14 +37,6 @@ struct basic_str_btree_map_key_mapped_pair
 	{
 		return val;
 	}
-	constexpr mapped_type &value() noexcept
-	{
-		return val;
-	}
-	constexpr mapped_type const &value() const noexcept
-	{
-		return val;
-	}
 };
 
 template <::std::integral chtype, typename mappedtype>
@@ -72,14 +64,6 @@ struct basic_str_btree_map_key_mapped_initializer_list_pair
 		return val;
 	}
 	constexpr mapped_type const &mapped() const noexcept
-	{
-		return val;
-	}
-	constexpr mapped_type &value() noexcept
-	{
-		return val;
-	}
-	constexpr mapped_type const &value() const noexcept
 	{
 		return val;
 	}
@@ -130,13 +114,9 @@ struct str_btree_map_iterator_proxy
 	{
 		return static_cast<node_type const *>(this->ptr)->keys[this->pos].strvw();
 	}
-	constexpr mapped_type &value() const noexcept
-	{
-		return const_cast<node_type *>(static_cast<node_type const *>(this->ptr))->values[this->pos];
-	}
 	constexpr mapped_type &mapped() const noexcept
 	{
-		return this->value();
+		return const_cast<node_type *>(static_cast<node_type const *>(this->ptr))->values[this->pos];
 	}
 	constexpr str_btree_map_iterator_proxy const *operator->() const noexcept
 	{
@@ -148,7 +128,7 @@ template <::std::integral chtype, typename mappedtype, ::std::size_t keys_number
 inline constexpr bool operator==(::fast_io::containers::details::str_btree_map_iterator_proxy<chtype, mappedtype, keys_number> const &a,
 								 ::fast_io::containers::details::str_btree_map_iterator_proxy<chtype, mappedtype, keys_number> const &b) noexcept
 {
-	return a.key() == b.key() && a.value() == b.value();
+	return a.key() == b.key() && a.mapped() == b.mapped();
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
@@ -163,7 +143,7 @@ inline constexpr auto operator<=>(::fast_io::containers::details::str_btree_map_
 	{
 		return static_cast<order_type>(cmp);
 	}
-	return static_cast<order_type>(::std::compare_three_way{}(a.value(), b.value()));
+	return static_cast<order_type>(::std::compare_three_way{}(a.mapped(), b.mapped()));
 }
 #endif
 
@@ -1613,9 +1593,9 @@ public:
 		{
 			::fast_io::containers::details::str_btree_map_insert_key_hint<allocator_type, keys_number, node_type>(
 				this->imp, it.node.ptr, it.node.pos, key.ptr, key.n, mapped_type{});
-			return this->find(key)->value();
+			return this->find(key)->mapped();
 		}
-		return it->value();
+		return it->mapped();
 	}
 	constexpr ~basic_str_btree_map()
 	{

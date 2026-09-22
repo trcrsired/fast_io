@@ -55,7 +55,7 @@ int main()
 	::fast_io::io::println("initializer_list construction:");
 	for (auto e : mp2)
 	{
-		::fast_io::io::println("  ", e.key(), " -> ", e.value());
+		::fast_io::io::println("  ", e.key(), " -> ", e.mapped());
 	}
 
 	// 3. Ordered iteration (keys must come out sorted)
@@ -65,7 +65,7 @@ int main()
 	bool sorted{true};
 	for (auto e : mp3)
 	{
-		::fast_io::io::println("  ", e.key(), " -> ", e.value());
+		::fast_io::io::println("  ", e.key(), " -> ", e.mapped());
 		if (!prev.empty() && !(prev < e.key()))
 		{
 			sorted = false;
@@ -111,21 +111,21 @@ int main()
 	mp1.insert_key("elderberry", 5);
 	for (auto e : mp1)
 	{
-		::fast_io::io::println("  ", e.key(), " -> ", e.value());
+		::fast_io::io::println("  ", e.key(), " -> ", e.mapped());
 	}
 
 	// 8. insert_key (existing key - should not overwrite)
 	mp1.insert_key("apple", 100);
-	::fast_io::io::println("after insert_key existing, apple -> ", mp1.find("apple")->value(), " (should be 1)");
-	if (mp1.find("apple")->value() != 1)
+	::fast_io::io::println("after insert_key existing, apple -> ", mp1.find("apple")->mapped(), " (should be 1)");
+	if (mp1.find("apple")->mapped() != 1)
 	{
 		::fast_io::fast_terminate();
 	}
 
 	// 9. insert_key_or_assign (existing key - should overwrite)
 	mp1.insert_key_or_assign("apple", 1000);
-	::fast_io::io::println("after insert_key_or_assign existing, apple -> ", mp1.find("apple")->value(), " (should be 1000)");
-	if (mp1.find("apple")->value() != 1000)
+	::fast_io::io::println("after insert_key_or_assign existing, apple -> ", mp1.find("apple")->mapped(), " (should be 1000)");
+	if (mp1.find("apple")->mapped() != 1000)
 	{
 		::fast_io::fast_terminate();
 	}
@@ -144,8 +144,8 @@ int main()
 	mp1.emplace_key("kiwi", 9);
 	mp1.emplace_key_or_assign("lemon", 10);
 	mp1.emplace_key_or_assign("kiwi", 99);
-	::fast_io::io::println("kiwi -> ", mp1.find("kiwi")->value(), " (should be 99)");
-	if (mp1.find("kiwi")->value() != 99)
+	::fast_io::io::println("kiwi -> ", mp1.find("kiwi")->mapped(), " (should be 99)");
+	if (mp1.find("kiwi")->mapped() != 99)
 	{
 		::fast_io::fast_terminate();
 	}
@@ -164,7 +164,7 @@ int main()
 		::std::size_t expect{};
 		for (auto e : hinted)
 		{
-			if (e.value() != expect)
+			if (e.mapped() != expect)
 			{
 				ok = false;
 			}
@@ -186,7 +186,7 @@ int main()
 	// 13. insert_range
 	::fast_io::io::println("\n--- insert_range ---");
 	mp1.insert_range({{"grape", 7}, {"honeydew", 8}});
-	::fast_io::io::println("grape -> ", mp1.find("grape")->value(), " honeydew -> ", mp1.find("honeydew")->value());
+	::fast_io::io::println("grape -> ", mp1.find("grape")->mapped(), " honeydew -> ", mp1.find("honeydew")->mapped());
 
 	// 14. contains / find / count
 	::fast_io::io::println("\n--- lookup ---");
@@ -229,8 +229,8 @@ int main()
 
 	// 16. front / back
 	::fast_io::io::println("\n--- front/back ---");
-	::fast_io::io::println("front: ", mp1.front().key(), " -> ", mp1.front().value());
-	::fast_io::io::println("back: ", mp1.back().key(), " -> ", mp1.back().value());
+	::fast_io::io::println("front: ", mp1.front().key(), " -> ", mp1.front().mapped());
+	::fast_io::io::println("back: ", mp1.back().key(), " -> ", mp1.back().mapped());
 
 	// 17. erase_key
 	::fast_io::io::println("\n--- erase_key ---");
@@ -273,7 +273,7 @@ int main()
 	::fast_io::io::println("\n--- reverse iteration ---");
 	for (auto i{mp3.crbegin()}, ed{mp3.crend()}; i != ed; ++i)
 	{
-		::fast_io::io::println("  ", i->key(), " -> ", i->value());
+		::fast_io::io::println("  ", i->key(), " -> ", i->mapped());
 	}
 
 	// 21. swap / comparison
@@ -342,7 +342,7 @@ int main()
 			{
 				auto len{static_cast<::std::size_t>(::std::snprintf(buf, sizeof(buf), "k%08zu", i))};
 				auto it{cp.find(::fast_io::string_view{buf, len})};
-				if (it == cp.end() || it->value().val != i)
+				if (it == cp.end() || it->mapped().val != i)
 				{
 					::fast_io::fast_terminate();
 				}
@@ -380,7 +380,7 @@ int main()
 		{
 			::fast_io::fast_terminate();
 		}
-		if (rm.find("a")->value().val != 10 || rm.find("b")->value().val != 20)
+		if (rm.find("a")->mapped().val != 10 || rm.find("b")->mapped().val != 20)
 		{
 			::fast_io::fast_terminate();
 		}
