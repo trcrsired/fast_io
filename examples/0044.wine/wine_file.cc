@@ -8,4 +8,6 @@ try
 }
 catch throws(::std::error e)
 {
+	::fast_io::perrln(e);
+	return 1;
 }
