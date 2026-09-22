@@ -244,6 +244,9 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 		constexpr ::std::size_t group_counts{::fast_io::details::swiss_table_group_counts};
 		for (;;)
 		{
+#if FAST_IO_HAS_BUILTIN(__builtin_prefetch)
+			__builtin_prefetch(slots + seq.offset);
+#endif
 			::fast_io::details::swiss_table_group const group{controls + seq.offset};
 			for (auto match{group.match(h2)};;)
 			{

@@ -12,7 +12,7 @@ int main()
 		::fast_io::timer t(u8"insert_key");
 		for (auto const &e : vec)
 		{
-			bset.insert_key(::fast_io::mnp::os_c_str(e));
+			bset.insert_key(::fast_io::u8string_view{e.data(), e.size()});
 		}
 	}
 	{
@@ -21,7 +21,7 @@ int main()
 			::fast_io::timer t(u8"contains");
 			for (auto const &e : vec)
 			{
-				count += static_cast<::std::size_t>(bset.contains(::fast_io::mnp::os_c_str(e)));
+				count += static_cast<::std::size_t>(bset.contains(::fast_io::u8string_view{e.data(), e.size()}));
 			}
 		}
 		::fast_io::io::perrln("count=", count);
