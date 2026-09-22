@@ -15,6 +15,8 @@
 #include <bit>
 #include <compare>
 #include <algorithm>
+#include <ranges>
+#include <utility>
 #include "impl/misc/push_macros.h"
 #include "impl/misc/push_warnings.h"
 #include "../fast_io_core_impl/freestanding/impl.h"
