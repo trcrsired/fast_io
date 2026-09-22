@@ -27,12 +27,12 @@ struct wine_at_entry
 };
 
 /*
-host_dirfd == 0 means "current working directory" in the wineunix abi
-(AT_FDCWD on the unix side, no RootDirectory on the nt side).
+the dll's at_fdcwd token for host_dirfd: AT_FDCWD encoded as a host_fd on
+the unixcall impl, fast_io's -3 sentinel on the nt impl.
 */
-inline constexpr wine_at_entry wine_at_fdcwd() noexcept
+inline wine_at_entry wine_at_fdcwd() noexcept
 {
-	return wine_at_entry{};
+	return wine_at_entry{__wine_unix_at_fdcwd()};
 }
 
 template <::fast_io::wine_family family, ::std::integral ch_type>
