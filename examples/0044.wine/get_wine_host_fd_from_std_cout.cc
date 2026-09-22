@@ -1,21 +1,10 @@
 ﻿#include <iostream>
 #include <fast_io_legacy.h>
 
-/*
-C++ iostream is a holy crap. You cannot access FILE* inside std::cout because of the OO garbage.
-See an old blog: https://www.ginac.de/~kreckel/fileno/
-
-Also see wiki in fast_io to understand how C++ std::fstream work. It is implemented by FILE*.
-So why do you use iostream?? It is just a garbage quality of RAII wrapper for FILE*.
-https://github.com/expnkx/fast_io/wiki/0014.-How-does-std::fstream-work-internally%3F
-*/
-
 int main()
 {
 	::fast_io::streambuf_io_observer siob{std::cout.rdbuf()};
 	::fast_io::wine_io_observer wniob{static_cast<::fast_io::wine_io_observer>(siob)};
-	// This is done by hacking C++ standard library implementation in fast_io.
-	//  I hacked ALL c++ standard library implementation, including libstdc++, libc++ and MSVC stl
 	using namespace fast_io::iomnp;
 	println("std::cout.rdbuf():", handlevw(siob.fb),
 			"\n"
@@ -35,9 +24,6 @@ int main()
 			"\n"
 			"zw HANDLE:",
 			handlevw(static_cast<fast_io::zw_io_observer>(siob).handle),
-			// Zw and Nt are the same in user mode, but different in kernel mode. See Book: Windows Internal 7th version
-			// Or MSDN What Does the Zw Prefix Mean?
-			// https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/what-does-the-zw-prefix-mean
 			"\n"
 			"wine host_fd:",
 			handlevw(wniob.host_fd)
@@ -47,12 +33,14 @@ int main()
 }
 
 /*
-On Windows 10, it works like this
-D:\hg\fast_io\examples\0007.legacy>get_file_descriptor_from_std_cout
-std::cout.rdbuf():0x00007ff91879baa0
-FILE*:0x00007ff95961fa30
+$ clang++ -o get_wine_host_fd_from_std_cout.exe get_wine_host_fd_from_std_cout.cc -O3 --config=$HOME/herbcfgs/x86_64-windows-msvc.cfg -fherbceptions -lherbceptions -flto=thin -L$HOME/libraries/fast_io_kilo/winelibc_wine_build -lwineunix
+$ WINEDLLPATH=$HOME/libraries/fast_io_kilo/winelibc_wine_build WINEPATH="$HOME/libraries/fast_io_kilo/winelibc_wine_build;$WINEPATH" wine ./get_wine_host_fd_from_std_cout.exe
+std::cout.rdbuf():0x00006ffff6c5eb40
+FILE*:0x00006ffffea12278
 fd:1
-win32 HANDLE:0x0000000000000054
-nt HANDLE:0x0000000000000054
-zw HANDLE:0x0000000000000054
+win32 HANDLE:0x0000000000000010
+nt HANDLE:0x0000000000000010
+zw HANDLE:0x0000000000000010
+wine host_fd:2
+Hello World to wine host_fd of C++ std::cout from Windows C++ standard library
 */
