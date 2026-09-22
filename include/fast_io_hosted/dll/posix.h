@@ -111,7 +111,7 @@ inline void *create_posix_rtld(char const *filename, dll_mode mode)
 struct posix_rtld_impl_context
 {
 	dll_mode mode{};
-	inline void *operator()(char const *filename) const
+	inline void *operator()(char const *filename) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return create_posix_rtld(filename, mode);
 	}

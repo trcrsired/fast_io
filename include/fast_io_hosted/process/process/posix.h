@@ -570,13 +570,23 @@ struct io_redirector
 			// it's actually OK to go without closing pipe ends since fast_io pipes are all CLOEXEC
 			sys_close(d.pipe_fds[is_stdin ? 1 : 0]);
 		}
-		else if (d.dev_null)
-		{
-			rc = sys_dup2_nothrow(devnull(), target_fd);
-		}
 		else
 		{
-			rc = sys_dup2_nothrow(d.fd, target_fd);
+			int todupfd{-1};
+			if (d.dev_null)
+			{
+				FAST_IO_HERBCEPTIONS_TRY
+				{
+					todupfd = devnull();
+				}
+				FAST_IO_HERBCEPTIONS_CATCH_ALL
+				{}
+			}
+			else
+			{
+				todupfd = d.fd;
+			}
+			rc = sys_dup2_nothrow(todupfd, target_fd);
 		}
 		if (rc.error) [[unlikely]]
 		{
@@ -704,7 +714,7 @@ template <typename path_type>
 inline pid_t pipefork_execveat_impl(int dirfd, path_type const &csv, char const *const *args, char const *const *envp, posix_process_io const &pio, process_mode mode)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::posix_api_common(csv, [&](char const *cstr) { return pipefork_execveat_common_impl(dirfd, cstr, args, envp, pio, mode); });
+	return ::fast_io::posix_api_common(csv, [&](char const *cstr) FAST_IO_HERBCEPTIONS_THROWS { return pipefork_execveat_common_impl(dirfd, cstr, args, envp, pio, mode); });
 }
 
 template <typename path_type>
@@ -869,7 +879,7 @@ template <typename path_type>
 inline pid_t vfork_execveat_impl(int dirfd, path_type const &csv, char const *const *args, char const *const *envp, posix_process_io const &pio, process_mode mode)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::posix_api_common(csv, [&](char const *cstr) { return vfork_execveat_common_impl(dirfd, cstr, args, envp, pio, mode); });
+	return ::fast_io::posix_api_common(csv, [&](char const *cstr) FAST_IO_HERBCEPTIONS_THROWS { return vfork_execveat_common_impl(dirfd, cstr, args, envp, pio, mode); });
 }
 
 template <typename path_type>
