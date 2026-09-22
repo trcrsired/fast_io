@@ -1409,7 +1409,7 @@ public:
 	}
 
 	template <typename Operation>
-	inline constexpr void resize_and_overwrite(size_type count, Operation op) noexcept
+	inline constexpr void resize_and_overwrite(size_type count, Operation op) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(op(this->imp.begin_ptr, count)))
 	{
 		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
