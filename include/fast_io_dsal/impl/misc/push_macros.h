@@ -303,3 +303,15 @@ Internal assert macros for fuzzing fast_io.
 #else
 #define FAST_IO_INDETERMINATE
 #endif
+
+/*
+the wine platform layer exists only when winelibc's abi header is reachable;
+detected once here so every wine header/tests just check the macro.
+*/
+#pragma push_macro("FAST_IO_HAS_WINE_UNIX")
+#undef FAST_IO_HAS_WINE_UNIX
+#if defined(__has_include)
+#if __has_include(<__wine_unix/__wine_unix.h>)
+#define FAST_IO_HAS_WINE_UNIX
+#endif
+#endif

@@ -99,11 +99,36 @@ inline constexpr __wine_host_flags_t calculate_wine_open_mode(open_mode value) n
 	}
 }
 
-inline __wine_host_fd_t wine_open_file_impl(__wine_host_fd_t host_dirfd, char const *filename, ::std::size_t filenamelen,
-											open_mode om, perms pm) FAST_IO_HERBCEPTIONS_THROWS
+struct my_wine_at_open_parameter
 {
-	return wine_openat_impl(host_dirfd, filename, filenamelen, calculate_wine_open_mode(om),
-							static_cast<__wine_host_mode_t>(pm));
+	__wine_host_fd_t host_dirfd{};
+	__wine_host_flags_t flags{};
+	__wine_host_mode_t mode{};
+	inline __wine_host_fd_t operator()(char const *filename, ::std::size_t filenamelen) const
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return wine_openat_impl(host_dirfd, filename, filenamelen, flags, mode);
+	}
+};
+
+/*
+wineunix filenames are utf8 bytes like posix (the unixcall impl hands them to
+openat, the nt impl converts to utf16), never utf16 like the win32 api — even
+though the wine layer is compiled for a windows target.
+*/
+template <::fast_io::constructible_to_os_c_str T>
+inline __wine_host_fd_t wine_openat_file_impl(__wine_host_fd_t host_dirfd, T const &t, open_mode om, perms pm)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::posix_api_common(
+		t, my_wine_at_open_parameter{host_dirfd, ::fast_io::details::calculate_wine_open_mode(om),
+									 static_cast<__wine_host_mode_t>(pm)});
+}
+
+template <::fast_io::constructible_to_os_c_str T>
+inline __wine_host_fd_t wine_open_file_impl(T const &t, open_mode om, perms pm) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::details::wine_openat_file_impl(0, t, om, pm);
 }
 
 } // namespace details

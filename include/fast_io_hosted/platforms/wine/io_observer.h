@@ -109,14 +109,7 @@ inline __wine_host_fd_t wine_openat_impl(__wine_host_fd_t host_dirfd, char const
 										 __wine_host_flags_t flags, __wine_host_mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(__HERBCEPTIONS__)
-	// clang backend crashes on try() when the api value type is i64; catch
-	// return_failure + throw throws lowers to the same thing without the bug
-	auto r{catch return_failure(__wine_unix_openat(host_dirfd, filename, filenamelen, flags, mode))};
-	if (r.failed)
-	{
-		throw throws r.error;
-	}
-	return r.value;
+	return try(__wine_unix_openat(host_dirfd, filename, filenamelen, flags, mode));
 #else
 	auto ret{__wine_unix_openat_returns_status(host_dirfd, filename, filenamelen, flags, mode)};
 	if (ret.status)

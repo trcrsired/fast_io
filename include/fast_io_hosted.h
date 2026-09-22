@@ -51,6 +51,9 @@ freestanding ones.
 #include "fast_io_dsal/impl/string.h"
 #include "fast_io_dsal/impl/vector.h"
 #include "fast_io_hosted/platforms/native.h"
+#if defined(FAST_IO_HAS_WINE_UNIX)
+#include "fast_io_hosted/platforms/wine/wine.h"
+#endif
 #include "fast_io_hosted/file_loaders/impl.h"
 #include "fast_io_hosted/wrapper.h"
 #include "fast_io_hosted/white_hole/white_hole.h"
