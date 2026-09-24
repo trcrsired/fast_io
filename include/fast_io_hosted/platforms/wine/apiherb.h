@@ -36,7 +36,4 @@ wine_unix_write(::fast_io::wine_unix::host_fd_t, void const *, ::std::size_t)
 FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::rw_result_t
 wine_unix_read(::fast_io::wine_unix::host_fd_t, void *, ::std::size_t)
 	return_failure{::fast_io::freestanding::wine_errc} FAST_IO_WINCDECL_RENAME(__wine_unix_read, 12);
-FAST_IO_DLLIMPORT FAST_IO_GNU_CONST extern ::std::uint_least32_t
-wine_unix_is_unix()
-	return_failure{::fast_io::freestanding::wine_errc} FAST_IO_WINCDECL_RENAME(__wine_unix_is_unix, 0);
 } // namespace fast_io::wine
