@@ -117,6 +117,11 @@ FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::host_fd_status_t
 wine_unix_openat_returns_status(::fast_io::wine_unix::host_fd_t, char const *, ::std::size_t,
 								::fast_io::wine_unix::flags_t, ::fast_io::wine_unix::mode_t) noexcept
 	FAST_IO_WINCDECL_RENAME(__wine_unix_openat_returns_status, 20);
+/* plain open(): cwd-relative without fetching the at_fdcwd token first */
+FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::host_fd_status_t
+wine_unix_open_returns_status(char const *, ::std::size_t,
+							  ::fast_io::wine_unix::flags_t, ::fast_io::wine_unix::mode_t) noexcept
+	FAST_IO_WINCDECL_RENAME(__wine_unix_open_returns_status, 16);
 FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::status_t
 	wine_unix_close_returns_status(::fast_io::wine_unix::host_fd_t) noexcept
 	FAST_IO_WINCDECL_RENAME(__wine_unix_close_returns_status, 4);

@@ -12,6 +12,10 @@ FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::host_fd_t
 wine_unix_openat(::fast_io::wine_unix::host_fd_t, char const *, ::std::size_t,
 				 ::fast_io::wine_unix::flags_t, ::fast_io::wine_unix::mode_t)
 	return_failure{::fast_io::freestanding::wine_errc} FAST_IO_WINCDECL_RENAME(__wine_unix_openat, 20);
+FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::host_fd_t
+wine_unix_open(char const *, ::std::size_t,
+			   ::fast_io::wine_unix::flags_t, ::fast_io::wine_unix::mode_t)
+	return_failure{::fast_io::freestanding::wine_errc} FAST_IO_WINCDECL_RENAME(__wine_unix_open, 16);
 FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::rwv_result_t
 wine_unix_writev(::fast_io::wine_unix::host_fd_t, ::fast_io::wine_unix::iovec_t const *,
 				 ::std::size_t) return_failure{::fast_io::freestanding::wine_errc} FAST_IO_WINCDECL_RENAME(__wine_unix_writev, 12);

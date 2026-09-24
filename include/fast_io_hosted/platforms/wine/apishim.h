@@ -48,6 +48,18 @@ inline ::fast_io::wine_host_fd_t wine_unix_openat(::fast_io::wine_host_fd_t host
 	return ret.host_fd;
 }
 
+inline ::fast_io::wine_host_fd_t wine_unix_open(char const *filename,
+												::std::size_t filenamelen, ::fast_io::wine_unix::flags_t flags,
+												::fast_io::wine_unix::mode_t mode) FAST_IO_HERBCEPTIONS_THROWS
+{
+	auto const ret{wine_unix_open_returns_status(filename, filenamelen, flags, mode)};
+	if (ret.status != 0)
+	{
+		throw_wine_errc(static_cast<::std::uint_least32_t>(ret.status));
+	}
+	return ret.host_fd;
+}
+
 inline ::fast_io::wine_unix::rwv_result_t wine_unix_writev(::fast_io::wine_host_fd_t host_fd,
 														   ::fast_io::wine_unix::iovec_t const *iovs,
 														   ::std::size_t iovsize) FAST_IO_HERBCEPTIONS_THROWS
