@@ -262,7 +262,7 @@ struct is_zero_default_constructible<posix_dll_file>
 } // namespace freestanding
 
 template <::fast_io::constructible_to_os_c_str T>
-inline void *dll_load_symbol(posix_dll_io_observer pdliob, T const &symbol)
+inline void *dll_load_symbol(posix_dll_io_observer pdliob, T const &symbol) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::posix_api_common(symbol, ::fast_io::details::posix_dll_load_impl_context{pdliob.rtld_handle});
 }
@@ -274,7 +274,7 @@ inline void *dll_load_versioned_symbol(posix_dll_io_observer pdliob, T const &sy
 #if __GLIBC_PREREQ(2, 0)
 	return ::fast_io::posix_api_common(
 		vers,
-		[&](char const *ver) {
+		[&](char const *ver) FAST_IO_HERBCEPTIONS_THROWS {
 			return ::fast_io::posix_api_common(
 				symbol, ::fast_io::details::posix_dll_load_versioned_symbol_impl_context{pdliob.rtld_handle, ver});
 		});
@@ -289,13 +289,4 @@ inline void *dll_load_versioned_symbol(posix_dll_io_observer pdliob, T const &sy
 using native_dll_io_observer = posix_dll_io_observer;
 using native_dll_file = posix_dll_file;
 
-namespace freestanding
-{
-template <>
-struct is_zero_default_constructible<posix_dll_io_observer>
-{
-	inline static constexpr bool value = true;
-};
-
-} // namespace freestanding
 } // namespace fast_io
