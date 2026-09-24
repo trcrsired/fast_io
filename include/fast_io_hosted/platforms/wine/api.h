@@ -59,6 +59,13 @@ struct rw_status_t
 	::std::size_t total;
 };
 
+/* is_unix: 1 on the unix backend (wine + libwineunix.so), 0 on nt */
+struct is_unix_status_t
+{
+	status_t status;
+	::std::uint_least32_t is_unix;
+};
+
 struct rw_result_t
 {
 	::std::size_t total;
@@ -150,8 +157,13 @@ FAST_IO_DLLIMPORT extern ::fast_io::wine_unix::rw_status_t
 wine_unix_read_returns_status(::fast_io::wine_unix::host_fd_t, void *, ::std::size_t) noexcept
 	FAST_IO_WINCDECL_RENAME(__wine_unix_read_returns_status, 12);
 FAST_IO_DLLIMPORT FAST_IO_GNU_CONST extern ::fast_io::wine_unix::host_fd_status_t
-wine_unix_get_std_host_fd_returns_status(int) noexcept
+	wine_unix_get_std_host_fd_returns_status(::std::int_least32_t) noexcept
 	FAST_IO_WINCDECL_RENAME(__wine_unix_get_std_host_fd_returns_status, 4);
+
+/* is_unix: 1 under wine's unix backend, 0 on the nt backend; status = dispatch failure only */
+FAST_IO_DLLIMPORT FAST_IO_GNU_CONST extern ::fast_io::wine_unix::is_unix_status_t
+wine_unix_is_unix_returns_status() noexcept
+	FAST_IO_WINCDECL_RENAME(__wine_unix_is_unix_returns_status, 0);
 
 /* impl-defined at_fdcwd token for host_dirfd; infallible, 0 if dispatch is broken */
 FAST_IO_DLLIMPORT FAST_IO_GNU_CONST extern ::fast_io::wine_unix::host_fd_t

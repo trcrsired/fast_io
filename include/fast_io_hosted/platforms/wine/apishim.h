@@ -132,4 +132,14 @@ inline ::fast_io::wine_unix::rw_result_t wine_unix_read(::fast_io::wine_host_fd_
 	return {ret.total};
 }
 
+inline ::std::uint_least32_t wine_unix_is_unix() FAST_IO_HERBCEPTIONS_THROWS
+{
+	auto const ret{wine_unix_is_unix_returns_status()};
+	if (ret.status != 0)
+	{
+		throw_wine_errc(static_cast<::std::uint_least32_t>(ret.status));
+	}
+	return ret.is_unix;
+}
+
 } // namespace fast_io::wine
