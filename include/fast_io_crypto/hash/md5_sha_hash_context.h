@@ -208,7 +208,7 @@ inline
 		for (::std::size_t i{}; i != n; ++i)
 		{
 			U v{digest[i]};
-			if constexpr (::std::endian::native == end)
+			if constexpr (::std::endian::native != end)
 			{
 				v = ::fast_io::byte_swap(v);
 			}
