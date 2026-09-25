@@ -120,6 +120,32 @@ template <::std::integral ch_type>
 }
 
 template <::std::integral ch_type>
+inline constexpr void read_all_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first, ch_type *last)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	auto *curr{view.ptr->curr_ptr};
+	auto *ed{view.ptr->end_ptr};
+	::std::ptrdiff_t diff{ed - curr};
+	::std::ptrdiff_t itdiff{last - first};
+	if (diff < itdiff) [[unlikely]]
+	{
+		::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first);
+		view.ptr->curr_ptr = ed;
+		::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
+	}
+	::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+	view.ptr->curr_ptr = curr + itdiff;
+}
+
+template <::std::integral ch_type>
+	requires(sizeof(ch_type) == 1)
+inline constexpr void read_all_bytes_underflow_define(basic_ibuffer_view_ref<ch_type> view, ::std::byte *first, ::std::byte *last)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	read_all_underflow_define(view, reinterpret_cast<ch_type *>(first), reinterpret_cast<ch_type *>(last));
+}
+
+template <::std::integral ch_type>
 [[nodiscard]] inline constexpr bool ibuffer_underflow(basic_ibuffer_view_ref<ch_type>) noexcept
 {
 	return false;
