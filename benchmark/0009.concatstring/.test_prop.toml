@@ -1,2 +1,6 @@
 ["format.cc"] # CI doesn't support <format>
 ignore = true
+
+["abseilstrcat.cc"]
+ignore = true
+

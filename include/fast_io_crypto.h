@@ -18,6 +18,7 @@
 // #include"fast_io_crypto/symmetric_crypto.h"
 // #include"fast_io_crypto/hash/intrin_include.h"
 #include "fast_io_crypto/hash/impl.h"
+#include "fast_io_crypto/cipher/aes.h"
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
