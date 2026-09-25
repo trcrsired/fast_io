@@ -5,7 +5,11 @@ Software AES implementation (FIPS-197).
 Portable, byte-oriented, constexpr-capable. Fallback backend for
 platforms without AES hardware (wasm32, generic arm, ...).
 
-C-style free functions only: no templates, no lambdas, no macros.
+C-style free functions only: no classes, no lambdas, no macros.
+The only template parameter is nk (key words), which selects the
+algorithm: nk=4, 6, 8 are AES-128, AES-192, AES-256 and each
+instantiation is a single fixed algorithm. There are no runtime
+branches on key or data position.
 Inner per-byte loops are manually unrolled so the state stays in
 registers; the block loop and the round loop are the only runtime loops.
 A future SIMD backend should use ::fast_io::intrinsics::simd_vector
@@ -58,20 +62,6 @@ inline constexpr ::std::uint_least8_t rcon[11]{
 inline constexpr ::std::uint_least8_t xtime(::std::uint_least8_t x) noexcept
 {
 	return static_cast<::std::uint_least8_t>((x << 1) ^ (((x >> 7) & 1u) * 0x1bu));
-}
-
-inline constexpr ::std::uint_least8_t gmul(::std::uint_least8_t x, ::std::uint_least8_t y) noexcept
-{
-	::std::uint_least8_t r{};
-	for (; y; y >>= 1)
-	{
-		if (y & 1u)
-		{
-			r ^= x;
-		}
-		x = xtime(x);
-	}
-	return r;
 }
 
 /* load/store a 32-bit AES word: byte 0 of the group is the MSB */
@@ -173,40 +163,51 @@ inline constexpr ::std::uint_least32_t sub_word(::std::uint_least32_t x) noexcep
 
 /*
 Expand key into round_keys[(rounds + 1) * 16].
-nk = key_size/4 (4, 6 or 8), rounds = nk + 6.
+nk (key words) selects the algorithm: 4 = AES-128, 6 = AES-192, 8 = AES-256.
+rounds = nk + 6 is a compile-time constant, not a parameter.
 Round keys are stored as plain bytes in state order:
 round_keys[16*r + c*4 + row] hits state column c, row r.
-group/rcon_i counters track i%nk and i/nk without division.
+
+The expansion runs one group of nk words per iteration with the
+per-word code manually unrolled, so there are no position checks
+inside the loop. The final group may write a few words past
+total_words (nk > 4); w has nk words of slack and the extra words
+are never stored.
 */
-inline constexpr void key_expansion(::std::byte const *key, ::std::uint_least8_t *round_keys,
-									::std::size_t nk, ::std::size_t rounds) noexcept
+template <::std::size_t nk>
+inline constexpr void key_expansion(::std::byte const *key, ::std::uint_least8_t *round_keys) noexcept
 {
-	::std::size_t const total_words{4 * (rounds + 1)};
-	::std::uint_least32_t w[60]{}; /* max: AES-256 -> 4 * (14 + 1) */
+	static_assert(nk == 4 || nk == 6 || nk == 8);
+	constexpr ::std::size_t rounds{nk + 6};
+	constexpr ::std::size_t total_words{4 * (rounds + 1)};
+	::std::uint_least32_t w[total_words + nk]{};
 	for (::std::size_t i{}; i != nk; ++i)
 	{
 		w[i] = load_be32(key + i * 4);
 	}
-	::std::size_t group{};
 	::std::size_t rcon_i{1};
-	for (::std::size_t i{nk}; i != total_words; ++i)
+	for (::std::size_t base{nk}; base < total_words; base += nk)
 	{
-		::std::uint_least32_t t{w[i - 1]};
-		if (group == 0)
+		/* first word of each group: SubWord(RotWord(w)) ^ Rcon.
+		canonical word: byte0 in bits 31..24 -> RotWord is rotl by 8 */
+		w[base] = w[base - nk] ^
+				  (sub_word(::std::rotl(w[base - 1], 8)) ^
+				   (static_cast<::std::uint_least32_t>(rcon[rcon_i]) << 24));
+		++rcon_i;
+		w[base + 1] = w[base + 1 - nk] ^ w[base];
+		w[base + 2] = w[base + 2 - nk] ^ w[base + 1];
+		w[base + 3] = w[base + 3 - nk] ^ w[base + 2];
+		if constexpr (nk == 6)
 		{
-			/* canonical word: byte0 in bits 31..24 -> RotWord is rotl by 8 */
-			t = sub_word(::std::rotl(t, 8)) ^
-				(static_cast<::std::uint_least32_t>(rcon[rcon_i]) << 24);
-			++rcon_i;
+			w[base + 4] = w[base - 2] ^ w[base + 3];
+			w[base + 5] = w[base - 1] ^ w[base + 4];
 		}
-		else if (nk == 8 && group == 4)
+		else if constexpr (nk == 8)
 		{
-			t = sub_word(t);
-		}
-		w[i] = w[i - nk] ^ t;
-		if (++group == nk)
-		{
-			group = 0;
+			w[base + 4] = w[base - 4] ^ sub_word(w[base + 3]);
+			w[base + 5] = w[base - 3] ^ w[base + 4];
+			w[base + 6] = w[base - 2] ^ w[base + 5];
+			w[base + 7] = w[base - 1] ^ w[base + 6];
 		}
 	}
 	for (::std::size_t i{}; i != total_words; ++i)
@@ -320,35 +321,60 @@ inline constexpr void mix_columns(::std::uint_least8_t *s) noexcept
 	s[15] = static_cast<::std::uint_least8_t>(xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
 }
 
+/*
+InvMixColumns without per-byte gmul branches:
+t0 ^= 4*(a0^a2), t2 ^= 4*(a0^a2), t1 ^= 4*(a1^a3), t3 ^= 4*(a1^a3)
+turns the 14/11/13/9 matrix into the plain 2/3/1/1 MixColumns, since
+2*(1^4)^4 == 14, 3*(1^4)^4 == 11, 2*4^5 == 13, 3*4^5 == 9.
+*/
 inline constexpr void inv_mix_columns(::std::uint_least8_t *s) noexcept
 {
-	::std::uint_least8_t a0, a1, a2, a3;
+	::std::uint_least8_t a0, a1, a2, a3, t;
 	a0 = s[0]; a1 = s[1]; a2 = s[2]; a3 = s[3];
-	s[0] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
-	s[1] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
-	s[2] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
-	s[3] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a0 ^ a2)));
+	a0 ^= t; a2 ^= t;
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a1 ^ a3)));
+	a1 ^= t; a3 ^= t;
+	s[0] = xtime(a0) ^ static_cast<::std::uint_least8_t>(xtime(a1) ^ a1) ^ a2 ^ a3;
+	s[1] = a0 ^ xtime(a1) ^ static_cast<::std::uint_least8_t>(xtime(a2) ^ a2) ^ a3;
+	s[2] = a0 ^ a1 ^ xtime(a2) ^ static_cast<::std::uint_least8_t>(xtime(a3) ^ a3);
+	s[3] = static_cast<::std::uint_least8_t>(xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
 	a0 = s[4]; a1 = s[5]; a2 = s[6]; a3 = s[7];
-	s[4] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
-	s[5] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
-	s[6] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
-	s[7] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a0 ^ a2)));
+	a0 ^= t; a2 ^= t;
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a1 ^ a3)));
+	a1 ^= t; a3 ^= t;
+	s[4] = xtime(a0) ^ static_cast<::std::uint_least8_t>(xtime(a1) ^ a1) ^ a2 ^ a3;
+	s[5] = a0 ^ xtime(a1) ^ static_cast<::std::uint_least8_t>(xtime(a2) ^ a2) ^ a3;
+	s[6] = a0 ^ a1 ^ xtime(a2) ^ static_cast<::std::uint_least8_t>(xtime(a3) ^ a3);
+	s[7] = static_cast<::std::uint_least8_t>(xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
 	a0 = s[8]; a1 = s[9]; a2 = s[10]; a3 = s[11];
-	s[8] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
-	s[9] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
-	s[10] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
-	s[11] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a0 ^ a2)));
+	a0 ^= t; a2 ^= t;
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a1 ^ a3)));
+	a1 ^= t; a3 ^= t;
+	s[8] = xtime(a0) ^ static_cast<::std::uint_least8_t>(xtime(a1) ^ a1) ^ a2 ^ a3;
+	s[9] = a0 ^ xtime(a1) ^ static_cast<::std::uint_least8_t>(xtime(a2) ^ a2) ^ a3;
+	s[10] = a0 ^ a1 ^ xtime(a2) ^ static_cast<::std::uint_least8_t>(xtime(a3) ^ a3);
+	s[11] = static_cast<::std::uint_least8_t>(xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
 	a0 = s[12]; a1 = s[13]; a2 = s[14]; a3 = s[15];
-	s[12] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
-	s[13] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
-	s[14] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
-	s[15] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a0 ^ a2)));
+	a0 ^= t; a2 ^= t;
+	t = xtime(xtime(static_cast<::std::uint_least8_t>(a1 ^ a3)));
+	a1 ^= t; a3 ^= t;
+	s[12] = xtime(a0) ^ static_cast<::std::uint_least8_t>(xtime(a1) ^ a1) ^ a2 ^ a3;
+	s[13] = a0 ^ xtime(a1) ^ static_cast<::std::uint_least8_t>(xtime(a2) ^ a2) ^ a3;
+	s[14] = a0 ^ a1 ^ xtime(a2) ^ static_cast<::std::uint_least8_t>(xtime(a3) ^ a3);
+	s[15] = static_cast<::std::uint_least8_t>(xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
 }
 
 /* ECB encrypt: nblocks consecutive 16-byte blocks. from/to may alias. */
-inline constexpr void encrypt(::std::uint_least8_t const *round_keys, ::std::size_t rounds,
+template <::std::size_t nk>
+inline constexpr void encrypt(::std::uint_least8_t const *round_keys,
 							  ::std::byte const *from, ::std::size_t nblocks, ::std::byte *to) noexcept
 {
+	static_assert(nk == 4 || nk == 6 || nk == 8);
+	constexpr ::std::size_t rounds{nk + 6};
 	::std::uint_least8_t state[16];
 	for (; nblocks; --nblocks, from += 16, to += 16)
 	{
@@ -373,9 +399,12 @@ inline constexpr void encrypt(::std::uint_least8_t const *round_keys, ::std::siz
 }
 
 /* ECB decrypt: same round keys, used in reverse order */
-inline constexpr void decrypt(::std::uint_least8_t const *round_keys, ::std::size_t rounds,
+template <::std::size_t nk>
+inline constexpr void decrypt(::std::uint_least8_t const *round_keys,
 							  ::std::byte const *from, ::std::size_t nblocks, ::std::byte *to) noexcept
 {
+	static_assert(nk == 4 || nk == 6 || nk == 8);
+	constexpr ::std::size_t rounds{nk + 6};
 	::std::uint_least8_t state[16];
 	for (; nblocks; --nblocks, from += 16, to += 16)
 	{

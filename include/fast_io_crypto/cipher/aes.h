@@ -46,35 +46,20 @@ public:
 	/* key points to key_size bytes */
 	inline explicit constexpr aes_ctx(::std::byte const *key) noexcept
 	{
-		::fast_io::details::aes::key_expansion(key, round_keys, nk, rounds);
-	}
-
-	inline constexpr ~aes_ctx() noexcept
-	{
-		if consteval
-		{
-			for (::std::size_t i{}; i != key_schedule_size; ++i)
-			{
-				round_keys[i] = 0;
-			}
-		}
-		else
-		{
-			::fast_io::secure_clear(round_keys, key_schedule_size);
-		}
+		::fast_io::details::aes::key_expansion<nk>(key, round_keys);
 	}
 
 	/* ECB over nblocks consecutive 16-byte blocks; from/to may alias */
 	inline constexpr void encrypt(::std::byte const *from, ::std::size_t nblocks,
 								  ::std::byte *to) const noexcept
 	{
-		::fast_io::details::aes::encrypt(round_keys, rounds, from, nblocks, to);
+		::fast_io::details::aes::encrypt<nk>(round_keys, from, nblocks, to);
 	}
 
 	inline constexpr void decrypt(::std::byte const *from, ::std::size_t nblocks,
 								  ::std::byte *to) const noexcept
 	{
-		::fast_io::details::aes::decrypt(round_keys, rounds, from, nblocks, to);
+		::fast_io::details::aes::decrypt<nk>(round_keys, from, nblocks, to);
 	}
 };
 
