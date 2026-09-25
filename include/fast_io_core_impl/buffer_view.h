@@ -103,10 +103,20 @@ inline constexpr void ibuffer_set_curr(basic_ibuffer_view_ref<ch_type> view, ch_
 }
 
 template <::std::integral ch_type>
-[[nodiscard]] inline constexpr ch_type *read_some_underflow_define(basic_ibuffer_view_ref<ch_type>, ch_type *first,
-																  ch_type *) noexcept
+[[nodiscard]] inline constexpr ch_type *read_some_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first,
+																  ch_type *last) noexcept
 {
-	return first;
+	auto *curr{view.ptr->curr_ptr};
+	auto *ed{view.ptr->end_ptr};
+	::std::ptrdiff_t diff{ed - curr};
+	::std::ptrdiff_t itdiff{last - first};
+	if (itdiff < diff)
+	{
+		diff = itdiff;
+	}
+	auto it{::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first)};
+	view.ptr->curr_ptr = curr + diff;
+	return it;
 }
 
 template <::std::integral ch_type>

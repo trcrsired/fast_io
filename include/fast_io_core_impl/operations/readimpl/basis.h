@@ -223,8 +223,8 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				first = it;
-				char_type *curr{ibuffer_curr(insm)};
-				char_type *ed{ibuffer_end(insm)};
+				auto curr{ibuffer_curr(insm)};
+				auto ed{ibuffer_end(insm)};
 				::std::ptrdiff_t bfddiff{ed - curr};
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
@@ -266,8 +266,8 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				{
 					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
-				char_type *curr{ibuffer_curr(insm)};
-				char_type *ed{ibuffer_end(insm)};
+				auto curr{ibuffer_curr(insm)};
+				auto ed{ibuffer_end(insm)};
 				::std::ptrdiff_t bfddiff{ed - curr};
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
@@ -350,8 +350,8 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
 				first = it;
-				char_type *curr{ibuffer_curr(insm)};
-				char_type *ed{ibuffer_end(insm)};
+				auto curr{ibuffer_curr(insm)};
+				auto ed{ibuffer_end(insm)};
 				::std::ptrdiff_t bfddiff{ed - curr};
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
@@ -393,8 +393,8 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				{
 					::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 				}
-				char_type *curr{ibuffer_curr(insm)};
-				char_type *ed{ibuffer_end(insm)};
+				auto curr{ibuffer_curr(insm)};
+				auto ed{ibuffer_end(insm)};
 				::std::ptrdiff_t bfddiff{ed - curr};
 				::std::ptrdiff_t itdiff{last - first};
 				if (itdiff < bfddiff)
@@ -478,8 +478,8 @@ read_some_impl(instmtype insm, typename instmtype::input_char_type *first, typen
 	{
 		if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 		{
-			char_type *curr{ibuffer_curr(insm)};
-			char_type *ed{ibuffer_end(insm)};
+			auto curr{ibuffer_curr(insm)};
+			auto ed{ibuffer_end(insm)};
 			::std::ptrdiff_t bfddiff{ed - curr};
 			::std::ptrdiff_t itdiff{last - first};
 			if (itdiff < bfddiff)
@@ -514,8 +514,8 @@ inline constexpr void read_all_impl(instmtype insm, typename instmtype::input_ch
 		using char_type = typename instmtype::input_char_type;
 		if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 		{
-			char_type *curr{ibuffer_curr(insm)};
-			char_type *ed{ibuffer_end(insm)};
+			auto curr{ibuffer_curr(insm)};
+			auto ed{ibuffer_end(insm)};
 			::std::ptrdiff_t bfddiff{ed - curr};
 			::std::ptrdiff_t itdiff{last - first};
 			if (itdiff < bfddiff)
@@ -550,8 +550,8 @@ inline constexpr ::std::byte *read_some_bytes_impl(instmtype insm, ::std::byte *
 		if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype> &&
 					  sizeof(char_type) == 1)
 		{
-			char_type *curr{ibuffer_curr(insm)};
-			char_type *ed{ibuffer_end(insm)};
+			auto curr{ibuffer_curr(insm)};
+			auto ed{ibuffer_end(insm)};
 			::std::ptrdiff_t bfddiff{ed - curr};
 			::std::ptrdiff_t itdiff{last - first};
 			if (itdiff < bfddiff)
@@ -591,8 +591,8 @@ inline constexpr void read_all_bytes_impl(instmtype insm, ::std::byte *first, ::
 		if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype> &&
 					  sizeof(char_type) == 1)
 		{
-			char_type *curr{ibuffer_curr(insm)};
-			char_type *ed{ibuffer_end(insm)};
+			auto curr{ibuffer_curr(insm)};
+			auto ed{ibuffer_end(insm)};
 			::std::ptrdiff_t bfddiff{ed - curr};
 			::std::ptrdiff_t itdiff{last - first};
 			if (itdiff < bfddiff)
