@@ -30,7 +30,79 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void create_key_pair(::std::byte *public_key, ::std::byte *private_key, ::std::byte const *secret_key) noexcept
+		void create_key_pair_to_ptr(::std::byte *public_key, ::std::byte *private_key, ::std::byte const *secret_key) noexcept
+	{
+		::fast_io::curve25519::details::ed25519_create_key_pair_to_ptr(public_key, private_key, secret_key);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		void create_key_pair_with_blinding_to_ptr(::std::byte *public_key, ::std::byte *private_key, ::std::byte const *secret_key, blinding_context &blinding) noexcept
+	{
+		::fast_io::curve25519::details::ed25519_create_key_pair_with_blinding_to_ptr(public_key, private_key, secret_key, blinding);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		void sign_message_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+	{
+		::fast_io::curve25519::details::ed25519_sign_message_to_ptr(signature, private_key, msg, msg_size);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		void sign_message_with_blinding_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, ::std::size_t msg_size, blinding_context &blinding) noexcept
+	{
+		::fast_io::curve25519::details::ed25519_sign_message_with_blinding_to_ptr(signature, private_key, msg, msg_size, blinding);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		void verify_init_to_ptr(verify_context &ctx, ::std::byte const *public_key) noexcept
+	{
+		::fast_io::curve25519::details::ed25519_verify_init_to_ptr(ctx, public_key);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		bool verify_check_to_ptr(verify_context const &ctx, ::std::byte const *signature, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+	{
+		return ::fast_io::curve25519::details::ed25519_verify_check_to_ptr(ctx, signature, msg, msg_size);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		bool verify_signature_to_ptr(::std::byte const *signature, ::std::byte const *public_key, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+	{
+		return ::fast_io::curve25519::details::ed25519_verify_signature_to_ptr(signature, public_key, msg, msg_size);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		blinding_context &blinding_init_to_ptr(blinding_context &ctx, ::std::byte const *seed, ::std::size_t seed_size) noexcept
+	{
+		return ::fast_io::curve25519::details::ed25519_blinding_init_to_ptr(ctx, seed, seed_size);
+	}
+
+	static inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+		constexpr
+#endif
+		void create_key_pair(::fast_io::containers::index_span<::std::byte, public_key_size> public_key, ::fast_io::containers::index_span<::std::byte, private_key_size> private_key, ::fast_io::containers::index_span<::std::byte const, secret_key_size> secret_key) noexcept
 	{
 		::fast_io::curve25519::details::ed25519_create_key_pair(public_key, private_key, secret_key);
 	}
@@ -39,7 +111,7 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void create_key_pair_with_blinding(::std::byte *public_key, ::std::byte *private_key, ::std::byte const *secret_key, blinding_context &blinding) noexcept
+		void create_key_pair_with_blinding(::fast_io::containers::index_span<::std::byte, public_key_size> public_key, ::fast_io::containers::index_span<::std::byte, private_key_size> private_key, ::fast_io::containers::index_span<::std::byte const, secret_key_size> secret_key, blinding_context &blinding) noexcept
 	{
 		::fast_io::curve25519::details::ed25519_create_key_pair_with_blinding(public_key, private_key, secret_key, blinding);
 	}
@@ -48,25 +120,25 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void sign_message(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+		void sign_message(::fast_io::containers::index_span<::std::byte, signature_size> signature, ::fast_io::containers::index_span<::std::byte const, private_key_size> private_key, ::fast_io::containers::span<::std::byte const> msg) noexcept
 	{
-		::fast_io::curve25519::details::ed25519_sign_message(signature, private_key, msg, msg_size);
+		::fast_io::curve25519::details::ed25519_sign_message(signature, private_key, msg);
 	}
 
 	static inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void sign_message_with_blinding(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, ::std::size_t msg_size, blinding_context &blinding) noexcept
+		void sign_message_with_blinding(::fast_io::containers::index_span<::std::byte, signature_size> signature, ::fast_io::containers::index_span<::std::byte const, private_key_size> private_key, ::fast_io::containers::span<::std::byte const> msg, blinding_context &blinding) noexcept
 	{
-		::fast_io::curve25519::details::ed25519_sign_message_with_blinding(signature, private_key, msg, msg_size, blinding);
+		::fast_io::curve25519::details::ed25519_sign_message_with_blinding(signature, private_key, msg, blinding);
 	}
 
 	static inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void verify_init(verify_context &ctx, ::std::byte const *public_key) noexcept
+		void verify_init(verify_context &ctx, ::fast_io::containers::index_span<::std::byte const, public_key_size> public_key) noexcept
 	{
 		::fast_io::curve25519::details::ed25519_verify_init(ctx, public_key);
 	}
@@ -75,27 +147,27 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		bool verify_check(verify_context const &ctx, ::std::byte const *signature, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+		bool verify_check(verify_context const &ctx, ::fast_io::containers::index_span<::std::byte const, signature_size> signature, ::fast_io::containers::span<::std::byte const> msg) noexcept
 	{
-		return ::fast_io::curve25519::details::ed25519_verify_check(ctx, signature, msg, msg_size);
+		return ::fast_io::curve25519::details::ed25519_verify_check(ctx, signature, msg);
 	}
 
 	static inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		bool verify_signature(::std::byte const *signature, ::std::byte const *public_key, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+		bool verify_signature(::fast_io::containers::index_span<::std::byte const, signature_size> signature, ::fast_io::containers::index_span<::std::byte const, public_key_size> public_key, ::fast_io::containers::span<::std::byte const> msg) noexcept
 	{
-		return ::fast_io::curve25519::details::ed25519_verify_signature(signature, public_key, msg, msg_size);
+		return ::fast_io::curve25519::details::ed25519_verify_signature(signature, public_key, msg);
 	}
 
 	static inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		blinding_context &blinding_init(blinding_context &ctx, ::std::byte const *seed, ::std::size_t seed_size) noexcept
+		blinding_context &blinding_init(blinding_context &ctx, ::fast_io::containers::span<::std::byte const> seed) noexcept
 	{
-		return ::fast_io::curve25519::details::ed25519_blinding_init(ctx, seed, seed_size);
+		return ::fast_io::curve25519::details::ed25519_blinding_init(ctx, seed);
 	}
 
 	template <typename instmtype>

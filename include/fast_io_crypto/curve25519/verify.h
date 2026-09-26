@@ -115,7 +115,7 @@ inline constexpr void qtable_set(::fast_io::containers::array<precomputed_extend
 Pre-compute the q-table for a public key.
 q_table[i] = -(i0*Q + i1*2^64*Q + i2*2^128*Q + i3*2^192*Q) for i = i3i2i1i0 bits.
 */
-inline constexpr void ed25519_verify_init(ed25519_verify_context &ctx, std::byte const *public_key) noexcept
+inline constexpr void ed25519_verify_init_to_ptr(ed25519_verify_context &ctx, std::byte const *public_key) noexcept
 {
 	::fast_io::freestanding::nonoverlapped_bytes_copy_n(public_key, 32, ctx.pk.data());
 
@@ -202,7 +202,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	bool ed25519_verify_check(ed25519_verify_context const &ctx, std::byte const *signature, std::byte const *msg, std::size_t msg_size) noexcept
+	bool ed25519_verify_check_to_ptr(ed25519_verify_context const &ctx, std::byte const *signature, std::byte const *msg, std::size_t msg_size) noexcept
 {
 	::fast_io::sha512_context H;
 	affine_point t;
@@ -239,11 +239,38 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	bool ed25519_verify_signature(std::byte const *signature, std::byte const *public_key, std::byte const *msg, std::size_t msg_size) noexcept
+	bool ed25519_verify_signature_to_ptr(std::byte const *signature, std::byte const *public_key, std::byte const *msg, std::size_t msg_size) noexcept
 {
 	ed25519_verify_context ctx;
-	ed25519_verify_init(ctx, public_key);
-	return ed25519_verify_check(ctx, signature, msg, msg_size);
+	ed25519_verify_init_to_ptr(ctx, public_key);
+	return ed25519_verify_check_to_ptr(ctx, signature, msg, msg_size);
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	void ed25519_verify_init(ed25519_verify_context &ctx, ::fast_io::containers::index_span<std::byte const, 32> public_key) noexcept
+{
+	ed25519_verify_init_to_ptr(ctx, public_key.data());
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	bool ed25519_verify_check(ed25519_verify_context const &ctx, ::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::span<std::byte const> msg) noexcept
+{
+	return ed25519_verify_check_to_ptr(ctx, signature.data(), msg.data(), msg.size());
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	bool ed25519_verify_signature(::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::index_span<std::byte const, 32> public_key, ::fast_io::containers::span<std::byte const> msg) noexcept
+{
+	return ed25519_verify_signature_to_ptr(signature.data(), public_key.data(), msg.data(), msg.size());
 }
 
 } // namespace details

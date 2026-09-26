@@ -70,7 +70,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	edp_blinding_context &ed25519_blinding_init(edp_blinding_context &ctx, std::byte const *seed, std::size_t seed_size) noexcept
+	edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding_context &ctx, std::byte const *seed, std::size_t seed_size) noexcept
 {
 	::fast_io::sha512_context H;
 	::fast_io::containers::array<std::byte, 32> zb;
@@ -115,6 +115,15 @@ inline
 	return ctx;
 }
 
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	edp_blinding_context &ed25519_blinding_init(edp_blinding_context &ctx, ::fast_io::containers::span<std::byte const> seed) noexcept
+{
+	return ed25519_blinding_init_to_ptr(ctx, seed.data(), seed.size());
+}
+
 /*
 Derive a blinding context by reading a 64-byte seed from an input stream.
 */
@@ -124,7 +133,7 @@ inline edp_blinding_context &ed25519_blinding_init_from_input_stream(edp_blindin
 {
 	::fast_io::containers::array<std::byte, 64> seed;
 	::fast_io::operations::read_all_bytes(instm, seed.data(), seed.data() + seed.size());
-	ed25519_blinding_init(ctx, seed.data(), seed.size());
+	ed25519_blinding_init_to_ptr(ctx, seed.data(), seed.size());
 	::fast_io::secure_clear(seed.data(), seed.size_bytes());
 	return ctx;
 }

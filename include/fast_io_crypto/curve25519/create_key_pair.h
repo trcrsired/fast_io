@@ -251,7 +251,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_create_key_pair(std::byte *public_key, std::byte *private_key, std::byte const *secret_key) noexcept
+	void ed25519_create_key_pair_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key) noexcept
 {
 	constexpr std::size_t keylength{32};
 	::fast_io::sha512_context sha;
@@ -277,7 +277,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_create_key_pair_with_blinding(std::byte *public_key, std::byte *private_key, std::byte const *secret_key, edp_blinding_context &blinding) noexcept
+	void ed25519_create_key_pair_with_blinding_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key, edp_blinding_context &blinding) noexcept
 {
 	constexpr std::size_t keylength{32};
 	::fast_io::sha512_context sha;
@@ -376,7 +376,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_sign_message(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size) noexcept
+	void ed25519_sign_message_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size) noexcept
 {
 	ed25519_sign_message_impl(signature, private_key, nullptr, msg, msg_size);
 }
@@ -385,9 +385,45 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_sign_message_with_blinding(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size, edp_blinding_context &blinding) noexcept
+	void ed25519_sign_message_with_blinding_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size, edp_blinding_context &blinding) noexcept
 {
 	ed25519_sign_message_impl(signature, private_key, __builtin_addressof(blinding), msg, msg_size);
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	void ed25519_create_key_pair(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key) noexcept
+{
+	ed25519_create_key_pair_to_ptr(public_key.data(), private_key.data(), secret_key.data());
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	void ed25519_create_key_pair_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key, edp_blinding_context &blinding) noexcept
+{
+	ed25519_create_key_pair_with_blinding_to_ptr(public_key.data(), private_key.data(), secret_key.data(), blinding);
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	void ed25519_sign_message(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg) noexcept
+{
+	ed25519_sign_message_to_ptr(signature.data(), private_key.data(), msg.data(), msg.size());
+}
+
+inline
+#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
+	constexpr
+#endif
+	void ed25519_sign_message_with_blinding(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg, edp_blinding_context &blinding) noexcept
+{
+	ed25519_sign_message_with_blinding_to_ptr(signature.data(), private_key.data(), msg.data(), msg.size(), blinding);
 }
 
 } // namespace details
