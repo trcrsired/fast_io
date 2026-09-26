@@ -11,6 +11,9 @@
 #else
 
 #include "fast_io_core.h"
+#include "fast_io_dsal/impl/common.h"
+#include "fast_io_dsal/impl/span.h"
+#include "fast_io_dsal/impl/index_span.h"
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
