@@ -479,22 +479,22 @@ inline constexpr void field_number_multiplication(field_number &r, field_number 
 	reduce_final(r, t);
 }
 
-inline constexpr std::uint_least64_t muladd_w0(std::uint_least64_t add_value, std::uint_least64_t mul_value, std::uint_least64_t &high) noexcept
+inline constexpr field_number::value_type muladd_w0(field_number::value_type add_value, field_number::value_type mul_value, field_number::value_type &high) noexcept
 {
-	constexpr std::uint_least64_t constant{38};
-	constexpr std::uint_least64_t zero{};
-	std::uint_least64_t low{::fast_io::intrinsics::umul(mul_value, constant, high)};
+	constexpr field_number::value_type constant{38};
+	constexpr field_number::value_type zero{};
+	field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
 	bool carry{};
 	low = ::fast_io::intrinsics::addc(add_value, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
 	return low;
 }
 
-inline constexpr std::uint_least64_t muladd_w1(std::uint_least64_t add_value, std::uint_least64_t mul_value, std::uint_least64_t &high, std::uint_least64_t last_high) noexcept
+inline constexpr field_number::value_type muladd_w1(field_number::value_type add_value, field_number::value_type mul_value, field_number::value_type &high, field_number::value_type last_high) noexcept
 {
-	constexpr std::uint_least64_t constant{38};
-	constexpr std::uint_least64_t zero{};
-	std::uint_least64_t low{::fast_io::intrinsics::umul(mul_value, constant, high)};
+	constexpr field_number::value_type constant{38};
+	constexpr field_number::value_type zero{};
+	field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
 	bool carry{};
 	low = ::fast_io::intrinsics::addc(last_high, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
@@ -503,35 +503,285 @@ inline constexpr std::uint_least64_t muladd_w1(std::uint_least64_t add_value, st
 	return low;
 }
 
-/*
-Mehdi's symmetric square on four u64 limbs: y = x*x mod 2^255-19.
-Shared by the u64 build and by the u32 build (which packs limb pairs
-into u64 locals so LLVM emits the same schedule it synthesizes for u64).
-*/
-inline constexpr void field_number_square_u64(std::uint_least64_t r[4], std::uint_least64_t const x[4]) noexcept
+inline constexpr void field_number_square(field_number &r, field_number const &x) noexcept
 {
-	constexpr std::uint_least64_t zero{};
-	constexpr std::uint_least64_t constant{38};
+	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
+	{
+		using unsigned_type = field_number::value_type;
+		constexpr unsigned_type zero{};
+		constexpr ::std::size_t n{field_number::array_size};
 
-	std::uint_least64_t x0{x[0]}, x1{x[1]}, x2{x[2]}, x3{x[3]};
+		/*
+		x^2 = sum_i x_i^2 * B^(2i) + 2 * sum_{i<j} x_i*x_j * B^(i+j).
+		Row i computes x_i*x_j for j>i; each product's hi half lands one
+		column right and merges into the same carry chain.  The chain is
+		doubled, then the diagonal squares are chained in, and
+		reduce_final folds the top half with the *38 trick.
+		*/
+		u512 t{};
+		{
+		bool carry{};
+		unsigned_type const b0{x.index_unchecked(0)};
+		unsigned_type h01 FAST_IO_INDETERMINATE;
+		unsigned_type const p01{::fast_io::intrinsics::umul(x.index_unchecked(1), b0, h01)};
+		unsigned_type h02 FAST_IO_INDETERMINATE;
+		unsigned_type const p02{::fast_io::intrinsics::umul(x.index_unchecked(2), b0, h02)};
+		unsigned_type h03 FAST_IO_INDETERMINATE;
+		unsigned_type const p03{::fast_io::intrinsics::umul(x.index_unchecked(3), b0, h03)};
+		unsigned_type h04 FAST_IO_INDETERMINATE;
+		unsigned_type const p04{::fast_io::intrinsics::umul(x.index_unchecked(4), b0, h04)};
+		unsigned_type h05 FAST_IO_INDETERMINATE;
+		unsigned_type const p05{::fast_io::intrinsics::umul(x.index_unchecked(5), b0, h05)};
+		unsigned_type h06 FAST_IO_INDETERMINATE;
+		unsigned_type const p06{::fast_io::intrinsics::umul(x.index_unchecked(6), b0, h06)};
+		unsigned_type h07 FAST_IO_INDETERMINATE;
+		unsigned_type const p07{::fast_io::intrinsics::umul(x.index_unchecked(7), b0, h07)};
+		unsigned_type m01{p01};
+		unsigned_type m02{::fast_io::intrinsics::addc(p02, h01, carry, carry)};
+		unsigned_type m03{::fast_io::intrinsics::addc(p03, h02, carry, carry)};
+		unsigned_type m04{::fast_io::intrinsics::addc(p04, h03, carry, carry)};
+		unsigned_type m05{::fast_io::intrinsics::addc(p05, h04, carry, carry)};
+		unsigned_type m06{::fast_io::intrinsics::addc(p06, h05, carry, carry)};
+		unsigned_type m07{::fast_io::intrinsics::addc(p07, h06, carry, carry)};
+		unsigned_type m08{::fast_io::intrinsics::addc(h07, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(1) = ::fast_io::intrinsics::addc(t.index_unchecked(1), m01, carry, carry);
+		t.index_unchecked(2) = ::fast_io::intrinsics::addc(t.index_unchecked(2), m02, carry, carry);
+		t.index_unchecked(3) = ::fast_io::intrinsics::addc(t.index_unchecked(3), m03, carry, carry);
+		t.index_unchecked(4) = ::fast_io::intrinsics::addc(t.index_unchecked(4), m04, carry, carry);
+		t.index_unchecked(5) = ::fast_io::intrinsics::addc(t.index_unchecked(5), m05, carry, carry);
+		t.index_unchecked(6) = ::fast_io::intrinsics::addc(t.index_unchecked(6), m06, carry, carry);
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), m07, carry, carry);
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), m08, carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), zero, carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), zero, carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), zero, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), zero, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), zero, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b1{x.index_unchecked(1)};
+		unsigned_type h12 FAST_IO_INDETERMINATE;
+		unsigned_type const p12{::fast_io::intrinsics::umul(x.index_unchecked(2), b1, h12)};
+		unsigned_type h13 FAST_IO_INDETERMINATE;
+		unsigned_type const p13{::fast_io::intrinsics::umul(x.index_unchecked(3), b1, h13)};
+		unsigned_type h14 FAST_IO_INDETERMINATE;
+		unsigned_type const p14{::fast_io::intrinsics::umul(x.index_unchecked(4), b1, h14)};
+		unsigned_type h15 FAST_IO_INDETERMINATE;
+		unsigned_type const p15{::fast_io::intrinsics::umul(x.index_unchecked(5), b1, h15)};
+		unsigned_type h16 FAST_IO_INDETERMINATE;
+		unsigned_type const p16{::fast_io::intrinsics::umul(x.index_unchecked(6), b1, h16)};
+		unsigned_type h17 FAST_IO_INDETERMINATE;
+		unsigned_type const p17{::fast_io::intrinsics::umul(x.index_unchecked(7), b1, h17)};
+		unsigned_type m12{p12};
+		unsigned_type m13{::fast_io::intrinsics::addc(p13, h12, carry, carry)};
+		unsigned_type m14{::fast_io::intrinsics::addc(p14, h13, carry, carry)};
+		unsigned_type m15{::fast_io::intrinsics::addc(p15, h14, carry, carry)};
+		unsigned_type m16{::fast_io::intrinsics::addc(p16, h15, carry, carry)};
+		unsigned_type m17{::fast_io::intrinsics::addc(p17, h16, carry, carry)};
+		unsigned_type m18{::fast_io::intrinsics::addc(h17, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(3) = ::fast_io::intrinsics::addc(t.index_unchecked(3), m12, carry, carry);
+		t.index_unchecked(4) = ::fast_io::intrinsics::addc(t.index_unchecked(4), m13, carry, carry);
+		t.index_unchecked(5) = ::fast_io::intrinsics::addc(t.index_unchecked(5), m14, carry, carry);
+		t.index_unchecked(6) = ::fast_io::intrinsics::addc(t.index_unchecked(6), m15, carry, carry);
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), m16, carry, carry);
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), m17, carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), m18, carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), zero, carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), zero, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), zero, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), zero, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b2{x.index_unchecked(2)};
+		unsigned_type h23 FAST_IO_INDETERMINATE;
+		unsigned_type const p23{::fast_io::intrinsics::umul(x.index_unchecked(3), b2, h23)};
+		unsigned_type h24 FAST_IO_INDETERMINATE;
+		unsigned_type const p24{::fast_io::intrinsics::umul(x.index_unchecked(4), b2, h24)};
+		unsigned_type h25 FAST_IO_INDETERMINATE;
+		unsigned_type const p25{::fast_io::intrinsics::umul(x.index_unchecked(5), b2, h25)};
+		unsigned_type h26 FAST_IO_INDETERMINATE;
+		unsigned_type const p26{::fast_io::intrinsics::umul(x.index_unchecked(6), b2, h26)};
+		unsigned_type h27 FAST_IO_INDETERMINATE;
+		unsigned_type const p27{::fast_io::intrinsics::umul(x.index_unchecked(7), b2, h27)};
+		unsigned_type m23{p23};
+		unsigned_type m24{::fast_io::intrinsics::addc(p24, h23, carry, carry)};
+		unsigned_type m25{::fast_io::intrinsics::addc(p25, h24, carry, carry)};
+		unsigned_type m26{::fast_io::intrinsics::addc(p26, h25, carry, carry)};
+		unsigned_type m27{::fast_io::intrinsics::addc(p27, h26, carry, carry)};
+		unsigned_type m28{::fast_io::intrinsics::addc(h27, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(5) = ::fast_io::intrinsics::addc(t.index_unchecked(5), m23, carry, carry);
+		t.index_unchecked(6) = ::fast_io::intrinsics::addc(t.index_unchecked(6), m24, carry, carry);
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), m25, carry, carry);
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), m26, carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), m27, carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), m28, carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), zero, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), zero, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), zero, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b3{x.index_unchecked(3)};
+		unsigned_type h34 FAST_IO_INDETERMINATE;
+		unsigned_type const p34{::fast_io::intrinsics::umul(x.index_unchecked(4), b3, h34)};
+		unsigned_type h35 FAST_IO_INDETERMINATE;
+		unsigned_type const p35{::fast_io::intrinsics::umul(x.index_unchecked(5), b3, h35)};
+		unsigned_type h36 FAST_IO_INDETERMINATE;
+		unsigned_type const p36{::fast_io::intrinsics::umul(x.index_unchecked(6), b3, h36)};
+		unsigned_type h37 FAST_IO_INDETERMINATE;
+		unsigned_type const p37{::fast_io::intrinsics::umul(x.index_unchecked(7), b3, h37)};
+		unsigned_type m34{p34};
+		unsigned_type m35{::fast_io::intrinsics::addc(p35, h34, carry, carry)};
+		unsigned_type m36{::fast_io::intrinsics::addc(p36, h35, carry, carry)};
+		unsigned_type m37{::fast_io::intrinsics::addc(p37, h36, carry, carry)};
+		unsigned_type m38{::fast_io::intrinsics::addc(h37, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), m34, carry, carry);
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), m35, carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), m36, carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), m37, carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), m38, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), zero, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), zero, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b4{x.index_unchecked(4)};
+		unsigned_type h45 FAST_IO_INDETERMINATE;
+		unsigned_type const p45{::fast_io::intrinsics::umul(x.index_unchecked(5), b4, h45)};
+		unsigned_type h46 FAST_IO_INDETERMINATE;
+		unsigned_type const p46{::fast_io::intrinsics::umul(x.index_unchecked(6), b4, h46)};
+		unsigned_type h47 FAST_IO_INDETERMINATE;
+		unsigned_type const p47{::fast_io::intrinsics::umul(x.index_unchecked(7), b4, h47)};
+		unsigned_type m45{p45};
+		unsigned_type m46{::fast_io::intrinsics::addc(p46, h45, carry, carry)};
+		unsigned_type m47{::fast_io::intrinsics::addc(p47, h46, carry, carry)};
+		unsigned_type m48{::fast_io::intrinsics::addc(h47, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), m45, carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), m46, carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), m47, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), m48, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), zero, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b5{x.index_unchecked(5)};
+		unsigned_type h56 FAST_IO_INDETERMINATE;
+		unsigned_type const p56{::fast_io::intrinsics::umul(x.index_unchecked(6), b5, h56)};
+		unsigned_type h57 FAST_IO_INDETERMINATE;
+		unsigned_type const p57{::fast_io::intrinsics::umul(x.index_unchecked(7), b5, h57)};
+		unsigned_type m56{p56};
+		unsigned_type m57{::fast_io::intrinsics::addc(p57, h56, carry, carry)};
+		unsigned_type m58{::fast_io::intrinsics::addc(h57, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), m56, carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), m57, carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), m58, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), zero, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type const b6{x.index_unchecked(6)};
+		unsigned_type h67 FAST_IO_INDETERMINATE;
+		unsigned_type const p67{::fast_io::intrinsics::umul(x.index_unchecked(7), b6, h67)};
+		unsigned_type m67{p67};
+		unsigned_type m68{::fast_io::intrinsics::addc(h67, zero, carry, carry)};
+		carry = false;
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), m67, carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), m68, carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), zero, carry, carry);
+		}
+		{
+		bool carry{};
+		t.index_unchecked(0) = ::fast_io::intrinsics::addc(t.index_unchecked(0), t.index_unchecked(0), carry, carry);
+		t.index_unchecked(1) = ::fast_io::intrinsics::addc(t.index_unchecked(1), t.index_unchecked(1), carry, carry);
+		t.index_unchecked(2) = ::fast_io::intrinsics::addc(t.index_unchecked(2), t.index_unchecked(2), carry, carry);
+		t.index_unchecked(3) = ::fast_io::intrinsics::addc(t.index_unchecked(3), t.index_unchecked(3), carry, carry);
+		t.index_unchecked(4) = ::fast_io::intrinsics::addc(t.index_unchecked(4), t.index_unchecked(4), carry, carry);
+		t.index_unchecked(5) = ::fast_io::intrinsics::addc(t.index_unchecked(5), t.index_unchecked(5), carry, carry);
+		t.index_unchecked(6) = ::fast_io::intrinsics::addc(t.index_unchecked(6), t.index_unchecked(6), carry, carry);
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), t.index_unchecked(7), carry, carry);
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), t.index_unchecked(8), carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), t.index_unchecked(9), carry, carry);
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), t.index_unchecked(10), carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), t.index_unchecked(11), carry, carry);
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), t.index_unchecked(12), carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), t.index_unchecked(13), carry, carry);
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), t.index_unchecked(14), carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), t.index_unchecked(15), carry, carry);
+		}
+		{
+		bool carry{};
+		unsigned_type h00 FAST_IO_INDETERMINATE;
+		t.index_unchecked(0) = ::fast_io::intrinsics::addc(t.index_unchecked(0), ::fast_io::intrinsics::umul(x.index_unchecked(0), x.index_unchecked(0), h00), carry, carry);
+		t.index_unchecked(1) = ::fast_io::intrinsics::addc(t.index_unchecked(1), h00, carry, carry);
+		unsigned_type h11 FAST_IO_INDETERMINATE;
+		t.index_unchecked(2) = ::fast_io::intrinsics::addc(t.index_unchecked(2), ::fast_io::intrinsics::umul(x.index_unchecked(1), x.index_unchecked(1), h11), carry, carry);
+		t.index_unchecked(3) = ::fast_io::intrinsics::addc(t.index_unchecked(3), h11, carry, carry);
+		unsigned_type h22 FAST_IO_INDETERMINATE;
+		t.index_unchecked(4) = ::fast_io::intrinsics::addc(t.index_unchecked(4), ::fast_io::intrinsics::umul(x.index_unchecked(2), x.index_unchecked(2), h22), carry, carry);
+		t.index_unchecked(5) = ::fast_io::intrinsics::addc(t.index_unchecked(5), h22, carry, carry);
+		unsigned_type h33 FAST_IO_INDETERMINATE;
+		t.index_unchecked(6) = ::fast_io::intrinsics::addc(t.index_unchecked(6), ::fast_io::intrinsics::umul(x.index_unchecked(3), x.index_unchecked(3), h33), carry, carry);
+		t.index_unchecked(7) = ::fast_io::intrinsics::addc(t.index_unchecked(7), h33, carry, carry);
+		unsigned_type h44 FAST_IO_INDETERMINATE;
+		t.index_unchecked(8) = ::fast_io::intrinsics::addc(t.index_unchecked(8), ::fast_io::intrinsics::umul(x.index_unchecked(4), x.index_unchecked(4), h44), carry, carry);
+		t.index_unchecked(9) = ::fast_io::intrinsics::addc(t.index_unchecked(9), h44, carry, carry);
+		unsigned_type h55 FAST_IO_INDETERMINATE;
+		t.index_unchecked(10) = ::fast_io::intrinsics::addc(t.index_unchecked(10), ::fast_io::intrinsics::umul(x.index_unchecked(5), x.index_unchecked(5), h55), carry, carry);
+		t.index_unchecked(11) = ::fast_io::intrinsics::addc(t.index_unchecked(11), h55, carry, carry);
+		unsigned_type h66 FAST_IO_INDETERMINATE;
+		t.index_unchecked(12) = ::fast_io::intrinsics::addc(t.index_unchecked(12), ::fast_io::intrinsics::umul(x.index_unchecked(6), x.index_unchecked(6), h66), carry, carry);
+		t.index_unchecked(13) = ::fast_io::intrinsics::addc(t.index_unchecked(13), h66, carry, carry);
+		unsigned_type h77 FAST_IO_INDETERMINATE;
+		t.index_unchecked(14) = ::fast_io::intrinsics::addc(t.index_unchecked(14), ::fast_io::intrinsics::umul(x.index_unchecked(7), x.index_unchecked(7), h77), carry, carry);
+		t.index_unchecked(15) = ::fast_io::intrinsics::addc(t.index_unchecked(15), h77, carry, carry);
+		}
+		reduce_final(r, t);
+		return;
+	}
+	else
+	{
+	using unsigned_type = field_number::value_type;
+	constexpr unsigned_type zero{};
+	constexpr unsigned_type constant{38};
 
-	std::uint_least64_t a2;
-	std::uint_least64_t a1{::fast_io::intrinsics::umul(x0, x1, a2)};
+	unsigned_type x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
 
-	std::uint_least64_t b0;
-	std::uint_least64_t a3{::fast_io::intrinsics::umul(x0, x3, b0)};
+	unsigned_type a2;
+	unsigned_type a1{::fast_io::intrinsics::umul(x0, x1, a2)};
 
-	std::uint_least64_t b2;
-	std::uint_least64_t b1{::fast_io::intrinsics::umul(x2, x3, b2)};
+	unsigned_type b0;
+	unsigned_type a3{::fast_io::intrinsics::umul(x0, x3, b0)};
 
-	std::uint_least64_t b3_x0x2;
-	std::uint_least64_t a0{::fast_io::intrinsics::umul(x0, x2, b3_x0x2)};
+	unsigned_type b2;
+	unsigned_type b1{::fast_io::intrinsics::umul(x2, x3, b2)};
 
-	std::uint_least64_t c1;
-	std::uint_least64_t c0{::fast_io::intrinsics::umul(x1, x3, c1)};
+	unsigned_type b3_x0x2;
+	unsigned_type a0{::fast_io::intrinsics::umul(x0, x2, b3_x0x2)};
 
-	std::uint_least64_t c0_x1x2;
-	std::uint_least64_t b3{::fast_io::intrinsics::umul(x1, x2, c0_x1x2)};
+	unsigned_type c1;
+	unsigned_type c0{::fast_io::intrinsics::umul(x1, x3, c1)};
+
+	unsigned_type c0_x1x2;
+	unsigned_type b3{::fast_io::intrinsics::umul(x1, x2, c0_x1x2)};
 
 	bool carry{};
 	b3 = ::fast_io::intrinsics::addc(b3_x0x2, b3, false, carry);
@@ -553,16 +803,16 @@ inline constexpr void field_number_square_u64(std::uint_least64_t r[4], std::uin
 	b2 = ::fast_io::intrinsics::addc(b2, b2, carry, carry);
 	b3 = ::fast_io::intrinsics::addc(zero, zero, carry, carry);
 
-	std::uint_least64_t y1;
+	unsigned_type y1;
 	x0 = ::fast_io::intrinsics::umul(x0, x0, y1);
 
-	std::uint_least64_t y3;
+	unsigned_type y3;
 	x1 = ::fast_io::intrinsics::umul(x1, x1, y3);
 
-	std::uint_least64_t y5;
+	unsigned_type y5;
 	x2 = ::fast_io::intrinsics::umul(x2, x2, y5);
 
-	std::uint_least64_t y7;
+	unsigned_type y7;
 	x3 = ::fast_io::intrinsics::umul(x3, x3, y7);
 
 	y1 = ::fast_io::intrinsics::addc(a1, y1, false, carry);
@@ -573,13 +823,13 @@ inline constexpr void field_number_square_u64(std::uint_least64_t r[4], std::uin
 	x3 = ::fast_io::intrinsics::addc(b2, x3, carry, carry);
 	y7 = ::fast_io::intrinsics::addc(b3, y7, carry, carry);
 
-	std::uint_least64_t high;
+	unsigned_type high;
 	a0 = muladd_w0(x0, x2, high);
 	a1 = muladd_w1(y1, y5, high, high);
 	a2 = muladd_w1(x1, x3, high, high);
 	a3 = muladd_w1(y3, y7, high, high);
 
-	std::uint_least64_t low{::fast_io::intrinsics::umul(constant, high, high)};
+	unsigned_type low{::fast_io::intrinsics::umul(constant, high, high)};
 
 	a0 = ::fast_io::intrinsics::addc(low, a0, false, carry);
 	a1 = ::fast_io::intrinsics::addc(high, a1, carry, carry);
@@ -588,50 +838,10 @@ inline constexpr void field_number_square_u64(std::uint_least64_t r[4], std::uin
 	low = ::fast_io::intrinsics::subc(low, low, carry, carry);
 
 	low &= constant;
-	r[0] = ::fast_io::intrinsics::addc(low, a0, false, carry);
-	r[1] = ::fast_io::intrinsics::addc(zero, a1, carry, carry);
-	r[2] = ::fast_io::intrinsics::addc(zero, a2, carry, carry);
-	r[3] = ::fast_io::intrinsics::addc(zero, a3, carry, carry);
-}
-
-inline constexpr void field_number_square(field_number &r, field_number const &x) noexcept
-{
-	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
-	{
-		/*
-		Pack the eight u32 limbs into four u64 locals and run the same
-		symmetric square as the wide build; on i686 LLVM lowers the u64
-		ops into pairs of u32 ops with better register scheduling than a
-		direct 8-limb formulation.
-		*/
-		std::uint_least64_t xw[4] FAST_IO_INDETERMINATE;
-		std::uint_least64_t rw[4] FAST_IO_INDETERMINATE;
-		for (::std::size_t i{}; i != 4; ++i)
-		{
-			xw[i] = static_cast<std::uint_least64_t>(x.index_unchecked(i * 2)) |
-				(static_cast<std::uint_least64_t>(x.index_unchecked(i * 2 + 1)) << 32u);
-		}
-		field_number_square_u64(rw, xw);
-		for (::std::size_t i{}; i != 4; ++i)
-		{
-			r.index_unchecked(i * 2) = static_cast<field_number::value_type>(rw[i]);
-			r.index_unchecked(i * 2 + 1) = static_cast<field_number::value_type>(rw[i] >> 32u);
-		}
-		return;
-	}
-	else
-	{
-		std::uint_least64_t xw[4] FAST_IO_INDETERMINATE;
-		std::uint_least64_t rw[4] FAST_IO_INDETERMINATE;
-		for (::std::size_t i{}; i != 4; ++i)
-		{
-			xw[i] = static_cast<std::uint_least64_t>(x.index_unchecked(i));
-		}
-		field_number_square_u64(rw, xw);
-		for (::std::size_t i{}; i != 4; ++i)
-		{
-			r.index_unchecked(i) = static_cast<field_number::value_type>(rw[i]);
-		}
+	r.front_unchecked() = ::fast_io::intrinsics::addc(low, a0, false, carry);
+	r.index_unchecked(1) = ::fast_io::intrinsics::addc(zero, a1, carry, carry);
+	r.index_unchecked(2) = ::fast_io::intrinsics::addc(zero, a2, carry, carry);
+	r.back_unchecked() = ::fast_io::intrinsics::addc(zero, a3, carry, carry);
 	}
 }
 
