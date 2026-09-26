@@ -80,6 +80,11 @@ constexpr bool test_ed25519_vector(ed25519_vector const &v) noexcept
 	hex2bytes(expected, v.pk);
 	if (!bytes_eq(pk, expected, 32))
 	{
+		if (!::std::is_constant_evaluated())
+		{
+			::fast_io::println("pk mismatch\n  expect: ", ::fast_io::mnp::hex_encode(expected),
+							   "\n  got   : ", ::fast_io::mnp::hex_encode(pk));
+		}
 		return false;
 	}
 	::fast_io::ed25519::sign_message_to_ptr(sig, priv, msg, msglen);
@@ -87,10 +92,19 @@ constexpr bool test_ed25519_vector(ed25519_vector const &v) noexcept
 	hex2bytes(expected_sig, v.sig);
 	if (!bytes_eq(sig, expected_sig, 64))
 	{
+		if (!::std::is_constant_evaluated())
+		{
+			::fast_io::println("sig mismatch\n  expect: ", ::fast_io::mnp::hex_encode(expected_sig),
+							   "\n  got   : ", ::fast_io::mnp::hex_encode(sig));
+		}
 		return false;
 	}
 	if (!::fast_io::ed25519::verify_signature_to_ptr(sig, pk, msg, msglen))
 	{
+		if (!::std::is_constant_evaluated())
+		{
+			::fast_io::println("verify failed for sig: ", ::fast_io::mnp::hex_encode(sig));
+		}
 		return false;
 	}
 	sig[0] ^= ::std::byte{1};
@@ -128,6 +142,8 @@ bool test_ed25519_span() noexcept
 		hex2bytes(expected, v.pk);
 		if (!bytes_eq(pk, expected, 32))
 		{
+			::fast_io::println("pk mismatch\n  expect: ", ::fast_io::mnp::hex_encode(expected),
+							   "\n  got   : ", ::fast_io::mnp::hex_encode(pk));
 			return false;
 		}
 		::fast_io::ed25519::sign_message(
