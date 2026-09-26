@@ -23,7 +23,7 @@ S = (sk+bc.bl)*B + bc.bp = sk*B.
 */
 inline constexpr void blinded_base_point_mult(extended_point &s, field_number const &sk, edp_blinding_context const &bc) noexcept
 {
-	field_number t;
+	field_number t FAST_IO_INDETERMINATE;
 	eco_add_reduce(t, sk, bc.bl);
 	base_point_mult(s, t, bc.zr);
 	add_point(s, s, bc.bp);
@@ -31,7 +31,7 @@ inline constexpr void blinded_base_point_mult(extended_point &s, field_number co
 
 inline constexpr void base_point_multiply(affine_point &r, field_number const &sk, edp_blinding_context const &bc) noexcept
 {
-	extended_point s;
+	extended_point s FAST_IO_INDETERMINATE;
 	blinded_base_point_mult(s, sk, bc);
 	field_number_inverse(s.z, s.z);
 	field_multiplication_mod(r.x, s.x, s.z);
@@ -47,7 +47,7 @@ u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
 */
 inline constexpr void x25519_base_point_multiply_with_blinding(std::byte *r, field_number const &sk, edp_blinding_context const &bc) noexcept
 {
-	extended_point s;
+	extended_point s FAST_IO_INDETERMINATE;
 	blinded_base_point_mult(s, sk, bc);
 	field_number_addition(s.t, s.z, s.y);
 	field_number_subtraction(s.z, s.z, s.y);
@@ -69,8 +69,8 @@ generation scalar multiply is also blinded.
 inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding_context &ctx, std::byte const *seed, std::size_t seed_size) noexcept
 {
 	::fast_io::sha512_context H;
-	::fast_io::containers::array<std::byte, 32> zb;
-	::fast_io::containers::array<std::byte, ::fast_io::sha512_context::digest_size> digest;
+	::fast_io::containers::array<std::byte, 32> zb FAST_IO_INDETERMINATE;
+	::fast_io::containers::array<std::byte, ::fast_io::sha512_context::digest_size> digest FAST_IO_INDETERMINATE;
 	for (std::size_t i{}; i != field_number::array_size; ++i)
 	{
 		limb_to_bytes_little_endian(zb.data() + i * sizeof(field_number::value_type), default_blinding.zr.index_unchecked(i));
@@ -80,7 +80,7 @@ inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding
 	H.do_final();
 	H.digest_to_byte_ptr(digest.data());
 
-	field_number t, g;
+	field_number t FAST_IO_INDETERMINATE, g FAST_IO_INDETERMINATE;
 	for (std::size_t i{}; i != field_number::array_size; ++i)
 	{
 		t.index_unchecked(i) = bytes_to_limb_little_endian(digest.data() + i * sizeof(field_number::value_type));
@@ -90,7 +90,7 @@ inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding
 	subtraction_u256(ctx.bl, NxBPOraw.index_unchecked(1), t); /* bl = BPO - t */
 
 	/* ctx.bp = t*B computed under the default context: (t+bl_d)*B + bp_d = t*B */
-	extended_point T;
+	extended_point T FAST_IO_INDETERMINATE;
 	eco_add_reduce(g, t, default_blinding.bl);
 	base_point_mult(T, g, default_blinding.zr);
 	add_point(T, T, default_blinding.bp);
@@ -119,7 +119,7 @@ template <typename instmtype>
 inline edp_blinding_context &ed25519_blinding_init_from_input_stream(edp_blinding_context &ctx, instmtype &&instm)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 {
-	::fast_io::containers::array<std::byte, 64> seed;
+	::fast_io::containers::array<std::byte, 64> seed FAST_IO_INDETERMINATE;
 	::fast_io::operations::read_all_bytes(instm, seed.data(), seed.data() + seed.size());
 	ed25519_blinding_init_to_ptr(ctx, seed.data(), seed.size());
 	::fast_io::secure_clear(seed.data(), seed.size_bytes());
@@ -137,7 +137,7 @@ namespace fast_io::diffie_hellman::details
 inline constexpr void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::byte *sk, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
-	::fast_io::curve25519::field_number t;
+	::fast_io::curve25519::field_number t FAST_IO_INDETERMINATE;
 	::fast_io::freestanding::type_punning_from_bytes(sk, t);
 	::fast_io::curve25519::details::x25519_base_point_multiply_with_blinding(pk, t, blinding);
 }

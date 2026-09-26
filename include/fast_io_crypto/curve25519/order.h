@@ -82,13 +82,13 @@ inline constexpr void eco_reduce_hi_word(::fast_io::curve25519::field_number &y,
 		/* BPO in u32 limbs */
 		constexpr unsigned_type bpo[8]{0x5CF5D3EDu, 0x5812631Au, 0xA2F79CD6u, 0x14DEF9DEu, 0u, 0u, 0u, 0x10000000u};
 
-		unsigned_type lo[5] FAST_IO_INDETERMINATE;
-		unsigned_type hi[5] FAST_IO_INDETERMINATE;
+		unsigned_type lo FAST_IO_INDETERMINATE[5];
+		unsigned_type hi FAST_IO_INDETERMINATE[5];
 		for (::std::size_t i{}; i != 5; ++i)
 		{
 			lo[i] = ::fast_io::intrinsics::umul(b, minus_r[i], hi[i]);
 		}
-		unsigned_type p[6] FAST_IO_INDETERMINATE;
+		unsigned_type p FAST_IO_INDETERMINATE[6];
 		bool carry{};
 		p[0] = lo[0];
 		for (::std::size_t i{1}; i != 5; ++i)
@@ -165,13 +165,13 @@ inline constexpr void eco_reduce_hi_word_inplace(::fast_io::curve25519::field_nu
 		constexpr unsigned_type bpo[8]{0x5CF5D3EDu, 0x5812631Au, 0xA2F79CD6u, 0x14DEF9DEu, 0u, 0u, 0u, 0x10000000u};
 
 		unsigned_type const b{t[off + n]};
-		unsigned_type lo[5] FAST_IO_INDETERMINATE;
-		unsigned_type hi[5] FAST_IO_INDETERMINATE;
+		unsigned_type lo FAST_IO_INDETERMINATE[5];
+		unsigned_type hi FAST_IO_INDETERMINATE[5];
 		for (::std::size_t i{}; i != 5; ++i)
 		{
 			lo[i] = ::fast_io::intrinsics::umul(b, minus_r[i], hi[i]);
 		}
-		unsigned_type p[6] FAST_IO_INDETERMINATE;
+		unsigned_type p FAST_IO_INDETERMINATE[6];
 		bool carry{};
 		p[0] = lo[0];
 		for (::std::size_t i{1}; i != 5; ++i)
@@ -233,7 +233,7 @@ inline constexpr void eco_reduce_hi_word_inplace(::fast_io::curve25519::field_nu
 /* Z = X*Y mod BPO */
 inline constexpr void eco_mul_reduce(::fast_io::curve25519::field_number &z, ::fast_io::curve25519::field_number const &x, ::fast_io::curve25519::field_number const &y) noexcept
 {
-	::fast_io::curve25519::field_number::value_type t[::fast_io::curve25519::field_number::array_size * 2] FAST_IO_INDETERMINATE;
+	::fast_io::curve25519::field_number::value_type t FAST_IO_INDETERMINATE[::fast_io::curve25519::field_number::array_size * 2];
 	multiplication_u256(t, x, y);
 	if constexpr (::std::same_as<::fast_io::curve25519::field_number::value_type, ::std::uint_least32_t>)
 	{
@@ -286,7 +286,7 @@ inline constexpr void limb_to_bytes_little_endian(std::byte *p, ::fast_io::curve
 inline constexpr void eco_digest_to_words(::fast_io::curve25519::field_number &y, std::byte const *md) noexcept
 {
 	constexpr ::std::size_t n{::fast_io::curve25519::field_number::array_size};
-	::fast_io::curve25519::field_number::value_type t[::fast_io::curve25519::field_number::array_size * 2] FAST_IO_INDETERMINATE;
+	::fast_io::curve25519::field_number::value_type t FAST_IO_INDETERMINATE[::fast_io::curve25519::field_number::array_size * 2];
 	for (::std::size_t i{}; i != n * 2; ++i)
 	{
 		t[i] = bytes_to_limb_little_endian(md + i * sizeof(::fast_io::curve25519::field_number::value_type));

@@ -15,7 +15,7 @@ inline constexpr field_number w_zero{};
 /* Z = X^(2^n) * Y */
 inline constexpr void field_number_sqr_mul_reduce(field_number &z, field_number const &x, std::size_t n, field_number const &y) noexcept
 {
-	field_number t;
+	field_number t FAST_IO_INDETERMINATE;
 	field_number_square(t, x);
 	while (--n)
 	{
@@ -27,7 +27,7 @@ inline constexpr void field_number_sqr_mul_reduce(field_number &z, field_number 
 /* Y = X^(2^252-3) mod p */
 inline constexpr void field_number_pow_2523(field_number &y, field_number const &x) noexcept
 {
-	field_number x2, x9, x11, x5, x10, x20, x50, x100, t;
+	field_number x2 FAST_IO_INDETERMINATE, x9 FAST_IO_INDETERMINATE, x11 FAST_IO_INDETERMINATE, x5 FAST_IO_INDETERMINATE, x10 FAST_IO_INDETERMINATE, x20 FAST_IO_INDETERMINATE, x50 FAST_IO_INDETERMINATE, x100 FAST_IO_INDETERMINATE, t FAST_IO_INDETERMINATE;
 
 	field_number_square(x2, x);                      /* 2 */
 	field_number_sqr_mul_reduce(x9, x2, 2, x);       /* 9 */
@@ -55,7 +55,7 @@ x = sqrt((y^2-1)/(d*y^2+1)) = u*v^3 * (u*v^7)^((p-5)/8)
 */
 inline constexpr void ed25519_calculate_x(field_number &x, field_number const &y, std::uint_least64_t parity) noexcept
 {
-	field_number u, v, a, b;
+	field_number u FAST_IO_INDETERMINATE, v FAST_IO_INDETERMINATE, a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE;
 
 	field_number_square(u, y);              /* u = y^2 */
 	field_number_multiplication(v, u, w_d); /* v = d*y^2 */
@@ -124,7 +124,7 @@ inline constexpr void ed25519_verify_init_to_ptr(ed25519_verify_context &ctx, st
 {
 	::fast_io::freestanding::nonoverlapped_bytes_copy_n(public_key, 32, ctx.pk.data());
 
-	extended_point q, t;
+	extended_point q FAST_IO_INDETERMINATE, t FAST_IO_INDETERMINATE;
 	std::uint_least64_t const parity{ed25519_decode_int(q.y, public_key)};
 	ed25519_calculate_x(q.x, q.y, parity ^ 1); /* -Q: inverted parity */
 	field_multiplication_mod(q.t, q.x, q.y);
@@ -179,7 +179,7 @@ inline constexpr void poly_point_multiply(affine_point &r, field_number const &a
 	ecp_8folds(u, a);
 	ecp_4folds(v, b);
 
-	extended_point s;
+	extended_point s FAST_IO_INDETERMINATE;
 	auto const &q0{qtable.index_unchecked(static_cast<char unsigned>(v.front_unchecked()))};
 	field_number_subtraction(s.x, q0.ypx, q0.ymx); /* 2x */
 	field_number_addition(s.y, q0.ypx, q0.ymx);    /* 2y */
@@ -206,8 +206,8 @@ inline constexpr void poly_point_multiply(affine_point &r, field_number const &a
 inline constexpr bool ed25519_verify_check_to_ptr(ed25519_verify_context const &ctx, std::byte const *signature, std::byte const *msg, std::size_t msg_size) noexcept
 {
 	::fast_io::sha512_context H;
-	affine_point t;
-	field_number h, s;
+	affine_point t FAST_IO_INDETERMINATE;
+	field_number h FAST_IO_INDETERMINATE, s FAST_IO_INDETERMINATE;
 	::fast_io::containers::array<std::byte, ::fast_io::sha512_context::digest_size> md;
 
 	/* h = H(enc(R) || pk || m) mod BPO */

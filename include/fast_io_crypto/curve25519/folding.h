@@ -38,7 +38,7 @@ inline constexpr auto folding1{folding.index_unchecked(1)};
 
 inline constexpr void add_affine_point(extended_point &p, precomputed_affine_point const &q) noexcept
 {
-	field_number a, b, c, d, e;
+	field_number a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE, c FAST_IO_INDETERMINATE, d FAST_IO_INDETERMINATE, e FAST_IO_INDETERMINATE;
 	field_number_subtraction(a, p.y, p.x);
 	field_number_multiplication(a, a, q.ymx);
 	field_number_addition(b, p.y, p.x);
@@ -62,7 +62,7 @@ inline constexpr void add_base_point(extended_point &p) noexcept
 
 inline constexpr void edp_double_point(extended_point &p) noexcept
 {
-	field_number a, b, c, d, e;
+	field_number a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE, c FAST_IO_INDETERMINATE, d FAST_IO_INDETERMINATE, e FAST_IO_INDETERMINATE;
 	field_number_square(a, p.x);
 	field_number_square(b, p.y);
 	field_number_square(c, p.z);
@@ -109,7 +109,7 @@ inline constexpr void ecp_8folds(::fast_io::containers::array<std::byte, 32> &y,
 	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
 	{
 		/* eight u32 columns, MSB-first */
-		std::uint_least32_t xw[field_number::array_size] FAST_IO_INDETERMINATE;
+		std::uint_least32_t xw FAST_IO_INDETERMINATE[field_number::array_size];
 		for (::std::size_t i{}; i != field_number::array_size; ++i)
 		{
 			xw[i] = x.index_unchecked(i);
@@ -147,7 +147,7 @@ inline constexpr void ecp_4folds(::fast_io::containers::array<std::byte, 64> &y,
 		u64 emits four columns of 64 bits; in u32 limbs the high halves
 		are limbs 7,5,3,1 and the low halves are 6,4,2,0.
 		*/
-		std::uint_least32_t xw[field_number::array_size] FAST_IO_INDETERMINATE;
+		std::uint_least32_t xw FAST_IO_INDETERMINATE[field_number::array_size];
 		for (::std::size_t i{}; i != field_number::array_size; ++i)
 		{
 			xw[i] = x.index_unchecked(i);
@@ -209,7 +209,7 @@ inline constexpr void base_point_mult(extended_point &s, field_number const &sk,
 
 inline constexpr void base_point_multiply(affine_point &r, field_number const &sk) noexcept
 {
-	extended_point s;
+	extended_point s FAST_IO_INDETERMINATE;
 	base_point_mult(s, sk, ::fast_io::curve25519::custom_blindings::zr);
 	field_number_inverse(s.z, s.z);
 	field_multiplication_mod(r.x, s.x, s.z);
@@ -225,7 +225,7 @@ u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
 */
 inline constexpr void x25519_base_point_multiply(std::byte *r, field_number const &sk) noexcept
 {
-	extended_point s;
+	extended_point s FAST_IO_INDETERMINATE;
 	base_point_mult(s, sk, ::fast_io::curve25519::custom_blindings::zr);
 	field_number_addition(s.t, s.z, s.y);
 	field_number_subtraction(s.z, s.z, s.y);
@@ -242,7 +242,7 @@ r may alias p.
 */
 inline constexpr void add_point(extended_point &r, extended_point const &p, precomputed_extended_point const &q) noexcept
 {
-	field_number a, b, c, d, e;
+	field_number a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE, c FAST_IO_INDETERMINATE, d FAST_IO_INDETERMINATE, e FAST_IO_INDETERMINATE;
 	field_number_subtraction(a, p.y, p.x);
 	field_number_multiplication(a, a, q.ymx);
 	field_number_addition(b, p.y, p.x);
@@ -276,7 +276,7 @@ namespace fast_io::diffie_hellman::details
 inline constexpr void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
-	::fast_io::curve25519::field_number t;
+	::fast_io::curve25519::field_number t FAST_IO_INDETERMINATE;
 	::fast_io::freestanding::type_punning_from_bytes(sk, t);
 	::fast_io::curve25519::details::x25519_base_point_multiply(pk, t);
 }

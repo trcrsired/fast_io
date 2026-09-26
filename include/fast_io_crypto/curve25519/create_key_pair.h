@@ -235,10 +235,10 @@ inline constexpr void ed25519_create_key_pair_to_ptr(std::byte *public_key, std:
 	sha.digest_to_byte_ptr(md.data());
 
 	x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, md.data()});
-	field_number t;
+	field_number t FAST_IO_INDETERMINATE;
 	hash_digest_to_byte_ptr_common<::std::endian::little>(md.data(), t);
 
-	affine_point q;
+	affine_point q FAST_IO_INDETERMINATE;
 	base_point_multiply(q, t);
 	ed25519_packpoint(public_key, q.y, static_cast<std::byte>(q.x.front_unchecked()));
 
@@ -257,10 +257,10 @@ inline constexpr void ed25519_create_key_pair_with_blinding_to_ptr(std::byte *pu
 	sha.digest_to_byte_ptr(md.data());
 
 	x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, md.data()});
-	field_number t;
+	field_number t FAST_IO_INDETERMINATE;
 	hash_digest_to_byte_ptr_common<::std::endian::little>(md.data(), t);
 
-	affine_point q;
+	affine_point q FAST_IO_INDETERMINATE;
 	base_point_multiply(q, t, blinding);
 	ed25519_packpoint(public_key, q.y, static_cast<std::byte>(q.x.front_unchecked()));
 
@@ -270,8 +270,8 @@ inline constexpr void ed25519_create_key_pair_with_blinding_to_ptr(std::byte *pu
 
 inline constexpr void ed25519_sign_message_impl(::std::byte *signature, ::std::byte const *private_key, edp_blinding_context const *blinding, ::std::byte const *msg, std::size_t msg_size) noexcept
 {
-	affine_point R;
-	field_number a, t, r;
+	affine_point R FAST_IO_INDETERMINATE;
+	field_number a FAST_IO_INDETERMINATE, t FAST_IO_INDETERMINATE, r FAST_IO_INDETERMINATE;
 	::fast_io::sha512_context H;
 
 	constexpr std::size_t digest_size{::fast_io::sha512_context::digest_size};

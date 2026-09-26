@@ -544,7 +544,7 @@ inline constexpr void reduce_final(::fast_io::curve25519::field_number &f, ::fas
 
 inline constexpr void field_number_multiplication(::fast_io::curve25519::field_number &r, ::fast_io::curve25519::field_number const &x, ::fast_io::curve25519::field_number const &y) noexcept
 {
-	::fast_io::curve25519::field_number::value_type t[::fast_io::curve25519::field_number::array_size * 2] FAST_IO_INDETERMINATE;
+	::fast_io::curve25519::field_number::value_type t FAST_IO_INDETERMINATE[::fast_io::curve25519::field_number::array_size * 2];
 	if constexpr (::std::same_as<::fast_io::curve25519::field_number::value_type, ::std::uint_least32_t>)
 	{
 		multiply_single<0, true>(t, x, y.index_unchecked(0));
@@ -608,8 +608,8 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		if constexpr(false)
 		{
 			unsigned_type t[n << 1]{};
-			unsigned_type lows[n + 1] FAST_IO_INDETERMINATE;
-			unsigned_type highs[n] FAST_IO_INDETERMINATE;
+			unsigned_type lows FAST_IO_INDETERMINATE[n + 1];
+			unsigned_type highs FAST_IO_INDETERMINATE[n];
 			unsigned_type dlo FAST_IO_INDETERMINATE;
 			unsigned_type dhi FAST_IO_INDETERMINATE;
 			bool carry{};
@@ -648,7 +648,7 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		}
 		else
 		{
-		unsigned_type t[n << 1] FAST_IO_INDETERMINATE;
+		unsigned_type t FAST_IO_INDETERMINATE[n << 1];
 		bool carry FAST_IO_INDETERMINATE;
 		{
 		unsigned_type const b0{x.front_unchecked()};
@@ -982,8 +982,8 @@ Using Euler theorem to calculate the z^(-2) of an element over a finite field
 
 inline constexpr void field_number_pow_minus2(::fast_io::curve25519::field_number &r, ::fast_io::curve25519::field_number const &z) noexcept
 {
-	::fast_io::curve25519::field_number t0, t1, z2, z9, z11;
-	::fast_io::curve25519::field_number z2_5_0, z2_10_0, z2_20_0, z2_50_0, z2_100_0;
+	::fast_io::curve25519::field_number t0 FAST_IO_INDETERMINATE, t1 FAST_IO_INDETERMINATE, z2 FAST_IO_INDETERMINATE, z9 FAST_IO_INDETERMINATE, z11 FAST_IO_INDETERMINATE;
+	::fast_io::curve25519::field_number z2_5_0 FAST_IO_INDETERMINATE, z2_10_0 FAST_IO_INDETERMINATE, z2_20_0 FAST_IO_INDETERMINATE, z2_50_0 FAST_IO_INDETERMINATE, z2_100_0 FAST_IO_INDETERMINATE;
 
 	/*
 	Montgomery ladder
@@ -1075,7 +1075,7 @@ Using Euler theorem to calculate the inverse of an element over a finite field.
 
 inline constexpr ::fast_io::curve25519::field_number pow_minus2(::fast_io::curve25519::field_number const &z) noexcept
 {
-	::fast_io::curve25519::field_number number;
+	::fast_io::curve25519::field_number number FAST_IO_INDETERMINATE;
 	field_number_pow_minus2(number, z);
 	return number;
 }
@@ -1199,14 +1199,14 @@ inline constexpr void field_multiplication_mod(::fast_io::curve25519::field_numb
 
 inline constexpr ::fast_io::curve25519::field_number inverse(::fast_io::curve25519::field_number const &z) noexcept
 {
-	::fast_io::curve25519::field_number number;
+	::fast_io::curve25519::field_number number FAST_IO_INDETERMINATE;
 	field_number_inverse(number, z);
 	return number;
 }
 
 inline constexpr ::fast_io::curve25519::field_number operator*(::fast_io::curve25519::field_number const &x, ::fast_io::curve25519::field_number const &y) noexcept
 {
-	::fast_io::curve25519::field_number f;
+	::fast_io::curve25519::field_number f FAST_IO_INDETERMINATE;
 	field_multiplication_mod(f, x, y);
 	return f;
 }
@@ -1221,7 +1221,7 @@ inline constexpr ::fast_io::containers::array<std::byte, 32> montgomery_curve_ba
 /* Y = X + X */
 inline constexpr void montgomery_curve_point_double(xz_point &y, xz_point const &x) noexcept
 {
-	::fast_io::curve25519::field_number a, b;
+	::fast_io::curve25519::field_number a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE;
 	/*  x2 = (x+z)^2 * (x-z)^2 */
 	/*  z2 = ((x+z)^2 - (x-z)^2)*((x+z)^2 + ((A-2)/4)((x+z)^2 - (x-z)^2)) */
 	field_number_addition(a, x.x, x.z);
@@ -1238,7 +1238,7 @@ inline constexpr void montgomery_curve_point_double(xz_point &y, xz_point const 
 
 inline constexpr void montgomery_curve_mont(xz_point &p, xz_point &q, ::fast_io::curve25519::field_number const &base) noexcept
 {
-	::fast_io::curve25519::field_number a, b, c, d, e;
+	::fast_io::curve25519::field_number a FAST_IO_INDETERMINATE, b FAST_IO_INDETERMINATE, c FAST_IO_INDETERMINATE, d FAST_IO_INDETERMINATE, e FAST_IO_INDETERMINATE;
 	field_number_subtraction(a, p.x, p.z);
 	field_number_addition(b, p.x, p.z);
 	field_number_subtraction(c, q.x, q.z);
@@ -1265,13 +1265,13 @@ inline constexpr void montgomery_curve_mont(xz_point &p, xz_point &q, ::fast_io:
 inline constexpr void montgomery_curve_point_multiplication(std::byte *public_key, std::byte const *base_point, std::byte const *secret_key, ::fast_io::curve25519::field_number const &zr) noexcept
 {
 	constexpr std::size_t total_len{32};
-	::fast_io::containers::array<std::byte, 32> sk;
+	::fast_io::containers::array<std::byte, 32> sk FAST_IO_INDETERMINATE;
 	::fast_io::freestanding::nonoverlapped_bytes_copy_n(secret_key, total_len, sk.data());
-	::fast_io::curve25519::field_number x;
+	::fast_io::curve25519::field_number x FAST_IO_INDETERMINATE;
 	::fast_io::freestanding::type_punning_from_bytes(base_point, x);
-	xz_point p, q;
-	::fast_io::containers::array<xz_point *, 2> pp;
-	::fast_io::containers::array<xz_point *, 2> qp;
+	xz_point p FAST_IO_INDETERMINATE, q FAST_IO_INDETERMINATE;
+	::fast_io::containers::array<xz_point *, 2> pp FAST_IO_INDETERMINATE;
+	::fast_io::containers::array<xz_point *, 2> qp FAST_IO_INDETERMINATE;
 	for (std::size_t j{total_len}; j--;)
 	{
 		char unsigned k{static_cast<char unsigned>(sk.index_unchecked(j))};
