@@ -692,7 +692,7 @@ inline constexpr void calculate_public_key_to_ptr(std::byte *pk, std::byte *sk) 
 	::fast_io::curve25519::montgomery_curve_point_multiplication(pk, base_point.data(), sk);
 }
 
-inline constexpr void calculate_public_key_to_ptr(std::byte *pk, std::byte *sk, ::fast_io::curve25519::field_number const &zr) noexcept
+inline constexpr void calculate_public_key_to_ptr_with_zr(std::byte *pk, std::byte *sk, ::fast_io::curve25519::field_number const &zr) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
 	::fast_io::curve25519::montgomery_curve_point_multiplication(pk, base_point.data(), sk, zr);
@@ -704,17 +704,15 @@ inline constexpr void create_shared_key_to_ptr(std::byte *shared, std::byte cons
 	::fast_io::curve25519::montgomery_curve_point_multiplication(shared, pk, sk);
 }
 
-inline constexpr void create_shared_key_to_ptr(std::byte *shared, std::byte const *pk, std::byte *sk, ::fast_io::curve25519::field_number const &zr) noexcept
+inline constexpr void create_shared_key_to_ptr_with_zr(std::byte *shared, std::byte const *pk, std::byte *sk, ::fast_io::curve25519::field_number const &zr) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
 	::fast_io::curve25519::montgomery_curve_point_multiplication(shared, pk, sk, zr);
 }
 
-#if __cpp_lib_span >= 202002L && (defined(_GLIBCXX_SPAN) || defined(_LIBCPP_SPAN) || defined(_SPAN_))
-inline constexpr void calculate_public_key(std::span<std::byte, 32> public_key, std::span<std::byte, 32> secret_key) noexcept
+inline constexpr void calculate_public_key(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key) noexcept
 {
 	::fast_io::diffie_hellman::details::calculate_public_key_to_ptr(public_key.data(), secret_key.data());
 }
-#endif
 
 } // namespace fast_io::diffie_hellman::details

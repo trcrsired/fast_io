@@ -277,7 +277,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_create_key_pair(std::byte *public_key, std::byte *private_key, edp_blinding_context const &blinding, std::byte const *secret_key) noexcept
+	void ed25519_create_key_pair_with_blinding(std::byte *public_key, std::byte *private_key, std::byte const *secret_key, edp_blinding_context &blinding) noexcept
 {
 	constexpr std::size_t keylength{32};
 	::fast_io::sha512_context sha;
@@ -385,7 +385,7 @@ inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 	constexpr
 #endif
-	void ed25519_sign_message(::std::byte *signature, ::std::byte const *private_key, edp_blinding_context const &blinding, ::std::byte const *msg, std::size_t msg_size) noexcept
+	void ed25519_sign_message_with_blinding(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size, edp_blinding_context &blinding) noexcept
 {
 	ed25519_sign_message_impl(signature, private_key, __builtin_addressof(blinding), msg, msg_size);
 }

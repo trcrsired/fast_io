@@ -8,14 +8,17 @@ Default blinding context.  Generated once for a fixed internal seed by
 src/generate_default_blinding.cc; bp = -bl*B holds so that for any
 scalar sk, (sk+bl)*B + bp = sk*B.
 */
-inline constexpr edp_blinding_context default_blinding{
-	{0xe319c5e2e91917c2ULL, 0x0f25cfbcafe30c0aULL, 0x64e218a30ba1e198ULL, 0x08ba065b737c6d8fULL},
-	{0xbc0bf373210c75b1ULL, 0x2b0f08392ebd0a04ULL, 0x982b1498f84e78c2ULL, 0xbe8c10169eb775bcULL},
-	{{0x36bc52267bdeeca0ULL, 0x76a4f80c7eceb9a9ULL, 0xd528c977e9aee2c9ULL, 0xe7323079ebdfca4fULL},
-	 {0x4ffb48a56423d116ULL, 0x7124ba3dd2497a51ULL, 0x0585388a8dcdd182ULL, 0xdd0f7d0aeff6fbddULL},
-	 {0xe820f4f685949928ULL, 0x707c614e16efaf6bULL, 0x981c2357c00efe26ULL, 0xf60cb134bb2b35bdULL},
-	 {0x4f59fb2afbf7b10aULL, 0xea0b4e1de2650398ULL, 0x0e22d48a421f4d9cULL, 0xcb7fd2170d1a4888ULL}},
-};
+inline constexpr edp_blinding_context default_blinding() noexcept
+{
+	return {
+		{0xe319c5e2e91917c2ULL, 0x0f25cfbcafe30c0aULL, 0x64e218a30ba1e198ULL, 0x08ba065b737c6d8fULL},
+		{0xbc0bf373210c75b1ULL, 0x2b0f08392ebd0a04ULL, 0x982b1498f84e78c2ULL, 0xbe8c10169eb775bcULL},
+		{{0x36bc52267bdeeca0ULL, 0x76a4f80c7eceb9a9ULL, 0xd528c977e9aee2c9ULL, 0xe7323079ebdfca4fULL},
+		 {0x4ffb48a56423d116ULL, 0x7124ba3dd2497a51ULL, 0x0585388a8dcdd182ULL, 0xdd0f7d0aeff6fbddULL},
+		 {0xe820f4f685949928ULL, 0x707c614e16efaf6bULL, 0x981c2357c00efe26ULL, 0xf60cb134bb2b35bdULL},
+		 {0x4f59fb2afbf7b10aULL, 0xea0b4e1de2650398ULL, 0x0e22d48a421f4d9cULL, 0xcb7fd2170d1a4888ULL}},
+	};
+}
 
 /*
 S = sk*B with scalar + projective blinding.
@@ -45,7 +48,7 @@ namespace details
 r = sk*B mapped to Montgomery u coordinate, with blinding.
 u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
 */
-inline constexpr void x25519_base_point_multiply(std::byte *r, field_number const &sk, edp_blinding_context const &bc) noexcept
+inline constexpr void x25519_base_point_multiply_with_blinding(std::byte *r, field_number const &sk, edp_blinding_context const &bc) noexcept
 {
 	extended_point s;
 	blinded_base_point_mult(s, sk, bc);
@@ -77,7 +80,7 @@ inline
 	::fast_io::containers::array<std::byte, ::fast_io::sha512_context::digest_size> digest;
 	for (std::size_t i{}; i != field_number::array_size; ++i)
 	{
-		u64_to_bytes_little_endian(zb.data() + i * 8, default_blinding.zr.index_unchecked(i));
+		u64_to_bytes_little_endian(zb.data() + i * 8, default_blinding().zr.index_unchecked(i));
 	}
 	H.update(zb.data(), zb.data() + zb.size());
 	H.update(seed, seed + seed_size);
@@ -95,9 +98,9 @@ inline
 
 	/* ctx.bp = t*B computed under the default context: (t+bl_d)*B + bp_d = t*B */
 	extended_point T;
-	eco_add_reduce(g, t, default_blinding.bl);
-	base_point_mult(T, g, default_blinding.zr);
-	add_point(T, T, default_blinding.bp);
+	eco_add_reduce(g, t, default_blinding().bl);
+	base_point_mult(T, g, default_blinding().zr);
+	add_point(T, T, default_blinding().bp);
 	edp_ext_point_2e(ctx.bp, T);
 
 // Clear sensitive data. Not needed (nor possible) during constant evaluation.
@@ -119,7 +122,7 @@ inline
 Derive a blinding context by reading a 64-byte seed from an input stream.
 */
 template <typename instmtype>
-inline edp_blinding_context &ed25519_blinding_init(edp_blinding_context &ctx, instmtype &&instm)
+inline edp_blinding_context &ed25519_blinding_init_from_input_stream(edp_blinding_context &ctx, instmtype &&instm)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 {
 	::fast_io::containers::array<std::byte, 64> seed;
@@ -137,12 +140,12 @@ namespace fast_io::diffie_hellman::details
 {
 
 /* Faster alternative to calculate_public_key_to_ptr using the ed25519 base point table, with blinding */
-inline void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
+inline void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::byte *sk, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
 	::fast_io::curve25519::field_number t;
 	::fast_io::freestanding::type_punning_from_bytes(sk, t);
-	::fast_io::curve25519::details::x25519_base_point_multiply(pk, t, blinding);
+	::fast_io::curve25519::details::x25519_base_point_multiply_with_blinding(pk, t, blinding);
 }
 
 } // namespace fast_io::diffie_hellman::details

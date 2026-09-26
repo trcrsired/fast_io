@@ -21,8 +21,10 @@ public:
 	static inline constexpr ::std::size_t private_key_size{64};
 	static inline constexpr ::std::size_t signature_size{64};
 
-	static inline constexpr ::fast_io::curve25519::edp_blinding_context const &default_blinding{
-		::fast_io::curve25519::default_blinding};
+	static inline constexpr blinding_context default_blinding() noexcept
+	{
+		return ::fast_io::curve25519::default_blinding();
+	}
 
 	static inline
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
@@ -37,9 +39,9 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void create_key_pair(::std::byte *public_key, ::std::byte *private_key, blinding_context const &blinding, ::std::byte const *secret_key) noexcept
+		void create_key_pair_with_blinding(::std::byte *public_key, ::std::byte *private_key, ::std::byte const *secret_key, blinding_context &blinding) noexcept
 	{
-		::fast_io::curve25519::details::ed25519_create_key_pair(public_key, private_key, blinding, secret_key);
+		::fast_io::curve25519::details::ed25519_create_key_pair_with_blinding(public_key, private_key, secret_key, blinding);
 	}
 
 	static inline
@@ -55,9 +57,9 @@ public:
 #if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
 		constexpr
 #endif
-		void sign_message(::std::byte *signature, ::std::byte const *private_key, blinding_context const &blinding, ::std::byte const *msg, ::std::size_t msg_size) noexcept
+		void sign_message_with_blinding(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, ::std::size_t msg_size, blinding_context &blinding) noexcept
 	{
-		::fast_io::curve25519::details::ed25519_sign_message(signature, private_key, blinding, msg, msg_size);
+		::fast_io::curve25519::details::ed25519_sign_message_with_blinding(signature, private_key, msg, msg_size, blinding);
 	}
 
 	static inline
@@ -97,10 +99,10 @@ public:
 	}
 
 	template <typename instmtype>
-	static inline blinding_context &blinding_init(blinding_context &ctx, instmtype &&instm)
+	static inline blinding_context &blinding_init_from_input_stream(blinding_context &ctx, instmtype &&instm)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	{
-		return ::fast_io::curve25519::details::ed25519_blinding_init(ctx, ::fast_io::freestanding::forward<instmtype>(instm));
+		return ::fast_io::curve25519::details::ed25519_blinding_init_from_input_stream(ctx, ::fast_io::freestanding::forward<instmtype>(instm));
 	}
 };
 
