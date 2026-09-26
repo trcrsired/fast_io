@@ -226,4 +226,9 @@ inline void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk) noexc
 	::fast_io::curve25519::details::x25519_base_point_multiply(pk, t);
 }
 
+inline void calculate_public_key_fast(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key) noexcept
+{
+	::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr(public_key.data(), secret_key.data());
+}
+
 } // namespace fast_io::diffie_hellman::details

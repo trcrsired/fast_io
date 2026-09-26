@@ -715,4 +715,19 @@ inline constexpr void calculate_public_key(::fast_io::containers::index_span<std
 	::fast_io::diffie_hellman::details::calculate_public_key_to_ptr(public_key.data(), secret_key.data());
 }
 
+inline constexpr void calculate_public_key_with_zr(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key, ::fast_io::curve25519::field_number const &zr) noexcept
+{
+	::fast_io::diffie_hellman::details::calculate_public_key_to_ptr_with_zr(public_key.data(), secret_key.data(), zr);
+}
+
+inline constexpr void create_shared_key(::fast_io::containers::index_span<std::byte, 32> shared_key, ::fast_io::containers::index_span<std::byte const, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key) noexcept
+{
+	::fast_io::diffie_hellman::details::create_shared_key_to_ptr(shared_key.data(), public_key.data(), secret_key.data());
+}
+
+inline constexpr void create_shared_key_with_zr(::fast_io::containers::index_span<std::byte, 32> shared_key, ::fast_io::containers::index_span<std::byte const, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key, ::fast_io::curve25519::field_number const &zr) noexcept
+{
+	::fast_io::diffie_hellman::details::create_shared_key_to_ptr_with_zr(shared_key.data(), public_key.data(), secret_key.data(), zr);
+}
+
 } // namespace fast_io::diffie_hellman::details

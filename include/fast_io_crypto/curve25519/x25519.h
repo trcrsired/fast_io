@@ -70,6 +70,31 @@ public:
 	{
 		::fast_io::diffie_hellman::details::calculate_public_key(public_key, secret_key);
 	}
+
+	static inline constexpr void calculate_public_key_with_zr(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key, field_number const &zr) noexcept
+	{
+		::fast_io::diffie_hellman::details::calculate_public_key_with_zr(public_key, secret_key, zr);
+	}
+
+	static inline void calculate_public_key_fast(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key) noexcept
+	{
+		::fast_io::diffie_hellman::details::calculate_public_key_fast(public_key, secret_key);
+	}
+
+	static inline void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key, blinding_context const &blinding) noexcept
+	{
+		::fast_io::diffie_hellman::details::calculate_public_key_fast_with_blinding(public_key, secret_key, blinding);
+	}
+
+	static inline constexpr void create_shared_key(::fast_io::containers::index_span<::std::byte, 32> shared_key, ::fast_io::containers::index_span<::std::byte const, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key) noexcept
+	{
+		::fast_io::diffie_hellman::details::create_shared_key(shared_key, public_key, secret_key);
+	}
+
+	static inline constexpr void create_shared_key_with_zr(::fast_io::containers::index_span<::std::byte, 32> shared_key, ::fast_io::containers::index_span<::std::byte const, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key, field_number const &zr) noexcept
+	{
+		::fast_io::diffie_hellman::details::create_shared_key_with_zr(shared_key, public_key, secret_key, zr);
+	}
 };
 
 } // namespace fast_io::diffie_hellman

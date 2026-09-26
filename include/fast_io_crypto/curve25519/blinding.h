@@ -148,4 +148,9 @@ inline void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::b
 	::fast_io::curve25519::details::x25519_base_point_multiply_with_blinding(pk, t, blinding);
 }
 
+inline void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
+{
+	::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr_with_blinding(public_key.data(), secret_key.data(), blinding);
+}
+
 } // namespace fast_io::diffie_hellman::details
