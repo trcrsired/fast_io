@@ -9,12 +9,12 @@ src/generate_default_blinding.cc; bp = -bl*B holds so that for any
 scalar sk, (sk+bl)*B + bp = sk*B.
 */
 inline constexpr edp_blinding_context default_blinding{
-	{0xe319c5e2e91917c2ULL, 0x0f25cfbcafe30c0aULL, 0x64e218a30ba1e198ULL, 0x08ba065b737c6d8fULL},
-	{0xbc0bf373210c75b1ULL, 0x2b0f08392ebd0a04ULL, 0x982b1498f84e78c2ULL, 0xbe8c10169eb775bcULL},
-	{{0x36bc52267bdeeca0ULL, 0x76a4f80c7eceb9a9ULL, 0xd528c977e9aee2c9ULL, 0xe7323079ebdfca4fULL},
-	 {0x4ffb48a56423d116ULL, 0x7124ba3dd2497a51ULL, 0x0585388a8dcdd182ULL, 0xdd0f7d0aeff6fbddULL},
-	 {0xe820f4f685949928ULL, 0x707c614e16efaf6bULL, 0x981c2357c00efe26ULL, 0xf60cb134bb2b35bdULL},
-	 {0x4f59fb2afbf7b10aULL, 0xea0b4e1de2650398ULL, 0x0e22d48a421f4d9cULL, 0xcb7fd2170d1a4888ULL}},
+	field_number_from_u64(0xe319c5e2e91917c2ULL, 0x0f25cfbcafe30c0aULL, 0x64e218a30ba1e198ULL, 0x08ba065b737c6d8fULL),
+	field_number_from_u64(0xbc0bf373210c75b1ULL, 0x2b0f08392ebd0a04ULL, 0x982b1498f84e78c2ULL, 0xbe8c10169eb775bcULL),
+	{field_number_from_u64(0x36bc52267bdeeca0ULL, 0x76a4f80c7eceb9a9ULL, 0xd528c977e9aee2c9ULL, 0xe7323079ebdfca4fULL),
+	 field_number_from_u64(0x4ffb48a56423d116ULL, 0x7124ba3dd2497a51ULL, 0x0585388a8dcdd182ULL, 0xdd0f7d0aeff6fbddULL),
+	 field_number_from_u64(0xe820f4f685949928ULL, 0x707c614e16efaf6bULL, 0x981c2357c00efe26ULL, 0xf60cb134bb2b35bdULL),
+	 field_number_from_u64(0x4f59fb2afbf7b10aULL, 0xea0b4e1de2650398ULL, 0x0e22d48a421f4d9cULL, 0xcb7fd2170d1a4888ULL)},
 };
 
 /*
@@ -73,7 +73,7 @@ inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding
 	::fast_io::containers::array<std::byte, ::fast_io::sha512_context::digest_size> digest;
 	for (std::size_t i{}; i != field_number::array_size; ++i)
 	{
-		u64_to_bytes_little_endian(zb.data() + i * 8, default_blinding.zr.index_unchecked(i));
+		limb_to_bytes_little_endian(zb.data() + i * sizeof(field_number::value_type), default_blinding.zr.index_unchecked(i));
 	}
 	H.update(zb.data(), zb.data() + zb.size());
 	H.update(seed, seed + seed_size);
@@ -83,8 +83,8 @@ inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding
 	field_number t, g;
 	for (std::size_t i{}; i != field_number::array_size; ++i)
 	{
-		t.index_unchecked(i) = bytes_to_u64_little_endian(digest.data() + i * 8);
-		ctx.zr.index_unchecked(i) = bytes_to_u64_little_endian(digest.data() + 32 + i * 8);
+		t.index_unchecked(i) = bytes_to_limb_little_endian(digest.data() + i * sizeof(field_number::value_type));
+		ctx.zr.index_unchecked(i) = bytes_to_limb_little_endian(digest.data() + 32 + i * sizeof(field_number::value_type));
 	}
 	eco_mod(t);
 	subtraction_u256(ctx.bl, NxBPOraw.index_unchecked(1), t); /* bl = BPO - t */

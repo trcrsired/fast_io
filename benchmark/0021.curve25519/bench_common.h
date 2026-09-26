@@ -10,6 +10,13 @@ include this header and provide main() in each .cc.
 #include <cstdint>
 #include <cstddef>
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+
+inline constexpr char const *bench_unit() noexcept
+{
+	return " cycles";
+}
+
 inline ::std::uint64_t bench_start() noexcept
 {
 	unsigned aux;
@@ -24,6 +31,32 @@ inline ::std::uint64_t bench_end() noexcept
 	__asm__ volatile("lfence" ::: "memory");
 	return t;
 }
+
+#else
+
+inline constexpr char const *bench_unit() noexcept
+{
+	return " ns";
+}
+
+inline ::std::uint64_t bench_now_ns()
+{
+	auto const ts{::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::monotonic_raw)};
+	return static_cast<::std::uint64_t>(ts.seconds) * 1000000000u +
+	       ts.subseconds / (::fast_io::uint_least64_subseconds_per_second / 1000000000u);
+}
+
+inline ::std::uint64_t bench_start()
+{
+	return bench_now_ns();
+}
+
+inline ::std::uint64_t bench_end()
+{
+	return bench_now_ns();
+}
+
+#endif
 
 template <typename F>
 inline ::std::uint64_t bench(F &&f, ::std::size_t iters, ::std::size_t batches = 25) noexcept

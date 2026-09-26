@@ -2,6 +2,11 @@
 #include <fast_io_crypto.h>
 
 /*
+The compile-time checks evaluate whole scalar multiplications; raise the
+constexpr step budget when building:  -fconstexpr-steps=100000000
+*/
+
+/*
 Blinding-context tests:
   - a context derived from a seed produces keypair/sign output identical
     to the unblinded path (blinding must not change results)

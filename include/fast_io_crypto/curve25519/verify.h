@@ -4,12 +4,12 @@ namespace fast_io::curve25519
 {
 
 /* sqrt(-1) mod p */
-inline constexpr field_number w_i{0xC4EE1B274A0EA0B0ULL, 0x2F431806AD2FE478ULL, 0x2B4D00993DFBD7A7ULL, 0x2B8324804FC1DF0BULL};
+inline constexpr field_number w_i{field_number_from_u64(0xC4EE1B274A0EA0B0ULL, 0x2F431806AD2FE478ULL, 0x2B4D00993DFBD7A7ULL, 0x2B8324804FC1DF0BULL)};
 
 /* d = -121665/121666 mod p */
-inline constexpr field_number w_d{0x75EB4DCA135978A3ULL, 0x00700A4D4141D8ABULL, 0x8CC740797779E898ULL, 0x52036CEE2B6FFE73ULL};
+inline constexpr field_number w_d{field_number_from_u64(0x75EB4DCA135978A3ULL, 0x00700A4D4141D8ABULL, 0x8CC740797779E898ULL, 0x52036CEE2B6FFE73ULL)};
 
-inline constexpr field_number w_one{1, 0, 0, 0};
+inline constexpr field_number w_one{field_number_from_u64(1, 0, 0, 0)};
 inline constexpr field_number w_zero{};
 
 /* Z = X^(2^n) * Y */
@@ -75,7 +75,12 @@ inline constexpr void ed25519_calculate_x(field_number &x, field_number const &y
 	field_number_multiplication(b, b, v);
 	field_number_subtraction(b, b, u);
 	field_number_reduce_to_25519(b);
-	if ((b.front_unchecked() | b.index_unchecked(1) | b.index_unchecked(2) | b.back_unchecked()) != 0)
+	field_number::value_type bor{};
+	for (::std::size_t bi{}; bi != field_number::array_size; ++bi)
+	{
+		bor |= b.index_unchecked(bi);
+	}
+	if (bor != 0)
 	{
 		field_number_multiplication(x, x, w_i);
 	}
@@ -130,7 +135,7 @@ inline constexpr void ed25519_verify_init_to_ptr(ed25519_verify_context &ctx, st
 	tbl.index_unchecked(0).ypx = w_one;
 	tbl.index_unchecked(0).ymx = w_one;
 	tbl.index_unchecked(0).t2d = w_zero;
-	tbl.index_unchecked(0).z2 = {2, 0, 0, 0};
+	tbl.index_unchecked(0).z2 = field_number_from_u64(2, 0, 0, 0);
 
 	edp_ext_point_2e(tbl.index_unchecked(1), q); /* -- -- -- q0 */
 
@@ -214,9 +219,9 @@ inline constexpr bool ed25519_verify_check_to_ptr(ed25519_verify_context const &
 	eco_digest_to_words(h, md.data());
 	eco_mod(h);
 
-	for (std::uint_fast8_t i{}; i != 4; ++i)
+	for (::std::size_t i{}; i != field_number::array_size; ++i)
 	{
-		s.index_unchecked(i) = bytes_to_u64_little_endian(signature + 32 + i * 8);
+		s.index_unchecked(i) = bytes_to_limb_little_endian(signature + 32 + i * sizeof(field_number::value_type));
 	}
 
 	/* T = s*B + h*(-Q) = (s - h*a)*B = r*B = R */

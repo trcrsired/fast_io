@@ -28,11 +28,11 @@ struct edp_blinding_context
 	precomputed_extended_point bp;
 };
 
-inline constexpr field_number w2d{16993941304535871833ULL, 63073048630374742ULL, 1841551078520508720ULL, 2596001775599221991ULL};
-inline constexpr field_number wdi{2729447966259148867ULL, 819046656689919022ULL, 3104705366353104742ULL, 4652357855831510595ULL};
+inline constexpr field_number w2d{field_number_from_u64(16993941304535871833ULL, 63073048630374742ULL, 1841551078520508720ULL, 2596001775599221991ULL)};
+inline constexpr field_number wdi{field_number_from_u64(2729447966259148867ULL, 819046656689919022ULL, 3104705366353104742ULL, 4652357855831510595ULL)};
 
-inline constexpr field_number wprime{0xFFFFFFFFFFFFFFED, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF};
-inline constexpr field_number w_maxprime{0xFFFFFFFFFFFFFFDA, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF};
+inline constexpr field_number wprime{field_number_from_u64(0xFFFFFFFFFFFFFFED, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF)};
+inline constexpr field_number w_maxprime{field_number_from_u64(0xFFFFFFFFFFFFFFDA, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)};
 
 inline constexpr auto folding1{folding.index_unchecked(1)};
 
@@ -86,7 +86,8 @@ inline constexpr void edp_double_point(extended_point &p) noexcept
 rcl $1, aa is ::fast_io::intrinsics::addc(aa,aa): shift left through carry.
 shl $1, xx is ::fast_io::intrinsics::addc(xx,xx,0).
 */
-inline constexpr void rl_msb(std::uint_least8_t &aa, std::uint_least64_t &xx) noexcept
+template <typename T>
+inline constexpr void rl_msb(std::uint_least8_t &aa, T &xx) noexcept
 {
 	bool carry{};
 	xx = ::fast_io::intrinsics::addc(xx, xx, false, carry);
@@ -105,29 +106,83 @@ inline constexpr void rl_msbs(std::uint_least8_t &aa, std::uint_least64_t &xx) n
 
 inline constexpr void ecp_8folds(::fast_io::containers::array<std::byte, 32> &y, field_number const &x) noexcept
 {
-	std::uint_least64_t x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
-	std::uint_least8_t low{};
-	for (std::uint_least8_t i{}; i != 32; ++i)
+	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
 	{
-		rl_msbs(low, x3);
-		rl_msbs(low, x2);
-		rl_msbs(low, x1);
-		rl_msbs(low, x0);
-		y.index_unchecked(i) = static_cast<std::byte>(low);
+		/* eight u32 columns, MSB-first */
+		std::uint_least32_t xw[field_number::array_size] FAST_IO_INDETERMINATE;
+		for (::std::size_t i{}; i != field_number::array_size; ++i)
+		{
+			xw[i] = x.index_unchecked(i);
+		}
+		for (::std::size_t i{}; i != 32; ++i)
+		{
+			std::uint_least8_t low{};
+			for (::std::size_t w{field_number::array_size}; w--;)
+			{
+				rl_msb(low, xw[w]);
+			}
+			y.index_unchecked(i) = static_cast<std::byte>(low);
+		}
+	}
+	else
+	{
+		std::uint_least64_t x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
+		std::uint_least8_t low{};
+		for (std::uint_least8_t i{}; i != 32; ++i)
+		{
+			rl_msbs(low, x3);
+			rl_msbs(low, x2);
+			rl_msbs(low, x1);
+			rl_msbs(low, x0);
+			y.index_unchecked(i) = static_cast<std::byte>(low);
+		}
 	}
 }
 
 inline constexpr void ecp_4folds(::fast_io::containers::array<std::byte, 64> &y, field_number const &x) noexcept
 {
-	std::uint_least64_t x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
-	for (std::uint_least8_t i{}; i != 64; ++i)
+	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
 	{
-		std::uint_least8_t low{};
-		rl_msb(low, x3);
-		rl_msb(low, x2);
-		rl_msb(low, x1);
-		rl_msb(low, x0);
-		y.index_unchecked(i) = static_cast<std::byte>(low);
+		/*
+		u64 emits four columns of 64 bits; in u32 limbs the high halves
+		are limbs 7,5,3,1 and the low halves are 6,4,2,0.
+		*/
+		std::uint_least32_t xw[field_number::array_size] FAST_IO_INDETERMINATE;
+		for (::std::size_t i{}; i != field_number::array_size; ++i)
+		{
+			xw[i] = x.index_unchecked(i);
+		}
+		for (::std::size_t i{}; i != 32; ++i)
+		{
+			std::uint_least8_t low{};
+			rl_msb(low, xw[7]);
+			rl_msb(low, xw[5]);
+			rl_msb(low, xw[3]);
+			rl_msb(low, xw[1]);
+			y.index_unchecked(i) = static_cast<std::byte>(low);
+		}
+		for (::std::size_t i{}; i != 32; ++i)
+		{
+			std::uint_least8_t low{};
+			rl_msb(low, xw[6]);
+			rl_msb(low, xw[4]);
+			rl_msb(low, xw[2]);
+			rl_msb(low, xw[0]);
+			y.index_unchecked(32 + i) = static_cast<std::byte>(low);
+		}
+	}
+	else
+	{
+		std::uint_least64_t x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
+		for (std::uint_least8_t i{}; i != 64; ++i)
+		{
+			std::uint_least8_t low{};
+			rl_msb(low, x3);
+			rl_msb(low, x2);
+			rl_msb(low, x1);
+			rl_msb(low, x0);
+			y.index_unchecked(i) = static_cast<std::byte>(low);
+		}
 	}
 }
 

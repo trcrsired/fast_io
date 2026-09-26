@@ -1,8 +1,8 @@
 /*
 Benchmark: ed25519-donna (floodyberry) reference implementation.
 
-Built by the Makefile which compiles ../ed25519-donna/ed25519.c with its
-default OpenSSL SHA-512 backend (-lcrypto). Manual example:
+Compile ../ed25519-donna/ed25519.c with its default OpenSSL SHA-512
+backend (-lcrypto). Example:
 
   gcc -O2 -fPIE -I../../../ed25519-donna -c -o build/donna_ed25519.o \
       ../../../ed25519-donna/ed25519.c

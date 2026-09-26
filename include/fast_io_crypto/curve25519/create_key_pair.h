@@ -193,8 +193,16 @@ Encode a field element y-coord as little-endian bytes, top bit = x parity.
 inline constexpr void ed25519_encode(::std::byte *y, field_number const &x, ::std::byte parity) noexcept
 {
 	field_number t{x};
-	t.back_unchecked() = (t.back_unchecked() & 0x7fffffffffffffffULL) |
-						 (static_cast<std::uint_least64_t>(parity & std::byte{1}) << 63u);
+	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
+	{
+		t.back_unchecked() = (t.back_unchecked() & 0x7fffffffu) |
+							 (static_cast<std::uint_least32_t>(parity & std::byte{1}) << 31u);
+	}
+	else
+	{
+		t.back_unchecked() = (t.back_unchecked() & 0x7fffffffffffffffULL) |
+							 (static_cast<std::uint_least64_t>(parity & std::byte{1}) << 63u);
+	}
 	hash_digest_from_byte_ptr_common<std::endian::little>(t, y);
 }
 
@@ -208,10 +216,11 @@ Decode a little-endian encoded point: returns the x-parity bit, y words to out.
 */
 inline constexpr std::uint_least64_t ed25519_decode_int(field_number &y, ::std::byte const *x) noexcept
 {
-	y.front_unchecked() = bytes_to_u64_little_endian(x);
-	y.index_unchecked(1) = bytes_to_u64_little_endian(x + 8);
-	y.index_unchecked(2) = bytes_to_u64_little_endian(x + 16);
-	y.back_unchecked() = bytes_to_u64_little_endian(x + 24) & 0x7FFFFFFFFFFFFFFFULL;
+	for (::std::size_t i{}; i != field_number::array_size; ++i)
+	{
+		y.index_unchecked(i) = bytes_to_limb_little_endian(x + i * sizeof(field_number::value_type));
+	}
+	y.back_unchecked() &= ::std::numeric_limits<field_number::value_type>::max() >> 1;
 	return static_cast<std::uint_least64_t>(x[31] >> 7);
 }
 
@@ -306,9 +315,9 @@ inline constexpr void ed25519_sign_message_impl(::std::byte *signature, ::std::b
 	eco_mul_reduce(t, t, a);
 	eco_add_reduce(t, t, r);
 	eco_mod(t);
-	for (::std::uint_fast8_t i{}; i != 4; ++i)
+	for (::std::size_t i{}; i != field_number::array_size; ++i)
 	{
-		u64_to_bytes_little_endian(signature + 32 + i * 8, t.index_unchecked(i));
+		limb_to_bytes_little_endian(signature + 32 + i * sizeof(field_number::value_type), t.index_unchecked(i));
 	}
 
 // Clear sensitive data. Not needed (nor possible) during constant evaluation.

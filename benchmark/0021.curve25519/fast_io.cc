@@ -1,8 +1,7 @@
 /*
 Benchmark: fast_io curve25519 (ed25519 + x25519).
 
-Build (from this directory):  make -f Makefile fast_io
-or manually:
+Build (from this directory):
   clang++ -std=c++2c -O2 -I../../include -I. -o build/fast_io fast_io.cc
 */
 
@@ -39,11 +38,11 @@ int main()
 
 	::std::uint64_t c;
 	c = bench([&] { ::fast_io::ed25519::create_key_pair_to_ptr(pk, priv, sk); }, bench_iters);
-	::fast_io::print("ed25519 keypair   ours : ", c, " cycles\n");
+	::fast_io::print("ed25519 keypair   ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 	c = bench([&] { ::fast_io::ed25519::sign_message_to_ptr(sig, priv, msg, 64); }, bench_iters);
-	::fast_io::print("ed25519 sign      ours : ", c, " cycles\n");
+	::fast_io::print("ed25519 sign      ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 	c = bench([&] { ::fast_io::ed25519::verify_signature_to_ptr(sig, pk, msg, 64); }, bench_iters);
-	::fast_io::print("ed25519 verify    ours : ", c, " cycles\n");
+	::fast_io::print("ed25519 verify    ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 
 	/* X25519 — RFC 7748 alice */
 	::std::byte dhsk[32], dhpk[32], shared[32];
@@ -55,7 +54,7 @@ int main()
 				  ::fast_io::diffie_hellman::x25519::calculate_public_key_to_ptr(dhpk, t);
 			  },
 			  bench_iters);
-	::fast_io::print("x25519 pubkey     ours : ", c, " cycles\n");
+	::fast_io::print("x25519 pubkey     ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 	c = bench([&]
 			  {
 				  ::std::byte t[32];
@@ -63,7 +62,7 @@ int main()
 				  ::fast_io::diffie_hellman::x25519::calculate_public_key_fast_to_ptr(dhpk, t);
 			  },
 			  bench_iters);
-	::fast_io::print("x25519 pub (fast) ours : ", c, " cycles\n");
+	::fast_io::print("x25519 pub (fast) ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 	c = bench([&]
 			  {
 				  ::std::byte t[32];
@@ -71,6 +70,6 @@ int main()
 				  ::fast_io::diffie_hellman::x25519::create_shared_key_to_ptr(shared, dhpk, t);
 			  },
 			  bench_iters);
-	::fast_io::print("x25519 shared     ours : ", c, " cycles\n");
+	::fast_io::print("x25519 shared     ours : ", c, ::fast_io::mnp::os_c_str(bench_unit()), "\n");
 	return 0;
 }

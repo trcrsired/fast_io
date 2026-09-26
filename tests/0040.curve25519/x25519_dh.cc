@@ -2,6 +2,11 @@
 #include <fast_io_crypto.h>
 
 /*
+The compile-time checks evaluate whole scalar multiplications; raise the
+constexpr step budget when building:  -fconstexpr-steps=100000000
+*/
+
+/*
 RFC 7748 x25519 known-answer test:
 alice/bob public keys and the agreed shared secret, through both the
 Montgomery ladder path and the ed25519-table fast path.

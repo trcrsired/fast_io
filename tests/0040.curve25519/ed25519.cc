@@ -2,6 +2,11 @@
 #include <fast_io_crypto.h>
 
 /*
+The compile-time checks evaluate whole scalar multiplications; raise the
+constexpr step budget when building:  -fconstexpr-steps=100000000
+*/
+
+/*
 RFC 8032 Ed25519 known-answer tests (TEST 1-3): public key derivation,
 signature generation and verification, plus rejection of a tampered
 signature. Exercised at compile time and at runtime.

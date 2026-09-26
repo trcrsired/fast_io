@@ -1,8 +1,8 @@
 /*
 Benchmark: Mehdi Sotoodeh's curve25519 C+asm reference implementation.
 
-Requires the reference repo as a sibling checkout; built by the Makefile
-which compiles its amd64 asm objects. Manual build example (from repo root):
+Requires the reference repo as a sibling checkout. Build its amd64
+asm objects, e.g. (from repo root):
 
   as --64 --defsym GCC=1 -I ../ed25519/curve25519/source/asm64/amd64.gnu \
      -o build/Add.o ../ed25519/curve25519/source/asm64/amd64.gnu/Add.s   (etc.)
