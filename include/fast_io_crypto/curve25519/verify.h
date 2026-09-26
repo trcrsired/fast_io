@@ -198,11 +198,7 @@ inline constexpr void poly_point_multiply(affine_point &r, field_number const &a
 	field_multiplication_mod(r.y, s.y, s.z);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	bool ed25519_verify_check_to_ptr(ed25519_verify_context const &ctx, std::byte const *signature, std::byte const *msg, std::size_t msg_size) noexcept
+inline constexpr bool ed25519_verify_check_to_ptr(ed25519_verify_context const &ctx, std::byte const *signature, std::byte const *msg, std::size_t msg_size) noexcept
 {
 	::fast_io::sha512_context H;
 	affine_point t;
@@ -235,40 +231,24 @@ inline
 	return diff == 0;
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	bool ed25519_verify_signature_to_ptr(std::byte const *signature, std::byte const *public_key, std::byte const *msg, std::size_t msg_size) noexcept
+inline constexpr bool ed25519_verify_signature_to_ptr(std::byte const *signature, std::byte const *public_key, std::byte const *msg, std::size_t msg_size) noexcept
 {
 	ed25519_verify_context ctx;
 	ed25519_verify_init_to_ptr(ctx, public_key);
 	return ed25519_verify_check_to_ptr(ctx, signature, msg, msg_size);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_verify_init(ed25519_verify_context &ctx, ::fast_io::containers::index_span<std::byte const, 32> public_key) noexcept
+inline constexpr void ed25519_verify_init(ed25519_verify_context &ctx, ::fast_io::containers::index_span<std::byte const, 32> public_key) noexcept
 {
 	ed25519_verify_init_to_ptr(ctx, public_key.data());
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	bool ed25519_verify_check(ed25519_verify_context const &ctx, ::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::span<std::byte const> msg) noexcept
+inline constexpr bool ed25519_verify_check(ed25519_verify_context const &ctx, ::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::span<std::byte const> msg) noexcept
 {
 	return ed25519_verify_check_to_ptr(ctx, signature.data(), msg.data(), msg.size());
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	bool ed25519_verify_signature(::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::index_span<std::byte const, 32> public_key, ::fast_io::containers::span<std::byte const> msg) noexcept
+inline constexpr bool ed25519_verify_signature(::fast_io::containers::index_span<std::byte const, 64> signature, ::fast_io::containers::index_span<std::byte const, 32> public_key, ::fast_io::containers::span<std::byte const> msg) noexcept
 {
 	return ed25519_verify_signature_to_ptr(signature.data(), public_key.data(), msg.data(), msg.size());
 }

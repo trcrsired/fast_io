@@ -46,12 +46,12 @@ public:
 		::fast_io::diffie_hellman::details::create_shared_key_to_ptr_with_zr(shared_key, public_key, secret_key, zr);
 	}
 
-	static inline void calculate_public_key_fast_to_ptr(::std::byte *public_key, ::std::byte *secret_key) noexcept
+	static inline constexpr void calculate_public_key_fast_to_ptr(::std::byte *public_key, ::std::byte *secret_key) noexcept
 	{
 		::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr(public_key, secret_key);
 	}
 
-	static inline void calculate_public_key_fast_to_ptr_with_blinding(::std::byte *public_key, ::std::byte *secret_key, blinding_context const &blinding) noexcept
+	static inline constexpr void calculate_public_key_fast_to_ptr_with_blinding(::std::byte *public_key, ::std::byte *secret_key, blinding_context const &blinding) noexcept
 	{
 		::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr_with_blinding(public_key, secret_key, blinding);
 	}
@@ -76,12 +76,12 @@ public:
 		::fast_io::diffie_hellman::details::calculate_public_key_with_zr(public_key, secret_key, zr);
 	}
 
-	static inline void calculate_public_key_fast(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key) noexcept
+	static inline constexpr void calculate_public_key_fast(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key) noexcept
 	{
 		::fast_io::diffie_hellman::details::calculate_public_key_fast(public_key, secret_key);
 	}
 
-	static inline void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key, blinding_context const &blinding) noexcept
+	static inline constexpr void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<::std::byte, 32> public_key, ::fast_io::containers::index_span<::std::byte, 32> secret_key, blinding_context const &blinding) noexcept
 	{
 		::fast_io::diffie_hellman::details::calculate_public_key_fast_with_blinding(public_key, secret_key, blinding);
 	}

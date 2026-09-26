@@ -5,19 +5,10 @@ namespace fast_io::curve25519
 
 
 template <std::endian end, typename D>
-inline
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void hash_digest_to_ptr_common_impl(std::byte const *ptr, std::size_t n, D &digest) noexcept
+inline constexpr void hash_digest_to_ptr_common_impl(std::byte const *ptr, std::size_t n, D &digest) noexcept
 {
 	using U = typename D::value_type;
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-#if __cpp_if_consteval >= 202106L
-	if consteval
-#else
-	if (__builtin_is_constant_evaluated())
-#endif
+if consteval
 	{
 		for (std::size_t i{}; i != n; ++i)
 		{
@@ -31,7 +22,6 @@ inline
 		}
 	}
 	else
-#endif
 	{
 		if constexpr (::std::endian::native == end)
 		{
@@ -50,19 +40,10 @@ inline
 }
 
 template <std::endian end, typename D>
-inline
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void hash_digest_from_ptr_common_impl(D const &digest, std::size_t n, std::byte *ptr) noexcept
+inline constexpr void hash_digest_from_ptr_common_impl(D const &digest, std::size_t n, std::byte *ptr) noexcept
 {
 	using U = typename D::value_type;
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-#if __cpp_if_consteval >= 202106L
-	if consteval
-#else
-	if (__builtin_is_constant_evaluated())
-#endif
+if consteval
 	{
 		for (std::size_t i{}; i != n; ++i)
 		{
@@ -75,7 +56,6 @@ inline
 		}
 	}
 	else
-#endif
 	{
 		if constexpr (::std::endian::native == end)
 		{
@@ -101,17 +81,11 @@ inline constexpr void hash_digest_to_ptr_simd16_impl(std::byte const *ptr, std::
 {
 	using U = typename D::value_type;
 	constexpr std::size_t usz{sizeof(U)};
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-#if __cpp_if_consteval >= 202106L
-	if consteval
-#else
-	if (__builtin_is_constant_evaluated())
-#endif
+if consteval
 	{
 		hash_digest_to_ptr_common_impl<end>(ptr, n, digest);
 	}
 	else
-#endif
 	{
 		if constexpr (::std::endian::native == end)
 		{
@@ -141,17 +115,11 @@ inline constexpr void hash_digest_from_ptr_simd16_impl(D const &digest, std::siz
 {
 	using U = typename D::value_type;
 	constexpr std::size_t usz{sizeof(U)};
-#if __cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L
-#if __cpp_if_consteval >= 202106L
-	if consteval
-#else
-	if (__builtin_is_constant_evaluated())
-#endif
+if consteval
 	{
 		hash_digest_from_ptr_common_impl<end>(digest, n, ptr);
 	}
 	else
-#endif
 	{
 		if constexpr (::std::endian::native == end)
 		{
@@ -247,11 +215,7 @@ inline constexpr std::uint_least64_t ed25519_decode_int(field_number &y, ::std::
 	return static_cast<std::uint_least64_t>(x[31] >> 7);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_create_key_pair_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key) noexcept
+inline constexpr void ed25519_create_key_pair_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key) noexcept
 {
 	constexpr std::size_t keylength{32};
 	::fast_io::sha512_context sha;
@@ -273,11 +237,7 @@ inline
 	::fast_io::freestanding::nonoverlapped_bytes_copy_n(public_key, keylength, private_key + keylength);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_create_key_pair_with_blinding_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key, edp_blinding_context &blinding) noexcept
+inline constexpr void ed25519_create_key_pair_with_blinding_to_ptr(std::byte *public_key, std::byte *private_key, std::byte const *secret_key, edp_blinding_context &blinding) noexcept
 {
 	constexpr std::size_t keylength{32};
 	::fast_io::sha512_context sha;
@@ -299,11 +259,7 @@ inline
 	::fast_io::freestanding::nonoverlapped_bytes_copy_n(public_key, keylength, private_key + keylength);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_sign_message_impl(::std::byte *signature, ::std::byte const *private_key, edp_blinding_context const *blinding, ::std::byte const *msg, std::size_t msg_size) noexcept
+inline constexpr void ed25519_sign_message_impl(::std::byte *signature, ::std::byte const *private_key, edp_blinding_context const *blinding, ::std::byte const *msg, std::size_t msg_size) noexcept
 {
 	affine_point R;
 	field_number a, t, r;
@@ -356,11 +312,7 @@ inline
 	}
 
 // Clear sensitive data. Not needed (nor possible) during constant evaluation.
-#if __cpp_if_consteval >= 202106L
 	if !consteval
-#else
-	if (!__builtin_is_constant_evaluated())
-#endif
 	{
 		::fast_io::secure_clear(__builtin_addressof(a), sizeof(a));
 		::fast_io::secure_clear(__builtin_addressof(r), sizeof(r));
@@ -372,56 +324,32 @@ signature = R(32 bytes) || S(32 bytes)
 R = r*B  where r = H(sk_hash[32:64] || msg) mod BPO
 S = (r + H(R || pk || msg)*a) mod BPO
 */
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_sign_message_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size) noexcept
+inline constexpr void ed25519_sign_message_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size) noexcept
 {
 	ed25519_sign_message_impl(signature, private_key, nullptr, msg, msg_size);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_sign_message_with_blinding_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size, edp_blinding_context &blinding) noexcept
+inline constexpr void ed25519_sign_message_with_blinding_to_ptr(::std::byte *signature, ::std::byte const *private_key, ::std::byte const *msg, std::size_t msg_size, edp_blinding_context &blinding) noexcept
 {
 	ed25519_sign_message_impl(signature, private_key, __builtin_addressof(blinding), msg, msg_size);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_create_key_pair(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key) noexcept
+inline constexpr void ed25519_create_key_pair(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key) noexcept
 {
 	ed25519_create_key_pair_to_ptr(public_key.data(), private_key.data(), secret_key.data());
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_create_key_pair_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key, edp_blinding_context &blinding) noexcept
+inline constexpr void ed25519_create_key_pair_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 64> private_key, ::fast_io::containers::index_span<std::byte const, 32> secret_key, edp_blinding_context &blinding) noexcept
 {
 	ed25519_create_key_pair_with_blinding_to_ptr(public_key.data(), private_key.data(), secret_key.data(), blinding);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_sign_message(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg) noexcept
+inline constexpr void ed25519_sign_message(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg) noexcept
 {
 	ed25519_sign_message_to_ptr(signature.data(), private_key.data(), msg.data(), msg.size());
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void ed25519_sign_message_with_blinding(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg, edp_blinding_context &blinding) noexcept
+inline constexpr void ed25519_sign_message_with_blinding(::fast_io::containers::index_span<std::byte, 64> signature, ::fast_io::containers::index_span<std::byte const, 64> private_key, ::fast_io::containers::span<std::byte const> msg, edp_blinding_context &blinding) noexcept
 {
 	ed25519_sign_message_with_blinding_to_ptr(signature.data(), private_key.data(), msg.data(), msg.size(), blinding);
 }

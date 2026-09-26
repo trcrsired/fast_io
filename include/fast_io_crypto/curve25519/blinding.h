@@ -66,11 +66,7 @@ Derive a blinding context from seed bytes:
 The bp point is computed through default_blinding itself so the
 generation scalar multiply is also blinded.
 */
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding_context &ctx, std::byte const *seed, std::size_t seed_size) noexcept
+inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding_context &ctx, std::byte const *seed, std::size_t seed_size) noexcept
 {
 	::fast_io::sha512_context H;
 	::fast_io::containers::array<std::byte, 32> zb;
@@ -101,11 +97,7 @@ inline
 	edp_ext_point_2e(ctx.bp, T);
 
 // Clear sensitive data. Not needed (nor possible) during constant evaluation.
-#if __cpp_if_consteval >= 202106L
 	if !consteval
-#else
-	if (!__builtin_is_constant_evaluated())
-#endif
 	{
 		::fast_io::secure_clear(__builtin_addressof(t), sizeof(t));
 		::fast_io::secure_clear(__builtin_addressof(g), sizeof(g));
@@ -115,11 +107,7 @@ inline
 	return ctx;
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	edp_blinding_context &ed25519_blinding_init(edp_blinding_context &ctx, ::fast_io::containers::span<std::byte const> seed) noexcept
+inline constexpr edp_blinding_context &ed25519_blinding_init(edp_blinding_context &ctx, ::fast_io::containers::span<std::byte const> seed) noexcept
 {
 	return ed25519_blinding_init_to_ptr(ctx, seed.data(), seed.size());
 }
@@ -146,7 +134,7 @@ namespace fast_io::diffie_hellman::details
 {
 
 /* Faster alternative to calculate_public_key_to_ptr using the ed25519 base point table, with blinding */
-inline void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::byte *sk, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
+inline constexpr void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::byte *sk, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
 	::fast_io::curve25519::field_number t;
@@ -154,7 +142,7 @@ inline void calculate_public_key_fast_to_ptr_with_blinding(std::byte *pk, std::b
 	::fast_io::curve25519::details::x25519_base_point_multiply_with_blinding(pk, t, blinding);
 }
 
-inline void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
+inline constexpr void calculate_public_key_fast_with_blinding(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key, ::fast_io::curve25519::edp_blinding_context const &blinding) noexcept
 {
 	::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr_with_blinding(public_key.data(), secret_key.data(), blinding);
 }

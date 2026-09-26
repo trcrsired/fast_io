@@ -603,11 +603,7 @@ inline constexpr void montgomery_curve_mont(xz_point &p, xz_point &q, field_numb
 	field_number_multiplication(q.z, a, b);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void montgomery_curve_point_multiplication(std::byte *public_key, std::byte const *base_point, std::byte const *secret_key, field_number const &zr) noexcept
+inline constexpr void montgomery_curve_point_multiplication(std::byte *public_key, std::byte const *base_point, std::byte const *secret_key, field_number const &zr) noexcept
 {
 	constexpr std::size_t total_len{32};
 	::fast_io::containers::array<std::byte, 32> sk;
@@ -657,11 +653,7 @@ inline
 	::fast_io::none_secure_clear(public_key, total_len);
 }
 
-inline
-#if __cpp_lib_bit_cast >= 201806L && __cpp_lib_is_constant_evaluated >= 201811L
-	constexpr
-#endif
-	void montgomery_curve_point_multiplication(std::byte *public_key, std::byte const *base_point, std::byte const *secret_key) noexcept
+inline constexpr void montgomery_curve_point_multiplication(std::byte *public_key, std::byte const *base_point, std::byte const *secret_key) noexcept
 {
 	montgomery_curve_point_multiplication(public_key, base_point, secret_key, ::fast_io::curve25519::custom_blindings::zr);
 }

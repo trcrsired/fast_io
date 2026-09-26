@@ -218,7 +218,7 @@ namespace fast_io::diffie_hellman::details
 {
 
 /* Faster alternative to calculate_public_key_to_ptr using the ed25519 base point table */
-inline void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk) noexcept
+inline constexpr void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk) noexcept
 {
 	::fast_io::curve25519::details::x25519_trim_secret_key(::fast_io::containers::index_span<::std::byte, 32>{::fast_io::containers::index_unchecked, sk});
 	::fast_io::curve25519::field_number t;
@@ -226,7 +226,7 @@ inline void calculate_public_key_fast_to_ptr(std::byte *pk, std::byte *sk) noexc
 	::fast_io::curve25519::details::x25519_base_point_multiply(pk, t);
 }
 
-inline void calculate_public_key_fast(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key) noexcept
+inline constexpr void calculate_public_key_fast(::fast_io::containers::index_span<std::byte, 32> public_key, ::fast_io::containers::index_span<std::byte, 32> secret_key) noexcept
 {
 	::fast_io::diffie_hellman::details::calculate_public_key_fast_to_ptr(public_key.data(), secret_key.data());
 }
