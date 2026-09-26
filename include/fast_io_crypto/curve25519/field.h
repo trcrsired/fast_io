@@ -650,26 +650,7 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		{
 		unsigned_type t[n << 1] FAST_IO_INDETERMINATE;
 		bool carry FAST_IO_INDETERMINATE;
-		constexpr bool avoid_t_initialization{
-#ifdef FIELD_NOT_AVOID_T_INITIALIZATION
-		true
-#endif
-		};
-		if constexpr(!avoid_t_initialization)
 		{
-			if consteval
-			{
-			for (::std::size_t k{}; k != (n << 1); ++k)
-			{
-				t[k] = zero;
-			}
-			}
-			else
-			{
-			__builtin_memset(__builtin_addressof(t),0,sizeof(t));
-			}
-		}
-			{
 		unsigned_type const b0{x.front_unchecked()};
 		unsigned_type h01 FAST_IO_INDETERMINATE;
 		unsigned_type const p01{::fast_io::intrinsics::umul(x.index_unchecked(1), b0, h01)};
@@ -692,8 +673,6 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		unsigned_type m06{::fast_io::intrinsics::addc(p06, h05, carry, carry)};
 		unsigned_type m07{::fast_io::intrinsics::addc(p07, h06, carry, carry)};
 		unsigned_type m08{::fast_io::intrinsics::addc(h07, zero, carry, carry)};
-		if constexpr(avoid_t_initialization)
-		{
 		t[1] = p01;
 		t[2] = ::fast_io::intrinsics::addc(m02, zero, false, carry);
 		t[3] = ::fast_io::intrinsics::addc(m03, zero, carry, carry);
@@ -709,25 +688,6 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		t[13] = ::fast_io::intrinsics::addc(zero, zero, carry, carry);
 		t[14] = ::fast_io::intrinsics::addc(zero, zero, carry, carry);
 		t[15] = ::fast_io::intrinsics::addc(zero, zero, carry, carry);
-		}
-		else
-		{
-		t[1] = ::fast_io::intrinsics::addc(t[1], p01, false, carry);
-		t[2] = ::fast_io::intrinsics::addc(t[2], m02, carry, carry);
-		t[3] = ::fast_io::intrinsics::addc(t[3], m03, carry, carry);
-		t[4] = ::fast_io::intrinsics::addc(t[4], m04, carry, carry);
-		t[5] = ::fast_io::intrinsics::addc(t[5], m05, carry, carry);
-		t[6] = ::fast_io::intrinsics::addc(t[6], m06, carry, carry);
-		t[7] = ::fast_io::intrinsics::addc(t[7], m07, carry, carry);
-		t[8] = ::fast_io::intrinsics::addc(t[8], m08, carry, carry);
-		t[9] = ::fast_io::intrinsics::addc(t[9], zero, carry, carry);
-		t[10] = ::fast_io::intrinsics::addc(t[10], zero, carry, carry);
-		t[11] = ::fast_io::intrinsics::addc(t[11], zero, carry, carry);
-		t[12] = ::fast_io::intrinsics::addc(t[12], zero, carry, carry);
-		t[13] = ::fast_io::intrinsics::addc(t[13], zero, carry, carry);
-		t[14] = ::fast_io::intrinsics::addc(t[14], zero, carry, carry);
-		t[15] = ::fast_io::intrinsics::addc(t[15], zero, carry, carry);
-		}
 		}
 		{
 		unsigned_type const b1{x.index_unchecked(1)};
@@ -865,15 +825,7 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		t[15] = ::fast_io::intrinsics::addc(t[15], zero, carry, carry);
 		}
 		{
-			if constexpr(avoid_t_initialization)
-			{				
 		t[1] = ::fast_io::intrinsics::addc(t[1], t[1], false, carry);
-			}
-			else
-			{
-		t[0] = ::fast_io::intrinsics::addc(t[0], t[0], false, carry);
-		t[1] = ::fast_io::intrinsics::addc(t[1], t[1], carry, carry);
-			}
 		t[2] = ::fast_io::intrinsics::addc(t[2], t[2], carry, carry);
 		t[3] = ::fast_io::intrinsics::addc(t[3], t[3], carry, carry);
 		t[4] = ::fast_io::intrinsics::addc(t[4], t[4], carry, carry);
@@ -891,16 +843,8 @@ inline constexpr void field_number_square(::fast_io::curve25519::field_number &r
 		}
 		{
 		unsigned_type h00 FAST_IO_INDETERMINATE;
-		if constexpr(avoid_t_initialization)
-		{
-			t[0] = ::fast_io::intrinsics::umul(x.index_unchecked(0), x.index_unchecked(0), h00);
-			t[1] = ::fast_io::intrinsics::addc(t[1], h00, false, carry);
-		}
-		else
-		{
-		t[0] = ::fast_io::intrinsics::addc(t[0], ::fast_io::intrinsics::umul(x.index_unchecked(0), x.index_unchecked(0), h00), false, carry);
-		t[1] = ::fast_io::intrinsics::addc(t[1], h00, carry, carry);
-		}
+		t[0] = ::fast_io::intrinsics::umul(x.index_unchecked(0), x.index_unchecked(0), h00);
+		t[1] = ::fast_io::intrinsics::addc(t[1], h00, false, carry);
 		unsigned_type h11 FAST_IO_INDETERMINATE;
 		t[2] = ::fast_io::intrinsics::addc(t[2], ::fast_io::intrinsics::umul(x.index_unchecked(1), x.index_unchecked(1), h11), carry, carry);
 		t[3] = ::fast_io::intrinsics::addc(t[3], h11, carry, carry);

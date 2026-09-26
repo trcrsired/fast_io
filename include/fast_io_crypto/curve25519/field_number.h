@@ -12,14 +12,18 @@ struct field_number
 	arm32, riscv32, ...): u64 ops are synthesized there anyway, so we do
 	the split ourselves and control the carry schedule.
 	*/
-#if 0
-	using value_type = std::uint_least32_t;
-	static inline constexpr ::std::size_t array_size{8};
 
+	using value_type =
+	::std::conditional_t<
+#if (defined(__i686__) || defined(_M_IX86))
+	true
 #else
-	using value_type = std::uint_least64_t;
-	static inline constexpr ::std::size_t array_size{4};
+	false
 #endif
+	, ::std::uint_least32_t, ::std::uint_least64_t>;
+
+	static inline constexpr ::std::size_t array_size{4u*sizeof(::std::uint_least64_t)/sizeof(value_type)};
+
 	using size_type = ::std::size_t;
 	static inline constexpr size_type array_size_bytes{array_size * sizeof(value_type)};
 	value_type content[array_size];
