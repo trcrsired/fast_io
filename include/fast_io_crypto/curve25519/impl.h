@@ -12,4 +12,3 @@
 #include "verify.h"
 #include "ed25519.h"
 #include "x25519.h"
-
