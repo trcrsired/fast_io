@@ -7,13 +7,17 @@ inline constexpr void addition_u256_discard(::fast_io::curve25519::field_number 
 											::fast_io::curve25519::field_number const &x,
 											::fast_io::curve25519::field_number const &y) noexcept
 {
-	bool carry{};
+	bool carry FAST_IO_INDETERMINATE;
 	if constexpr (::std::same_as<::fast_io::curve25519::field_number::value_type, ::std::uint_least32_t>)
 	{
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			z.index_unchecked(i) = ::fast_io::intrinsics::addc(x.index_unchecked(i), y.index_unchecked(i), carry, carry);
-		}
+		z.front_unchecked() = ::fast_io::intrinsics::addc(x.front_unchecked(), y.front_unchecked(), false, carry);
+		z.index_unchecked(1) = ::fast_io::intrinsics::addc(x.index_unchecked(1), y.index_unchecked(1), carry, carry);
+		z.index_unchecked(2) = ::fast_io::intrinsics::addc(x.index_unchecked(2), y.index_unchecked(2), carry, carry);
+		z.index_unchecked(3) = ::fast_io::intrinsics::addc(x.index_unchecked(3), y.index_unchecked(3), carry, carry);
+		z.index_unchecked(4) = ::fast_io::intrinsics::addc(x.index_unchecked(4), y.index_unchecked(4), carry, carry);
+		z.index_unchecked(5) = ::fast_io::intrinsics::addc(x.index_unchecked(5), y.index_unchecked(5), carry, carry);
+		z.index_unchecked(6) = ::fast_io::intrinsics::addc(x.index_unchecked(6), y.index_unchecked(6), carry, carry);
+		z.back_unchecked() = ::fast_io::intrinsics::addc(x.back_unchecked(), y.back_unchecked(), carry, carry);
 	}
 	else
 	{
@@ -29,13 +33,17 @@ inline constexpr ::fast_io::curve25519::field_number::value_type addition_u256(:
 														::fast_io::curve25519::field_number const &y) noexcept
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
-	bool carry{};
+	bool carry FAST_IO_INDETERMINATE;
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			z.index_unchecked(i) = ::fast_io::intrinsics::addc(x.index_unchecked(i), y.index_unchecked(i), carry, carry);
-		}
+		z.front_unchecked() = ::fast_io::intrinsics::addc(x.front_unchecked(), y.front_unchecked(), false, carry);
+		z.index_unchecked(1) = ::fast_io::intrinsics::addc(x.index_unchecked(1), y.index_unchecked(1), carry, carry);
+		z.index_unchecked(2) = ::fast_io::intrinsics::addc(x.index_unchecked(2), y.index_unchecked(2), carry, carry);
+		z.index_unchecked(3) = ::fast_io::intrinsics::addc(x.index_unchecked(3), y.index_unchecked(3), carry, carry);
+		z.index_unchecked(4) = ::fast_io::intrinsics::addc(x.index_unchecked(4), y.index_unchecked(4), carry, carry);
+		z.index_unchecked(5) = ::fast_io::intrinsics::addc(x.index_unchecked(5), y.index_unchecked(5), carry, carry);
+		z.index_unchecked(6) = ::fast_io::intrinsics::addc(x.index_unchecked(6), y.index_unchecked(6), carry, carry);
+		z.back_unchecked() = ::fast_io::intrinsics::addc(x.back_unchecked(), y.back_unchecked(), carry, carry);
 	}
 	else
 	{
@@ -57,33 +65,42 @@ inline constexpr void field_number_addition(::fast_io::curve25519::field_number 
 	constexpr unsigned_type zero{};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		unsigned_type t[::fast_io::curve25519::field_number::array_size] FAST_IO_INDETERMINATE;
-		bool carry{};
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::addc(x.index_unchecked(i), y.index_unchecked(i), carry, carry);
-		}
+		unsigned_type f0 FAST_IO_INDETERMINATE, f1 FAST_IO_INDETERMINATE, f2 FAST_IO_INDETERMINATE, f3 FAST_IO_INDETERMINATE;
+		unsigned_type f4 FAST_IO_INDETERMINATE, f5 FAST_IO_INDETERMINATE, f6 FAST_IO_INDETERMINATE, f7 FAST_IO_INDETERMINATE;
+		bool carry FAST_IO_INDETERMINATE;
+		f0 = ::fast_io::intrinsics::addc(x.front_unchecked(), y.front_unchecked(), false, carry);
+		f1 = ::fast_io::intrinsics::addc(x.index_unchecked(1), y.index_unchecked(1), carry, carry);
+		f2 = ::fast_io::intrinsics::addc(x.index_unchecked(2), y.index_unchecked(2), carry, carry);
+		f3 = ::fast_io::intrinsics::addc(x.index_unchecked(3), y.index_unchecked(3), carry, carry);
+		f4 = ::fast_io::intrinsics::addc(x.index_unchecked(4), y.index_unchecked(4), carry, carry);
+		f5 = ::fast_io::intrinsics::addc(x.index_unchecked(5), y.index_unchecked(5), carry, carry);
+		f6 = ::fast_io::intrinsics::addc(x.index_unchecked(6), y.index_unchecked(6), carry, carry);
+		f7 = ::fast_io::intrinsics::addc(x.back_unchecked(), y.back_unchecked(), carry, carry);
 		unsigned_type v{::fast_io::intrinsics::subc(zero, zero, carry, carry)};
 		v &= static_cast<unsigned_type>(38);
-		carry = false;
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::addc(t[i], v, carry, carry);
-			v = zero;
-		}
-		v = ::fast_io::intrinsics::subc(zero, zero, carry, carry);
+		f0 = ::fast_io::intrinsics::addc(f0, v, false, carry);
+		f1 = ::fast_io::intrinsics::addc(f1, zero, carry, carry);
+		f2 = ::fast_io::intrinsics::addc(f2, zero, carry, carry);
+		f3 = ::fast_io::intrinsics::addc(f3, zero, carry, carry);
+		f4 = ::fast_io::intrinsics::addc(f4, zero, carry, carry);
+		f5 = ::fast_io::intrinsics::addc(f5, zero, carry, carry);
+		f6 = ::fast_io::intrinsics::addc(f6, zero, carry, carry);
+		f7 = ::fast_io::intrinsics::addc(f7, zero, carry, carry);
+		v = ::fast_io::intrinsics::subc(v, v, carry, carry);
 		v &= static_cast<unsigned_type>(38);
-		carry = false;
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			f.index_unchecked(i) = ::fast_io::intrinsics::addc(t[i], v, carry, carry);
-			v = zero;
-		}
+		f.front_unchecked() = ::fast_io::intrinsics::addc(f0, v, false, carry);
+		f.index_unchecked(1) = ::fast_io::intrinsics::addc(f1, zero, carry, carry);
+		f.index_unchecked(2) = ::fast_io::intrinsics::addc(f2, zero, carry, carry);
+		f.index_unchecked(3) = ::fast_io::intrinsics::addc(f3, zero, carry, carry);
+		f.index_unchecked(4) = ::fast_io::intrinsics::addc(f4, zero, carry, carry);
+		f.index_unchecked(5) = ::fast_io::intrinsics::addc(f5, zero, carry, carry);
+		f.index_unchecked(6) = ::fast_io::intrinsics::addc(f6, zero, carry, carry);
+		f.back_unchecked() = ::fast_io::intrinsics::addc(f7, zero, carry, carry);
 	}
 	else
 	{
 		unsigned_type f0 FAST_IO_INDETERMINATE, f1 FAST_IO_INDETERMINATE, f2 FAST_IO_INDETERMINATE, f3 FAST_IO_INDETERMINATE;
-		bool carry{};
+		bool carry FAST_IO_INDETERMINATE;
 		f0 = ::fast_io::intrinsics::addc(x.front_unchecked(), y.front_unchecked(), false, carry);
 		f1 = ::fast_io::intrinsics::addc(x.index_unchecked(1), y.index_unchecked(1), carry, carry);
 		f2 = ::fast_io::intrinsics::addc(x.index_unchecked(2), y.index_unchecked(2), carry, carry);
@@ -111,13 +128,17 @@ inline constexpr ::fast_io::curve25519::field_number::value_type subtraction_u25
 														   ::fast_io::curve25519::field_number const &y) noexcept
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
-	bool borrow{};
+	bool borrow FAST_IO_INDETERMINATE;
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			f.index_unchecked(i) = ::fast_io::intrinsics::subc(x.index_unchecked(i), y.index_unchecked(i), borrow, borrow);
-		}
+		f.front_unchecked() = ::fast_io::intrinsics::subc(x.front_unchecked(), y.front_unchecked(), false, borrow);
+		f.index_unchecked(1) = ::fast_io::intrinsics::subc(x.index_unchecked(1), y.index_unchecked(1), borrow, borrow);
+		f.index_unchecked(2) = ::fast_io::intrinsics::subc(x.index_unchecked(2), y.index_unchecked(2), borrow, borrow);
+		f.index_unchecked(3) = ::fast_io::intrinsics::subc(x.index_unchecked(3), y.index_unchecked(3), borrow, borrow);
+		f.index_unchecked(4) = ::fast_io::intrinsics::subc(x.index_unchecked(4), y.index_unchecked(4), borrow, borrow);
+		f.index_unchecked(5) = ::fast_io::intrinsics::subc(x.index_unchecked(5), y.index_unchecked(5), borrow, borrow);
+		f.index_unchecked(6) = ::fast_io::intrinsics::subc(x.index_unchecked(6), y.index_unchecked(6), borrow, borrow);
+		f.back_unchecked() = ::fast_io::intrinsics::subc(x.back_unchecked(), y.back_unchecked(), borrow, borrow);
 	}
 	else
 	{
@@ -141,33 +162,42 @@ inline constexpr void field_number_subtraction(::fast_io::curve25519::field_numb
 	constexpr unsigned_type zero{};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		unsigned_type t[::fast_io::curve25519::field_number::array_size] FAST_IO_INDETERMINATE;
-		bool borrow{};
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::subc(x.index_unchecked(i), y.index_unchecked(i), borrow, borrow);
-		}
+		unsigned_type f0 FAST_IO_INDETERMINATE, f1 FAST_IO_INDETERMINATE, f2 FAST_IO_INDETERMINATE, f3 FAST_IO_INDETERMINATE;
+		unsigned_type f4 FAST_IO_INDETERMINATE, f5 FAST_IO_INDETERMINATE, f6 FAST_IO_INDETERMINATE, f7 FAST_IO_INDETERMINATE;
+		bool borrow FAST_IO_INDETERMINATE;
+		f0 = ::fast_io::intrinsics::subc(x.front_unchecked(), y.front_unchecked(), false, borrow);
+		f1 = ::fast_io::intrinsics::subc(x.index_unchecked(1), y.index_unchecked(1), borrow, borrow);
+		f2 = ::fast_io::intrinsics::subc(x.index_unchecked(2), y.index_unchecked(2), borrow, borrow);
+		f3 = ::fast_io::intrinsics::subc(x.index_unchecked(3), y.index_unchecked(3), borrow, borrow);
+		f4 = ::fast_io::intrinsics::subc(x.index_unchecked(4), y.index_unchecked(4), borrow, borrow);
+		f5 = ::fast_io::intrinsics::subc(x.index_unchecked(5), y.index_unchecked(5), borrow, borrow);
+		f6 = ::fast_io::intrinsics::subc(x.index_unchecked(6), y.index_unchecked(6), borrow, borrow);
+		f7 = ::fast_io::intrinsics::subc(x.back_unchecked(), y.back_unchecked(), borrow, borrow);
 		unsigned_type v{::fast_io::intrinsics::subc(zero, zero, borrow, borrow)};
 		v &= static_cast<unsigned_type>(38);
-		borrow = false;
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::subc(t[i], v, borrow, borrow);
-			v = zero;
-		}
-		v = ::fast_io::intrinsics::subc(zero, zero, borrow, borrow);
+		f0 = ::fast_io::intrinsics::subc(f0, v, false, borrow);
+		f1 = ::fast_io::intrinsics::subc(f1, zero, borrow, borrow);
+		f2 = ::fast_io::intrinsics::subc(f2, zero, borrow, borrow);
+		f3 = ::fast_io::intrinsics::subc(f3, zero, borrow, borrow);
+		f4 = ::fast_io::intrinsics::subc(f4, zero, borrow, borrow);
+		f5 = ::fast_io::intrinsics::subc(f5, zero, borrow, borrow);
+		f6 = ::fast_io::intrinsics::subc(f6, zero, borrow, borrow);
+		f7 = ::fast_io::intrinsics::subc(f7, zero, borrow, borrow);
+		v = ::fast_io::intrinsics::subc(v, v, borrow, borrow);
 		v &= static_cast<unsigned_type>(38);
-		borrow = false;
-		for (::std::size_t i{}; i != ::fast_io::curve25519::field_number::array_size; ++i)
-		{
-			f.index_unchecked(i) = ::fast_io::intrinsics::subc(t[i], v, borrow, borrow);
-			v = zero;
-		}
+		f.front_unchecked() = ::fast_io::intrinsics::subc(f0, v, false, borrow);
+		f.index_unchecked(1) = ::fast_io::intrinsics::subc(f1, zero, borrow, borrow);
+		f.index_unchecked(2) = ::fast_io::intrinsics::subc(f2, zero, borrow, borrow);
+		f.index_unchecked(3) = ::fast_io::intrinsics::subc(f3, zero, borrow, borrow);
+		f.index_unchecked(4) = ::fast_io::intrinsics::subc(f4, zero, borrow, borrow);
+		f.index_unchecked(5) = ::fast_io::intrinsics::subc(f5, zero, borrow, borrow);
+		f.index_unchecked(6) = ::fast_io::intrinsics::subc(f6, zero, borrow, borrow);
+		f.back_unchecked() = ::fast_io::intrinsics::subc(f7, zero, borrow, borrow);
 	}
 	else
 	{
 		unsigned_type f0 FAST_IO_INDETERMINATE, f1 FAST_IO_INDETERMINATE, f2 FAST_IO_INDETERMINATE, f3 FAST_IO_INDETERMINATE;
-		bool borrow{};
+		bool borrow FAST_IO_INDETERMINATE;
 		f0 = ::fast_io::intrinsics::subc(x.front_unchecked(), y.front_unchecked(), false, borrow);
 		f1 = ::fast_io::intrinsics::subc(x.index_unchecked(1), y.index_unchecked(1), borrow, borrow);
 		f2 = ::fast_io::intrinsics::subc(x.index_unchecked(2), y.index_unchecked(2), borrow, borrow);
@@ -195,39 +225,57 @@ inline constexpr void multiply_single(::fast_io::curve25519::field_number::value
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
 	constexpr unsigned_type zero{};
-	constexpr ::std::size_t n{::fast_io::curve25519::field_number::array_size};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		unsigned_type t[n] FAST_IO_INDETERMINATE;
-		unsigned_type h[n] FAST_IO_INDETERMINATE;
-		for (::std::size_t i{}; i != n; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::umul(x.index_unchecked(i), b, h[i]);
-		}
-		bool carry{};
+		unsigned_type h0 FAST_IO_INDETERMINATE;
+		unsigned_type t0{::fast_io::intrinsics::umul(x.front_unchecked(), b, h0)};
+		unsigned_type h1 FAST_IO_INDETERMINATE;
+		unsigned_type t1{::fast_io::intrinsics::umul(x.index_unchecked(1), b, h1)};
+		unsigned_type h2 FAST_IO_INDETERMINATE;
+		unsigned_type t2{::fast_io::intrinsics::umul(x.index_unchecked(2), b, h2)};
+		unsigned_type h3 FAST_IO_INDETERMINATE;
+		unsigned_type t3{::fast_io::intrinsics::umul(x.index_unchecked(3), b, h3)};
+		unsigned_type h4 FAST_IO_INDETERMINATE;
+		unsigned_type t4{::fast_io::intrinsics::umul(x.index_unchecked(4), b, h4)};
+		unsigned_type h5 FAST_IO_INDETERMINATE;
+		unsigned_type t5{::fast_io::intrinsics::umul(x.index_unchecked(5), b, h5)};
+		unsigned_type h6 FAST_IO_INDETERMINATE;
+		unsigned_type t6{::fast_io::intrinsics::umul(x.index_unchecked(6), b, h6)};
+		unsigned_type h7 FAST_IO_INDETERMINATE;
+		unsigned_type t7{::fast_io::intrinsics::umul(x.back_unchecked(), b, h7)};
+		bool carry FAST_IO_INDETERMINATE;
 		if constexpr (first)
 		{
-			dest[offset] = t[0];
-			for (::std::size_t i{1}; i != n; ++i)
-			{
-				dest[offset + i] = ::fast_io::intrinsics::addc(t[i], h[i - 1], carry, carry);
-			}
-			dest[offset + n] = ::fast_io::intrinsics::addc(zero, h[n - 1], carry, carry);
+			dest[offset] = t0;
+			dest[offset + 1] = ::fast_io::intrinsics::addc(t1, h0, false, carry);
+			dest[offset + 2] = ::fast_io::intrinsics::addc(t2, h1, carry, carry);
+			dest[offset + 3] = ::fast_io::intrinsics::addc(t3, h2, carry, carry);
+			dest[offset + 4] = ::fast_io::intrinsics::addc(t4, h3, carry, carry);
+			dest[offset + 5] = ::fast_io::intrinsics::addc(t5, h4, carry, carry);
+			dest[offset + 6] = ::fast_io::intrinsics::addc(t6, h5, carry, carry);
+			dest[offset + 7] = ::fast_io::intrinsics::addc(t7, h6, carry, carry);
+			dest[offset + 8] = ::fast_io::intrinsics::addc(zero, h7, carry, carry);
 		}
 		else
 		{
-			for (::std::size_t i{1}; i != n; ++i)
-			{
-				t[i] = ::fast_io::intrinsics::addc(t[i], h[i - 1], carry, carry);
-			}
-			h[n - 1] = ::fast_io::intrinsics::addc(zero, h[n - 1], carry, carry);
+			t1 = ::fast_io::intrinsics::addc(t1, h0, false, carry);
+			t2 = ::fast_io::intrinsics::addc(t2, h1, carry, carry);
+			t3 = ::fast_io::intrinsics::addc(t3, h2, carry, carry);
+			t4 = ::fast_io::intrinsics::addc(t4, h3, carry, carry);
+			t5 = ::fast_io::intrinsics::addc(t5, h4, carry, carry);
+			t6 = ::fast_io::intrinsics::addc(t6, h5, carry, carry);
+			t7 = ::fast_io::intrinsics::addc(t7, h6, carry, carry);
+			h7 = ::fast_io::intrinsics::addc(zero, h7, carry, carry);
 
-			dest[offset] = ::fast_io::intrinsics::addc(t[0], dest[offset], false, carry);
-			for (::std::size_t i{1}; i != n; ++i)
-			{
-				dest[offset + i] = ::fast_io::intrinsics::addc(t[i], dest[offset + i], carry, carry);
-			}
-			dest[offset + n] = ::fast_io::intrinsics::addc(zero, h[n - 1], carry, carry);
+			dest[offset] = ::fast_io::intrinsics::addc(t0, dest[offset], false, carry);
+			dest[offset + 1] = ::fast_io::intrinsics::addc(t1, dest[offset + 1], carry, carry);
+			dest[offset + 2] = ::fast_io::intrinsics::addc(t2, dest[offset + 2], carry, carry);
+			dest[offset + 3] = ::fast_io::intrinsics::addc(t3, dest[offset + 3], carry, carry);
+			dest[offset + 4] = ::fast_io::intrinsics::addc(t4, dest[offset + 4], carry, carry);
+			dest[offset + 5] = ::fast_io::intrinsics::addc(t5, dest[offset + 5], carry, carry);
+			dest[offset + 6] = ::fast_io::intrinsics::addc(t6, dest[offset + 6], carry, carry);
+			dest[offset + 7] = ::fast_io::intrinsics::addc(t7, dest[offset + 7], carry, carry);
+			dest[offset + 8] = ::fast_io::intrinsics::addc(zero, h7, carry, carry);
 		}
 	}
 	else
@@ -240,7 +288,7 @@ inline constexpr void multiply_single(::fast_io::curve25519::field_number::value
 		unsigned_type t2{::fast_io::intrinsics::umul(x.index_unchecked(2), b, h2)};
 		unsigned_type h3 FAST_IO_INDETERMINATE;
 		unsigned_type t3{::fast_io::intrinsics::umul(x.back_unchecked(), b, h3)};
-		bool carry{};
+		bool carry FAST_IO_INDETERMINATE;
 		if constexpr (first)
 		{
 			dest[offset] = t0;
@@ -272,45 +320,66 @@ inline constexpr void multiplication_add_reduce(::fast_io::curve25519::field_num
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
 	constexpr unsigned_type zero{};
-	constexpr ::std::size_t n{::fast_io::curve25519::field_number::array_size};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
-		unsigned_type t[n] FAST_IO_INDETERMINATE;
-		unsigned_type h[n] FAST_IO_INDETERMINATE;
-		for (::std::size_t i{}; i != n; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::umul(x.index_unchecked(i), constant, h[i]);
-		}
-		bool carry{};
-		for (::std::size_t i{}; i != n; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::addc(t[i], y.index_unchecked(i), carry, carry);
-		}
-		h[n - 1] = ::fast_io::intrinsics::addc(h[n - 1], zero, carry, carry);
-		carry = false;
-		for (::std::size_t i{1}; i != n; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::addc(t[i], h[i - 1], carry, carry);
-		}
-		h[n - 1] = ::fast_io::intrinsics::addc(h[n - 1], zero, carry, carry);
+		unsigned_type h0 FAST_IO_INDETERMINATE;
+		unsigned_type t0{::fast_io::intrinsics::umul(x.front_unchecked(), constant, h0)};
+		unsigned_type h1 FAST_IO_INDETERMINATE;
+		unsigned_type t1{::fast_io::intrinsics::umul(x.index_unchecked(1), constant, h1)};
+		unsigned_type h2 FAST_IO_INDETERMINATE;
+		unsigned_type t2{::fast_io::intrinsics::umul(x.index_unchecked(2), constant, h2)};
+		unsigned_type h3 FAST_IO_INDETERMINATE;
+		unsigned_type t3{::fast_io::intrinsics::umul(x.index_unchecked(3), constant, h3)};
+		unsigned_type h4 FAST_IO_INDETERMINATE;
+		unsigned_type t4{::fast_io::intrinsics::umul(x.index_unchecked(4), constant, h4)};
+		unsigned_type h5 FAST_IO_INDETERMINATE;
+		unsigned_type t5{::fast_io::intrinsics::umul(x.index_unchecked(5), constant, h5)};
+		unsigned_type h6 FAST_IO_INDETERMINATE;
+		unsigned_type t6{::fast_io::intrinsics::umul(x.index_unchecked(6), constant, h6)};
+		unsigned_type h7 FAST_IO_INDETERMINATE;
+		unsigned_type t7{::fast_io::intrinsics::umul(x.back_unchecked(), constant, h7)};
+		bool carry FAST_IO_INDETERMINATE;
+		t0 = ::fast_io::intrinsics::addc(t0, y.front_unchecked(), false, carry);
+		t1 = ::fast_io::intrinsics::addc(t1, y.index_unchecked(1), carry, carry);
+		t2 = ::fast_io::intrinsics::addc(t2, y.index_unchecked(2), carry, carry);
+		t3 = ::fast_io::intrinsics::addc(t3, y.index_unchecked(3), carry, carry);
+		t4 = ::fast_io::intrinsics::addc(t4, y.index_unchecked(4), carry, carry);
+		t5 = ::fast_io::intrinsics::addc(t5, y.index_unchecked(5), carry, carry);
+		t6 = ::fast_io::intrinsics::addc(t6, y.index_unchecked(6), carry, carry);
+		t7 = ::fast_io::intrinsics::addc(t7, y.back_unchecked(), carry, carry);
+		h7 = ::fast_io::intrinsics::addc(h7, zero, carry, carry);
+
+		t1 = ::fast_io::intrinsics::addc(t1, h0, false, carry);
+		t2 = ::fast_io::intrinsics::addc(t2, h1, carry, carry);
+		t3 = ::fast_io::intrinsics::addc(t3, h2, carry, carry);
+		t4 = ::fast_io::intrinsics::addc(t4, h3, carry, carry);
+		t5 = ::fast_io::intrinsics::addc(t5, h4, carry, carry);
+		t6 = ::fast_io::intrinsics::addc(t6, h5, carry, carry);
+		t7 = ::fast_io::intrinsics::addc(t7, h6, carry, carry);
+		h7 = ::fast_io::intrinsics::addc(h7, zero, carry, carry);
 
 		constexpr unsigned_type constant38{38};
 		unsigned_type v FAST_IO_INDETERMINATE;
-		unsigned_type const tf{::fast_io::intrinsics::umul(h[n - 1], constant38, v)};
-		t[0] = ::fast_io::intrinsics::addc(t[0], tf, false, carry);
-		t[1] = ::fast_io::intrinsics::addc(t[1], v, carry, carry);
-		for (::std::size_t i{2}; i != n; ++i)
-		{
-			t[i] = ::fast_io::intrinsics::addc(t[i], zero, carry, carry);
-		}
+		unsigned_type const tf{::fast_io::intrinsics::umul(h7, constant38, v)};
+		t0 = ::fast_io::intrinsics::addc(t0, tf, false, carry);
+		t1 = ::fast_io::intrinsics::addc(t1, v, carry, carry);
+		t2 = ::fast_io::intrinsics::addc(t2, zero, carry, carry);
+		t3 = ::fast_io::intrinsics::addc(t3, zero, carry, carry);
+		t4 = ::fast_io::intrinsics::addc(t4, zero, carry, carry);
+		t5 = ::fast_io::intrinsics::addc(t5, zero, carry, carry);
+		t6 = ::fast_io::intrinsics::addc(t6, zero, carry, carry);
+		t7 = ::fast_io::intrinsics::addc(t7, zero, carry, carry);
 
 		v = ::fast_io::intrinsics::subc(zero, zero, carry, carry);
 		v &= constant38;
-		z.front_unchecked() = ::fast_io::intrinsics::addc(t[0], v, false, carry);
-		for (::std::size_t i{1}; i != n; ++i)
-		{
-			z.index_unchecked(i) = ::fast_io::intrinsics::addc(t[i], zero, carry, carry);
-		}
+		z.front_unchecked() = ::fast_io::intrinsics::addc(t0, v, false, carry);
+		z.index_unchecked(1) = ::fast_io::intrinsics::addc(t1, zero, carry, carry);
+		z.index_unchecked(2) = ::fast_io::intrinsics::addc(t2, zero, carry, carry);
+		z.index_unchecked(3) = ::fast_io::intrinsics::addc(t3, zero, carry, carry);
+		z.index_unchecked(4) = ::fast_io::intrinsics::addc(t4, zero, carry, carry);
+		z.index_unchecked(5) = ::fast_io::intrinsics::addc(t5, zero, carry, carry);
+		z.index_unchecked(6) = ::fast_io::intrinsics::addc(t6, zero, carry, carry);
+		z.back_unchecked() = ::fast_io::intrinsics::addc(t7, zero, carry, carry);
 	}
 	else
 	{
@@ -323,7 +392,7 @@ inline constexpr void multiplication_add_reduce(::fast_io::curve25519::field_num
 		unsigned_type h3 FAST_IO_INDETERMINATE;
 		unsigned_type t3{::fast_io::intrinsics::umul(x.back_unchecked(), constant, h3)};
 
-		bool carry{};
+		bool carry FAST_IO_INDETERMINATE;
 		t0 = ::fast_io::intrinsics::addc(t0, y.front_unchecked(), false, carry);
 		t1 = ::fast_io::intrinsics::addc(t1, y.index_unchecked(1), carry, carry);
 		t2 = ::fast_io::intrinsics::addc(t2, y.index_unchecked(2), carry, carry);
@@ -362,7 +431,6 @@ inline constexpr void multiplication_add_reduce_hi(::fast_io::curve25519::field_
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
 	constexpr unsigned_type zero{};
-	constexpr ::std::size_t n{::fast_io::curve25519::field_number::array_size};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
 		unsigned_type h0 FAST_IO_INDETERMINATE;
@@ -435,7 +503,7 @@ inline constexpr void multiplication_add_reduce_hi(::fast_io::curve25519::field_
 		unsigned_type h3 FAST_IO_INDETERMINATE;
 		unsigned_type t3{::fast_io::intrinsics::umul(t[7], constant, h3)};
 
-		bool carry{};
+		bool carry FAST_IO_INDETERMINATE;
 		t0 = ::fast_io::intrinsics::addc(t0, t[0], false, carry);
 		t1 = ::fast_io::intrinsics::addc(t1, t[1], carry, carry);
 		t2 = ::fast_io::intrinsics::addc(t2, t[2], carry, carry);
@@ -503,7 +571,7 @@ inline constexpr ::fast_io::curve25519::field_number::value_type muladd_w0(::fas
 	constexpr ::fast_io::curve25519::field_number::value_type constant{38};
 	constexpr ::fast_io::curve25519::field_number::value_type zero{};
 	::fast_io::curve25519::field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
-	bool carry{};
+	bool carry FAST_IO_INDETERMINATE;
 	low = ::fast_io::intrinsics::addc(add_value, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
 	return low;
@@ -514,7 +582,7 @@ inline constexpr ::fast_io::curve25519::field_number::value_type muladd_w1(::fas
 	constexpr ::fast_io::curve25519::field_number::value_type constant{38};
 	constexpr ::fast_io::curve25519::field_number::value_type zero{};
 	::fast_io::curve25519::field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
-	bool carry{};
+	bool carry FAST_IO_INDETERMINATE;
 	low = ::fast_io::intrinsics::addc(last_high, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
 	low = ::fast_io::intrinsics::addc(add_value, low, false, carry);
@@ -1071,7 +1139,6 @@ inline constexpr ::fast_io::curve25519::field_number pow_minus2(::fast_io::curve
 inline constexpr void field_number_reduce_to_25519(::fast_io::curve25519::field_number &x) noexcept
 {
 	using unsigned_type = ::fast_io::curve25519::field_number::value_type;
-	constexpr ::std::size_t n{::fast_io::curve25519::field_number::array_size};
 	if constexpr (::std::same_as<unsigned_type, ::std::uint_least32_t>)
 	{
 		constexpr unsigned_type c1{~unsigned_type{}};
@@ -1080,46 +1147,55 @@ inline constexpr void field_number_reduce_to_25519(::fast_io::curve25519::field_
 		unsigned_type c2{c2_constant};
 		unsigned_type c1r1{c1r1_constant};
 		unsigned_type t{};
-		unsigned_type r[n] FAST_IO_INDETERMINATE;
-		bool carry{};
-		r[0] = ::fast_io::intrinsics::subc(x.front_unchecked(), c2, false, carry);
-		for (::std::size_t i{1}; i != n - 1; ++i)
-		{
-			r[i] = ::fast_io::intrinsics::subc(x.index_unchecked(i), c1, carry, carry);
-		}
-		r[n - 1] = ::fast_io::intrinsics::subc(x.back_unchecked(), c1r1, carry, carry);
+		unsigned_type r0 FAST_IO_INDETERMINATE, r1 FAST_IO_INDETERMINATE, r2 FAST_IO_INDETERMINATE, r3 FAST_IO_INDETERMINATE;
+		unsigned_type r4 FAST_IO_INDETERMINATE, r5 FAST_IO_INDETERMINATE, r6 FAST_IO_INDETERMINATE, r7 FAST_IO_INDETERMINATE;
+		bool carry FAST_IO_INDETERMINATE;
+		r0 = ::fast_io::intrinsics::subc(x.front_unchecked(), c2, false, carry);
+		r1 = ::fast_io::intrinsics::subc(x.index_unchecked(1), c1, carry, carry);
+		r2 = ::fast_io::intrinsics::subc(x.index_unchecked(2), c1, carry, carry);
+		r3 = ::fast_io::intrinsics::subc(x.index_unchecked(3), c1, carry, carry);
+		r4 = ::fast_io::intrinsics::subc(x.index_unchecked(4), c1, carry, carry);
+		r5 = ::fast_io::intrinsics::subc(x.index_unchecked(5), c1, carry, carry);
+		r6 = ::fast_io::intrinsics::subc(x.index_unchecked(6), c1, carry, carry);
+		r7 = ::fast_io::intrinsics::subc(x.back_unchecked(), c1r1, carry, carry);
 		t = ::fast_io::intrinsics::subc(t, t, carry, carry);
 		// undo if carry is true
 		c1r1 &= t;
 		c2 &= t;
 
-		r[0] = ::fast_io::intrinsics::addc(r[0], c2, false, carry);
-		for (::std::size_t i{1}; i != n - 1; ++i)
-		{
-			r[i] = ::fast_io::intrinsics::addc(r[i], t, carry, carry);
-		}
-		r[n - 1] = ::fast_io::intrinsics::addc(r[n - 1], c1r1, carry, carry);
+		r0 = ::fast_io::intrinsics::addc(r0, c2, false, carry);
+		r1 = ::fast_io::intrinsics::addc(r1, t, carry, carry);
+		r2 = ::fast_io::intrinsics::addc(r2, t, carry, carry);
+		r3 = ::fast_io::intrinsics::addc(r3, t, carry, carry);
+		r4 = ::fast_io::intrinsics::addc(r4, t, carry, carry);
+		r5 = ::fast_io::intrinsics::addc(r5, t, carry, carry);
+		r6 = ::fast_io::intrinsics::addc(r6, t, carry, carry);
+		r7 = ::fast_io::intrinsics::addc(r7, c1r1, carry, carry);
 
 		c1r1 = c1r1_constant;
 		c2 = c2_constant;
 
 		// we need to do this 2nd time.
-		r[0] = ::fast_io::intrinsics::subc(r[0], c2, false, carry);
-		for (::std::size_t i{1}; i != n - 1; ++i)
-		{
-			r[i] = ::fast_io::intrinsics::subc(r[i], c1, carry, carry);
-		}
-		r[n - 1] = ::fast_io::intrinsics::subc(r[n - 1], c1r1, carry, carry);
+		r0 = ::fast_io::intrinsics::subc(r0, c2, false, carry);
+		r1 = ::fast_io::intrinsics::subc(r1, c1, carry, carry);
+		r2 = ::fast_io::intrinsics::subc(r2, c1, carry, carry);
+		r3 = ::fast_io::intrinsics::subc(r3, c1, carry, carry);
+		r4 = ::fast_io::intrinsics::subc(r4, c1, carry, carry);
+		r5 = ::fast_io::intrinsics::subc(r5, c1, carry, carry);
+		r6 = ::fast_io::intrinsics::subc(r6, c1, carry, carry);
+		r7 = ::fast_io::intrinsics::subc(r7, c1r1, carry, carry);
 		// undo if carry is true
 		t = ::fast_io::intrinsics::subc(t, t, carry, carry);
 		c1r1 &= t;
 		c2 &= t;
-		x.front_unchecked() = ::fast_io::intrinsics::addc(r[0], c2, false, carry);
-		for (::std::size_t i{1}; i != n - 1; ++i)
-		{
-			x.index_unchecked(i) = ::fast_io::intrinsics::addc(r[i], t, carry, carry);
-		}
-		x.back_unchecked() = ::fast_io::intrinsics::addc(r[n - 1], c1r1, carry, carry);
+		x.front_unchecked() = ::fast_io::intrinsics::addc(r0, c2, false, carry);
+		x.index_unchecked(1) = ::fast_io::intrinsics::addc(r1, t, carry, carry);
+		x.index_unchecked(2) = ::fast_io::intrinsics::addc(r2, t, carry, carry);
+		x.index_unchecked(3) = ::fast_io::intrinsics::addc(r3, t, carry, carry);
+		x.index_unchecked(4) = ::fast_io::intrinsics::addc(r4, t, carry, carry);
+		x.index_unchecked(5) = ::fast_io::intrinsics::addc(r5, t, carry, carry);
+		x.index_unchecked(6) = ::fast_io::intrinsics::addc(r6, t, carry, carry);
+		x.back_unchecked() = ::fast_io::intrinsics::addc(r7, c1r1, carry, carry);
 		return;
 	}
 	else
@@ -1131,7 +1207,7 @@ inline constexpr void field_number_reduce_to_25519(::fast_io::curve25519::field_
 	unsigned_type c1r1{c1r1_constant};
 	unsigned_type t{};
 	unsigned_type r0, r1, r2, r3;
-	bool carry{};
+	bool carry FAST_IO_INDETERMINATE;
 	r0 = ::fast_io::intrinsics::subc(x.front_unchecked(), c2, false, carry);
 	r1 = ::fast_io::intrinsics::subc(x.index_unchecked(1), c1, carry, carry);
 	r2 = ::fast_io::intrinsics::subc(x.index_unchecked(2), c1, carry, carry);
