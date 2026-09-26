@@ -479,22 +479,22 @@ inline constexpr void field_number_multiplication(field_number &r, field_number 
 	reduce_final(r, t);
 }
 
-inline constexpr field_number::value_type muladd_w0(field_number::value_type add_value, field_number::value_type mul_value, field_number::value_type &high) noexcept
+inline constexpr std::uint_least64_t muladd_w0(std::uint_least64_t add_value, std::uint_least64_t mul_value, std::uint_least64_t &high) noexcept
 {
-	constexpr field_number::value_type constant{38};
-	constexpr field_number::value_type zero{};
-	field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
+	constexpr std::uint_least64_t constant{38};
+	constexpr std::uint_least64_t zero{};
+	std::uint_least64_t low{::fast_io::intrinsics::umul(mul_value, constant, high)};
 	bool carry{};
 	low = ::fast_io::intrinsics::addc(add_value, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
 	return low;
 }
 
-inline constexpr field_number::value_type muladd_w1(field_number::value_type add_value, field_number::value_type mul_value, field_number::value_type &high, field_number::value_type last_high) noexcept
+inline constexpr std::uint_least64_t muladd_w1(std::uint_least64_t add_value, std::uint_least64_t mul_value, std::uint_least64_t &high, std::uint_least64_t last_high) noexcept
 {
-	constexpr field_number::value_type constant{38};
-	constexpr field_number::value_type zero{};
-	field_number::value_type low{::fast_io::intrinsics::umul(mul_value, constant, high)};
+	constexpr std::uint_least64_t constant{38};
+	constexpr std::uint_least64_t zero{};
+	std::uint_least64_t low{::fast_io::intrinsics::umul(mul_value, constant, high)};
 	bool carry{};
 	low = ::fast_io::intrinsics::addc(last_high, low, false, carry);
 	high = ::fast_io::intrinsics::addc(zero, high, carry, carry);
@@ -503,38 +503,35 @@ inline constexpr field_number::value_type muladd_w1(field_number::value_type add
 	return low;
 }
 
-inline constexpr void field_number_square(field_number &r, field_number const &x) noexcept
+/*
+Mehdi's symmetric square on four u64 limbs: y = x*x mod 2^255-19.
+Shared by the u64 build and by the u32 build (which packs limb pairs
+into u64 locals so LLVM emits the same schedule it synthesizes for u64).
+*/
+inline constexpr void field_number_square_u64(std::uint_least64_t r[4], std::uint_least64_t const x[4]) noexcept
 {
-	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
-	{
-		field_number_multiplication(r, x, x);
-		return;
-	}
-	else
-	{
-	using unsigned_type = field_number::value_type;
-	constexpr unsigned_type zero{};
-	constexpr unsigned_type constant{38};
+	constexpr std::uint_least64_t zero{};
+	constexpr std::uint_least64_t constant{38};
 
-	unsigned_type x0{x.front_unchecked()}, x1{x.index_unchecked(1)}, x2{x.index_unchecked(2)}, x3{x.back_unchecked()};
+	std::uint_least64_t x0{x[0]}, x1{x[1]}, x2{x[2]}, x3{x[3]};
 
-	unsigned_type a2;
-	unsigned_type a1{::fast_io::intrinsics::umul(x0, x1, a2)};
+	std::uint_least64_t a2;
+	std::uint_least64_t a1{::fast_io::intrinsics::umul(x0, x1, a2)};
 
-	unsigned_type b0;
-	unsigned_type a3{::fast_io::intrinsics::umul(x0, x3, b0)};
+	std::uint_least64_t b0;
+	std::uint_least64_t a3{::fast_io::intrinsics::umul(x0, x3, b0)};
 
-	unsigned_type b2;
-	unsigned_type b1{::fast_io::intrinsics::umul(x2, x3, b2)};
+	std::uint_least64_t b2;
+	std::uint_least64_t b1{::fast_io::intrinsics::umul(x2, x3, b2)};
 
-	unsigned_type b3_x0x2;
-	unsigned_type a0{::fast_io::intrinsics::umul(x0, x2, b3_x0x2)};
+	std::uint_least64_t b3_x0x2;
+	std::uint_least64_t a0{::fast_io::intrinsics::umul(x0, x2, b3_x0x2)};
 
-	unsigned_type c1;
-	unsigned_type c0{::fast_io::intrinsics::umul(x1, x3, c1)};
+	std::uint_least64_t c1;
+	std::uint_least64_t c0{::fast_io::intrinsics::umul(x1, x3, c1)};
 
-	unsigned_type c0_x1x2;
-	unsigned_type b3{::fast_io::intrinsics::umul(x1, x2, c0_x1x2)};
+	std::uint_least64_t c0_x1x2;
+	std::uint_least64_t b3{::fast_io::intrinsics::umul(x1, x2, c0_x1x2)};
 
 	bool carry{};
 	b3 = ::fast_io::intrinsics::addc(b3_x0x2, b3, false, carry);
@@ -556,16 +553,16 @@ inline constexpr void field_number_square(field_number &r, field_number const &x
 	b2 = ::fast_io::intrinsics::addc(b2, b2, carry, carry);
 	b3 = ::fast_io::intrinsics::addc(zero, zero, carry, carry);
 
-	unsigned_type y1;
+	std::uint_least64_t y1;
 	x0 = ::fast_io::intrinsics::umul(x0, x0, y1);
 
-	unsigned_type y3;
+	std::uint_least64_t y3;
 	x1 = ::fast_io::intrinsics::umul(x1, x1, y3);
 
-	unsigned_type y5;
+	std::uint_least64_t y5;
 	x2 = ::fast_io::intrinsics::umul(x2, x2, y5);
 
-	unsigned_type y7;
+	std::uint_least64_t y7;
 	x3 = ::fast_io::intrinsics::umul(x3, x3, y7);
 
 	y1 = ::fast_io::intrinsics::addc(a1, y1, false, carry);
@@ -576,13 +573,13 @@ inline constexpr void field_number_square(field_number &r, field_number const &x
 	x3 = ::fast_io::intrinsics::addc(b2, x3, carry, carry);
 	y7 = ::fast_io::intrinsics::addc(b3, y7, carry, carry);
 
-	unsigned_type high;
+	std::uint_least64_t high;
 	a0 = muladd_w0(x0, x2, high);
 	a1 = muladd_w1(y1, y5, high, high);
 	a2 = muladd_w1(x1, x3, high, high);
 	a3 = muladd_w1(y3, y7, high, high);
 
-	unsigned_type low{::fast_io::intrinsics::umul(constant, high, high)};
+	std::uint_least64_t low{::fast_io::intrinsics::umul(constant, high, high)};
 
 	a0 = ::fast_io::intrinsics::addc(low, a0, false, carry);
 	a1 = ::fast_io::intrinsics::addc(high, a1, carry, carry);
@@ -591,10 +588,50 @@ inline constexpr void field_number_square(field_number &r, field_number const &x
 	low = ::fast_io::intrinsics::subc(low, low, carry, carry);
 
 	low &= constant;
-	r.front_unchecked() = ::fast_io::intrinsics::addc(low, a0, false, carry);
-	r.index_unchecked(1) = ::fast_io::intrinsics::addc(zero, a1, carry, carry);
-	r.index_unchecked(2) = ::fast_io::intrinsics::addc(zero, a2, carry, carry);
-	r.back_unchecked() = ::fast_io::intrinsics::addc(zero, a3, carry, carry);
+	r[0] = ::fast_io::intrinsics::addc(low, a0, false, carry);
+	r[1] = ::fast_io::intrinsics::addc(zero, a1, carry, carry);
+	r[2] = ::fast_io::intrinsics::addc(zero, a2, carry, carry);
+	r[3] = ::fast_io::intrinsics::addc(zero, a3, carry, carry);
+}
+
+inline constexpr void field_number_square(field_number &r, field_number const &x) noexcept
+{
+	if constexpr (::std::same_as<field_number::value_type, ::std::uint_least32_t>)
+	{
+		/*
+		Pack the eight u32 limbs into four u64 locals and run the same
+		symmetric square as the wide build; on i686 LLVM lowers the u64
+		ops into pairs of u32 ops with better register scheduling than a
+		direct 8-limb formulation.
+		*/
+		std::uint_least64_t xw[4] FAST_IO_INDETERMINATE;
+		std::uint_least64_t rw[4] FAST_IO_INDETERMINATE;
+		for (::std::size_t i{}; i != 4; ++i)
+		{
+			xw[i] = static_cast<std::uint_least64_t>(x.index_unchecked(i * 2)) |
+				(static_cast<std::uint_least64_t>(x.index_unchecked(i * 2 + 1)) << 32u);
+		}
+		field_number_square_u64(rw, xw);
+		for (::std::size_t i{}; i != 4; ++i)
+		{
+			r.index_unchecked(i * 2) = static_cast<field_number::value_type>(rw[i]);
+			r.index_unchecked(i * 2 + 1) = static_cast<field_number::value_type>(rw[i] >> 32u);
+		}
+		return;
+	}
+	else
+	{
+		std::uint_least64_t xw[4] FAST_IO_INDETERMINATE;
+		std::uint_least64_t rw[4] FAST_IO_INDETERMINATE;
+		for (::std::size_t i{}; i != 4; ++i)
+		{
+			xw[i] = static_cast<std::uint_least64_t>(x.index_unchecked(i));
+		}
+		field_number_square_u64(rw, xw);
+		for (::std::size_t i{}; i != 4; ++i)
+		{
+			r.index_unchecked(i) = static_cast<field_number::value_type>(rw[i]);
+		}
 	}
 }
 
