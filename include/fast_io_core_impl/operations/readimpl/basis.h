@@ -466,7 +466,6 @@ read_some_impl(instmtype insm, typename instmtype::input_char_type *first, typen
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
-	using char_type = typename instmtype::input_char_type;
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
@@ -511,7 +510,6 @@ inline constexpr void read_all_impl(instmtype insm, typename instmtype::input_ch
 	}
 	else
 	{
-		using char_type = typename instmtype::input_char_type;
 		if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<instmtype>)
 		{
 			auto curr{ibuffer_curr(insm)};
