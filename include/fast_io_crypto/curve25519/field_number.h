@@ -12,13 +12,13 @@ struct field_number
 	arm32, riscv32, ...): u64 ops are synthesized there anyway, so we do
 	the split ourselves and control the carry schedule.
 	*/
-#if defined(FAST_IO_CURVE25519_FIELD_W64) || defined(__wasm__) || defined(__x86_64__) || defined(__x86_64) || \
-	defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(_M_ARM64) || SIZE_MAX > UINT_LEAST32_MAX
-	using value_type = std::uint_least64_t;
-	static inline constexpr ::std::size_t array_size{4};
-#else
+#if 0
 	using value_type = std::uint_least32_t;
 	static inline constexpr ::std::size_t array_size{8};
+
+#else
+	using value_type = std::uint_least64_t;
+	static inline constexpr ::std::size_t array_size{4};
 #endif
 	using size_type = ::std::size_t;
 	static inline constexpr size_type array_size_bytes{array_size * sizeof(value_type)};
