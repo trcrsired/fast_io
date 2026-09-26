@@ -21,9 +21,9 @@ public:
 	static inline constexpr ::std::size_t private_key_size{64};
 	static inline constexpr ::std::size_t signature_size{64};
 
-	static inline constexpr blinding_context default_blinding() noexcept
+	static inline constexpr blinding_context const &get_default_blinding() noexcept
 	{
-		return ::fast_io::curve25519::default_blinding();
+		return ::fast_io::curve25519::default_blinding;
 	}
 
 	static inline
