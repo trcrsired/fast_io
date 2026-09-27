@@ -602,8 +602,8 @@ print_freestanding_decay(outputstmtype optstm,
 					::fast_io::basic_io_scatter_t<output_char_type>,
 					(only_one_scatter ? 0zu : requested_scatters)>
 					scatters FAST_IO_INDETERMINATE;
-				::fast_io::basic_io_scatter_t<output_char_type> *scatterbase FAST_IO_INDETERMINATE,
-					*scatterptr FAST_IO_INDETERMINATE;
+				typename decltype(scatters)::pointer scatterbase FAST_IO_INDETERMINATE,
+					scatterptr FAST_IO_INDETERMINATE;
 				if constexpr (!only_one_scatter)
 				{
 					scatterptr = scatterbase = scatters.data();
