@@ -5,7 +5,7 @@
 #endif
 
 #if !defined(__cpp_concepts)
-#error "fast_io requires at least C++20 standard compiler."
+#error "fast_io requires at least a C++26 standard compiler."
 #else
 
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \

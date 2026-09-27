@@ -13,7 +13,7 @@ freestanding ones.
 #endif
 
 #if !defined(__cpp_concepts)
-#error "fast_io requires at least C++20 standard compiler."
+#error "fast_io requires at least a C++26 standard compiler."
 #else
 
 #include "fast_io_freestanding.h"

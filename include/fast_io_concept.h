@@ -4,7 +4,7 @@
 #error "You must be using a C++ compiler"
 #endif
 #if !defined(__cpp_concepts)
-#error "fast_io requires at least a C++20 standard compiler."
+#error "fast_io requires at least a C++26 standard compiler."
 #else
 
 #include <version>
