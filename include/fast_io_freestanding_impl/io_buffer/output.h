@@ -118,7 +118,20 @@ inline constexpr char_type const *write_some_overflow_impl(optstmtype optstm,
 		}
 		else
 		{
-			return ::fast_io::operations::decay::write_some_decay(optstm, first, last);
+			if constexpr (::fast_io::operations::decay::defines::
+							  has_any_of_write_or_seek_pwrite_bytes_operations<optstmtype>)
+			{
+				::std::byte const *firstb{reinterpret_cast<::std::byte const *>(first)};
+				return first +
+					   (::fast_io::operations::decay::write_some_bytes_decay(
+							optstm, firstb, reinterpret_cast<::std::byte const *>(last)) -
+						firstb) /
+						   sizeof(char_type);
+			}
+			else
+			{
+				return ::fast_io::operations::decay::write_some_decay(optstm, first, last);
+			}
 		}
 	}
 	return write_some_typical_case<char_type>(optstm, pointers, first, last);
@@ -139,7 +152,7 @@ inline constexpr void write_all_nullptr_case(optstmtype optstm, basic_io_buffer_
 											: 0u)},
 			{reinterpret_cast<::std::byte const *>(first),
 			 static_cast<::std::size_t>(reinterpret_cast<::std::byte const *>(last) -
-										 reinterpret_cast<::std::byte const *>(first))}};
+										reinterpret_cast<::std::byte const *>(first))}};
 		::fast_io::operations::decay::scatter_write_all_bytes_decay(optstm, scatters, 2);
 	}
 	else
@@ -167,7 +180,18 @@ inline constexpr void write_all_overflow_impl(optstmtype optstm, basic_io_buffer
 		}
 		else
 		{
-			::fast_io::operations::decay::write_all_decay(optstm, first, last);
+			if constexpr (::fast_io::operations::decay::defines::
+							  has_any_of_write_or_seek_pwrite_bytes_operations<optstmtype>)
+			{
+				::fast_io::io_scatter_t const scatter{
+					first, static_cast<::std::size_t>(last - first) * sizeof(char_type)};
+				::fast_io::operations::decay::scatter_write_all_bytes_decay(optstm,
+																			__builtin_addressof(scatter), 1zu);
+			}
+			else
+			{
+				::fast_io::operations::decay::write_all_decay(optstm, first, last);
+			}
 		}
 		return;
 	}
@@ -182,7 +206,17 @@ inline constexpr void output_stream_buffer_flush_impl(optstmtype optstm, basic_i
 	{
 		return;
 	}
-	::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+	if constexpr (::fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<optstmtype>)
+	{
+		::fast_io::io_scatter_t const scatter{
+			pointers.buffer_begin,
+			static_cast<::std::size_t>(pointers.buffer_curr - pointers.buffer_begin) * sizeof(char_type)};
+		::fast_io::operations::decay::scatter_write_all_bytes_decay(optstm, __builtin_addressof(scatter), 1zu);
+	}
+	else
+	{
+		::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+	}
 	pointers.buffer_curr = pointers.buffer_begin;
 }
 
@@ -203,7 +237,18 @@ inline constexpr void obuffer_minimum_size_flush_prepare_impl(optstmtype optstm,
 	}
 	else
 	{
-		::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+		if constexpr (::fast_io::operations::decay::defines::
+						  has_any_of_write_or_seek_pwrite_bytes_operations<optstmtype>)
+		{
+			::fast_io::io_scatter_t const scatter{
+				pointers.buffer_begin,
+				static_cast<::std::size_t>(pointers.buffer_curr - pointers.buffer_begin) * sizeof(char_type)};
+			::fast_io::operations::decay::scatter_write_all_bytes_decay(optstm, __builtin_addressof(scatter), 1zu);
+		}
+		else
+		{
+			::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+		}
 		pointers.buffer_curr = pointers.buffer_begin;
 	}
 }

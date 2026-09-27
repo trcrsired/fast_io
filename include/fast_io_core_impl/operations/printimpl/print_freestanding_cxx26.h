@@ -598,12 +598,14 @@ print_freestanding_decay(outputstmtype optstm,
 				constexpr ::std::size_t requested_scatters{
 					::fast_io::details::compute_print_scatters_pos<output_char_type, line, Args...>()};
 				constexpr bool only_one_scatter{requested_scatters < 2zu};
+				using scattertype = ::std::conditional_t<
+					!only_one_scatter && ::fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<outputstmtype>,
+					::fast_io::io_scatter_t, ::fast_io::basic_io_scatter_t<output_char_type>>;
 				::fast_io::containers::array<
-					::fast_io::basic_io_scatter_t<output_char_type>,
-					(only_one_scatter ? 0zu : requested_scatters)>
+					scattertype, (only_one_scatter ? 0zu : requested_scatters)>
 					scatters FAST_IO_INDETERMINATE;
-				typename decltype(scatters)::pointer scatterbase FAST_IO_INDETERMINATE,
-					scatterptr FAST_IO_INDETERMINATE;
+				scattertype *scatterbase FAST_IO_INDETERMINATE,
+					*scatterptr FAST_IO_INDETERMINATE;
 				if constexpr (!only_one_scatter)
 				{
 					scatterptr = scatterbase = scatters.data();
@@ -648,8 +650,15 @@ print_freestanding_decay(outputstmtype optstm,
 									continue;
 								}
 							}
-							*scatterptr = {last_pos,
-										   static_cast<::std::size_t>(it - last_pos)};
+							::std::size_t const diff{static_cast<::std::size_t>(it - last_pos)};
+							if constexpr (::std::same_as<scattertype, ::fast_io::io_scatter_t>)
+							{
+								*scatterptr = {last_pos, diff * sizeof(output_char_type)};
+							}
+							else
+							{
+								*scatterptr = {last_pos, diff};
+							}
 							++scatterptr;
 							if constexpr (::fast_io::details::has_element_after_of_reserve_or_dynamic_reserve_printable<output_char_type, i, Args...>())
 							{
@@ -715,31 +724,23 @@ print_freestanding_decay(outputstmtype optstm,
 						}
 						else
 						{
-							*scatterptr = scatteri;
+							if constexpr (::std::same_as<scattertype, ::fast_io::io_scatter_t>)
+							{
+								*scatterptr = {scatteri.base, scatteri.len * sizeof(output_char_type)};
+							}
+							else
+							{
+								*scatterptr = scatteri;
+							}
 							++scatterptr;
 							if constexpr (islastwithlf)
 							{
-								*scatterptr = ::fast_io::details::line_scatter_common<output_char_type>;
+								*scatterptr = ::fast_io::details::line_scatter_common<output_char_type, typename scattertype::value_type>;
 								++scatterptr;
 							}
 						}
 					}
-#if 0
-				else if constexpr (::fast_io::reserve_scatters_printable<output_char_type, argtype>)
-				{
-/*
-concepts defined wrong. dynamic_reserve_printable should be base for many others
-*/
-#if 0
-					auto [newscatter, newit] = print_reserve_scatters_define(::fast_io::io_reserve_type<output_char_type, argtype>,
-						scatterptr, it, args...[i]);
-					scatterptr = newscatter;
-					newit = it;
-#endif
 				}
-#endif
-				}
-
 				if constexpr (is_buffer_output_stream)
 				{
 					if (buffer_enough_space) [[likely]]
@@ -750,20 +751,31 @@ concepts defined wrong. dynamic_reserve_printable should be base for many others
 				}
 				if constexpr (only_one_scatter)
 				{
+					output_char_type const *itend FAST_IO_INDETERMINATE;
 					if consteval
 					{
-						::fast_io::operations::decay::write_all_decay(optstm, bufferbase, itconst);
+						itend = itconst;
 					}
 					else
 					{
-						::fast_io::operations::decay::write_all_decay(optstm, bufferbase, it);
+						itend = it;
 					}
+					::fast_io::operations::decay::write_all_decay(optstm, bufferbase, itend);
 				}
 				else
 				{
-					::fast_io::operations::decay::scatter_write_all_decay(
-						optstm, scatterbase,
-						static_cast<::std::size_t>(scatterptr - scatterbase));
+					if constexpr (::std::same_as<scattertype, ::fast_io::io_scatter_t>)
+					{
+						::fast_io::operations::decay::scatter_write_all_bytes_decay(
+							optstm, scatterbase,
+							static_cast<::std::size_t>(scatterptr - scatterbase));
+					}
+					else
+					{
+						::fast_io::operations::decay::scatter_write_all_decay(
+							optstm, scatterbase,
+							static_cast<::std::size_t>(scatterptr - scatterbase));
+					}
 				}
 			}
 		}
