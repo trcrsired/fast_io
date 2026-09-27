@@ -193,7 +193,13 @@ template <typename T>
 concept has_obuffer_flush_reserve_define = requires(T outstm, ::std::size_t to_reserve) {
 	obuffer_flush_reserve_define(outstm, to_reserve);
 };
-
+#if 0
+template <typename T>
+concept has_obuffer_strlike_reserve_define = ::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<T> ||
+requires(T outstm, ::std::size_t to_reserve) {
+	obuffer_strlike_reserve_define(outstm, to_reserve);
+};
+#endif
 } // namespace operations::decay::defines
 
 } // namespace fast_io

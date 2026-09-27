@@ -12,5 +12,5 @@
 #ifdef FAST_IO_PRINT_FREESTANDING_USE_CXX20
 #include "concat.h"
 #else
-#include "concat_cxx26.h"
+#include "concat2.h"
 #endif
