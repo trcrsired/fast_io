@@ -76,8 +76,6 @@ inline consteval ::std::size_t first_print_define_index() noexcept
 						::fast_io::dynamic_reserve_printable<char_type,
 															 ArgsIType> ||
 						::fast_io::scatter_printable<char_type, ArgsIType> ||
-						::fast_io::reserve_scatters_printable<char_type,
-															  ArgsIType> ||
 						::fast_io::context_printable<char_type, ArgsIType> ||
 						::std::same_as<ArgsIType, ::fast_io::basic_io_scatter_t<char_type>>))
 		{
@@ -101,8 +99,6 @@ first_print_define_index_range() noexcept
 					  ::fast_io::dynamic_reserve_printable<char_type,
 														   ArgsIType> ||
 					  ::fast_io::scatter_printable<char_type, ArgsIType> ||
-					  ::fast_io::reserve_scatters_printable<char_type,
-															ArgsIType> ||
 					  ::fast_io::context_printable<char_type, ArgsIType> ||
 					  ::std::same_as<ArgsIType, ::fast_io::basic_io_scatter_t<char_type>>)
 		{
@@ -172,13 +168,6 @@ consteval auto compute_total_normal_reserved_size_or_scatters_cache_count(
 			{
 				sz = 1zu;
 			}
-			else if constexpr (::fast_io::reserve_scatters_printable<char_type,
-																	 arg_type>)
-			{
-				sz = print_reserve_scatters_size(
-						 ::fast_io::io_reserve_type<char_type, arg_type>)
-						 .scatters_size;
-			}
 		}
 		else
 		{
@@ -186,13 +175,6 @@ consteval auto compute_total_normal_reserved_size_or_scatters_cache_count(
 			{
 				sz =
 					print_reserve_size(::fast_io::io_reserve_type<char_type, arg_type>);
-			}
-			else if constexpr (::fast_io::reserve_scatters_printable<char_type,
-																	 arg_type>)
-			{
-				sz = print_reserve_scatters_size(
-						 ::fast_io::io_reserve_type<char_type, arg_type>)
-						 .reserve_size;
 			}
 		}
 		if (static_cast<::std::size_t>(mx - sz) < total_sz)
@@ -287,18 +269,6 @@ consteval ::std::size_t compute_print_scatters_pos() noexcept
 			{
 				continue;
 			}
-		}
-		else if constexpr (!::fast_io::scatter_printable<output_char_type, arg_type> &&
-						   !::std::same_as<::fast_io::basic_io_scatter_t<output_char_type>, arg_type> &&
-						   ::fast_io::reserve_scatters_printable<output_char_type, arg_type>)
-		{
-			constexpr ::std::size_t scatters_size{print_reserve_scatters_size(::fast_io::io_reserve_type<output_char_type, arg_type>).scatters_size};
-			if (static_cast<::std::size_t>(mx - scatters_size) < scatters)
-			{
-				::fast_io::fast_terminate();
-			}
-			scatters += scatters_size;
-			skipaddone = true;
 		}
 		if (!skipaddone)
 		{

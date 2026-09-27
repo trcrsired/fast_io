@@ -71,22 +71,6 @@ inline constexpr contiguous_scatter_result find_continuous_scatters_n()
 																					   static_cast<::std::size_t>(1));
 		ret.hasdynamicreserve = true;
 	}
-	else if constexpr (::fast_io::reserve_scatters_printable<char_type, Arg>)
-	{
-		if constexpr (sizeof...(Args) != 0)
-		{
-			ret = find_continuous_scatters_n<char_type, Args...>();
-		}
-		constexpr auto scatszres{print_reserve_scatters_size(::fast_io::io_reserve_type<char_type, Arg>)};
-		static_assert(scatszres.scatters_size != 0);
-		ret.hasscatters = true;
-		ret.hasreserve = true;
-		++ret.position;
-		ret.neededspace =
-			::fast_io::details::intrinsics::add_or_overflow_die_chain(ret.neededspace, scatszres.reserve_size);
-		ret.neededscatters =
-			::fast_io::details::intrinsics::add_or_overflow_die_chain(ret.neededscatters, scatszres.scatters_size);
-	}
 	else if constexpr (::std::same_as<::std::remove_cvref_t<Arg>, ::fast_io::io_null_t>)
 	{
 		if constexpr (sizeof...(Args) != 0)
@@ -474,45 +458,6 @@ inline constexpr void print_control_single(output outstm, T t)
 				::fast_io::operations::decay::write_all_decay(outstm, newptr.ptr, it);
 			}
 		}
-	}
-	else if constexpr (reserve_scatters_printable<char_type, value_type>)
-	{
-		constexpr auto sz{print_reserve_scatters_size(::fast_io::io_reserve_type<char_type, value_type>)};
-		static_assert(!line || sz.scatters_size != SIZE_MAX);
-		constexpr ::std::size_t scattersnum{sz.scatters_size + static_cast<::std::size_t>(line)};
-#if __cpp_if_consteval >= 202106L
-		if !consteval
-#else
-		if (!__builtin_is_constant_evaluated())
-#endif
-		{
-			if constexpr (::fast_io::operations::decay::defines::has_any_of_write_or_seek_pwrite_bytes_operations<
-							  output>)
-			{
-				::fast_io::io_scatter_t scattersbuffer[scattersnum];
-				char_type buffer[sz.reserve_size];
-				::fast_io::io_scatter_t *ptr{
-					::fast_io::details::decay::prrsvsct_byte_common_impl(scattersbuffer, buffer, t)};
-				if constexpr (line)
-				{
-					*ptr = ::fast_io::details::decay::line_scatter_common<char_type, void>;
-					++ptr;
-				}
-				::fast_io::operations::decay::scatter_write_all_bytes_decay(outstm, scattersbuffer, static_cast<::std::size_t>(ptr - scattersbuffer));
-				return;
-			}
-		}
-		::fast_io::basic_io_scatter_t<char_type> scattersbuffer[scattersnum];
-		char_type buffer[sz.reserve_size];
-		auto ptr{print_reserve_scatters_define(::fast_io::io_reserve_type<char_type, ::std::remove_cvref_t<T>>,
-											   scattersbuffer, buffer, t)
-					 .scatters_pos_ptr};
-		if constexpr (line)
-		{
-			*ptr = ::fast_io::details::decay::line_scatter_common<char_type>;
-			++ptr;
-		}
-		::fast_io::operations::decay::scatter_write_all_decay(outstm, scattersbuffer, static_cast<::std::size_t>(ptr - scattersbuffer));
 	}
 	else if constexpr (::fast_io::transcode_imaginary_printable<char_type, value_type>)
 	{
@@ -1025,40 +970,6 @@ inline constexpr auto print_n_scatters_reserve(basic_io_scatter_t<scattertype> *
 			{
 				return ::fast_io::details::decay::print_n_scatters_reserve<needprintlf, n - 1, char_type>(pscatters,
 																										  ptr, args...);
-			}
-		}
-		else if constexpr (::fast_io::reserve_scatters_printable<char_type, nocvreft>)
-		{
-			if constexpr (::std::same_as<scattertype, void>)
-			{
-				auto pit{::fast_io::details::decay::prrsvsct_byte_common_rsvsc_impl(pscatters, ptr, t)};
-				if constexpr (1 < n)
-				{
-					return ::fast_io::details::decay::print_n_scatters_reserve<needprintlf, n - 1, char_type>(
-						pit.scatters_pos_ptr, pit.reserve_pos_ptr, args...);
-				}
-				else if constexpr (n == 1 && needprintlf)
-				{
-					*pit.scatters_pos_ptr = ::fast_io::details::decay::line_scatter_common<char_type, scattertype>;
-					++pit.scatters_pos_ptr;
-				}
-				return pit.scatters_pos_ptr;
-			}
-			else
-			{
-				auto pit{
-					print_reserve_scatters_define(::fast_io::io_reserve_type<char_type, nocvreft>, pscatters, ptr, t)};
-				if constexpr (1 < n)
-				{
-					return ::fast_io::details::decay::print_n_scatters_reserve<needprintlf, n - 1, char_type>(
-						pit.scatters_pos_ptr, pit.reserve_pos_ptr, args...);
-				}
-				else if constexpr (n == 1 && needprintlf)
-				{
-					*pit = ::fast_io::details::decay::line_scatter_common<char_type, scattertype>;
-					++pit;
-				}
-				return pit;
 			}
 		}
 		else if constexpr (::std::same_as<nocvreft, ::fast_io::io_null_t>)

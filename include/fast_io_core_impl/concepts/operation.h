@@ -143,7 +143,7 @@ concept dynamic_reserve_printable = ::fast_io::runtime_reserve_printable_size_av
 /// @return     ::fast_io::context_print_result<char_type*> a pointer to the next after printing
 ///                                                         and a boolean indicating whether the printing is done
 template <typename char_type, typename T>
-concept context_printable = ::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, char_type *ptr) {
+concept context_printable = ::fast_io::dynamic_reserve_printable<char_type, T> && requires(T t, char_type *ptr) {
 	requires requires(
 		typename ::std::remove_cvref_t<decltype(print_context_type(io_reserve_type<char_type, T>))>::type st) {
 		{ st.print_context_define(t, ptr, ptr) } -> ::std::same_as<context_print_result<char_type *>>;
@@ -193,40 +193,6 @@ concept precise_reserve_printable =
 		print_reserve_precise_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, ptr, n, t);
 	};
 
-/// @brief      reserve_scatters_printable
-/// @details    That a type is reserve scatters printable
-///             is that it's composed of seperate parts
-///             that can be printed to several scatters with a compile-time-known size.
-/// @fn         print_reserve_scatters_size
-/// @brief      Returns the count of the scatters and some extra space required.
-/// @tparam     <auto-inferred>
-/// @param      ::fast_io::io_reserve_type_t<char_type, ::std::remove_cvref_t<T>> tag-invoke
-/// @return     ::fast_io::reserve_scatters_size_result     the count of the scatters and the size of an extra buffer
-///                                                         which can later be pointed in the scatters.
-/// @fn         print_reserve_scatters_define
-/// @brief      Prints the object to several scatters.
-/// @tparam     <auto-inferred>
-/// @param      ::fast_io::io_reserve_type_t<char_type, ::std::remove_cvref_t<T>> tag-invoke
-/// @param      ::fast_io::basic_io_scatter_t<char_type>*   a pointer to the beginning of the scatters
-/// @param      char_type*                                  a pointer to the beginning of the buffer
-/// @param      T                                           the object to be printed
-/// @return     ::fast_io::basic_reserve_scatters_define_result<char_type>
-///                                                         a pointer to the next scatter after printing
-///                                                         and a pointer to the next character after printing
-
-template <typename char_type, typename T>
-concept reserve_scatters_printable = false;
-
-#if 0
-::fast_io::runtime_reserve_printable_size_available<char_type, T> && requires(T t, ::fast_io::basic_io_scatter_t<char_type> *scatters, char_type *ptr) {
-		{
-			print_reserve_scatters_size(io_reserve_type<char_type, ::std::remove_cvref_t<T>>)
-		} -> ::std::same_as<reserve_scatters_size_result>;
-		{
-			print_reserve_scatters_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, scatters, ptr, t)
-		} -> ::std::same_as<::fast_io::basic_reserve_scatters_define_result<char_type>>;
-	};
-#endif
 /// @brief      printable
 /// @details    Makes a type printable
 /// @warning    This concept will be soon deprecated.
