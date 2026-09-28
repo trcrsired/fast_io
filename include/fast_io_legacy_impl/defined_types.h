@@ -193,11 +193,11 @@ inline consteval bool io_debug_print_may_throw() noexcept
 template <typename... Args>
 inline constexpr void scan_after_io_scan_forward(Args... args)
 #if __has_include(<stdio.h>)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::scan_result_freestanding_decay(c_stdin(), args...))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::scan_some_freestanding_decay(c_stdin(), args...))
 #endif
 {
 #if __has_include(<stdio.h>)
-	if (!::fast_io::operations::decay::scan_result_freestanding_decay(c_stdin(), args...))
+	if (!::fast_io::operations::decay::scan_some_freestanding_decay(c_stdin(), args...))
 	{
 		::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 	}
@@ -205,15 +205,15 @@ inline constexpr void scan_after_io_scan_forward(Args... args)
 }
 
 template <typename... Args>
-[[nodiscard]] inline constexpr ::fast_io::scan_result_t scan_result_after_io_scan_forward(Args... args)
+[[nodiscard]] inline constexpr ::fast_io::scan_some_result_t scan_some_after_io_scan_forward(Args... args)
 #if __has_include(<stdio.h>)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::scan_result_freestanding_decay(c_stdin(), args...))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::operations::decay::scan_some_freestanding_decay(c_stdin(), args...))
 #else
 	FAST_IO_HERBCEPTIONS_THROWS
 #endif
 {
 #if __has_include(<stdio.h>)
-	return ::fast_io::operations::decay::scan_result_freestanding_decay(c_stdin(), args...);
+	return ::fast_io::operations::decay::scan_some_freestanding_decay(c_stdin(), args...);
 #else
 	return {};
 #endif
@@ -224,14 +224,14 @@ inline consteval bool io_scan_may_throw() noexcept
 {
 	if constexpr (::fast_io::operations::defines::has_input_or_io_stream_ref_define<input>)
 	{
-		return !noexcept(::fast_io::operations::decay::scan_result_freestanding_decay(
+		return !noexcept(::fast_io::operations::decay::scan_some_freestanding_decay(
 			::fast_io::operations::input_stream_ref(::std::declval<input>()),
 			::fast_io::io_scan_forward<typename decltype(::fast_io::operations::input_stream_ref(
 				::std::declval<input>()))::input_char_type>(::fast_io::io_scan_alias(::std::declval<Args>()))...));
 	}
 	else
 	{
-		return !noexcept(::fast_io::details::scan_result_after_io_scan_forward(
+		return !noexcept(::fast_io::details::scan_some_after_io_scan_forward(
 			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(::std::declval<input>())),
 			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(::std::declval<Args>()))...));
 	}

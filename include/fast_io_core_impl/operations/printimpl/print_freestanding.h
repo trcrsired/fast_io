@@ -390,15 +390,15 @@ print_freestanding_decay(outputstmtype optstm,
 					output_char_type, line, Args...>()};
 
 			constexpr bool is_buffer_strlike_output_stream{::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<outputstmtype>};
-			constexpr bool use_dynamic_storage{
-				true || (256zu / sizeof(output_char_type) <= total_normal_reserved_size ||
-						 (::fast_io::dynamic_reserve_printable<output_char_type,
-															   ::std::remove_cvref_t<Args>> ||
-						  ...))};
-			::std::size_t total_to_allocate_size{total_normal_reserved_size};
 			constexpr bool is_buffer_output_stream{
 				::fast_io::operations::decay::defines::has_obuffer_basic_operations<
 					outputstmtype>};
+			constexpr bool use_dynamic_storage{
+				is_buffer_output_stream || (32zu / sizeof(output_char_type) <= total_normal_reserved_size ||
+											(::fast_io::dynamic_reserve_printable<output_char_type,
+																				  ::std::remove_cvref_t<Args>> ||
+											 ...))};
+			::std::size_t total_to_allocate_size{total_normal_reserved_size};
 			output_char_type *currptr FAST_IO_INDETERMINATE;
 			::std::size_t buffer_remained_spaces FAST_IO_INDETERMINATE;
 			bool buffer_enough_space FAST_IO_INDETERMINATE;

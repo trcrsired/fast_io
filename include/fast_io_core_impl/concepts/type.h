@@ -150,7 +150,7 @@ struct io_nothrow_tag
 	explicit inline constexpr io_nothrow_tag() noexcept = default;
 };
 
-struct scan_result_t
+struct scan_some_result_t
 {
 	::std::size_t remained_args{};
 	constexpr operator bool() const noexcept

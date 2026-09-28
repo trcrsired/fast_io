@@ -15,7 +15,7 @@ concept has_ibuffer_basic_operations = requires(T instm, typename decltype(instm
 };
 
 template <typename T>
-concept has_status_scan_result_define = requires(T optstm) { status_scan_result_define(optstm, 0); };
+concept has_status_scan_some_define = requires(T optstm) { status_scan_some_define(optstm, 0); };
 
 template <typename T>
 concept has_read_some_underflow_define =

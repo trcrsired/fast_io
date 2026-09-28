@@ -60,18 +60,18 @@ namespace operations::decay
 {
 
 template <typename input, typename... Args>
-[[nodiscard]] inline constexpr decltype(auto) scan_result_freestanding_decay(input instm, Args... args)
+[[nodiscard]] inline constexpr decltype(auto) scan_some_freestanding_decay(input instm, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	if constexpr (::fast_io::operations::decay::defines::has_status_scan_result_define<input>)
+	if constexpr (::fast_io::operations::decay::defines::has_status_scan_some_define<input>)
 	{
-		return status_scan_result_define(instm, args...);
+		return status_scan_some_define(instm, args...);
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<input>)
 	{
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
 			::fast_io::operations::decay::input_stream_mutex_ref_decay(instm)};
-		return ::fast_io::operations::decay::scan_result_freestanding_decay(
+		return ::fast_io::operations::decay::scan_some_freestanding_decay(
 			::fast_io::operations::decay::input_stream_unlocked_ref_decay(instm), args...);
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_ibuffer_basic_operations<input>)
@@ -99,7 +99,7 @@ template <typename input, typename... Args>
 						{
 							if (ret == ::fast_io::freestanding::parse_errc::end_of_file)
 							{
-								return ::fast_io::scan_result_t{sizeof...(Args) - i};
+								return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
 							}
 							::fast_io::herbceptions::throws_parse_errc(ret);
 						}
@@ -129,7 +129,7 @@ template <typename input, typename... Args>
 						{
 							if (ret == ::fast_io::freestanding::parse_errc::end_of_file)
 							{
-								return ::fast_io::scan_result_t{sizeof...(Args) - i};
+								return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
 							}
 							::fast_io::herbceptions::throws_parse_errc(ret);
 						}
@@ -150,7 +150,7 @@ template <typename input, typename... Args>
 				{
 					if (!::fast_io::details::scan_context_status_impl(instm, args...[i]))
 					{
-						return ::fast_io::scan_result_t{sizeof...(Args) - i};
+						return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
 					}
 				}
 				else
@@ -211,7 +211,7 @@ template <typename input, typename... Args>
 				}
 				if (!scanned)
 				{
-					return ::fast_io::scan_result_t{sizeof...(Args) - i};
+					return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
 				}
 			}
 			else
@@ -220,18 +220,18 @@ template <typename input, typename... Args>
 				static_assert(not_scannable, "type not scannable. need context_scannable");
 			}
 		}
-		return ::fast_io::scan_result_t{};
+		return ::fast_io::scan_some_result_t{};
 	}
 	else if constexpr (::fast_io::operations::defines::available_add_ibuf<input>)
 	{
-		static_assert(::fast_io::operations::decay::defines::has_status_scan_result_define<input>,
+		static_assert(::fast_io::operations::decay::defines::has_status_scan_some_define<input>,
 					  "If you want to scan this type of file, please add ::fast_io::basic_ibuf.");
-		return ::fast_io::scan_result_t{};
+		return ::fast_io::scan_some_result_t{};
 	}
 	else
 	{
-		static_assert(::fast_io::operations::decay::defines::has_status_scan_result_define<input>, "type not scannable.");
-		return ::fast_io::scan_result_t{};
+		static_assert(::fast_io::operations::decay::defines::has_status_scan_some_define<input>, "type not scannable.");
+		return ::fast_io::scan_some_result_t{};
 	}
 }
 

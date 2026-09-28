@@ -342,7 +342,7 @@ inline constexpr void scan(input &&in, Args &&...args)
 	if constexpr (device_error)
 	{
 		using char_type = typename decltype(::fast_io::operations::input_stream_ref(in))::input_char_type;
-		if (!::fast_io::operations::decay::scan_result_freestanding_decay(
+		if (!::fast_io::operations::decay::scan_some_freestanding_decay(
 				::fast_io::operations::input_stream_ref(in),
 				::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...))
 		{
@@ -367,14 +367,14 @@ static_assert(device_error, "freestanding environment must provide IO device");
 }
 
 template <typename input, typename... Args>
-[[nodiscard]] inline constexpr ::fast_io::scan_result_t scan_result(input &&in, Args &&...args)
+[[nodiscard]] inline constexpr ::fast_io::scan_some_result_t scan_some(input &&in, Args &&...args)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_scan_may_throw<input, Args...>())
 {
 	constexpr bool device_error{::fast_io::operations::defines::has_input_or_io_stream_ref_define<input>};
 	if constexpr (device_error)
 	{
 		using char_type = typename decltype(::fast_io::operations::input_stream_ref(in))::input_char_type;
-		return ::fast_io::operations::decay::scan_result_freestanding_decay(
+		return ::fast_io::operations::decay::scan_some_freestanding_decay(
 			::fast_io::operations::input_stream_ref(in),
 			::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...);
 	}
@@ -384,7 +384,7 @@ template <typename input, typename... Args>
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES)) &&                                     \
 	__has_include(<stdio.h>)
-		return ::fast_io::details::scan_result_after_io_scan_forward(
+		return ::fast_io::details::scan_some_after_io_scan_forward(
 			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(in)),
 			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(args))...);
 #else
