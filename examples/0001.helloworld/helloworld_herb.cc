@@ -10,7 +10,7 @@ try
 {
 	print("Hello World\n");
 }
-catch (::std::error e)
+catch throws(::std::error e)
 {
 	perrln(e);
 	return 1;
