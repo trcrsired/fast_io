@@ -6,7 +6,7 @@ namespace fast_io
 namespace details
 {
 
-template <::std::integral char_type, typename state, typename T, typename Arg1, typename... Args>
+template <::std::integral char_type, typename state, typename T, typename... Args>
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 [[__gnu__::__always_inline__]]
 #elif __has_cpp_attribute(msvc::forceinline)
@@ -14,101 +14,15 @@ template <::std::integral char_type, typename state, typename T, typename Arg1, 
 #endif
 inline constexpr void
 inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_output_buffer<char_type>> buffer, state &s,
-							  T t, Arg1 arg, Args... args)
+							  T t, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::operations::decay::print_freestanding_decay<false>(buffer, arg);
-	char_type *buffer_beg{buffer.dob_ptr->begin_ptr};
-	char_type const *buffer_begin{buffer_beg};
-	char_type const *buffer_curr{buffer.dob_ptr->curr_ptr};
-	auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
-	if (it != buffer_curr)
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		if (ec != ::fast_io::freestanding::parse_errc::ok)
-		{
-			::fast_io::herbceptions::throws_parse_errc(ec);
-		}
-		return;
-	}
-	if constexpr (sizeof...(Args) != 0)
-	{
-		buffer.dob_ptr->curr_ptr = buffer_beg;
-		inplace_to_decay_context_impl(buffer, s, t, args...);
-	}
-	else
-	{
-		::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-		if (p != ::fast_io::freestanding::parse_errc::ok)
-		{
-			::fast_io::herbceptions::throws_parse_errc(p);
-		}
-	}
-}
-
-template <::std::integral char_type, typename state, typename T, typename Arg1, typename... Args>
-#if __has_cpp_attribute(__gnu__::__always_inline__)
-[[__gnu__::__always_inline__]]
-#elif __has_cpp_attribute(msvc::forceinline)
-[[msvc::forceinline]]
-#endif
-inline constexpr void inplace_to_decay_buffer_scatter_context_impl(state &s, T t, Arg1 arg, Args... args)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	basic_io_scatter_t<char_type> scatter{print_scatter_define(io_reserve_type<char_type, Arg1>, arg)};
-	char_type const *buffer_begin{scatter.base};
-	char_type const *buffer_curr{buffer_begin + scatter.len};
-	auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
-	if (it != buffer_curr)
-	{
-		if (ec != ::fast_io::freestanding::parse_errc::ok)
-		{
-			::fast_io::herbceptions::throws_parse_errc(ec);
-		}
-		return;
-	}
-	if constexpr (sizeof...(Args) != 0)
-	{
-		inplace_to_decay_buffer_scatter_context_impl<char_type>(s, t, args...);
-	}
-	else
-	{
-		::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-		if (p != ::fast_io::freestanding::parse_errc::ok)
-		{
-			::fast_io::herbceptions::throws_parse_errc(p);
-		}
-	}
-}
-
-template <::std::integral char_type, typename state, typename T, typename Arg1, typename... Args>
-#if __has_cpp_attribute(__gnu__::__always_inline__)
-[[__gnu__::__always_inline__]]
-#elif __has_cpp_attribute(msvc::forceinline)
-[[msvc::forceinline]]
-#endif
-inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, state &s, T t, Arg1 arg, Args... args)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	if constexpr (scatter_printable<char_type, Arg1> && ((scatter_printable<char_type, Args> && ...)))
-	{
-		inplace_to_decay_buffer_scatter_context_impl<char_type>(s, t, arg, args...);
-	}
-	else
-	{
-		char_type const *buffer_begin;
-		char_type const *buffer_curr;
-		if constexpr (scatter_printable<char_type, Arg1>)
-		{
-			auto scatter{print_scatter_define(io_reserve_type<char_type, Arg1>, arg)};
-			buffer_begin = scatter.base;
-			buffer_curr = buffer_begin + scatter.len;
-		}
-		else
-		{
-
-			buffer_curr = print_reserve_define(io_reserve_type<char_type, Arg1>, buffer, arg);
-			buffer_begin = buffer;
-		}
+		::fast_io::operations::decay::print_freestanding_decay<false>(buffer, args...[i]);
+		char_type *buffer_beg{buffer.dob_ptr->begin_ptr};
+		char_type const *buffer_begin{buffer_beg};
+		char_type const *buffer_curr{buffer.dob_ptr->curr_ptr};
 		auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
 		if (it != buffer_curr)
 		{
@@ -118,47 +32,121 @@ inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, st
 			}
 			return;
 		}
-		if constexpr (sizeof...(Args) != 0)
+		if constexpr (i + 1zu != sizeof...(Args))
 		{
-			inplace_to_decay_buffer_context_impl(buffer, s, t, args...);
+			buffer.dob_ptr->curr_ptr = buffer_beg;
 		}
-		else
+	}
+	::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+	if (p != ::fast_io::freestanding::parse_errc::ok)
+	{
+		::fast_io::herbceptions::throws_parse_errc(p);
+	}
+}
+
+template <::std::integral char_type, typename state, typename T, typename... Args>
+#if __has_cpp_attribute(__gnu__::__always_inline__)
+[[__gnu__::__always_inline__]]
+#elif __has_cpp_attribute(msvc::forceinline)
+[[msvc::forceinline]]
+#endif
+inline constexpr void inplace_to_decay_buffer_scatter_context_impl(state &s, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
+	{
+		using argtype = ::std::remove_cvref_t<Args...[i]>;
+		basic_io_scatter_t<char_type> scatter{print_scatter_define(io_reserve_type<char_type, argtype>, args...[i])};
+		char_type const *buffer_begin{scatter.base};
+		char_type const *buffer_curr{buffer_begin + scatter.len};
+		auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
+		if (it != buffer_curr)
 		{
-			::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
-			if (p != ::fast_io::freestanding::parse_errc::ok)
+			if (ec != ::fast_io::freestanding::parse_errc::ok)
 			{
-				::fast_io::herbceptions::throws_parse_errc(p);
+				::fast_io::herbceptions::throws_parse_errc(ec);
 			}
+			return;
+		}
+	}
+	::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+	if (p != ::fast_io::freestanding::parse_errc::ok)
+	{
+		::fast_io::herbceptions::throws_parse_errc(p);
+	}
+}
+
+template <::std::integral char_type, typename state, typename T, typename... Args>
+#if __has_cpp_attribute(__gnu__::__always_inline__)
+[[__gnu__::__always_inline__]]
+#elif __has_cpp_attribute(msvc::forceinline)
+[[msvc::forceinline]]
+#endif
+inline constexpr void inplace_to_decay_buffer_context_impl(char_type *buffer, state &s, T t, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	if constexpr ((scatter_printable<char_type, Args> && ...))
+	{
+		inplace_to_decay_buffer_scatter_context_impl<char_type>(s, t, args...);
+	}
+	else
+	{
+		template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
+		{
+			using argtype = ::std::remove_cvref_t<Args...[i]>;
+			char_type const *buffer_begin;
+			char_type const *buffer_curr;
+			if constexpr (scatter_printable<char_type, argtype>)
+			{
+				auto scatter{print_scatter_define(io_reserve_type<char_type, argtype>, args...[i])};
+				buffer_begin = scatter.base;
+				buffer_curr = buffer_begin + scatter.len;
+			}
+			else
+			{
+				buffer_curr = print_reserve_define(io_reserve_type<char_type, argtype>, buffer, args...[i]);
+				buffer_begin = buffer;
+			}
+			auto [it, ec] = scan_context_define(io_reserve_type<char_type, T>, s, buffer_begin, buffer_curr, t);
+			if (it != buffer_curr)
+			{
+				if (ec != ::fast_io::freestanding::parse_errc::ok)
+				{
+					::fast_io::herbceptions::throws_parse_errc(ec);
+				}
+				return;
+			}
+		}
+		::fast_io::freestanding::parse_errc p{scan_context_eof_define(io_reserve_type<char_type, T>, s, t)};
+		if (p != ::fast_io::freestanding::parse_errc::ok)
+		{
+			::fast_io::herbceptions::throws_parse_errc(p);
 		}
 	}
 }
 
-template <::std::integral char_type, bool ln, typename T, typename... Args>
+template <::std::integral char_type, bool ln, typename... Args>
 inline constexpr ::std::size_t calculate_print_normal_maxium_size_main(::std::size_t mx_value) noexcept
 {
-	::std::size_t val{};
-	if constexpr (ln && (sizeof...(Args) == 0))
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		++val;
+		::std::size_t val{};
+		if constexpr (ln && (i + 1zu == sizeof...(Args)))
+		{
+			++val;
+		}
+		if constexpr (reserve_printable<char_type, ::std::remove_cvref_t<Args...[i]>>)
+		{
+			constexpr ::std::size_t size{print_reserve_size(io_reserve_type<char_type, ::std::remove_cvref_t<Args...[i]>>)};
+			static_assert(size != SIZE_MAX, "overflow");
+			val += size;
+		}
+		if (mx_value < val)
+		{
+			mx_value = val;
+		}
 	}
-	if constexpr (reserve_printable<char_type, T>)
-	{
-		constexpr ::std::size_t size{print_reserve_size(io_reserve_type<char_type, T>)};
-		static_assert(size != SIZE_MAX, "overflow");
-		val += size;
-	}
-	if (mx_value < val)
-	{
-		mx_value = val;
-	}
-	if constexpr ((sizeof...(Args) == 0))
-	{
-		return mx_value;
-	}
-	else
-	{
-		return calculate_print_normal_maxium_size_main<char_type, ln, Args...>(mx_value);
-	}
+	return mx_value;
 }
 
 template <::std::integral char_type, bool ln, typename... Args>
@@ -167,14 +155,26 @@ inline constexpr ::std::size_t calculate_print_normal_maxium_size() noexcept
 	return calculate_print_normal_maxium_size_main<char_type, ln, Args...>(0);
 }
 
-template <::std::integral char_type, bool ln, typename T, typename... Args>
-inline constexpr ::std::size_t calculate_print_normal_dynamic_maxium_main(::std::size_t mx_value, T t,
-																		  Args... args) noexcept
+template <::std::integral char_type, bool ln, typename... Args>
+inline constexpr ::std::size_t calculate_print_normal_dynamic_maxium_main(::std::size_t mx_value, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		::fast_io::details::has_any_print_define_operations_may_throw<char_type, Args...>)
 {
-	if constexpr (dynamic_reserve_printable<char_type, T>)
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		::std::size_t size{print_reserve_size(io_reserve_type<char_type, T>, t)};
-		if constexpr (ln && (sizeof...(Args) == 0))
+		using argtype = ::std::remove_cvref_t<Args...[i]>;
+		::std::size_t size{};
+		if constexpr (reserve_printable<char_type, argtype>)
+		{
+			constexpr ::std::size_t sz{print_reserve_size(io_reserve_type<char_type, argtype>)};
+			static_assert(sz != SIZE_MAX, "overflow");
+			size = sz;
+		}
+		else if constexpr (dynamic_reserve_printable<char_type, argtype>)
+		{
+			size = print_reserve_size(io_reserve_type<char_type, argtype>, args...[i]);
+		}
+		if constexpr (ln && (i + 1zu == sizeof...(Args)))
 		{
 			if (size == SIZE_MAX)
 			{
@@ -187,14 +187,7 @@ inline constexpr ::std::size_t calculate_print_normal_dynamic_maxium_main(::std:
 			mx_value = size;
 		}
 	}
-	if constexpr ((sizeof...(Args) == 0))
-	{
-		return mx_value;
-	}
-	else
-	{
-		return calculate_print_normal_dynamic_maxium_main<char_type, ln>(mx_value, args...);
-	}
+	return mx_value;
 }
 
 template <::std::integral char_type, typename T>
@@ -217,69 +210,47 @@ inline constexpr void to_deal_with_contiguous_single_scatter(T t, Arg arg)
 	deal_with_single_to<char_type>(base, base + scatter.len, t);
 }
 
-template <::std::integral char_type, typename T, typename... Args>
-inline constexpr char_type *to_impl_with_reserve_recursive(char_type *p, T t, Args... args)
-	FAST_IO_HERBCEPTIONS_THROWS
+template <::std::integral char_type, typename... Args>
+inline constexpr char_type *to_impl_with_reserve(char_type *p, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		::fast_io::details::has_any_print_define_operations_may_throw<char_type, Args...>)
 {
-	if constexpr (scatter_printable<char_type, T>)
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		p = copy_scatter(print_scatter_define(io_reserve_type<char_type, T>, t), p);
+		using argtype = ::std::remove_cvref_t<Args...[i]>;
+		if constexpr (scatter_printable<char_type, argtype>)
+		{
+			p = copy_scatter(print_scatter_define(io_reserve_type<char_type, argtype>, args...[i]), p);
+		}
+		else
+		{
+			p = print_reserve_define(io_reserve_type<char_type, argtype>, p, args...[i]);
+		}
 	}
-	else
-	{
-		p = print_reserve_define(io_reserve_type<char_type, T>, p, t);
-	}
-	if constexpr (sizeof...(Args) == 0)
-	{
-		return p;
-	}
-	else
-	{
-		return to_impl_with_reserve_recursive<char_type>(p, args...);
-	}
+	return p;
 }
 
-template <::std::integral char_type, typename T, typename... Args>
-inline constexpr ::std::size_t calculate_scatter_dynamic_reserve_size_with_scatter([[maybe_unused]] T t, Args... args)
-	FAST_IO_HERBCEPTIONS_THROWS
+template <::std::integral char_type, typename... Args>
+inline constexpr ::std::size_t calculate_scatter_dynamic_reserve_size_with_scatter([[maybe_unused]] Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		::fast_io::details::has_any_print_define_operations_may_throw<char_type, Args...>)
 {
-	if constexpr (dynamic_reserve_printable<char_type, T>)
+	::std::size_t total{};
+	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		::std::size_t res{print_reserve_size(io_reserve_type<char_type, T>, t)};
-		if constexpr (sizeof...(Args) == 0)
+		using argtype = ::std::remove_cvref_t<Args...[i]>;
+		if constexpr (dynamic_reserve_printable<char_type, argtype>)
 		{
-			return res;
+			total = ::fast_io::details::intrinsics::add_or_overflow_die(
+				total, print_reserve_size(io_reserve_type<char_type, argtype>, args...[i]));
 		}
-		else
+		else if constexpr (scatter_printable<char_type, argtype>)
 		{
-			return ::fast_io::details::intrinsics::add_or_overflow_die(
-				res, calculate_scatter_dynamic_reserve_size_with_scatter<char_type>(args...));
+			total = ::fast_io::details::intrinsics::add_or_overflow_die(
+				total, print_scatter_define(io_reserve_type<char_type, argtype>, args...[i]).len);
 		}
 	}
-	else if constexpr (scatter_printable<char_type, T>)
-	{
-		::std::size_t res{print_scatter_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t).len};
-		if constexpr (sizeof...(Args) == 0)
-		{
-			return res;
-		}
-		else
-		{
-			return ::fast_io::details::intrinsics::add_or_overflow_die(
-				res, calculate_scatter_dynamic_reserve_size_with_scatter<char_type>(args...));
-		}
-	}
-	else
-	{
-		if constexpr (sizeof...(Args) == 0)
-		{
-			return 0;
-		}
-		else
-		{
-			return calculate_scatter_dynamic_reserve_size_with_scatter<char_type>(args...);
-		}
-	}
+	return total;
 }
 
 template <typename char_type, typename T, typename... Args>
@@ -340,7 +311,7 @@ inline constexpr void basic_inplace_to_decay(T t, Args... args)
 					constexpr ::std::size_t total_size{
 						::fast_io::details::decay::calculate_scatter_reserve_size<char_type, Args...>()};
 					char_type buffer[total_size];
-					auto ret{::fast_io::details::to_impl_with_reserve_recursive(buffer, args...)};
+					auto ret{::fast_io::details::to_impl_with_reserve(buffer, args...)};
 					::fast_io::details::deal_with_single_to<char_type>(buffer, ret, t);
 				}
 				else
@@ -348,7 +319,7 @@ inline constexpr void basic_inplace_to_decay(T t, Args... args)
 					::std::size_t const maximum_reserve_size{
 						::fast_io::details::calculate_scatter_dynamic_reserve_size_with_scatter<char_type>(args...)};
 					::fast_io::details::local_operator_new_array_ptr<char_type> heap_buffer(maximum_reserve_size);
-					auto ret{::fast_io::details::to_impl_with_reserve_recursive(heap_buffer.ptr, args...)};
+					auto ret{::fast_io::details::to_impl_with_reserve(heap_buffer.ptr, args...)};
 					::fast_io::details::deal_with_single_to<char_type>(heap_buffer.ptr, ret, t);
 				}
 			}
