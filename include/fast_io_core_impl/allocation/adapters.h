@@ -8,6 +8,8 @@
 namespace fast_io
 {
 
+#include "allocator_adapter_flags.h"
+
 namespace details
 {
 
@@ -15,6 +17,24 @@ namespace details
 
 template <typename alloc>
 concept has_default_alignment_impl = requires(::std::size_t n) { alloc::default_alignment; };
+
+template <typename alloc>
+concept has_adapter_flags_impl = requires {
+	{ alloc::adapter_flags } -> ::std::same_as<::fast_io::allocator_adapter_flags>;
+};
+
+template <typename alloc>
+inline constexpr ::fast_io::allocator_adapter_flags adapter_flags_or_default() noexcept
+{
+	if constexpr (has_adapter_flags_impl<alloc>)
+	{
+		return alloc::adapter_flags;
+	}
+	else
+	{
+		return ::fast_io::allocator_adapter_flags::none;
+	}
+}
 
 template <typename alloc>
 inline constexpr ::std::size_t calculate_default_alignment() noexcept
@@ -29,7 +49,9 @@ inline constexpr ::std::size_t calculate_default_alignment() noexcept
 	}
 }
 
-inline constexpr ::std::size_t allocator_compute_aligned_total_size_impl(::std::size_t alignment, ::std::size_t n) noexcept
+template <bool throwing>
+inline constexpr ::std::size_t allocator_compute_aligned_total_size_impl(::std::size_t alignment, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max()},
 		sizeofptr{sizeof(void *)},
@@ -40,13 +62,27 @@ inline constexpr ::std::size_t allocator_compute_aligned_total_size_impl(::std::
 	}
 	if (alignment > mxmptr)
 	{
-		::fast_io::fast_terminate();
+		if constexpr (throwing)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::value_too_large);
+		}
+		else
+		{
+			::fast_io::fast_terminate();
+		}
 	}
 	::std::size_t total_extra_space{alignment + sizeofptr};
 	::std::size_t upperlimit{static_cast<::std::size_t>(mxn - total_extra_space)};
 	if (n > upperlimit)
 	{
-		::fast_io::fast_terminate();
+		if constexpr (throwing)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::value_too_large);
+		}
+		else
+		{
+			::fast_io::fast_terminate();
+		}
 	}
 	return n + total_extra_space;
 }
@@ -58,52 +94,171 @@ inline void *allocator_adjust_ptr_to_aligned_impl(void *p, ::std::size_t alignme
 	return aligned_ptr;
 }
 
-template <typename>
-inline constexpr void *allocator_pointer_aligned_impl(::std::size_t, ::std::size_t, bool) noexcept;
+// Dispatches a native allocator API call to its _die or _try flavour.
+// In die mode an allocator that only provides the _try flavour has its
+// herbception caught and the program terminated. In try mode an allocator
+// that only provides the _die flavour is rejected.
+template <typename alloc, bool throwing>
+struct allocator_die_try_dispatch
+{
+#define FAST_IO_ALLOCATION_DISPATCH(api)                                                               \
+	template <typename... Args>                                                                         \
+	static inline constexpr decltype(auto) api(Args &&...args)                                          \
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)                                                          \
+	{                                                                                                  \
+		if constexpr (throwing)                                                                           \
+		{                                                                                               \
+			static_assert(::fast_io::details::has_##api##_try_impl<alloc>,                                \
+						  "the underlying allocator does not provide " #api "_try");                     \
+			return alloc::api##_try(::std::forward<Args>(args)...);                                       \
+		}                                                                                               \
+		else if constexpr (::fast_io::details::has_##api##_die_impl<alloc>)                               \
+		{                                                                                               \
+			return alloc::api##_die(::std::forward<Args>(args)...);                                       \
+		}                                                                                               \
+		else                                                                                            \
+		{                                                                                               \
+			static_assert(::fast_io::details::has_##api##_try_impl<alloc>,                                \
+						  "the underlying allocator provides neither " #api "_die nor " #api "_try");    \
+			FAST_IO_HERBCEPTIONS_TRY                                                                      \
+			{                                                                                             \
+				return alloc::api##_try(::std::forward<Args>(args)...);                                   \
+			}                                                                                             \
+			FAST_IO_HERBCEPTIONS_CATCH_ALL                                                                \
+			{                                                                                             \
+				::fast_io::fast_terminate();                                                              \
+			}                                                                                             \
+		}                                                                                               \
+	}
 
-template <typename>
-inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at_least_impl(::std::size_t, ::std::size_t, bool) noexcept;
+	FAST_IO_ALLOCATION_DISPATCH(allocate)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_zero)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned_zero)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_n)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_n)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_zero_n)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_zero_n)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_n_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_n_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(allocate_aligned_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_zero_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_zero_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_n_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(reallocate_aligned_n_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_n)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_n)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_zero_n)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_zero_n)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_n_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_n_conditional_zero)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_allocate_aligned_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_zero_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_zero_n_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_n_conditional_zero_at_least)
+	FAST_IO_ALLOCATION_DISPATCH(handle_reallocate_aligned_n_conditional_zero_at_least)
 
-template <typename alloc>
-inline constexpr void *status_allocator_pointer_aligned_impl(typename alloc::handle_type, ::std::size_t, ::std::size_t, bool) noexcept;
+#undef FAST_IO_ALLOCATION_DISPATCH
+};
 
-template <typename alloc>
-inline constexpr ::fast_io::allocation_least_result status_allocator_pointer_aligned_at_least_impl(typename alloc::handle_type, ::std::size_t, ::std::size_t, bool) noexcept;
+template <typename alloc, bool throwing>
+inline constexpr void *allocator_pointer_aligned_impl(::std::size_t, ::std::size_t, bool)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing);
+
+template <typename alloc, bool throwing>
+inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at_least_impl(::std::size_t, ::std::size_t, bool)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing);
+
+template <typename alloc, bool throwing>
+inline constexpr void *status_allocator_pointer_aligned_impl(typename alloc::handle_type, ::std::size_t, ::std::size_t, bool)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing);
+
+template <typename alloc, bool throwing>
+inline constexpr ::fast_io::allocation_least_result status_allocator_pointer_aligned_at_least_impl(typename alloc::handle_type, ::std::size_t, ::std::size_t, bool)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing);
 
 
-template <typename alloc>
+template <typename alloc, bool throwing>
 concept native_allocate_aligned_has_none_zero_ops =
-	::fast_io::details::has_allocate_aligned_impl<alloc> ||
-	::fast_io::details::has_allocate_aligned_at_least_impl<alloc>;
-template <typename alloc>
+	::fast_io::details::has_allocate_aligned_mode_impl<alloc, throwing> ||
+	::fast_io::details::has_allocate_aligned_at_least_mode_impl<alloc, throwing>;
+template <typename alloc, bool throwing>
 concept native_allocate_aligned_has_zero_ops =
-	::fast_io::details::has_allocate_aligned_zero_impl<alloc> ||
-	::fast_io::details::has_allocate_aligned_zero_at_least_impl<alloc>;
+	::fast_io::details::has_allocate_aligned_zero_mode_impl<alloc, throwing> ||
+	::fast_io::details::has_allocate_aligned_zero_at_least_mode_impl<alloc, throwing>;
 
-template <typename alloc>
+template <typename alloc, bool throwing>
 concept native_allocate_aligned_has_ops =
-	::fast_io::details::native_allocate_aligned_has_none_zero_ops<alloc> ||
-	::fast_io::details::native_allocate_aligned_has_zero_ops<alloc>;
+	::fast_io::details::native_allocate_aligned_has_none_zero_ops<alloc, throwing> ||
+	::fast_io::details::native_allocate_aligned_has_zero_ops<alloc, throwing>;
 
-template <typename alloc>
-concept native_allocate_has_none_zero_ops = ::fast_io::details::has_allocate_impl<alloc> ||
-											::fast_io::details::has_allocate_at_least_impl<alloc> ||
-											::fast_io::details::native_allocate_aligned_has_none_zero_ops<alloc>;
-template <typename alloc>
+template <typename alloc, bool throwing>
+concept native_allocate_has_none_zero_ops = ::fast_io::details::has_allocate_mode_impl<alloc, throwing> ||
+											::fast_io::details::has_allocate_at_least_mode_impl<alloc, throwing> ||
+											::fast_io::details::native_allocate_aligned_has_none_zero_ops<alloc, throwing>;
+template <typename alloc, bool throwing>
 concept native_allocate_has_zero_ops =
-	::fast_io::details::has_allocate_zero_impl<alloc> ||
-	::fast_io::details::has_allocate_zero_at_least_impl<alloc> || ::fast_io::details::native_allocate_aligned_has_zero_ops<alloc>;
+	::fast_io::details::has_allocate_zero_mode_impl<alloc, throwing> ||
+	::fast_io::details::has_allocate_zero_at_least_mode_impl<alloc, throwing> ||
+	::fast_io::details::native_allocate_aligned_has_zero_ops<alloc, throwing>;
 } // namespace details
 
-#if 0
-#include "allocator_adapter_flags.h"
-#endif
-
-template <typename alloc>
+template <typename alloc, ::fast_io::allocator_adapter_flags flags = ::fast_io::allocator_adapter_flags::none>
 class generic_allocator_adapter
 {
 public:
 	using allocator_type = alloc;
+	static inline constexpr ::fast_io::allocator_adapter_flags adapter_flags{flags};
+	static inline constexpr bool throws_on_allocation_failure{
+		(flags & ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) != ::fast_io::allocator_adapter_flags::none};
+	static inline constexpr bool secure_clear{
+		(flags & ::fast_io::allocator_adapter_flags::secure_clear) != ::fast_io::allocator_adapter_flags::none};
 	static inline constexpr bool has_status{::fast_io::details::has_non_empty_handle_type<allocator_type>};
 	template <typename T, bool = false>
 	struct has
@@ -118,6 +273,9 @@ public:
 	using handle_type = typename has<allocator_type, has_status>::type;
 	static inline constexpr ::std::size_t default_alignment{::fast_io::details::calculate_default_alignment<allocator_type>()};
 
+	template <bool throwing>
+	using dispatch = ::fast_io::details::allocator_die_try_dispatch<allocator_type, throwing>;
+
 #include "adapters_no_status.h"
 #include "adapters_status.h"
 };
@@ -125,8 +283,9 @@ public:
 namespace details
 {
 
-template <typename alloc>
-inline constexpr void *allocator_pointer_aligned_impl(::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+template <typename alloc, bool throwing>
+inline constexpr void *allocator_pointer_aligned_impl(::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	static_assert(::fast_io::generic_allocator_adapter<alloc>::has_native_allocate);
 
@@ -134,9 +293,17 @@ inline constexpr void *allocator_pointer_aligned_impl(::std::size_t alignment, :
 	bool const alignedadjustment{defaultalignment < alignment};
 	if (alignedadjustment)
 	{
-		n = ::fast_io::details::allocator_compute_aligned_total_size_impl(alignment, n);
+		n = ::fast_io::details::allocator_compute_aligned_total_size_impl<throwing>(alignment, n);
 	}
-	void *p = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero(n, zero);
+	void *p;
+	if constexpr (throwing)
+	{
+		p = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero_try(n, zero);
+	}
+	else
+	{
+		p = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero_die(n, zero);
+	}
 	if (alignedadjustment)
 	{
 		p = ::fast_io::details::allocator_adjust_ptr_to_aligned_impl(p, alignment);
@@ -144,8 +311,9 @@ inline constexpr void *allocator_pointer_aligned_impl(::std::size_t alignment, :
 	return p;
 }
 
-template <typename alloc>
-inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at_least_impl(::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+template <typename alloc, bool throwing>
+inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at_least_impl(::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	static_assert(::fast_io::generic_allocator_adapter<alloc>::has_native_allocate);
 
@@ -153,9 +321,17 @@ inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at
 	bool const alignedadjustment{defaultalignment < alignment};
 	if (alignedadjustment)
 	{
-		n = ::fast_io::details::allocator_compute_aligned_total_size_impl(alignment, n);
+		n = ::fast_io::details::allocator_compute_aligned_total_size_impl<throwing>(alignment, n);
 	}
-	::fast_io::allocation_least_result res = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero_at_least(n, zero);
+	::fast_io::allocation_least_result res;
+	if constexpr (throwing)
+	{
+		res = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero_at_least_try(n, zero);
+	}
+	else
+	{
+		res = ::fast_io::generic_allocator_adapter<alloc>::allocate_conditional_zero_at_least_die(n, zero);
+	}
 	if (alignedadjustment)
 	{
 		auto resptr{res.ptr};
