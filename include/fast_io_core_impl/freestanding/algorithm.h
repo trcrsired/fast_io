@@ -5,7 +5,7 @@
 #endif
 
 #if __cpp_impl_three_way_comparison >= 201907L
-#if __cpp_lib_three_way_comparison >= 201907L
+#if __cpp_lib_three_way_comparison >= 201907L && !defined(__HERBCEPTIONS__)
 namespace fast_io::freestanding
 {
 using ::std::lexicographical_compare_three_way;
@@ -14,8 +14,19 @@ using ::std::compare_three_way;
 #else
 namespace fast_io::freestanding
 {
+struct compare_three_way
+{
+	template <typename T, typename U>
+	inline constexpr auto operator()(T const &t, U const &u) const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(t <=> u))
+	{
+		return t <=> u;
+	}
+};
+
 template <typename I1, typename I2, typename Cmp>
 constexpr auto lexicographical_compare_three_way(I1 f1, I1 l1, I2 f2, I2 l2, Cmp comp)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(comp(*f1, *f2)))
 	-> decltype(comp(*f1, *f2))
 {
 	using ret_t = decltype(comp(*f1, *f2));
@@ -41,8 +52,9 @@ constexpr auto lexicographical_compare_three_way(I1 f1, I1 l1, I2 f2, I2 l2, Cmp
 
 template <typename I1, typename I2>
 constexpr auto lexicographical_compare_three_way(I1 f1, I1 l1, I2 f2, I2 l2)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::fast_io::freestanding::compare_three_way{}(*f1, *f2)))
 {
-	return lexicographical_compare_three_way(f1, l1, f2, l2, ::std::compare_three_way{});
+	return lexicographical_compare_three_way(f1, l1, f2, l2, ::fast_io::freestanding::compare_three_way{});
 }
 
 } // namespace fast_io::freestanding
@@ -687,6 +699,7 @@ inline constexpr bool lexicographical_compare(InputIt1 first1, InputIt1 last1, I
 
 template <::std::input_iterator InputIt1, ::std::input_iterator InputIt2>
 inline constexpr bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*first1 == *first2))
 {
 	for (; first1 != last1 && first2 != last2 && *first1 == *first2; ++first2)
 	{
@@ -723,6 +736,7 @@ inline constexpr ForwardIt lower_bound(ForwardIt first, ForwardIt last, T const 
 
 template <::std::input_iterator InputIt, ::std::forward_iterator NoThrowForwardIt>
 inline constexpr NoThrowForwardIt uninitialized_copy(InputIt first, InputIt last, NoThrowForwardIt d_first)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<typename ::std::iterator_traits<NoThrowForwardIt>::value_type, decltype(*first)>)
 {
 	using T = typename ::std::iterator_traits<NoThrowForwardIt>::value_type;
 	struct destroyer
@@ -777,8 +791,9 @@ inline constexpr NoThrowForwardIt uninitialized_copy(InputIt first, InputIt last
 
 template <::std::input_iterator InputIt, ::std::forward_iterator NoThrowForwardIt>
 inline constexpr NoThrowForwardIt
-uninitialized_copy_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) noexcept(
-	::std::is_nothrow_copy_constructible_v<typename ::std::iterator_traits<NoThrowForwardIt>::value_type>)
+uninitialized_copy_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_constructible_v<typename ::std::iterator_traits<NoThrowForwardIt>::value_type, decltype(*first)>)
 {
 	using T = typename ::std::iterator_traits<NoThrowForwardIt>::value_type;
 	struct destroyer
@@ -825,7 +840,7 @@ uninitialized_copy_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) n
 	destroyer d{d_first, d_first};
 	for (::std::size_t i{}; i != n; ++i)
 	{
-		::std::construct_at(::std::to_address(d.current), *first);
+		::new (static_cast<void *>(::std::to_address(d.current))) T(*first);
 		++d.current;
 		++first;
 	}
@@ -836,9 +851,10 @@ uninitialized_copy_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) n
 
 template <::std::input_iterator InputIt, ::std::forward_iterator NoThrowForwardIt>
 inline constexpr NoThrowForwardIt
-uninitialized_move_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) noexcept(
-	::std::is_nothrow_constructible_v<typename ::std::iterator_traits<NoThrowForwardIt>::value_type>) // undefined if
-																									  // throws
+uninitialized_move_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_constructible_v<typename ::std::iterator_traits<NoThrowForwardIt>::value_type, decltype(::std::move(*first))>) // undefined if
+																																	   // throws
 {
 	using T = typename ::std::iterator_traits<NoThrowForwardIt>::value_type;
 	using input_iter = InputIt;
@@ -869,7 +885,7 @@ uninitialized_move_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) n
 	}
 	for (::std::size_t i{}; i != n; ++i)
 	{
-		::std::construct_at(::std::to_address(d_first), ::std::move(*first));
+		::new (static_cast<void *>(::std::to_address(d_first))) T(::std::move(*first));
 		++d_first;
 		++first;
 	}
@@ -877,8 +893,8 @@ uninitialized_move_n(InputIt first, ::std::size_t n, NoThrowForwardIt d_first) n
 }
 
 template <::std::input_iterator ForwardIt>
-inline constexpr void uninitialized_default_construct(ForwardIt first, ForwardIt last) noexcept(
-	::std::is_nothrow_default_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
+inline constexpr void uninitialized_default_construct(ForwardIt first, ForwardIt last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_default_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
 {
 	using T = typename ::std::iterator_traits<ForwardIt>::value_type;
 	if constexpr (::fast_io::freestanding::is_zero_default_constructible_v<T> &&
@@ -898,20 +914,21 @@ inline constexpr void uninitialized_default_construct(ForwardIt first, ForwardIt
 	}
 	for (; first != last; ++first)
 	{
-		::std::construct_at(::std::to_address(first));
+		::new (static_cast<void *>(::std::to_address(first))) T;
 	}
 }
 
 template <::std::input_iterator ForwardIt>
-inline constexpr void uninitialized_default_construct_n(ForwardIt first, ::std::size_t n) noexcept(
-	::std::is_nothrow_default_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
+inline constexpr void uninitialized_default_construct_n(ForwardIt first, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_default_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
 {
 	::fast_io::freestanding::uninitialized_default_construct(first, ::std::next(first, n));
 }
 
 template <::std::input_iterator ForwardIt, typename T>
-inline constexpr ForwardIt uninitialized_fill(ForwardIt first, ForwardIt last, T const &x) noexcept(
-	::std::is_nothrow_copy_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
+inline constexpr ForwardIt uninitialized_fill(ForwardIt first, ForwardIt last, T const &x)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type, T const &>)
 {
 	using valuetype = typename ::std::iterator_traits<ForwardIt>::value_type;
 
@@ -933,14 +950,15 @@ inline constexpr ForwardIt uninitialized_fill(ForwardIt first, ForwardIt last, T
 
 	for (; first != last; ++first)
 	{
-		::std::construct_at(::std::to_address(first), x);
+		::new (static_cast<void *>(::std::to_address(first))) valuetype(x);
 	}
 	return last;
 }
 
 template <::std::input_iterator ForwardIt, typename T>
-inline constexpr ForwardIt uninitialized_fill_n(ForwardIt first, ::std::size_t n, T const &x) noexcept(
-	::std::is_nothrow_copy_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
+inline constexpr ForwardIt uninitialized_fill_n(ForwardIt first, ::std::size_t n, T const &x)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type, T const &>)
 {
 	return ::fast_io::freestanding::uninitialized_fill(first, ::std::next(first, n), x);
 }

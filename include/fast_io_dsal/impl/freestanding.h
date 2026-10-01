@@ -42,7 +42,9 @@ uninitialized_relocate requires two range are not overlapped.
 */
 
 template <::std::input_or_output_iterator Iter1, ::std::sentinel_for<Iter1> Sent, ::std::input_or_output_iterator Iter2>
-inline constexpr Iter2 uninitialized_relocate_ignore_define(Iter1 first, Sent last, Iter2 dest) noexcept
+inline constexpr Iter2 uninitialized_relocate_ignore_define(Iter1 first, Sent last, Iter2 dest)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*first))> ||
+								   !::std::is_nothrow_destructible_v<::std::iter_value_t<Iter1>>)
 {
 	if constexpr (::std::contiguous_iterator<Iter1> && !::std::is_pointer_v<Iter1> && ::std::contiguous_iterator<Iter2> && !::std::is_pointer_v<Iter2>)
 	{
@@ -84,17 +86,17 @@ inline constexpr Iter2 uninitialized_relocate_ignore_define(Iter1 first, Sent la
 		// we do not allow move constructor to throw EH.
 		while (first != last)
 		{
-			::std::construct_at(::std::addressof(*dest), ::std::move(*first));
+			::new (static_cast<void *>(::std::addressof(*dest))) iter2valuetype(::std::move(*first));
 
 			if constexpr (!::std::is_trivially_destructible_v<iter1valuetype>)
 			{
 				if constexpr (::std::is_pointer_v<Iter1>)
 				{
-					::std::destroy_at(first);
+					first->~iter1valuetype();
 				}
 				else
 				{
-					::std::destroy_at(__builtin_addressof(*first));
+					__builtin_addressof(*first)->~iter1valuetype();
 				}
 			}
 			++first;
@@ -105,7 +107,8 @@ inline constexpr Iter2 uninitialized_relocate_ignore_define(Iter1 first, Sent la
 }
 
 template <::std::input_or_output_iterator Iter1, ::std::sentinel_for<Iter1> Snt, ::std::input_or_output_iterator Iter2>
-inline constexpr Iter2 uninitialized_relocate(Iter1 first, Snt last, Iter2 dest) noexcept
+inline constexpr Iter2 uninitialized_relocate(Iter1 first, Snt last, Iter2 dest)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::uninitialized_relocate_ignore_define(first, last, dest))
 {
 	if constexpr (
 		::std::same_as<Iter1, Snt> && ::std::contiguous_iterator<Iter1> && !::std::is_pointer_v<Iter1> && ::std::contiguous_iterator<Iter2> && !::std::is_pointer_v<Iter2>)
@@ -138,7 +141,9 @@ inline constexpr Iter2 uninitialized_relocate(Iter1 first, Snt last, Iter2 dest)
 }
 
 template <::std::bidirectional_iterator Iter1, ::std::sentinel_for<Iter1> Snt, ::std::bidirectional_iterator Iter2>
-inline constexpr Iter2 uninitialized_relocate_backward_ignore_define(Iter1 first, Snt last, Iter2 dest) noexcept
+inline constexpr Iter2 uninitialized_relocate_backward_ignore_define(Iter1 first, Snt last, Iter2 dest)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*first))> ||
+								   !::std::is_nothrow_destructible_v<::std::iter_value_t<Iter1>>)
 {
 	// Semantics:
 	//   Relocate the range [first, last) into the uninitialized memory ending at `dest`.
@@ -209,17 +214,17 @@ inline constexpr Iter2 uninitialized_relocate_backward_ignore_define(Iter1 first
 		{
 			--last;
 			--dest;
-			::std::construct_at(::std::addressof(*dest), ::std::move(*last));
+			::new (static_cast<void *>(::std::addressof(*dest))) iter2valuetype(::std::move(*last));
 
 			if constexpr (!::std::is_trivially_destructible_v<iter1valuetype>)
 			{
 				if constexpr (::std::is_pointer_v<Iter1>)
 				{
-					::std::destroy_at(last);
+					last->~iter1valuetype();
 				}
 				else
 				{
-					::std::destroy_at(__builtin_addressof(*last));
+					__builtin_addressof(*last)->~iter1valuetype();
 				}
 			}
 		}
@@ -230,7 +235,8 @@ inline constexpr Iter2 uninitialized_relocate_backward_ignore_define(Iter1 first
 }
 
 template <::std::bidirectional_iterator Iter1, ::std::sentinel_for<Iter1> Snt, ::std::bidirectional_iterator Iter2>
-inline constexpr Iter2 uninitialized_relocate_backward(Iter1 first, Snt last, Iter2 dest) noexcept
+inline constexpr Iter2 uninitialized_relocate_backward(Iter1 first, Snt last, Iter2 dest)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::uninitialized_relocate_backward_ignore_define(first, last, dest))
 {
 	// Semantics:
 	//   Relocate the range [first, last) into the uninitialized memory ending at `dest`.
@@ -273,7 +279,8 @@ inline constexpr Iter2 uninitialized_relocate_backward(Iter1 first, Snt last, It
 }
 
 template <::std::input_or_output_iterator Iter1, ::std::input_or_output_iterator Iter2>
-inline constexpr Iter2 uninitialized_move(Iter1 first, Iter1 last, Iter2 dest) noexcept
+inline constexpr Iter2 uninitialized_move(Iter1 first, Iter1 last, Iter2 dest)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*first))>)
 {
 	if constexpr (::std::contiguous_iterator<Iter1> && !::std::is_pointer_v<Iter1> && ::std::contiguous_iterator<Iter2> && !::std::is_pointer_v<Iter2>)
 	{
@@ -321,7 +328,7 @@ inline constexpr Iter2 uninitialized_move(Iter1 first, Iter1 last, Iter2 dest) n
 		// we do not allow move constructor to throw EH.
 		while (first != last)
 		{
-			::std::construct_at(::std::addressof(*dest), ::std::move(*first));
+			::new (static_cast<void *>(::std::addressof(*dest))) iter2valuetype(::std::move(*first));
 			++first;
 			++dest;
 		}
@@ -330,7 +337,8 @@ inline constexpr Iter2 uninitialized_move(Iter1 first, Iter1 last, Iter2 dest) n
 }
 
 template <::std::bidirectional_iterator Iter1, ::std::bidirectional_iterator Iter2>
-inline constexpr Iter2 uninitialized_move_backward(Iter1 first, Iter1 last, Iter2 d_last) noexcept
+inline constexpr Iter2 uninitialized_move_backward(Iter1 first, Iter1 last, Iter2 d_last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*last))>)
 {
 	// we do not allow move constructor to throw EH.
 	if constexpr (::std::contiguous_iterator<Iter1> && !::std::is_pointer_v<Iter1> && ::std::contiguous_iterator<Iter2> && !::std::is_pointer_v<Iter2>)
@@ -380,7 +388,7 @@ inline constexpr Iter2 uninitialized_move_backward(Iter1 first, Iter1 last, Iter
 #endif
 		while (first != last)
 		{
-			::std::construct_at(--d_last, std::move(*(--last)));
+			::new (static_cast<void *>(--d_last)) iter2valuetype(::std::move(*(--last)));
 		}
 		return d_last;
 	}
@@ -388,6 +396,7 @@ inline constexpr Iter2 uninitialized_move_backward(Iter1 first, Iter1 last, Iter
 
 template <::std::input_or_output_iterator Iter, typename T>
 inline constexpr Iter uninitialized_fill(Iter first, Iter last, T const &ele)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter>, T const &>)
 {
 	using itervaluetype = ::std::iter_value_t<Iter>;
 	if constexpr (::std::contiguous_iterator<itervaluetype>)
@@ -415,13 +424,14 @@ inline constexpr Iter uninitialized_fill(Iter first, Iter last, T const &ele)
 	}
 	for (; first != last; ++first)
 	{
-		::std::construct_at(__builtin_addressof(*first), ele);
+		::new (static_cast<void *>(__builtin_addressof(*first))) itervaluetype(ele);
 	}
 	return last;
 }
 
 template <::std::input_or_output_iterator Iter, typename T>
 inline constexpr Iter uninitialized_fill_n(Iter first, ::std::size_t n, T const &ele)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::uninitialized_fill(first, first + n, ele))
 {
 	return ::fast_io::freestanding::uninitialized_fill(first, first + n, ele);
 }

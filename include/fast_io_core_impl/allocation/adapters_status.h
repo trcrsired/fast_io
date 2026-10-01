@@ -621,6 +621,8 @@ public:
 	static inline constexpr ::fast_io::allocator_adapter_flags adapter_flags{flags};
 	static inline constexpr bool throws_on_allocation_failure{
 		(flags & ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) != ::fast_io::allocator_adapter_flags::none};
+	static inline constexpr bool throws_on_violations{
+		(flags & ::fast_io::allocator_adapter_flags::throws_on_violations) != ::fast_io::allocator_adapter_flags::none};
 	static inline constexpr bool secure_clear{
 		(flags & ::fast_io::allocator_adapter_flags::secure_clear) != ::fast_io::allocator_adapter_flags::none};
 	static inline constexpr bool has_status{allocator_adaptor::has_status};

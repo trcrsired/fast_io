@@ -16,6 +16,60 @@ using ::fast_io::containers::npos;
 
 namespace fast_io::containers::details
 {
+
+/*
+Reports a container contract violation (out of bounds access, size overflow,
+invalid index range ...). When the allocator adapter carries the
+throws_on_violations flag the violation is reported through herbceptions,
+otherwise the program terminates.
+*/
+template <bool throwing>
+[[noreturn]] inline constexpr void contract_violation_report(::std::errc ec) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+{
+	if constexpr (throwing)
+	{
+		::fast_io::herbceptions::throws_errc(ec);
+	}
+	else
+	{
+		::fast_io::fast_terminate();
+	}
+}
+
+/*
+Completeness-safe wrappers around the standard nothrow traits. Querying a
+nothrow trait on an incomplete type is a hard error; guarding it with
+sizeof(T) inside a constraint makes the wrapper simply report false so
+containers can still be instantiated against recursive (incomplete) element
+types. Specifications use the may_throw_* forms: an incomplete element type
+is assumed not to throw so that declarations checked while the element type
+is still being defined stay callable; the real check happens when the member
+function body is instantiated.
+*/
+template <typename T>
+concept complete_type = requires { sizeof(T); };
+
+template <typename T, typename... Args>
+concept may_throw_constructible = complete_type<T> && !::std::is_nothrow_constructible_v<T, Args...>;
+
+template <typename T>
+concept may_throw_default_constructible = complete_type<T> && !::std::is_nothrow_default_constructible_v<T>;
+
+template <typename T>
+concept may_throw_copy_constructible = complete_type<T> && !::std::is_nothrow_copy_constructible_v<T>;
+
+template <typename T>
+concept may_throw_move_constructible = complete_type<T> && !::std::is_nothrow_move_constructible_v<T>;
+
+template <typename T>
+concept may_throw_move_assignable = complete_type<T> && !::std::is_nothrow_assignable_v<T &, T>;
+
+template <typename T>
+concept may_throw_destructible = complete_type<T> && !::std::is_nothrow_destructible_v<T>;
+
+template <typename T>
+concept copy_constructible = complete_type<T> && ::std::is_copy_constructible_v<T>;
+
 template <typename handle>
 concept is_trivally_stored_allocator_handle = ::fast_io::freestanding::is_zero_default_constructible_v<handle> &&
 											  ::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<handle> &&
@@ -121,15 +175,15 @@ inline constexpr sztype cal_grow_twice_size_size_based(sztype cap) noexcept
 	return static_cast<sztype>(cap << 1u);
 }
 
-template <::std::size_t size, bool trivial>
-inline constexpr ::std::size_t cal_grow_twice_size(::std::size_t cap) noexcept
+template <::std::size_t size, bool trivial, bool throwing = false>
+inline constexpr ::std::size_t cal_grow_twice_size(::std::size_t cap) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	constexpr ::std::size_t mx_value2{::std::numeric_limits<::std::size_t>::max() / size};
 	constexpr ::std::size_t mx_value{trivial ? mx_value2 * size : mx_value2};
 	constexpr ::std::size_t mx_half_value{mx_value >> 1u};
 	if (cap == mx_value)
 	{
-		::fast_io::fast_terminate();
+		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
 	}
 	else if (mx_half_value < cap)
 	{
