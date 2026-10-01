@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
 enum class allocator_adapter_flags
 {
 	none = 0,
-	record_size = 1,
-	secure_clear = 2
+	secure_clear = 1,
+	throws_on_allocation_failure = 2,  // by default we fail fast
+	throws_on_contract_violations = 4, // by default we fail fast
 };
 
 constexpr allocator_adapter_flags operator&(allocator_adapter_flags x, allocator_adapter_flags y) noexcept
