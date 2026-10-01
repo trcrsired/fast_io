@@ -787,9 +787,12 @@ static inline constexpr void deallocate_n(void *p, ::std::size_t n) noexcept
 {
 	if constexpr (secure_clear)
 	{
-		if (p != nullptr)
+if !consteval
 		{
-			::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			if (p != nullptr)
+			{
+				::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
 		}
 	}
 #if __cpp_constexpr_dynamic_alloc >= 201907L
@@ -2442,9 +2445,12 @@ static inline void deallocate_aligned_n(void *p, ::std::size_t alignment, ::std:
 {
 	if constexpr (secure_clear)
 	{
-		if (p != nullptr)
+if !consteval
 		{
-			::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			if (p != nullptr)
+			{
+				::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
 		}
 	}
 	if constexpr (::fast_io::details::has_deallocate_aligned_n_impl<alloc>)

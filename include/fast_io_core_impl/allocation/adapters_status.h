@@ -584,9 +584,12 @@ static inline void handle_deallocate_n(handle_type handle, void *p, ::std::size_
 {
 	if constexpr (secure_clear)
 	{
-		if (p != nullptr)
+if !consteval
 		{
-			::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			if (p != nullptr)
+			{
+				::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
 		}
 	}
 	if constexpr (::fast_io::details::has_handle_deallocate_n_impl<alloc>)
@@ -1301,9 +1304,12 @@ public:
 	{
 		if constexpr (secure_clear)
 		{
-			if (ptr != nullptr)
+if !consteval
 			{
-				::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(ptr), n * sizeof(T));
+				if (ptr != nullptr)
+				{
+					::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(ptr), n * sizeof(T));
+				}
 			}
 		}
 #if __cpp_constexpr_dynamic_alloc >= 201907L
