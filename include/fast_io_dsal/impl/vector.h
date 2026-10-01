@@ -19,6 +19,25 @@ struct
 	::std::byte *end_ptr;
 };
 
+template<typename allochandle>
+struct
+#if __has_cpp_attribute(__gnu__::__may_alias__)
+	[[__gnu__::__may_alias__]]
+#endif
+	vector_alloc_handle_model
+{
+	::std::byte *begin_ptr;
+	::std::byte *curr_ptr;
+	::std::byte *end_ptr;
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#else
+	[[no_unique_address]]
+#endif
+	allochandle alloc;
+};
+
+
 namespace vector
 {
 
@@ -53,8 +72,8 @@ inline void *grow_to_byte_size_iter_impl(vector_model &imp, void *iter, ::std::s
 		newrescount = newres.count;
 		newiter = ::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(old_begin_ptr), reinterpret_cast<::std::byte const *>(iter),
 																	reinterpret_cast<::std::byte *>(begin_ptr));
-		::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(iter), reinterpret_cast<::std::byte const *>(old_curr_ptr),
-														  reinterpret_cast<::std::byte *>(newiter + gap));
+		static_cast<void>(::fast_io::freestanding::nonoverlapped_bytes_copy(reinterpret_cast<::std::byte const *>(iter), reinterpret_cast<::std::byte const *>(old_curr_ptr),
+														  reinterpret_cast<::std::byte *>(newiter + gap)));
 		allocator::deallocate_aligned_n(old_begin_ptr, alignment, old_capacity);
 	}
 	imp.begin_ptr = begin_ptr;
@@ -140,7 +159,7 @@ inline constexpr void *move_backward_impl(vector_model &imp, void *iter, ::std::
 	}
 	auto currptr{imp.curr_ptr};
 	auto currptrp1{currptr + size};
-	::fast_io::freestanding::uninitialized_move_backward(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1);
+	static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1));
 	return iter;
 }
 
@@ -245,6 +264,20 @@ struct vector_internal
 	T *end_ptr{};
 };
 
+template <typename T, typename Alloc>
+struct vector_alloc_handle_internal
+{
+	T *begin_ptr{};
+	T *curr_ptr{};
+	T *end_ptr{};
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#else
+	[[no_unique_address]]
+#endif
+	Alloc alloc;
+};
+
 } // namespace details
 
 template <typename T, typename allocator>
@@ -256,6 +289,11 @@ public:
 
 private:
 	using typed_allocator_type = typed_generic_allocator_adapter<allocator_type, value_type>;
+
+	static inline constexpr bool alloc_with_status{typed_allocator_type::has_status};
+	static_assert(!alloc_with_status ||
+					  ::fast_io::containers::details::defaulted_alignment<value_type, typed_allocator_type::default_alignment>,
+				  "handle-based allocators do not support over-aligned element types");
 
 	static inline constexpr bool throwing_allocation{typed_allocator_type::throws_on_allocation_failure};
 	static inline constexpr bool throwing_violations{typed_allocator_type::throws_on_violations};
@@ -288,15 +326,75 @@ public:
 
 	using size_type = ::std::size_t;
 	using difference_type = ::std::ptrdiff_t;
+	using handle_type = typename typed_allocator_type::handle_type;
 	::fast_io::containers::details::vector_internal<T> imp;
+#ifndef __INTELLISENSE__
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+	[[no_unique_address]]
+#endif
+#endif
+	handle_type allochdl{};
 
-	inline constexpr vector() noexcept = default;
+	inline constexpr vector() noexcept
+		requires(!alloc_with_status)
+	= default;
+
+	inline explicit constexpr vector(handle_type hdl) noexcept
+		requires(alloc_with_status)
+		: allochdl{hdl}
+	{}
 
 private:
+	inline constexpr pointer allocate_elements(size_type n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
+	{
+		if constexpr (alloc_with_status)
+		{
+			return typed_allocator_type::handle_allocate(allochdl, n);
+		}
+		else
+		{
+			return typed_allocator_type::allocate(n);
+		}
+	}
+	inline constexpr pointer allocate_zero_elements(size_type n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
+	{
+		if constexpr (alloc_with_status)
+		{
+			return typed_allocator_type::handle_allocate_zero(allochdl, n);
+		}
+		else
+		{
+			return typed_allocator_type::allocate_zero(n);
+		}
+	}
+	inline constexpr void deallocate_elements_n(pointer ptr, size_type n) noexcept
+	{
+		if constexpr (alloc_with_status)
+		{
+			typed_allocator_type::handle_deallocate_n(allochdl, ptr, n);
+		}
+		else
+		{
+			typed_allocator_type::deallocate_n(ptr, n);
+		}
+	}
 	inline constexpr void destroy() FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_destructible<value_type>)
 	{
 		clear();
-		if constexpr (!typed_allocator_type::has_deallocate)
+		if (imp.begin_ptr == nullptr)
+		{
+			return;
+		}
+		if constexpr (alloc_with_status)
+		{
+			typed_allocator_type::handle_deallocate_n(allochdl, imp.begin_ptr,
+													static_cast<::std::size_t>(imp.end_ptr - imp.begin_ptr));
+		}
+		else if constexpr (!typed_allocator_type::has_deallocate)
 		{
 			typed_allocator_type::deallocate(imp.begin_ptr);
 		}
@@ -328,7 +426,7 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		auto e{this->imp.end_ptr = (this->imp.curr_ptr = this->imp.begin_ptr =
-										typed_allocator_type::allocate(n)) +
+										this->allocate_elements(n)) +
 								   n};
 		run_destroy des(this);
 		for (; this->imp.curr_ptr != e; ++this->imp.curr_ptr)
@@ -358,7 +456,7 @@ private:
 					::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 				}
 				auto e{this->imp.end_ptr = (this->imp.curr_ptr = this->imp.begin_ptr =
-												typed_allocator_type::allocate(n)) +
+												this->allocate_elements(n)) +
 										   n};
 				if constexpr (
 					::std::is_pointer_v<Iter> &&
@@ -402,15 +500,15 @@ private:
 				run_destroy des(this);
 				for (; first != last; ++first)
 				{
-					this->emplace_back(*first);
+					static_cast<void>(this->emplace_back(*first));
 				}
 				des.thisvec = nullptr;
 			}
 		}
 	}
 
-public:
-	inline explicit constexpr vector(size_type n)
+private:
+	inline constexpr void ctor_default_size_impl(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		if (max_size() < n) [[unlikely]]
@@ -419,7 +517,7 @@ public:
 		}
 		if constexpr (::fast_io::freestanding::is_zero_default_constructible_v<value_type>)
 		{
-			imp.begin_ptr = typed_allocator_type::allocate_zero(n);
+			imp.begin_ptr = this->allocate_zero_elements(n);
 			imp.end_ptr = imp.curr_ptr = imp.begin_ptr + n;
 		}
 		else
@@ -428,7 +526,7 @@ public:
 		}
 	}
 
-	inline explicit constexpr vector(size_type n, ::fast_io::for_overwrite_t)
+	inline constexpr void ctor_overwrite_size_impl(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		if (max_size() < n) [[unlikely]]
@@ -437,12 +535,12 @@ public:
 		}
 		if constexpr (::std::is_trivially_default_constructible_v<value_type>)
 		{
-			imp.begin_ptr = typed_allocator_type::allocate(n);
+			imp.begin_ptr = this->allocate_elements(n);
 			imp.end_ptr = imp.curr_ptr = imp.begin_ptr + n;
 		}
 		else if constexpr (::fast_io::freestanding::is_zero_default_constructible_v<value_type>)
 		{
-			imp.begin_ptr = typed_allocator_type::allocate_zero(n);
+			imp.begin_ptr = this->allocate_zero_elements(n);
 			imp.end_ptr = imp.curr_ptr = imp.begin_ptr + n;
 		}
 		else
@@ -451,7 +549,7 @@ public:
 		}
 	}
 
-	inline explicit constexpr vector(size_type n, const_reference val)
+	inline constexpr void ctor_fill_size_impl(size_type n, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		if (max_size() < n) [[unlikely]]
@@ -459,7 +557,7 @@ public:
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 		}
 		auto e{this->imp.end_ptr = (this->imp.curr_ptr = this->imp.begin_ptr =
-										typed_allocator_type::allocate(n)) +
+										this->allocate_elements(n)) +
 								   n};
 		run_destroy des(this);
 		for (; this->imp.curr_ptr != e; ++this->imp.curr_ptr)
@@ -469,21 +567,87 @@ public:
 		des.thisvec = nullptr;
 	}
 
+public:
+	inline explicit constexpr vector(size_type n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		requires(!alloc_with_status)
+	{
+		this->ctor_default_size_impl(n);
+	}
+
+	inline explicit constexpr vector(handle_type hdl, size_type n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		requires(alloc_with_status)
+		: allochdl{hdl}
+	{
+		this->ctor_default_size_impl(n);
+	}
+
+	inline explicit constexpr vector(size_type n, ::fast_io::for_overwrite_t)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		requires(!alloc_with_status)
+	{
+		this->ctor_overwrite_size_impl(n);
+	}
+
+	inline explicit constexpr vector(handle_type hdl, size_type n, ::fast_io::for_overwrite_t)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		requires(alloc_with_status)
+		: allochdl{hdl}
+	{
+		this->ctor_overwrite_size_impl(n);
+	}
+
+	inline explicit constexpr vector(size_type n, const_reference val)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		requires(!alloc_with_status)
+	{
+		this->ctor_fill_size_impl(n, val);
+	}
+
+	inline explicit constexpr vector(handle_type hdl, size_type n, const_reference val)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		requires(alloc_with_status)
+		: allochdl{hdl}
+	{
+		this->ctor_fill_size_impl(n, val);
+	}
+
 	template <::std::ranges::range R>
 	inline explicit constexpr vector(::fast_io::freestanding::from_range_t, R &&rg)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(this->construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg)))
+		requires(!alloc_with_status)
+	{
+		this->construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg));
+	}
+
+	template <::std::ranges::range R>
+	inline explicit constexpr vector(handle_type hdl, ::fast_io::freestanding::from_range_t, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(this->construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg)))
+		requires(alloc_with_status)
+		: allochdl{hdl}
 	{
 		this->construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg));
 	}
 
 	inline explicit constexpr vector(::std::initializer_list<value_type> ilist)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		requires(!alloc_with_status)
+	{
+		this->construct_vector_common_impl(ilist.begin(), ilist.end());
+	}
+
+	inline explicit constexpr vector(handle_type hdl, ::std::initializer_list<value_type> ilist)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		requires(alloc_with_status)
+		: allochdl{hdl}
 	{
 		this->construct_vector_common_impl(ilist.begin(), ilist.end());
 	}
 
 	inline constexpr vector(vector const &vec)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		: allochdl{vec.allochdl}
 	{
 		// Using static_assert instead of requires to delay the check
 		// related to tests/0026.container/0001.vector/recursive.cc
@@ -493,7 +657,7 @@ public:
 		{
 			return;
 		}
-		imp.begin_ptr = typed_allocator_type::allocate(vecsize);
+		imp.begin_ptr = this->allocate_elements(vecsize);
 		if constexpr (::std::is_trivially_copyable_v<value_type>)
 		{
 #if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && __cpp_constexpr_dynamic_alloc >= 201907L
@@ -504,10 +668,10 @@ public:
 #endif
 #endif
 			{
-				::fast_io::freestanding::nonoverlapped_bytes_copy(
+				static_cast<void>(::fast_io::freestanding::nonoverlapped_bytes_copy(
 					reinterpret_cast<::std::byte const *>(vec.imp.begin_ptr),
 					reinterpret_cast<::std::byte const *>(vec.imp.curr_ptr),
-					reinterpret_cast<::std::byte *>(this->imp.begin_ptr));
+					reinterpret_cast<::std::byte *>(this->imp.begin_ptr)));
 				imp.end_ptr = imp.curr_ptr = imp.begin_ptr + vecsize;
 				return;
 			}
@@ -539,7 +703,7 @@ public:
 	}
 
 	inline constexpr vector(vector &&vec) noexcept
-		: imp(vec.imp)
+		: imp(vec.imp), allochdl{vec.allochdl}
 	{
 		vec.imp = {};
 	}
@@ -551,6 +715,7 @@ public:
 		}
 		this->destroy();
 		this->imp = vec.imp;
+		this->allochdl = vec.allochdl;
 		vec.imp = {};
 		return *this;
 	}
@@ -599,7 +764,7 @@ private:
 						p->~value_type();
 					}
 				}
-				typed_allocator_type::deallocate_n(first, cap);
+				thisvec->deallocate_elements_n(first, cap);
 			}
 		}
 	};
@@ -621,17 +786,53 @@ private:
 #endif
 #endif
 			{
-				return reinterpret_cast<pointer>(::fast_io::containers::details::vector::grow_to_size_iter_impl<allocator_type, sizeof(value_type), alignof(value_type)>(*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)),
-																																										 iter, n));
+				if constexpr (alloc_with_status)
+				{
+					auto new_begin_ptr{typed_allocator_type::handle_allocate(allochdl, newcap)};
+					auto newiter{::fast_io::freestanding::nonoverlapped_bytes_copy(
+						reinterpret_cast<::std::byte const *>(imp.begin_ptr),
+						reinterpret_cast<::std::byte const *>(iter),
+						reinterpret_cast<::std::byte *>(new_begin_ptr))};
+					static_cast<void>(::fast_io::freestanding::nonoverlapped_bytes_copy(
+						reinterpret_cast<::std::byte const *>(iter),
+						reinterpret_cast<::std::byte const *>(imp.curr_ptr),
+						newiter + n * sizeof(value_type)));
+					auto const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+					if (imp.begin_ptr != nullptr)
+					{
+						typed_allocator_type::handle_deallocate_n(allochdl, imp.begin_ptr,
+																static_cast<size_type>(imp.end_ptr - imp.begin_ptr));
+					}
+					imp.begin_ptr = new_begin_ptr;
+					imp.curr_ptr = new_begin_ptr + old_size;
+					imp.end_ptr = new_begin_ptr + newcap;
+					return reinterpret_cast<pointer>(newiter);
+				}
+				else
+				{
+					return reinterpret_cast<pointer>(::fast_io::containers::details::vector::grow_to_size_iter_impl<allocator_type, sizeof(value_type), alignof(value_type)>(*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)),
+																																											 iter, n));
+				}
 			}
 		}
-		auto newres{typed_allocator_type::allocate_at_least(newcap)};
-		auto new_begin_ptr{newres.ptr};
+		size_type new_count;
+		pointer new_begin_ptr;
+		if constexpr (alloc_with_status)
+		{
+			new_begin_ptr = typed_allocator_type::handle_allocate(allochdl, newcap);
+			new_count = newcap;
+		}
+		else
+		{
+			auto newres{typed_allocator_type::allocate_at_least(newcap)};
+			new_begin_ptr = newres.ptr;
+			new_count = newres.count;
+		}
 		auto old_begin_ptr{imp.begin_ptr};
 		auto old_curr_ptr{imp.curr_ptr};
 		size_type const old_size{static_cast<size_type>(old_curr_ptr - old_begin_ptr)};
 		size_type const old_capacity{static_cast<size_type>(imp.end_ptr - old_begin_ptr)};
-		grow_realloc_guard guard{this, new_begin_ptr, new_begin_ptr, new_begin_ptr, new_begin_ptr, newres.count};
+		grow_realloc_guard guard{this, new_begin_ptr, new_begin_ptr, new_begin_ptr, new_begin_ptr, new_count};
 		if constexpr (!::fast_io::containers::details::may_throw_move_constructible<value_type> || !::fast_io::containers::details::copy_constructible<value_type>)
 		{
 			for (auto src{old_begin_ptr}; src != iter; ++src)
@@ -679,7 +880,14 @@ private:
 				p->~value_type();
 			}
 		}
-		if constexpr (typed_allocator_type::has_deallocate)
+		if constexpr (alloc_with_status)
+		{
+			if (old_begin_ptr != nullptr)
+			{
+				typed_allocator_type::handle_deallocate_n(allochdl, old_begin_ptr, old_capacity);
+			}
+		}
+		else if constexpr (typed_allocator_type::has_deallocate)
 		{
 			typed_allocator_type::deallocate(old_begin_ptr);
 		}
@@ -689,7 +897,7 @@ private:
 		}
 		imp.begin_ptr = new_begin_ptr;
 		imp.curr_ptr = new_begin_ptr + old_size;
-		imp.end_ptr = new_begin_ptr + newres.count;
+		imp.end_ptr = new_begin_ptr + new_count;
 		return newiter;
 	}
 
@@ -699,7 +907,7 @@ private:
 	inline constexpr pointer grow_twice_iter_impl(pointer iter)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation)
 	{
-		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
+		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && !alloc_with_status)
 		{
 #if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && __cpp_constexpr_dynamic_alloc >= 201907L
 #if __cpp_if_consteval >= 202106L
@@ -737,7 +945,7 @@ private:
 #endif
 #endif
 			{
-				::fast_io::freestanding::uninitialized_move_backward(iter, imp.curr_ptr, imp.curr_ptr + 1);
+				static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(iter, imp.curr_ptr, imp.curr_ptr + 1));
 				return;
 			}
 		}
@@ -756,7 +964,7 @@ private:
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 		}
-		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
+		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && !alloc_with_status)
 		{
 #if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && __cpp_constexpr_dynamic_alloc >= 201907L
 #if __cpp_if_consteval >= 202106L
@@ -766,12 +974,12 @@ private:
 #endif
 #endif
 			{
-				::fast_io::containers::details::vector::grow_to_size_impl<allocator_type, sizeof(value_type), alignof(value_type)>(
-					*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)), newcap);
+				static_cast<void>(::fast_io::containers::details::vector::grow_to_size_impl<allocator_type, sizeof(value_type), alignof(value_type)>(
+					*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)), newcap));
 				return;
 			}
 		}
-		this->grow_to_size_iter_impl(newcap, imp.curr_ptr, 1);
+		static_cast<void>(this->grow_to_size_iter_impl(newcap, imp.curr_ptr, 1));
 	}
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
@@ -779,7 +987,7 @@ private:
 	inline constexpr void grow_twice_impl()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation)
 	{
-		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
+		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && !alloc_with_status)
 		{
 #if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && __cpp_constexpr_dynamic_alloc >= 201907L
 #if __cpp_if_consteval >= 202106L
@@ -789,8 +997,8 @@ private:
 #endif
 #endif
 			{
-				::fast_io::containers::details::vector::grow_twice_impl<allocator_type, sizeof(value_type), alignof(value_type)>(
-					*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)));
+				static_cast<void>(::fast_io::containers::details::vector::grow_twice_impl<allocator_type, sizeof(value_type), alignof(value_type)>(
+					*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp))));
 				return;
 			}
 		}
@@ -842,22 +1050,22 @@ public:
 	inline constexpr void push_back(T const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
-		this->emplace_back(value);
+		static_cast<void>(this->emplace_back(value));
 	}
 	inline constexpr void push_back(T &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
-		this->emplace_back(::std::move(value));
+		static_cast<void>(this->emplace_back(::std::move(value)));
 	}
 	inline constexpr void push_back_unchecked(T const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
-		this->emplace_back_unchecked(value);
+		static_cast<void>(this->emplace_back_unchecked(value));
 	}
 	inline constexpr void push_back_unchecked(T &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
-		this->emplace_back_unchecked(::std::move(value));
+		static_cast<void>(this->emplace_back_unchecked(::std::move(value)));
 	}
 
 	[[nodiscard]] inline constexpr pointer data() noexcept
@@ -1115,7 +1323,7 @@ private:
 			{
 				FAST_IO_HERBCEPTIONS_TRY
 				{
-					thisvec->erase(thisvec->cbegin() + oldn, thisvec->cend());
+					static_cast<void>(thisvec->erase(thisvec->cbegin() + oldn, thisvec->cend()));
 				}
 				FAST_IO_HERBCEPTIONS_CATCH_ALL
 				{
@@ -1175,7 +1383,7 @@ public:
 			{
 				for (auto &e : rg)
 				{
-					this->emplace_back(::std::forward<decltype(e)>(e));
+					static_cast<void>(this->emplace_back(::std::forward<decltype(e)>(e)));
 				}
 			}
 			else
@@ -1183,7 +1391,7 @@ public:
 				append_range_guard guard{this, this->size()};
 				for (auto &e : rg)
 				{
-					this->emplace_back(::std::forward<decltype(e)>(e));
+					static_cast<void>(this->emplace_back(::std::forward<decltype(e)>(e)));
 				}
 				guard.thisvec = nullptr;
 			}
@@ -1347,7 +1555,7 @@ private:
 		imp.curr_ptr = lastele - 1;
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
 		{
-			lastele[-1]->~value_type();
+			lastele[-1].~value_type();
 		}
 		return it;
 	}
@@ -1419,7 +1627,7 @@ public:
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
 		}
-		this->erase_common(beginptr + idx);
+		static_cast<void>(this->erase_common(beginptr + idx));
 		return idx;
 	}
 
@@ -1446,7 +1654,7 @@ public:
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
 		}
-		this->erase_iters_common(beginptr + firstidx, beginptr + lastidx);
+		static_cast<void>(this->erase_iters_common(beginptr + firstidx, beginptr + lastidx));
 		return firstidx;
 	}
 
@@ -1528,6 +1736,10 @@ public:
 	inline constexpr void swap(vector &other) noexcept
 	{
 		::std::swap(imp, other.imp);
+		if constexpr (alloc_with_status)
+		{
+			::std::swap(allochdl, other.allochdl);
+		}
 	}
 };
 
@@ -1578,7 +1790,7 @@ inline constexpr ::fast_io::containers::vector<ValueType, Alloc>::size_type eras
 		}
 	}
 	auto const r{last - first};
-	c.erase(first, last);
+	static_cast<void>(c.erase(first, last));
 	return static_cast<::fast_io::containers::vector<ValueType, Alloc>::size_type>(r);
 }
 
@@ -1605,7 +1817,7 @@ inline constexpr ::fast_io::containers::vector<ValueType, Alloc>::size_type eras
 		}
 	}
 	auto const r{last - first};
-	c.erase(first, last);
+	static_cast<void>(c.erase(first, last));
 	return static_cast<::fast_io::containers::vector<ValueType, Alloc>::size_type>(r);
 }
 

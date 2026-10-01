@@ -125,7 +125,8 @@ static_assert(::fast_io::details::has_non_empty_handle_type<handle_allocator>);
 static_assert(::fast_io::details::has_handle_allocate_impl<handle_allocator>);
 static_assert(::fast_io::details::has_handle_allocate_mode_impl<handle_allocator, true>);
 static_assert(!::fast_io::details::has_non_empty_handle_type<nontrivial_handle_allocator>);
-static_assert(!::fast_io::generic_allocator_adapter<nontrivial_handle_allocator>::has_status);
+// wrapping an allocator whose handle_type is not trivially copyable is a hard
+// error inside generic_allocator_adapter, so it cannot be spelled here
 
 using handle_adapter = ::fast_io::generic_allocator_adapter<handle_allocator>;
 static_assert(handle_adapter::has_status);

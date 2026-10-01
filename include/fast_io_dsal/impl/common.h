@@ -67,6 +67,11 @@ concept may_throw_move_assignable = complete_type<T> && !::std::is_nothrow_assig
 template <typename T>
 concept may_throw_destructible = complete_type<T> && !::std::is_nothrow_destructible_v<T>;
 
+// constraint level short circuit keeps alignof(T) from being instantiated
+// while T is still incomplete; incomplete types are treated as defaulted
+template <typename T, ::std::size_t default_alignment>
+concept defaulted_alignment = !complete_type<T> || alignof(T) <= default_alignment;
+
 template <typename T>
 concept copy_constructible = complete_type<T> && ::std::is_copy_constructible_v<T>;
 

@@ -485,7 +485,7 @@ inline io_scatter_status_t scatter_read_pread_some_bytes_common(void *__restrict
 		}
 		if (buffer.ptr == nullptr)
 		{
-			buffer.allocate_new(buffersz);
+			static_cast<void>(buffer.allocate_new(buffersz));
 		}
 		::std::size_t request{remained < buffersz ? remained : buffersz};
 		auto written{op(handle, buffer.ptr, buffer.ptr + request)};
@@ -562,7 +562,7 @@ inline void scatter_read_pread_all_bytes_common(void *__restrict handle,
 		}
 		if (buffer.ptr == nullptr)
 		{
-			buffer.allocate_new(buffersz);
+			static_cast<void>(buffer.allocate_new(buffersz));
 		}
 		::std::size_t request{remained < buffersz ? remained : buffersz};
 		op(handle, buffer.ptr, buffer.ptr + request);

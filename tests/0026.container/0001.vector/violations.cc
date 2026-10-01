@@ -42,10 +42,10 @@ inline void throwing_element_use() throws
 	throwing_vector v;
 	for (int i{}; i != 64; ++i)
 	{
-		v.emplace_back(i);
+		static_cast<void>(v.emplace_back(i));
 	}
-	v.insert(v.begin() + 3, 42);
-	v.erase_index(3);
+	static_cast<void>(v.insert(v.begin() + 3, 42));
+	static_cast<void>(v.erase_index(3));
 }
 
 #endif

@@ -166,5 +166,26 @@ concept has_handle_deallocate_aligned_n_impl = requires(typename alloc::handle_t
 	{ alloc::handle_deallocate_aligned_n(handle, p, alignment, n) } -> ::std::same_as<void>;
 };
 
+// An allocator offers handle-based allocation when it declares a handle_type
+// together with at least one handle_* method. The handle_type itself must be a
+// non-empty trivially copyable type so it can be passed by value into every
+// operation; anything else is a malformed handle allocator and gets rejected
+// loudly instead of silently degrading to a statusless allocator.
+template <typename alloc>
+concept has_any_handle_method_impl =
+	has_handle_allocate_impl<alloc> || has_handle_allocate_aligned_impl<alloc> ||
+	has_handle_allocate_zero_impl<alloc> || has_handle_allocate_aligned_zero_impl<alloc> ||
+	has_handle_allocate_conditional_zero_impl<alloc> || has_handle_allocate_aligned_conditional_zero_impl<alloc> ||
+	has_handle_allocate_at_least_impl<alloc> || has_handle_allocate_aligned_at_least_impl<alloc> ||
+	has_handle_allocate_zero_at_least_impl<alloc> || has_handle_allocate_aligned_zero_at_least_impl<alloc> ||
+	has_handle_allocate_conditional_zero_at_least_impl<alloc> ||
+	has_handle_allocate_aligned_conditional_zero_at_least_impl<alloc> ||
+	has_handle_reallocate_impl<alloc> || has_handle_reallocate_aligned_impl<alloc> ||
+	has_handle_reallocate_zero_impl<alloc> || has_handle_reallocate_aligned_zero_impl<alloc> ||
+	has_handle_reallocate_n_impl<alloc> || has_handle_reallocate_aligned_n_impl<alloc> ||
+	has_handle_reallocate_zero_n_impl<alloc> || has_handle_reallocate_aligned_zero_n_impl<alloc> ||
+	has_handle_deallocate_impl<alloc> || has_handle_deallocate_aligned_impl<alloc> ||
+	has_handle_deallocate_n_impl<alloc> || has_handle_deallocate_aligned_n_impl<alloc>;
+
 #undef FAST_IO_ALLOCATION_DETECT
 #undef FAST_IO_ALLOCATION_DETECT_INFALLIBLE

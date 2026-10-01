@@ -263,6 +263,8 @@ public:
 	static inline constexpr bool secure_clear{
 		(flags & ::fast_io::allocator_adapter_flags::secure_clear) != ::fast_io::allocator_adapter_flags::none};
 	static inline constexpr bool has_status{::fast_io::details::has_non_empty_handle_type<allocator_type>};
+	static_assert(!::fast_io::details::has_any_handle_method_impl<allocator_type> || has_status,
+				  "handle-based allocator APIs require a non-empty trivially copyable handle_type");
 	template <typename T, bool = false>
 	struct has
 	{

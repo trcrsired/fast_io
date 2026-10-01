@@ -627,7 +627,8 @@ public:
 		(flags & ::fast_io::allocator_adapter_flags::secure_clear) != ::fast_io::allocator_adapter_flags::none};
 	static inline constexpr bool has_status{allocator_adaptor::has_status};
 	using handle_type = typename allocator_adaptor::handle_type;
-	static inline constexpr bool has_defaulted_alignment{alignof(T) <= allocator_adaptor::default_alignment};
+	static inline constexpr ::std::size_t default_alignment{allocator_adaptor::default_alignment};
+	static inline constexpr bool has_defaulted_alignment{alignof(T) <= default_alignment};
 
 	template <bool throwing>
 	using dispatch = ::fast_io::details::allocator_die_try_dispatch<allocator_adaptor, throwing>;
@@ -1337,174 +1338,104 @@ if !consteval
 		}
 	}
 
-#if 0
-	static inline
-#if __cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
+	static inline constexpr bool has_handle_allocate{has_status && allocator_adaptor::has_native_handle_allocate};
+	static inline constexpr bool has_handle_allocate_try{has_status && allocator_adaptor::has_native_handle_allocate_try};
+
+	template <bool throwing>
+#if __has_cpp_attribute(__gnu__::__returns_nonnull__)
+	[[__gnu__::__returns_nonnull__]]
 #endif
-		T *
-		handle_allocate(handle_type handle, ::std::size_t n) noexcept
-		requires(has_status)
+	static inline constexpr T *
+	handle_allocate_impl(handle_type handle, ::std::size_t n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+		requires(has_status && has_defaulted_alignment)
 	{
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
-			if (n)
+			return ::fast_io::freestanding::allocator<T>{}.allocate(n);
+		}
+#endif
+		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
+		if (n > mxn)
+		{
+			if constexpr (throwing)
 			{
-				return ::fast_io::freestanding::allocator<T>{}.allocate(n);
+				::fast_io::herbceptions::throws_errc(::std::errc::value_too_large);
 			}
 			else
 			{
-				return nullptr;
+				::fast_io::fast_terminate();
 			}
 		}
-#endif
-		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
-		if (n > mxn)
-		{
-			::fast_io::fast_terminate();
-		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_allocate(handle, n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_allocate_aligned(handle, alignof(T), n * sizeof(T)));
-		}
+		return static_cast<T *>(dispatch<throwing>::handle_allocate(handle, n * sizeof(T)));
 	}
 
-	static inline
-#if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && \
-	__cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
+	static inline constexpr T *handle_allocate(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+		requires(has_defaulted_alignment &&
+				 ((!throws_on_allocation_failure && has_handle_allocate) ||
+				  (throws_on_allocation_failure && has_handle_allocate_try)))
+	{
+		return handle_allocate_impl<throws_on_allocation_failure>(handle, n);
+	}
+	static inline constexpr T *handle_allocate_die(handle_type handle, ::std::size_t n) noexcept
+		requires(has_defaulted_alignment && has_handle_allocate)
+	{
+		return handle_allocate_impl<false>(handle, n);
+	}
+	static inline constexpr T *handle_allocate_try(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+		requires(has_defaulted_alignment && has_handle_allocate_try)
+	{
+		return handle_allocate_impl<true>(handle, n);
+	}
+
+	template <bool throwing>
+#if __has_cpp_attribute(__gnu__::__returns_nonnull__)
+	[[__gnu__::__returns_nonnull__]]
 #endif
-		T *
-		handle_allocate_zero(handle_type handle, ::std::size_t n) noexcept
-		requires(has_status)
+	static inline constexpr T *
+	handle_allocate_zero_impl(handle_type handle, ::std::size_t n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+		requires(has_status && has_defaulted_alignment)
 	{
 		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
 		if (n > mxn)
 		{
-			::fast_io::fast_terminate();
+			if constexpr (throwing)
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::value_too_large);
+			}
+			else
+			{
+				::fast_io::fast_terminate();
+			}
 		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_allocate_zero(handle, n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_allocate_zero_aligned(handle, alignof(T), n * sizeof(T)));
-		}
+		return static_cast<T *>(dispatch<throwing>::handle_allocate_zero(handle, n * sizeof(T)));
 	}
 
-	static inline constexpr bool has_handle_reallocate = allocator_adaptor::has_handle_reallocate;
-	static inline
-#if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && \
-	__cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		T *
-		handle_reallocate(handle_type handle, T *ptr, ::std::size_t n) noexcept
-		requires(has_status && has_handle_reallocate)
+	static inline constexpr T *handle_allocate_zero(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+		requires(has_defaulted_alignment &&
+				 ((!throws_on_allocation_failure && has_handle_allocate) ||
+				  (throws_on_allocation_failure && has_handle_allocate_try)))
 	{
-		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
-		if (n > mxn)
-		{
-			::fast_io::fast_terminate();
-		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_reallocate(handle, ptr, n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_reallocate_aligned(handle, ptr, alignof(T), n * sizeof(T)));
-		}
+		return handle_allocate_zero_impl<throws_on_allocation_failure>(handle, n);
 	}
-
-	static inline constexpr bool has_handle_reallocate_zero = allocator_adaptor::has_handle_reallocate_zero;
-
-	static inline
-#if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && \
-	__cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		T *
-		handle_reallocate_zero(handle_type handle, T *ptr, ::std::size_t n) noexcept
-		requires(has_status && has_handle_reallocate)
+	static inline constexpr T *handle_allocate_zero_die(handle_type handle, ::std::size_t n) noexcept
+		requires(has_defaulted_alignment && has_handle_allocate)
 	{
-		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
-		if (n > mxn)
-		{
-			::fast_io::fast_terminate();
-		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_reallocate_zero(handle, ptr, n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_reallocate_aligned_zero(handle, ptr, alignof(T), n * sizeof(T)));
-		}
+		return handle_allocate_zero_impl<false>(handle, n);
 	}
-
-	static inline
-#if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && \
-	__cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		T *
-		handle_reallocate_n(handle_type handle, T *ptr, ::std::size_t oldn, ::std::size_t n) noexcept
-		requires(has_status)
+	static inline constexpr T *handle_allocate_zero_try(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+		requires(has_defaulted_alignment && has_handle_allocate_try)
 	{
-		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
-		if (n > mxn)
-		{
-			::fast_io::fast_terminate();
-		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_reallocate_n(handle, ptr, oldn * sizeof(T), n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_reallocate_aligned_n(handle, ptr, oldn * sizeof(T), alignof(T), n * sizeof(T)));
-		}
+		return handle_allocate_zero_impl<true>(handle, n);
 	}
 
-	static inline
-#if (__cpp_if_consteval >= 202106L || __cpp_lib_is_constant_evaluated >= 201811L) && \
-	__cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		T *
-		handle_reallocate_zero_n(handle_type handle, T *ptr, ::std::size_t oldn, ::std::size_t n) noexcept
-		requires(has_status)
-	{
-		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
-		if (n > mxn)
-		{
-			::fast_io::fast_terminate();
-		}
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return static_cast<T *>(alloc::handle_reallocate_zero_n(handle, ptr, oldn * sizeof(T), n * sizeof(T)));
-		}
-		else
-		{
-			return static_cast<T *>(alloc::handle_reallocate_aligned_zero_n(handle, ptr, oldn * sizeof(T), alignof(T), n * sizeof(T)));
-		}
-	}
+	static inline constexpr bool has_handle_deallocate{allocator_adaptor::has_handle_deallocate};
 
-	static inline constexpr bool has_handle_deallocate = allocator_adaptor::has_handle_deallocate;
-	static inline
-#if __cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		void
-		handle_deallocate(handle_type handle, T *ptr) noexcept
-		requires(has_status && has_handle_deallocate)
+	static inline constexpr void
+	handle_deallocate(handle_type handle, T *ptr) noexcept
+		requires(has_status && has_defaulted_alignment && has_handle_deallocate && !secure_clear)
 	{
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
@@ -1519,24 +1450,23 @@ if !consteval
 			}
 		}
 #endif
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			return alloc::handle_deallocate(handle, ptr);
-		}
-		else
-		{
-			return alloc::handle_deallocate_aligned(handle, ptr, alignof(T));
-		}
+		alloc::handle_deallocate(handle, ptr);
 	}
 
-	static inline
-#if __cpp_constexpr_dynamic_alloc >= 201907L
-		constexpr
-#endif
-		void
-		handle_deallocate_n(handle_type handle, T *ptr, ::std::size_t n) noexcept
-		requires(has_status)
+	static inline constexpr void
+	handle_deallocate_n(handle_type handle, T *ptr, ::std::size_t n) noexcept
+		requires(has_status && has_handle_deallocate)
 	{
+		if constexpr (secure_clear)
+		{
+if !consteval
+			{
+				if (ptr != nullptr)
+				{
+					::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(ptr), n * sizeof(T));
+				}
+			}
+		}
 #if __cpp_constexpr_dynamic_alloc >= 201907L
 		if (__builtin_is_constant_evaluated())
 		{
@@ -1550,13 +1480,5 @@ if !consteval
 			}
 		}
 #endif
-		if constexpr (alignof(T) <= alloc::default_alignment)
-		{
-			alloc::handle_deallocate_n(handle, ptr, n * sizeof(T));
-		}
-		else
-		{
-			alloc::handle_deallocate_aligned_n(handle, ptr, alignof(T), n * sizeof(T));
-		}
+		alloc::handle_deallocate_n(handle, ptr, n * sizeof(T));
 	}
-#endif
