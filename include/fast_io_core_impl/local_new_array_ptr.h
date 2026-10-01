@@ -3,7 +3,8 @@
 namespace fast_io::details
 {
 template <typename char_type, typename allocator = ::fast_io::native_thread_local_allocator>
-inline constexpr char_type *allocate_iobuf_space(::std::size_t buffer_size) noexcept
+inline constexpr char_type *allocate_iobuf_space(::std::size_t buffer_size)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(typed_generic_allocator_adapter<allocator, char_type>::throws_on_allocation_failure)
 {
 #if __cpp_constexpr >= 201907L && __cpp_constexpr_dynamic_alloc >= 201907L
 	if (__builtin_is_constant_evaluated())
@@ -75,14 +76,16 @@ struct buffer_alloc_arr_ptr
 	(__cpp_lib_is_constant_evaluated >= 201811L || __cpp_if_consteval >= 202106L)
 		constexpr
 #endif
-		buffer_alloc_arr_ptr(::std::size_t sz) noexcept
+		buffer_alloc_arr_ptr(::std::size_t sz)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(typed_generic_allocator_adapter<allocator_type, T>::throws_on_allocation_failure)
 		: ptr(::fast_io::details::allocate_iobuf_space<T, allocator_type>(sz)), size(sz)
 	{
 	}
 
 	inline buffer_alloc_arr_ptr(buffer_alloc_arr_ptr const &) = delete;
 	inline buffer_alloc_arr_ptr &operator=(buffer_alloc_arr_ptr const &) = delete;
-	inline constexpr T *allocate_new(::std::size_t n) noexcept
+	inline constexpr T *allocate_new(::std::size_t n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(typed_generic_allocator_adapter<allocator_type, T>::throws_on_allocation_failure)
 	{
 		return (ptr = ::fast_io::details::allocate_iobuf_space<T, allocator_type>(size = n));
 	}

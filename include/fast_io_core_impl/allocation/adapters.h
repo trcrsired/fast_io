@@ -20,7 +20,8 @@ concept has_default_alignment_impl = requires(::std::size_t n) { alloc::default_
 
 template <typename alloc>
 concept has_adapter_flags_impl = requires {
-	{ alloc::adapter_flags } -> ::std::same_as<::fast_io::allocator_adapter_flags>;
+	{ alloc::adapter_flags };
+	requires ::std::same_as<::std::remove_cvref_t<decltype(alloc::adapter_flags)>, ::fast_io::allocator_adapter_flags>;
 };
 
 template <typename alloc>

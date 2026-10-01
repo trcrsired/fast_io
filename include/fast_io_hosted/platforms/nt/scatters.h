@@ -13,7 +13,8 @@ using nt_buffer_alloc_ptr = ::fast_io::details::buffer_alloc_arr_ptr<
 #else
 		::fast_io::nt_rtlallocateheap_allocator
 #endif
-		>>;
+		,
+		::fast_io::allocator_adapter_flags::throws_on_allocation_failure>>;
 
 
 // The kernel only takes a per-call ByteOffset; it cannot advance an offset across the

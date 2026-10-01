@@ -7,7 +7,8 @@ template <typename T>
 using win32_buffer_alloc_ptr = ::fast_io::details::buffer_alloc_arr_ptr<
 	T,
 	false,
-	::fast_io::generic_allocator_adapter<::fast_io::win32_heapalloc_allocator>>;
+	::fast_io::generic_allocator_adapter<::fast_io::win32_heapalloc_allocator,
+										 ::fast_io::allocator_adapter_flags::throws_on_allocation_failure>>;
 
 // WriteFile only takes a per-call LPOVERLAPPED, so chunk offset tracking lives in the
 // thunk; these functors just carry it through the common loop.

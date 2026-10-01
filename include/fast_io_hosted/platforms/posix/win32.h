@@ -36,6 +36,16 @@ inline void posix_pwrite_all_bytes_impl(int fd, ::std::byte const *first, ::std:
 	::fast_io::operations::pwrite_all_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, last, off);
 }
 
+// Scatter I/O emulation buffers allocate through the throwing flavour of the thread
+// local allocator so allocation failure propagates as an herbception like any other
+// I/O error instead of terminating.
+template <typename T>
+using posix_scatter_buffer_alloc_ptr = ::fast_io::details::buffer_alloc_arr_ptr<
+	T,
+	false,
+	::fast_io::generic_allocator_adapter<::fast_io::native_thread_local_allocator,
+										 ::fast_io::allocator_adapter_flags::throws_on_allocation_failure>>;
+
 // Non-positional scatter I/O goes through _read/_write (posix_read/write_bytes_impl)
 // rather than win32_io_observer so the CRT fd's text mode is honored.
 struct posix_scatter_read_chunk_impl
@@ -94,14 +104,14 @@ struct posix_scatter_write_all_chunk_impl
 inline ::fast_io::io_scatter_status_t posix_scatter_read_bytes_impl(int fd, ::fast_io::io_scatter_t const *pscatters,
 																	::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::scatter_read_pread_some_bytes_common<::fast_io::details::buffer_alloc_arr_ptr<::std::byte, false>>(
+	return ::fast_io::details::scatter_read_pread_some_bytes_common<::fast_io::details::posix_scatter_buffer_alloc_ptr<::std::byte>>(
 		nullptr, pscatters, n, posix_scatter_read_chunk_impl{fd});
 }
 
 inline void posix_scatter_read_all_bytes_impl(int fd, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::scatter_read_pread_all_bytes_common<::fast_io::details::buffer_alloc_arr_ptr<::std::byte, false>>(
+	::fast_io::details::scatter_read_pread_all_bytes_common<::fast_io::details::posix_scatter_buffer_alloc_ptr<::std::byte>>(
 		nullptr, pscatters, n, posix_scatter_read_all_chunk_impl{fd});
 }
 
@@ -123,14 +133,14 @@ inline void posix_scatter_pread_all_bytes_impl(int fd, ::fast_io::io_scatter_t c
 inline ::fast_io::io_scatter_status_t posix_scatter_write_bytes_impl(int fd, ::fast_io::io_scatter_t const *pscatters,
 																	 ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::scatter_write_pwrite_some_bytes_common<::fast_io::details::buffer_alloc_arr_ptr<::std::byte, false>>(
+	return ::fast_io::details::scatter_write_pwrite_some_bytes_common<::fast_io::details::posix_scatter_buffer_alloc_ptr<::std::byte>>(
 		nullptr, pscatters, n, posix_scatter_write_chunk_impl{fd});
 }
 
 inline void posix_scatter_write_all_bytes_impl(int fd, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::scatter_write_pwrite_all_bytes_common<::fast_io::details::buffer_alloc_arr_ptr<::std::byte, false>>(
+	::fast_io::details::scatter_write_pwrite_all_bytes_common<::fast_io::details::posix_scatter_buffer_alloc_ptr<::std::byte>>(
 		nullptr, pscatters, n, posix_scatter_write_all_chunk_impl{fd});
 }
 
