@@ -332,24 +332,22 @@ inline
 	}
 }
 
-template <bool zw = false, ::std::int_least64_t off_to_epoch>
+template <bool zw = false>
 inline
 #if __cpp_constexpr >= 202207L
 	// https://en.cppreference.com/w/cpp/compiler_support/23.html#cpp_constexpr_202207L
 	// for reduce some warning purpose
 	constexpr
 #endif
-	void sleep_for(::fast_io::basic_timestamp<off_to_epoch> const &sleep_duration)
+	void sleep_for(::fast_io::posix_statx_timestamp64 const &sleep_duration)
 		FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (sleep_duration.seconds < 0) [[unlikely]]
+	if (sleep_duration.tv_sec < 0) [[unlikely]]
 	{
 		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
 	}
 
-	constexpr ::std::uint_least64_t mul_factor{::fast_io::uint_least64_subseconds_per_second / 1000000000u};
-
-	auto const win_100ns_seconds{static_cast<::std::uint_least64_t>(static_cast<::std::uint_least64_t>(sleep_duration.seconds) * 10'000'000u + sleep_duration.subseconds / mul_factor / 100u)};
+	auto const win_100ns_seconds{static_cast<::std::uint_least64_t>(static_cast<::std::uint_least64_t>(sleep_duration.tv_sec) * 10'000'000u + sleep_duration.tv_nsec / 100u)};
 
 	if (win_100ns_seconds > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max())) [[unlikely]]
 	{
@@ -403,25 +401,17 @@ inline
 	}
 }
 
-template <bool zw = false, ::std::int_least64_t off_to_epoch>
+template <bool zw = false>
 inline
 #if __cpp_constexpr >= 202207L
 	// https://en.cppreference.com/w/cpp/compiler_support/23.html#cpp_constexpr_202207L
 	// for reduce some warning purpose
 	constexpr
 #endif
-	void sleep_until(::fast_io::basic_timestamp<off_to_epoch> const &expect_time)
+	void sleep_until(::fast_io::posix_statx_timestamp64 const &expect_time)
 		FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (expect_time.seconds < 0) [[unlikely]]
-	{
-		::fast_io::herbceptions::throws_nt_errc_with_value(0xC000000D);
-	}
-
-	auto const win32_ts{static_cast<::fast_io::win32_timestamp>(expect_time)};
-
-	constexpr ::std::uint_least64_t mul_factor{::fast_io::uint_least64_subseconds_per_second / 1000000000u};
-	auto const win_100ns_seconds = static_cast<::std::uint_least64_t>(win32_ts.seconds) * 10'000'000u + win32_ts.subseconds / mul_factor / 100u;
+	auto const win_100ns_seconds{::fast_io::posix_statx_timestamp64_to_ftu64(expect_time)};
 
 	if (win_100ns_seconds > static_cast<::std::uint_least64_t>(::std::numeric_limits<::std::int_least64_t>::max())) [[unlikely]]
 	{

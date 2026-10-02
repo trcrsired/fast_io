@@ -18,9 +18,9 @@ int main(int argc, char **argv)
 #endif
 	{
 
-		::fast_io::unix_timestamp_option creation_time;
-		::fast_io::unix_timestamp_option last_access_time;
-		::fast_io::unix_timestamp_option last_modification_time;
+		::fast_io::statx_timestamp_option creation_time;
+		::fast_io::statx_timestamp_option last_access_time;
+		::fast_io::statx_timestamp_option last_modification_time;
 
 		::fast_io::iso8601_timestamp iso8601_ts{};
 

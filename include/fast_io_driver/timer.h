@@ -10,7 +10,7 @@ namespace fast_io
 struct timer
 {
 	::fast_io::u8string_view s;
-	unix_timestamp t0;
+	posix_statx_timestamp64 t0;
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
 #endif

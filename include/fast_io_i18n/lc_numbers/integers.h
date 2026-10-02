@@ -397,15 +397,35 @@ inline constexpr ::std::size_t print_reserve_size_grouping_timestamp_impl(basic_
 	constexpr ::std::size_t static_size{print_reserve_size(io_reserve_type<char_type, ::std::int_least64_t>)};
 	constexpr ::std::size_t static_sizem1{static_size - 1};
 	return static_size + static_sizem1 * all->numeric.thousands_sep.len + all->numeric.decimal_point.len +
-		   ::std::numeric_limits<::std::uint_least64_t>::digits10;
+		   ::std::numeric_limits<::std::uint_least32_t>::digits10;
 }
 
 template <::std::integral char_type>
 inline constexpr char_type *print_reserve_define_grouping_timestamp_impl(basic_lc_all<char_type> const *__restrict all,
-																		 char_type *iter, unix_timestamp timestamp)
+																		 char_type *iter, posix_statx_timestamp64 timestamp)
 {
-	iter = lc_print_reserve_integral_define<10>(all, iter, timestamp.seconds);
-	if (timestamp.subseconds)
+	::std::int_least64_t seconds{timestamp.tv_sec};
+	::std::uint_least32_t nanoseconds{timestamp.tv_nsec};
+	if (seconds < 0)
+	{
+		// floor-based to sign-magnitude form for printing
+		*iter = ::fast_io::char_literal_v<u8'-', char_type>;
+		++iter;
+		::std::uint_least64_t useconds{static_cast<::std::uint_least64_t>(seconds)};
+		useconds = static_cast<::std::uint_least64_t>(0u) - useconds;
+		if (nanoseconds)
+		{
+			--useconds;
+			nanoseconds = static_cast<::std::uint_least32_t>(
+				::fast_io::details::statx_timestamp64_nanoseconds_per_second - nanoseconds);
+		}
+		iter = lc_print_reserve_integral_define<10>(all, iter, useconds);
+	}
+	else
+	{
+		iter = lc_print_reserve_integral_define<10>(all, iter, seconds);
+	}
+	if (nanoseconds)
 	{
 		if (all->numeric.decimal_point.len == 1)
 		{
@@ -416,7 +436,7 @@ inline constexpr char_type *print_reserve_define_grouping_timestamp_impl(basic_l
 		{
 			iter = non_overlapped_copy_n(all->numeric.decimal_point.base, all->numeric.decimal_point.len, iter);
 		}
-		iter = output_iso8601_subseconds_main(iter, timestamp.subseconds);
+		iter = output_iso8601_nanoseconds_main(iter, nanoseconds);
 	}
 	return iter;
 }
@@ -458,25 +478,18 @@ inline constexpr char_type *print_reserve_define(basic_lc_all<char_type> const *
 	}
 }
 
-template <::std::integral char_type, ::std::int_least64_t off_to_epoch>
+template <::std::integral char_type>
 inline constexpr ::std::size_t print_reserve_size(basic_lc_all<char_type> const *__restrict all,
-												  basic_timestamp<off_to_epoch>) noexcept
+												  posix_statx_timestamp64) noexcept
 {
 	return details::print_reserve_size_grouping_timestamp_impl(all);
 }
 
-template <::std::integral char_type, ::std::int_least64_t off_to_epoch>
+template <::std::integral char_type>
 inline constexpr char_type *print_reserve_define(basic_lc_all<char_type> const *__restrict all, char_type *iter,
-												 basic_timestamp<off_to_epoch> ts) noexcept
+												 posix_statx_timestamp64 ts) noexcept
 {
-	if constexpr (off_to_epoch == 0)
-	{
-		return details::print_reserve_define_grouping_timestamp_impl(all, iter, ts);
-	}
-	else
-	{
-		return details::print_reserve_define_grouping_timestamp_impl(all, iter, {ts.seconds, ts.subseconds});
-	}
+	return details::print_reserve_define_grouping_timestamp_impl(all, iter, ts);
 }
 
 template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename T>
@@ -495,11 +508,11 @@ inline constexpr ::std::size_t print_define_internal_shift(basic_lc_all<char_typ
 	}
 }
 
-template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, ::std::int_least64_t off_to_epoch>
+template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags>
 inline constexpr ::std::size_t print_define_internal_shift(basic_lc_all<char_type> const *__restrict,
-														   basic_timestamp<off_to_epoch> t) noexcept
+														   posix_statx_timestamp64 t) noexcept
 {
-	return t.seconds < 0;
+	return t.tv_sec < 0;
 }
 
 } // namespace fast_io

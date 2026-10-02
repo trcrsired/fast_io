@@ -229,8 +229,8 @@ inline posix_file_status win32_9xa_fstatat_impl(::fast_io::win32_9xa_dir_handle 
 	return ::fast_io::win32::details::win32_status_impl(f.native_handle());
 }
 
-inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, unix_timestamp_option creation_time,
-									 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time, win32_9xa_at_flags flags)
+inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirhd, char8_t const *path_c_str, ::std::size_t path_size, statx_timestamp_option creation_time,
+									 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time, win32_9xa_at_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto path{concat_win32_9xa_path_uncheck_whether_exist(dirhd, path_c_str, path_size)};
@@ -242,7 +242,6 @@ inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 
 	// ::std::uint_least64_t current_time{(static_cast<::std::uint_least64_t>(ftm.dwHighDateTime) << 32) | ftm.dwLowDateTime};
 
-	// constexpr ::std::uint_least64_t mul_factor{::fast_io::uint_least64_subseconds_per_second / 10000000ULL};
 
 	::fast_io::win32::filetime CreationTime;
 	::fast_io::win32::filetime *pCreationTime{__builtin_addressof(CreationTime)};
@@ -255,8 +254,7 @@ inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(creation_time.timestamp)};
-		CreationTime = ::fast_io::win32::win32_timestamp_to_filetime(win32_time);
+		CreationTime = ::fast_io::win32::unix_timestamp_to_filetime(creation_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -273,8 +271,7 @@ inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(last_access_time.timestamp)};
-		LastAccessTime = ::fast_io::win32::win32_timestamp_to_filetime(win32_time);
+		LastAccessTime = ::fast_io::win32::unix_timestamp_to_filetime(last_access_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -291,8 +288,7 @@ inline void win32_9xa_utimensat_impl(::fast_io::win32_9xa_dir_handle const &dirh
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(last_modification_time.timestamp)};
-		LastWriteTime = ::fast_io::win32::win32_timestamp_to_filetime(win32_time);
+		LastWriteTime = ::fast_io::win32::unix_timestamp_to_filetime(last_modification_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -569,8 +565,8 @@ inline posix_file_status win32_9xa_fstatat(::fast_io::win32_9xa_at_entry const &
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void win32_9xa_utimensat(::fast_io::win32_9xa_at_entry const &ent, path_type const &path, unix_timestamp_option creation_time,
-								unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void win32_9xa_utimensat(::fast_io::win32_9xa_at_entry const &ent, path_type const &path, statx_timestamp_option creation_time,
+								statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 								win32_9xa_at_flags flags = win32_9xa_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -664,8 +660,8 @@ inline posix_file_status native_fstatat(::fast_io::win32_9xa_at_entry const &ent
 	return ::fast_io::win32::details::win32_9xa_deal_with1x<details::posix_api_1x::fstatat>(ent.handle, path, flags);
 }
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void native_utimensat(::fast_io::win32_9xa_at_entry const &ent, path_type const &path, unix_timestamp_option creation_time,
-							 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void native_utimensat(::fast_io::win32_9xa_at_entry const &ent, path_type const &path, statx_timestamp_option creation_time,
+							 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 							 win32_9xa_at_flags flags = win32_9xa_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {

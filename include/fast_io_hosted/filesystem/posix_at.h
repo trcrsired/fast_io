@@ -382,11 +382,10 @@ inline void posix_unlinkat_impl(int dirfd, char const *path, int flags)
 
 namespace details
 {
-inline constexpr struct timespec unix_timestamp_to_struct_timespec(unix_timestamp stmp) noexcept
+inline constexpr struct timespec unix_timestamp_to_struct_timespec(posix_statx_timestamp64 stmp) noexcept
 {
-	constexpr ::std::uint_least64_t mul_factor{uint_least64_subseconds_per_second / 1000000000u};
-	return {static_cast<::std::time_t>(stmp.seconds),
-			static_cast<long>(static_cast<long unsigned>(stmp.subseconds / mul_factor))};
+	return {static_cast<::std::time_t>(stmp.tv_sec),
+			static_cast<long>(stmp.tv_nsec)};
 }
 
 inline
@@ -394,7 +393,7 @@ inline
 	constexpr
 #endif
 	struct timespec
-	unix_timestamp_to_struct_timespec([[maybe_unused]] unix_timestamp_option opt) noexcept
+	unix_timestamp_to_struct_timespec([[maybe_unused]] statx_timestamp_option opt) noexcept
 {
 #if defined(UTIME_NOW) && defined(UTIME_OMIT)
 	switch (opt.flags)
@@ -422,11 +421,10 @@ struct kernel_timespec64
 	::std::int_least64_t tv_nsec;
 };
 
-inline constexpr kernel_timespec64 unix_timestamp_to_struct_timespec64(unix_timestamp stmp) noexcept
+inline constexpr kernel_timespec64 unix_timestamp_to_struct_timespec64(posix_statx_timestamp64 stmp) noexcept
 {
-	constexpr ::std::uint_least64_t mul_factor{uint_least64_subseconds_per_second / 1000000000u};
-	return {static_cast<::std::int_least64_t>(stmp.seconds),
-			static_cast<::std::int_least64_t>(stmp.subseconds / mul_factor)};
+	return {static_cast<::std::int_least64_t>(stmp.tv_sec),
+			static_cast<::std::int_least64_t>(stmp.tv_nsec)};
 }
 
 inline
@@ -434,7 +432,7 @@ inline
 	constexpr
 #endif
 	kernel_timespec64
-	unix_timestamp_to_struct_timespec64([[maybe_unused]] unix_timestamp_option opt) noexcept
+	unix_timestamp_to_struct_timespec64([[maybe_unused]] statx_timestamp_option opt) noexcept
 {
 #if defined(UTIME_NOW) && defined(UTIME_OMIT)
 	switch (opt.flags)
@@ -454,8 +452,8 @@ inline
 
 } // namespace details
 
-inline void posix_utimensat_impl(int dirfd, char const *path, unix_timestamp_option creation_time,
-								 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void posix_utimensat_impl(int dirfd, char const *path, statx_timestamp_option creation_time,
+								 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 								 int flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -870,8 +868,8 @@ inline void native_linkat(posix_at_entry oldent, old_path_type const &oldpath, p
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void posix_utimensat(posix_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-							unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void posix_utimensat(posix_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+							statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 							posix_at_flags flags = posix_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -880,8 +878,8 @@ inline void posix_utimensat(posix_at_entry ent, path_type const &path, unix_time
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void native_utimensat(posix_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-							 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void native_utimensat(posix_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+							 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 							 posix_at_flags flags = posix_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {

@@ -35,9 +35,6 @@ FILE* or fstream apis
 	fast_io::native_l10n l10n(u8"");
 	println(imbue(l10n, fast_io::c_stdout()), "Unix Timestamp:", unix_ts,
 			"\n"
-			"Universe Timestamp:",
-			static_cast<fast_io::universe_timestamp>(unix_ts),
-			"\n"
 			"UTC iso8601:",
 			utc(unix_ts), "\n", "UTC date_fmt:", fast_io::mnp::date_fmt(utc(unix_ts)),
 			"\n"

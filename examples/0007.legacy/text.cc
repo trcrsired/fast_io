@@ -22,9 +22,6 @@ int main()
 	using namespace fast_io::mnp;
 	println(cfl, "Unix Timestamp:", unix_ts,
 			"\n"
-			"Universe Timestamp:",
-			static_cast<fast_io::universe_timestamp>(unix_ts),
-			"\n"
 			"UTC:",
 			utc(unix_ts), "\n", "Local:", local(unix_ts), " Timezone:", fast_io::timezone_name(), "\n",
 #ifdef __clang__

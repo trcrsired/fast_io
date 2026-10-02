@@ -285,7 +285,7 @@ using ::fast_io::file_lock_mode;
 using ::fast_io::mmap_prot;
 using ::fast_io::mmap_flags;
 using ::fast_io::utime_flags;
-using ::fast_io::unix_timestamp_option;
+using ::fast_io::statx_timestamp_option;
 using ::fast_io::well_known_directory;
 // flags enum
 using ::fast_io::operator&;
@@ -361,16 +361,14 @@ using ::fast_io::intfpos_t;
 using ::fast_io::fposoffadd_scatters;
 using ::fast_io::seekdir;
 
-using ::fast_io::basic_timestamp;
-using ::fast_io::unix_timestamp;
-using ::fast_io::win32_timestamp;
-using ::fast_io::csharp_timestamp;
-using ::fast_io::year0_timestamp;
-using ::fast_io::universe_timestamp;
+using ::fast_io::posix_statx_timestamp64;
 using ::fast_io::iso8601_timestamp;
 
 using ::fast_io::local;
 using ::fast_io::utc;
+using ::fast_io::to_timestamp;
+using ::fast_io::to_posix_statx_timestamp64_ftu64;
+using ::fast_io::posix_statx_timestamp64_to_ftu64;
 
 using ::fast_io::operator==;
 using ::fast_io::operator!=;
@@ -401,5 +399,4 @@ using ::fast_io::basic_general_concat;
 using ::fast_io::io_print_forward;
 using ::fast_io::io_print_alias;
 
-using ::fast_io::uint_least64_subseconds_per_second;
 } // namespace fast_io

@@ -308,8 +308,8 @@ inline posix_file_status nt_fstatat_impl(void *dirhd, char16_t const *path_c_str
 }
 
 template <bool zw>
-inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, unix_timestamp_option creation_time,
-							  unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time, nt_at_flags flags, bool kernel)
+inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::size_t path_size, statx_timestamp_option creation_time,
+							  statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time, nt_at_flags flags, bool kernel)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_open_mode md{
@@ -349,15 +349,11 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 		current_time = (static_cast<::std::uint_least64_t>(ftm.dwHighDateTime) << 32u) | ftm.dwLowDateTime;
 	}
 
-	constexpr ::std::uint_least64_t mul_factor{::fast_io::uint_least64_subseconds_per_second / 10000000ULL};
-
 	switch (creation_time.flags)
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(creation_time.timestamp)};
-		fbi.CreationTime = static_cast<::std::uint_least64_t>(win32_time.seconds) * 10000000ULL +
-						   win32_time.subseconds / mul_factor;
+		fbi.CreationTime = ::fast_io::posix_statx_timestamp64_to_ftu64(creation_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -374,9 +370,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(last_access_time.timestamp)};
-		fbi.LastAccessTime = static_cast<::std::uint_least64_t>(win32_time.seconds) * 10000000ULL +
-							 win32_time.subseconds / mul_factor;
+		fbi.LastAccessTime = ::fast_io::posix_statx_timestamp64_to_ftu64(last_access_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -393,9 +387,7 @@ inline void nt_utimensat_impl(void *dirhd, char16_t const *path_c_str, ::std::si
 	{
 	case ::fast_io::utime_flags::none:
 	{
-		auto const win32_time{static_cast<::fast_io::win32_timestamp>(last_modification_time.timestamp)};
-		fbi.LastWriteTime = static_cast<::std::uint_least64_t>(win32_time.seconds) * 10000000ULL +
-							win32_time.subseconds / mul_factor;
+		fbi.LastWriteTime = ::fast_io::posix_statx_timestamp64_to_ftu64(last_modification_time.timestamp);
 		break;
 	}
 	case ::fast_io::utime_flags::now:
@@ -1134,40 +1126,40 @@ inline posix_file_status zw_fstatat(io_kernel_t, nt_at_entry ent, path_type cons
 
 template <nt_family family, bool kernel, ::fast_io::constructible_to_os_c_str path_type>
 	requires(family == nt_family::nt || family == nt_family::zw)
-inline void nt_family_nt_utimensat(nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-								   unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void nt_family_nt_utimensat(nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+								   statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 								   nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<family, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, kernel);
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void nt_utimensat(nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-						 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void nt_utimensat(nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+						 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 						 nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<nt_family::nt, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, false);
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void zw_utimensat(nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-						 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void zw_utimensat(nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+						 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 						 nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<nt_family::zw, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, false);
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void nt_utimensat(io_kernel_t, nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-						 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void nt_utimensat(io_kernel_t, nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+						 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 						 nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<nt_family::nt, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, true);
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void zw_utimensat(io_kernel_t, nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-						 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void zw_utimensat(io_kernel_t, nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+						 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 						 nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<nt_family::zw, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, true);
@@ -1392,8 +1384,8 @@ inline posix_file_status native_fstatat(nt_at_entry ent, path_type const &path, 
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void native_utimensat(nt_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-							 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void native_utimensat(nt_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+							 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 							 nt_at_flags flags = nt_at_flags::symlink_nofollow)
 {
 	::fast_io::win32::nt::details::nt_deal_with1x<nt_family::nt, details::posix_api_1x::utimensat>(ent.handle, path, creation_time, last_access_time, last_modification_time, flags, false);

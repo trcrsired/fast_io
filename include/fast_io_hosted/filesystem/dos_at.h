@@ -211,9 +211,9 @@ inline void dos_unlinkat_impl(int dirfd, char const *pathname)
 	djgpp_libc_throw_posix_error(::fast_io::posix::my_dos_unlink(::fast_io::details::my_dos_concat_tlc_path(dirfd, pathname).c_str()));
 }
 
-inline constexpr ::std::time_t unix_timestamp_to_time_t(unix_timestamp stmp) noexcept
+inline constexpr ::std::time_t unix_timestamp_to_time_t(posix_statx_timestamp64 stmp) noexcept
 {
-	return static_cast<::std::time_t>(stmp.seconds);
+	return static_cast<::std::time_t>(stmp.tv_sec);
 }
 
 inline
@@ -221,7 +221,7 @@ inline
 	constexpr
 #endif
 	::std::time_t
-	unix_timestamp_to_time_t(unix_timestamp_option opt)
+	unix_timestamp_to_time_t(statx_timestamp_option opt)
 		FAST_IO_HERBCEPTIONS_THROWS
 {
 	switch (opt.flags)
@@ -235,8 +235,8 @@ inline
 	}
 }
 
-inline void dos_utimensat_impl(int dirfd, char const *pathname, unix_timestamp_option creation_time,
-							   unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time)
+inline void dos_utimensat_impl(int dirfd, char const *pathname, statx_timestamp_option creation_time,
+							   statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (creation_time.flags != utime_flags::omit)
@@ -506,8 +506,8 @@ inline void native_linkat(posix_at_entry oldent, old_path_type const &oldpath, p
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void dos_utimensat(posix_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-						  unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void dos_utimensat(posix_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+						  statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 						  [[maybe_unused]] dos_at_flags flags = dos_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -516,8 +516,8 @@ inline void dos_utimensat(posix_at_entry ent, path_type const &path, unix_timest
 }
 
 template <::fast_io::constructible_to_os_c_str path_type>
-inline void native_utimensat(posix_at_entry ent, path_type const &path, unix_timestamp_option creation_time,
-							 unix_timestamp_option last_access_time, unix_timestamp_option last_modification_time,
+inline void native_utimensat(posix_at_entry ent, path_type const &path, statx_timestamp_option creation_time,
+							 statx_timestamp_option last_access_time, statx_timestamp_option last_modification_time,
 							 [[maybe_unused]] dos_at_flags flags = dos_at_flags::symlink_nofollow)
 	FAST_IO_HERBCEPTIONS_THROWS
 {

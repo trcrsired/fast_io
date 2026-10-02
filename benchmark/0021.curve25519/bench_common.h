@@ -42,8 +42,7 @@ inline constexpr char const *bench_unit() noexcept
 inline ::std::uint64_t bench_now_ns()
 {
 	auto const ts{::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::monotonic_raw)};
-	return static_cast<::std::uint64_t>(ts.seconds) * 1000000000u +
-	       ts.subseconds / (::fast_io::uint_least64_subseconds_per_second / 1000000000u);
+	return static_cast<::std::uint64_t>(ts.tv_sec) * 1000000000u + ts.tv_nsec;
 }
 
 inline ::std::uint64_t bench_start()

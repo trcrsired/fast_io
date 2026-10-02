@@ -6,7 +6,7 @@ namespace fast_io
 namespace win32::nt::details
 {
 
-inline constexpr unix_timestamp to_unix_timestamp(::std::uint_least64_t date_time) noexcept
+inline constexpr posix_statx_timestamp64 to_unix_timestamp(::std::uint_least64_t date_time) noexcept
 {
 	/*
 	116444736000000000
@@ -16,14 +16,13 @@ inline constexpr unix_timestamp to_unix_timestamp(::std::uint_least64_t date_tim
 	*/
 
 	constexpr ::std::uint_least64_t gap{11644473600000ULL * 10000ULL};
-	constexpr ::std::uint_least64_t mul_factor{uint_least64_subseconds_per_second / 10000000u};
 	::std::uint_least64_t unix_time{date_time - gap};
 	if (date_time < gap) [[unlikely]]
 	{
 		unix_time = 0;
 	}
 	return {static_cast<::std::int_least64_t>(unix_time / 10000000ULL),
-			static_cast<::std::uint_least64_t>(unix_time % 10000000ULL) * mul_factor};
+			static_cast<::std::uint_least32_t>(unix_time % 10000000ULL) * 100u};
 }
 
 inline constexpr file_type file_type_impl(::std::uint_least32_t DeviceType) noexcept
