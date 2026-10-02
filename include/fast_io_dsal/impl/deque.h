@@ -702,17 +702,17 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(typename alloca
 
 	auto end_block_ptr{start_block_ptr + initial_allocated_block_counts};
 #if __cpp_if_consteval >= 202106L
-		if consteval
+	if consteval
 	{
 		for (auto i{start_block_ptr}; i != end_block_ptr; ++i)
 		{
 			::std::construct_at(i, static_cast<begin_ptrtype>(
 #if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
-				__builtin_operator_new(bytes * sizeof(replacetype))
+									   __builtin_operator_new(bytes * sizeof(replacetype))
 #else
-				::operator new(bytes * sizeof(replacetype))
+									   ::operator new(bytes * sizeof(replacetype))
 #endif
-			));
+										   ));
 		}
 	}
 	else
@@ -810,11 +810,11 @@ inline constexpr void deque_allocate_init_blocks_dezeroing_impl(typename allocat
 		{
 			::std::construct_at(it, static_cast<begin_ptrtype>(
 #if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
-				__builtin_operator_new(blockbytes * sizeof(replacetype))
+										__builtin_operator_new(blockbytes * sizeof(replacetype))
 #else
-				::operator new(blockbytes * sizeof(replacetype))
+										::operator new(blockbytes * sizeof(replacetype))
 #endif
-			));
+											));
 		}
 	}
 	else
@@ -1467,7 +1467,7 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(typename all
 	);
 #endif
 	::std::size_t to_allocated_blocks_least_p1{::fast_io::containers::details::deque_new_blocks_count_compute_impl<allocator::throws_on_violations>(new_blocks_count_least,
-																												   old_blocks_count, (no_space_at_back ? static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_start_reserved_ptr) : static_cast<::std::size_t>(old_after_reserved_ptr - old_front_block_controller_ptr)))};
+																																					old_blocks_count, (no_space_at_back ? static_cast<::std::size_t>(old_back_block_controller_ptr_p1 - old_start_reserved_ptr) : static_cast<::std::size_t>(old_after_reserved_ptr - old_front_block_controller_ptr)))};
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 	decltype(old_start_ptr) new_start_ptr;
 	::std::size_t allocated_blocks;
@@ -1647,27 +1647,27 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(typename allocat
 				"to_allocate_blocks=",to_allocate_blocks);
 #endif
 #if __cpp_if_consteval >= 202106L
-		if consteval
-		{
-			for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
+			if consteval
 			{
-				::std::construct_at(pos, static_cast<begin_ptrtype>(
+				for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
+				{
+					::std::construct_at(pos, static_cast<begin_ptrtype>(
 #if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
-					__builtin_operator_new(blockbytes * sizeof(replacetype))
+												 __builtin_operator_new(blockbytes * sizeof(replacetype))
 #else
-					::operator new(blockbytes * sizeof(replacetype))
+												 ::operator new(blockbytes * sizeof(replacetype))
 #endif
-				));
+													 ));
+				}
 			}
-		}
-		else
+			else
 #endif
-		{
-			for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
 			{
-				::std::construct_at(pos, static_cast<begin_ptrtype>(::fast_io::containers::details::deque_alloc_aligned<allocator>(allochdl, align, blockbytes * sizeof(replacetype))));
+				for (auto e{pos + to_allocate_blocks}; pos != e; ++pos)
+				{
+					::std::construct_at(pos, static_cast<begin_ptrtype>(::fast_io::containers::details::deque_alloc_aligned<allocator>(allochdl, align, blockbytes * sizeof(replacetype))));
+				}
 			}
-		}
 			::std::construct_at(pos, nullptr);
 			controller.controller_block.controller_after_reserved_ptr = pos;
 		}
@@ -1704,8 +1704,8 @@ inline constexpr bool deque_reserve_back_blocks_impl(typename allocator::handle_
 
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_grow_back_common_impl(typename allocator::handle_type allochdl, dequecontroltype &controller,
-	std::size_t align,
-	std::size_t bytes)
+												  std::size_t align,
+												  std::size_t bytes)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
 	if (controller.controller_block.controller_start_ptr == nullptr)
@@ -1772,14 +1772,13 @@ inline constexpr void deque_reserve_back_spaces_impl(typename allocator::handle_
 	if consteval
 	{
 		::fast_io::containers::details::deque_reserve_back_blocks_impl<allocator>(allochdl, controller,
-																				toallocate, align, block_size, 1);
+																				  toallocate, align, block_size, 1);
 	}
 	else
 	{
 		::std::size_t const block_bytes{block_size * sz};
-		::fast_io::containers::details::deque_reserve_back_blocks_impl<allocator>(allochdl, *reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
-																					__builtin_addressof(controller)),
-																				toallocate, align, block_bytes, sz);
+		::fast_io::containers::details::deque_reserve_back_blocks_impl<allocator>(allochdl, *reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(__builtin_addressof(controller)),
+																				  toallocate, align, block_bytes, sz);
 	}
 }
 
@@ -1851,27 +1850,27 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(typename alloca
 			auto ed{new_controller_start_reserved_ptr};
 			new_controller_start_reserved_ptr -= to_allocate_blocks;
 #if __cpp_if_consteval >= 202106L
-		if consteval
-		{
-			for (auto i{new_controller_start_reserved_ptr}; i != ed; ++i)
+			if consteval
 			{
-				::std::construct_at(i, static_cast<begin_ptrtype>(
+				for (auto i{new_controller_start_reserved_ptr}; i != ed; ++i)
+				{
+					::std::construct_at(i, static_cast<begin_ptrtype>(
 #if FAST_IO_HAS_BUILTIN(__builtin_operator_new)
-					__builtin_operator_new(blockbytes * sizeof(replacetype))
+											   __builtin_operator_new(blockbytes * sizeof(replacetype))
 #else
-					::operator new(blockbytes * sizeof(replacetype))
+											   ::operator new(blockbytes * sizeof(replacetype))
 #endif
-				));
+												   ));
+				}
 			}
-		}
-		else
+			else
 #endif
-		{
-			for (auto i{new_controller_start_reserved_ptr}; i != ed; ++i)
 			{
-				::std::construct_at(i, static_cast<begin_ptrtype>(::fast_io::containers::details::deque_alloc_aligned<allocator>(allochdl, align, blockbytes * sizeof(replacetype))));
+				for (auto i{new_controller_start_reserved_ptr}; i != ed; ++i)
+				{
+					::std::construct_at(i, static_cast<begin_ptrtype>(::fast_io::containers::details::deque_alloc_aligned<allocator>(allochdl, align, blockbytes * sizeof(replacetype))));
+				}
 			}
-		}
 			controller.controller_block.controller_start_reserved_ptr = new_controller_start_reserved_ptr;
 		}
 	}
@@ -1939,9 +1938,8 @@ inline constexpr void deque_reserve_front_spaces_impl(typename allocator::handle
 	else
 	{
 		::std::size_t const block_bytes{block_size * sz};
-		::fast_io::containers::details::deque_reserve_front_blocks_impl<allocator>(allochdl, *reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
-																					  __builtin_addressof(controller)),
-																				  toallocate, align, block_bytes, sz);
+		::fast_io::containers::details::deque_reserve_front_blocks_impl<allocator>(allochdl, *reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(__builtin_addressof(controller)),
+																				   toallocate, align, block_bytes, sz);
 	}
 }
 
@@ -1954,8 +1952,8 @@ inline constexpr void deque_reserve_front_spaces(typename allocator::handle_type
 
 template <typename allocator, typename dequecontroltype>
 inline constexpr void deque_grow_front_common_impl(typename allocator::handle_type allochdl, dequecontroltype &controller,
-	std::size_t align,
-	std::size_t bytes)
+												   std::size_t align,
+												   std::size_t bytes)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
 	if (controller.controller_block.controller_start_ptr == nullptr)
@@ -2331,7 +2329,11 @@ private:
 public:
 	using handle_type = typename typed_allocator_type::handle_type;
 	controller_type controller{};
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
 	[[no_unique_address]]
+#endif
 	handle_type allochdl{};
 
 	static inline constexpr size_type block_size{::fast_io::containers::details::deque_block_size<sizeof(value_type)>};
@@ -2414,7 +2416,7 @@ private:
 		}
 	};
 	inline constexpr void copy_construct_impl(controller_type const &fromcontroller)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		if constexpr (::std::is_trivially_copyable_v<value_type>)
 		{
@@ -2488,7 +2490,7 @@ private:
 		}
 	}
 	inline constexpr void default_construct_impl()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		run_destroy des(this->allochdl, __builtin_addressof(this->controller));
 
@@ -2732,7 +2734,7 @@ private:
 	}
 
 	inline constexpr void init_blocks_common(::std::size_t n, bool iszeroconstr)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_is_constant_evaluated())
 		{
@@ -2807,7 +2809,7 @@ private:
 	[[__gnu__::__cold__]]
 #endif
 	inline constexpr void grow_front()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_is_constant_evaluated())
 		{
@@ -2823,7 +2825,7 @@ private:
 	[[__gnu__::__cold__]]
 #endif
 	inline constexpr void grow_back()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_is_constant_evaluated())
 		{
@@ -2880,7 +2882,7 @@ public:
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr reference emplace_back(Args &&...args)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
 		if (controller.back_block.curr_ptr == controller.back_end_ptr) [[unlikely]]
 		{
@@ -2909,13 +2911,13 @@ public:
 	}
 
 	inline constexpr void push_back(value_type const &value)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->emplace_back(value);
 	}
 
 	inline constexpr void push_back(value_type &&value)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
 		this->emplace_back(::std::move(value));
 	}
@@ -2960,7 +2962,7 @@ public:
 	}
 
 	inline constexpr void pop_back()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -2992,7 +2994,7 @@ public:
 	}
 
 	inline constexpr reference back()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -3003,7 +3005,7 @@ public:
 	}
 
 	inline constexpr const_reference back() const
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -3043,7 +3045,7 @@ public:
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
 	inline constexpr reference emplace_front(Args &&...args)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
 		if (controller.front_block.curr_ptr == controller.front_block.begin_ptr) [[unlikely]]
 		{
@@ -3092,13 +3094,13 @@ public:
 	}
 
 	inline constexpr void push_front(value_type const &value)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->emplace_front(value);
 	}
 
 	inline constexpr void push_front(value_type &&value)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
 		this->emplace_front(::std::move(value));
 	}
@@ -3143,7 +3145,7 @@ public:
 	}
 
 	inline constexpr void pop_front()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -3177,7 +3179,7 @@ public:
 	}
 
 	inline constexpr reference front()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -3188,7 +3190,7 @@ public:
 	}
 
 	inline constexpr const_reference front() const
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
@@ -3199,7 +3201,7 @@ public:
 	}
 
 	inline constexpr reference operator[](size_type index)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (size() <= index) [[unlikely]]
 		{
@@ -3209,7 +3211,7 @@ public:
 	}
 
 	inline constexpr const_reference operator[](size_type index) const
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (size() <= index) [[unlikely]]
 		{
@@ -3345,7 +3347,7 @@ public:
 	}
 
 	inline constexpr ::fast_io::containers::span<value_type> nth_segment(size_type pos)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if consteval
 		{
@@ -3359,7 +3361,7 @@ public:
 		}
 	}
 	inline constexpr ::fast_io::containers::span<value_type const> const_nth_segment(size_type pos) const
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if consteval
 		{
@@ -3369,13 +3371,13 @@ public:
 		else
 		{
 			auto [start_ptr, end_ptr] = ::std::bit_cast<::fast_io::containers::details::deque_nth_element_result<const_pointer>>(::fast_io::containers::details::deque_nth_element_common<block_size * sizeof(value_type), throwing_violations>(*reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(
-																																																							   const_cast<controller_type *>(__builtin_addressof(this->controller))),
-																																																						   pos));
+																																																													const_cast<controller_type *>(__builtin_addressof(this->controller))),
+																																																												pos));
 			return ::fast_io::containers::span<value_type const>(start_ptr, end_ptr);
 		}
 	}
 	inline constexpr ::fast_io::containers::span<value_type const> nth_segment(size_type pos) const
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		return this->const_nth_segment(pos);
 	}
@@ -3493,7 +3495,7 @@ private:
 		iterator it;
 	};
 	inline constexpr insert_range_result insert_n_front_common_impl(size_type pos, size_type rgsize)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		::fast_io::containers::details::deque_reserve_front_spaces<allocator,
 																   alignof(value_type), sizeof(value_type), block_size>(allochdl, this->controller, rgsize);
@@ -3508,14 +3510,14 @@ private:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr insert_range_result insert_range_front_impl(size_type pos, R &&rg, size_type rgsize)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		auto ret{this->insert_n_front_common_impl(pos, rgsize)};
 		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
 		return ret;
 	}
 	inline constexpr insert_range_result insert_n_back_common_impl(size_type pos, size_type rgsize)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		::fast_io::containers::details::deque_reserve_back_spaces<allocator,
 																  alignof(value_type), sizeof(value_type), block_size>(allochdl, this->controller, rgsize);
@@ -3536,7 +3538,7 @@ private:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr insert_range_result insert_range_back_impl(size_type pos, R &&rg, size_type rgsize)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		auto ret{this->insert_n_back_common_impl(pos, rgsize)};
 		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
@@ -3545,7 +3547,7 @@ private:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr insert_range_result insert_range_impl(size_type pos, R &&rg, size_type old_size)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		if constexpr (::std::ranges::sized_range<R>)
 		{
@@ -3602,7 +3604,7 @@ public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr iterator insert_range(const_iterator pos, R &&rg)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		return this->insert_range_impl(
 					   ::fast_io::containers::details::deque_iter_difference_unsigned_common(pos.itercontent, this->controller.front_block), ::std::forward<R>(rg), this->size())
@@ -3612,7 +3614,7 @@ public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr size_type insert_range_index(size_type pos, R &&rg)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		size_type const n{this->size()};
 		if (n < pos) [[unlikely]]
@@ -3650,7 +3652,7 @@ public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void append_range(R &&rg)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		if constexpr (::std::ranges::sized_range<R>)
 		{
@@ -3743,7 +3745,7 @@ public:
 
 private:
 	inline constexpr insert_range_result emplace_index_n_impl(size_type pos, size_type n, size_type old_size)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		size_type const half_size{old_size >> 1u};
 		insert_range_result ret;
@@ -3758,12 +3760,12 @@ private:
 		return ret;
 	}
 	inline constexpr insert_range_result emplace_index_impl(size_type pos, size_type n)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		return this->emplace_index_n_impl(pos, 1u, n);
 	}
 	inline constexpr insert_range_result emplace_impl(size_type pos)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		return this->emplace_index_impl(pos, this->size());
 	}
@@ -3947,7 +3949,7 @@ private:
 public:
 	template <typename... Args>
 	inline constexpr iterator emplace(const_iterator iter, Args &&...args)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
 		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
 		{
@@ -3966,7 +3968,7 @@ public:
 	}
 	template <typename... Args>
 	inline constexpr reference emplace_index(size_type idx, Args &&...args)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
 		// bounds checking && eh safety for being and end.
 		auto oldsize{this->size()};
@@ -3991,22 +3993,22 @@ public:
 	}
 
 	inline constexpr iterator insert(const_iterator iter, const_reference val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		return this->emplace(iter, val);
 	}
 	inline constexpr iterator insert(const_iterator iter, value_type &&val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
 		return this->emplace(iter, ::std::move(val));
 	}
 	inline constexpr reference insert_index(size_type idx, const_reference val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		return this->emplace_index(idx, val);
 	}
 	inline constexpr reference insert_index(size_type idx, value_type &&val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
 		return this->emplace_index(idx, ::std::move(val));
 	}
@@ -4028,7 +4030,7 @@ private:
 	};
 
 	inline constexpr insert_range_result insert_index_impl(size_type idx, size_type count, const_reference val, size_type oldn)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		insert_range_result res{this->emplace_index_n_impl(idx, count, oldn)};
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
@@ -4046,12 +4048,12 @@ private:
 
 public:
 	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		return this->insert_index_impl(::fast_io::containers::details::deque_iter_difference_unsigned_common(iter.itercontent, this->controller.front_block), count, val, this->size()).it;
 	}
 	inline constexpr size_type insert_index(size_type idx, size_type count, const_reference val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		size_type const n{this->size()};
 		if (n < idx) [[unlikely]]
@@ -4061,7 +4063,7 @@ public:
 		return this->insert_index_impl(idx, count, val, n).pos;
 	}
 	inline constexpr void shrink_to_fit()
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if consteval
 		{
@@ -4070,7 +4072,7 @@ public:
 		else
 		{
 			::fast_io::containers::details::deque_shrink_to_fit_impl<allocator, alignof(value_type), block_size * sizeof(value_type)>(allochdl, *reinterpret_cast<::fast_io::containers::details::deque_controller_common *>(__builtin_addressof(
-				this->controller)));
+																																					this->controller)));
 		}
 	}
 
@@ -4085,7 +4087,7 @@ public:
 	}
 
 	inline constexpr void reserve_back(size_type backcap)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if consteval
 		{
@@ -4097,7 +4099,7 @@ public:
 		}
 	}
 	inline constexpr void reserve_front(size_type frontcap)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if consteval
 		{
@@ -4129,7 +4131,7 @@ public:
 
 public:
 	inline constexpr void assign(size_type count, const_reference val)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
@@ -4154,7 +4156,7 @@ public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void assign_range(R &&rg)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
 	{
 		auto temp{this->alloc_empty()};
 		temp.construct_deque_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg));
@@ -4163,7 +4165,7 @@ public:
 
 private:
 	inline constexpr void resize_impl(size_type count, T const *pval)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		size_type oldsz{this->size()};
 		if (count == oldsz)
@@ -4200,7 +4202,7 @@ private:
 		this->set_newed_common(newed.itercontent);
 	}
 	inline constexpr void resize_for_overwrite_impl(size_type count)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		size_type oldsz{this->size()};
 		if (count == oldsz)
@@ -4230,12 +4232,12 @@ private:
 
 public:
 	inline constexpr void resize(size_type count)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		this->resize_impl(count, nullptr);
 	}
 	inline constexpr void resize(size_type count, ::fast_io::for_overwrite_t)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		/*
 		Todo
@@ -4257,14 +4259,13 @@ public:
 		}
 	}
 	inline constexpr void resize(size_type count, const_reference value)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->resize_impl(count, __builtin_addressof(value));
 	}
 
 private:
-	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft)
-	noexcept
+	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		::fast_io::containers::details::deque_control_block<value_type> back_block;
 		if (moveleft)
@@ -4289,8 +4290,7 @@ private:
 		return first;
 	}
 
-	inline constexpr iterator erase_unchecked_nodestroy_impl(iterator first, iterator last, bool moveleft)
-	noexcept
+	inline constexpr iterator erase_unchecked_nodestroy_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && 0)
 		{
@@ -4307,8 +4307,7 @@ private:
 		}
 		return this->erase_no_destroy_common_impl(first, last, moveleft);
 	}
-	inline constexpr void erase_unchecked_nodestroy_for_insert_counts_impl(iterator first, ::std::size_t count)
-	noexcept
+	inline constexpr void erase_unchecked_nodestroy_for_insert_counts_impl(iterator first, ::std::size_t count) noexcept
 	{
 		if (!count)
 		{
@@ -4324,8 +4323,7 @@ private:
 
 		this->erase_unchecked_nodestroy_impl(first, last, distofront < distoback);
 	}
-	inline constexpr iterator erase_unchecked_impl(iterator first, iterator last, bool moveleft)
-	noexcept
+	inline constexpr iterator erase_unchecked_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		if (first == last)
 		{
@@ -4337,8 +4335,7 @@ private:
 		}
 		return this->erase_unchecked_nodestroy_impl(first, last, moveleft);
 	}
-	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft)
-	noexcept
+	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft) noexcept
 	{
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
 		{
@@ -4365,8 +4362,7 @@ private:
 		++posp1;
 		return this->erase_no_destroy_common_impl(pos, posp1, moveleft);
 	}
-	inline constexpr iterator erase_unchecked_single_impl(iterator pos, bool moveleft)
-	noexcept
+	inline constexpr iterator erase_unchecked_single_impl(iterator pos, bool moveleft) noexcept
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
 		{
@@ -4376,8 +4372,7 @@ private:
 	}
 
 public:
-	inline constexpr iterator erase(const_iterator first, const_iterator last)
-	noexcept
+	inline constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		return this->erase_unchecked_impl(iterator{first.itercontent},
 										  iterator{last.itercontent},
@@ -4386,7 +4381,7 @@ public:
 	}
 
 	inline constexpr size_type erase_index(size_type firstidx, size_type lastidx)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		size_type const n{this->size()};
 		if (n < firstidx || n < lastidx) [[unlikely]]
@@ -4398,8 +4393,7 @@ public:
 		return firstidx;
 	}
 
-	inline constexpr iterator erase(const_iterator first)
-	noexcept
+	inline constexpr iterator erase(const_iterator first) noexcept
 	{
 		::std::size_t const n{this->size()};
 		::std::size_t const distofront{
@@ -4409,7 +4403,7 @@ public:
 	}
 
 	inline constexpr size_type erase_index(size_type firstidx)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		size_type const n{this->size()};
 		if (n <= firstidx) [[unlikely]]
