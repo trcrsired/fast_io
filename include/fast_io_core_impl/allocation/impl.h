@@ -38,8 +38,6 @@ using native_global_allocator = generic_allocator_adapter<
 	custom_global_allocator
 #elif defined(FAST_IO_USE_MIMALLOC) && (!defined(_MSC_VER) || defined(__clang__))
 	mimalloc_allocator
-#elif (defined(__linux__) && defined(__KERNEL__)) || defined(FAST_IO_USE_LINUX_KERNEL_ALLOCATOR)
-	linux_kmalloc_allocator
 #elif (                                                                                                                \
 	(__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && !defined(_LIBCPP_FREESTANDING)) || \
 	defined(FAST_IO_ENABLE_HOSTED_FEATURES))

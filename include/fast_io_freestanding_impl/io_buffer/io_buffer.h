@@ -34,6 +34,47 @@ concept has_reopen_impl = requires(T &&t, Args &&...args) { t.reopen(::std::forw
 template <typename T>
 concept has_close_impl = requires(T &&t) { t.close(); };
 
+namespace io_buffer
+{
+
+template <typename allocator_type, typename char_type>
+using iobuffer_alloc_handle_t = ::std::conditional_t<
+	::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::has_status,
+	typename ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::handle_type,
+	::fast_io::details::empty>;
+
+template <::std::integral char_type, typename allocator_type>
+inline constexpr char_type *
+iobuffer_allocate(iobuffer_alloc_handle_t<allocator_type, char_type> allochdl, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::throws_on_allocation_failure)
+{
+	if constexpr (::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::has_status)
+	{
+		return ::fast_io::details::allocate_iobuf_space<char_type, allocator_type>(allochdl, n);
+	}
+	else
+	{
+		return ::fast_io::details::allocate_iobuf_space<char_type, allocator_type>(n);
+	}
+}
+
+template <::std::integral char_type, typename allocator_type>
+inline constexpr void iobuffer_deallocate_n(iobuffer_alloc_handle_t<allocator_type, char_type> allochdl,
+											char_type *ptr, ::std::size_t n) noexcept
+{
+	if constexpr (::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::has_status)
+	{
+		::fast_io::details::deallocate_iobuf_space<false, char_type, allocator_type>(allochdl, ptr, n);
+	}
+	else
+	{
+		::fast_io::details::deallocate_iobuf_space<false, char_type, allocator_type>(ptr, n);
+	}
+}
+
+} // namespace io_buffer
+
 } // namespace details
 
 template <typename handletype, typename iobuffertraits>
@@ -44,6 +85,10 @@ public:
 	using traits_type = iobuffertraits;
 	using input_char_type = typename traits_type::input_char_type;
 	using output_char_type = typename traits_type::output_char_type;
+	using allocator_type = typename traits_type::allocator_type;
+	static inline constexpr bool allocator_has_status{allocator_type::has_status};
+	using allocator_handle_type =
+		::std::conditional_t<allocator_has_status, typename allocator_type::handle_type, ::fast_io::details::empty>;
 
 	using input_buffer_type = ::std::conditional_t<(traits_type::mode & buffer_mode::in) == buffer_mode::in,
 												   basic_io_buffer_pointers<input_char_type>, empty_buffer_pointers>;
@@ -74,10 +119,33 @@ public:
 #endif
 #endif
 	handle_type handle;
+#ifndef __INTELLISENSE__
+#if __has_cpp_attribute(msvc::no_unique_address)
+	[[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address) >= 201803
+	[[no_unique_address]]
+#endif
+#endif
+	allocator_handle_type allocator_handle{};
 
-	inline explicit constexpr basic_io_buffer() = default;
+	inline explicit constexpr basic_io_buffer()
+		requires(!allocator_has_status)
+		= default;
+	inline explicit constexpr basic_io_buffer(allocator_handle_type allochdl) noexcept
+		requires(allocator_has_status && ::std::is_default_constructible_v<handle_type>)
+		: allocator_handle(allochdl)
+	{
+	}
 	template <typename... Args>
-		requires(::std::constructible_from<handle_type, Args...>)
+		requires(allocator_has_status && 0 < sizeof...(Args) &&
+				 ::std::constructible_from<handle_type, Args...>)
+	inline constexpr basic_io_buffer(allocator_handle_type allochdl, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(handle_type(::std::forward<Args>(args)...))
+		: handle(::std::forward<Args>(args)...), allocator_handle(allochdl)
+	{
+	}
+	template <typename... Args>
+		requires(!allocator_has_status && ::std::constructible_from<handle_type, Args...>)
 	inline explicit constexpr basic_io_buffer(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(handle_type(::std::forward<Args>(args)...))
 		: handle(::std::forward<Args>(args)...)
@@ -87,7 +155,7 @@ public:
 	inline basic_io_buffer(basic_io_buffer const &) = delete;
 	inline constexpr basic_io_buffer(basic_io_buffer &&__restrict other) noexcept
 		: input_buffer(::std::move(other.input_buffer)), output_buffer(::std::move(other.output_buffer)),
-		  handle(::std::move(other.handle))
+		  handle(::std::move(other.handle)), allocator_handle(other.allocator_handle)
 	{
 		other.input_buffer = {};
 		other.output_buffer = {};
@@ -142,6 +210,7 @@ public:
 		input_buffer = ::std::move(other.input_buffer);
 		output_buffer = ::std::move(other.output_buffer);
 		handle = ::std::move(other.handle);
+		allocator_handle = other.allocator_handle;
 		other.input_buffer = {};
 		other.output_buffer = {};
 		return *this;

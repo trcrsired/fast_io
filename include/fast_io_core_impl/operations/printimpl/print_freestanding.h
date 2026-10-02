@@ -21,9 +21,6 @@ concept has_any_print_define_operations_not_noexcept = ::fast_io::details::print
 template <typename char_type, typename... Args>
 concept has_any_print_define_operations_may_throw = (::fast_io::details::print_define_operations_nothrow<char_type, Args> || ...);
 
-template <typename outputstmtype, typename... Args>
-concept decayed_output_stream_print_may_throw = (!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outputstmtype>) ||
-												(::fast_io::details::has_any_print_define_operations_may_throw<typename outputstmtype::char_type, Args...>);
 
 template <::std::integral char_type, typename T = char_type>
 inline constexpr basic_io_scatter_t<T> line_scatter_common{
@@ -290,6 +287,73 @@ consteval ::std::size_t compute_print_scatters_pos() noexcept
 	return scatters;
 }
 
+/*
+Whether the print scratch buffer allocation may happen for these arguments.
+Only the plain path reaches a heap allocation: streams with an obuffer may run
+out of buffer space, unbuffered streams allocate when the reserved size exceeds
+the small on-stack space or a dynamic_reserve_printable arg is present.
+*/
+template <bool line, typename outputstmtype, typename... Args>
+inline constexpr bool print_freestanding_scratch_allocation_possible{[]() consteval -> bool {
+	if constexpr (sizeof...(Args) == 0 ||
+				  ::fast_io::operations::decay::defines::has_status_print_define<outputstmtype>)
+	{
+		return false;
+	}
+	else if constexpr ((::std::same_as<::std::remove_cvref_t<Args>, ::fast_io::io_null_t> || ...) ||
+					   ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outputstmtype>)
+	{
+		return true; // filters/unwraps, then re-enters this path
+	}
+	else
+	{
+		using output_char_type = typename outputstmtype::output_char_type;
+		constexpr auto range{::fast_io::details::first_print_define_index_range<output_char_type, Args...>()};
+		if constexpr (range.first != sizeof...(Args))
+		{
+			return false;
+		}
+		else
+		{
+			return !::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<outputstmtype> &&
+				   (::fast_io::operations::decay::defines::has_obuffer_basic_operations<outputstmtype> ||
+					(32zu / sizeof(output_char_type) <=
+					 ::fast_io::details::compute_total_normal_reserved_size<output_char_type, line, Args...>()) ||
+					(::fast_io::dynamic_reserve_printable<output_char_type, ::std::remove_cvref_t<Args>> || ...));
+		}
+	}
+}()};
+
+template <bool line, typename outputstmtype, typename... Args>
+inline constexpr bool print_freestanding_allocation_may_throw{
+	print_freestanding_scratch_allocation_possible<line, outputstmtype, Args...> &&
+	::fast_io::typed_generic_allocator_adapter<
+		::fast_io::operations::decay::output_stream_allocator_t<outputstmtype>,
+		typename outputstmtype::output_char_type>::throws_on_allocation_failure};
+
+template <typename outputstmtype, typename typed_allocator_type>
+inline constexpr typename typed_allocator_type::handle_type
+print_output_stream_allocator_handle(outputstmtype optstm) noexcept
+{
+	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_allocator_handle_define<outputstmtype>)
+	{
+		return {::fast_io::operations::decay::output_stream_allocator_handle_decay(optstm)};
+	}
+	else
+	{
+		static_assert(::fast_io::operations::decay::defines::has_output_or_io_stream_allocator_handle_define<outputstmtype>,
+					  "a stream using a handle-based allocator must define "
+					  "output_stream_allocator_handle_define(optstm) or io_stream_allocator_handle_define(optstm)");
+		return {};
+	}
+}
+
+
+template <bool line, typename outputstmtype, typename... Args>
+concept decayed_output_stream_print_may_throw = (!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outputstmtype>) ||
+												(::fast_io::details::has_any_print_define_operations_may_throw<typename outputstmtype::char_type, Args...>) ||
+												::fast_io::details::print_freestanding_allocation_may_throw<line, outputstmtype, Args...>;
+
 } // namespace fast_io::details
 
 namespace fast_io::operations::decay
@@ -297,7 +361,7 @@ namespace fast_io::operations::decay
 template <bool line, typename outputstmtype, typename... Args>
 inline constexpr decltype(auto)
 print_freestanding_decay(outputstmtype optstm,
-						 Args... args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::decayed_output_stream_print_may_throw<outputstmtype, Args...>)
+						 Args... args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::decayed_output_stream_print_may_throw<line, outputstmtype, Args...>)
 {
 	using output_char_type = typename outputstmtype::output_char_type;
 	if constexpr ((::std::same_as<::std::remove_cvref_t<Args>,
@@ -464,8 +528,11 @@ print_freestanding_decay(outputstmtype optstm,
 							}
 							total_to_allocate_size += argsz;
 #endif
-							buffer_enough_space &= argsz < buffer_remained_spaces;
-							buffer_remained_spaces -= argsz;
+							if constexpr (is_buffer_output_stream)
+							{
+								buffer_enough_space &= argsz < buffer_remained_spaces;
+								buffer_remained_spaces -= argsz;
+							}
 						}
 						else if constexpr (is_buffer_output_stream && ::std::same_as<argtype, ::fast_io::basic_io_scatter_t<output_char_type>>)
 						{
@@ -525,9 +592,13 @@ print_freestanding_decay(outputstmtype optstm,
 					output_char_type,
 					use_dynamic_storage ? 0zu : total_normal_reserved_size>
 					buffer FAST_IO_INDETERMINATE;
+				using print_allocator_type =
+					::fast_io::operations::decay::output_stream_allocator_t<outputstmtype>;
+				using print_typed_allocator_type =
+					::fast_io::typed_generic_allocator_adapter<print_allocator_type, output_char_type>;
 				::std::conditional_t<
 					use_dynamic_storage,
-					::fast_io::details::local_operator_new_array_ptr<output_char_type>,
+					::fast_io::details::buffer_alloc_arr_ptr<output_char_type, false, print_allocator_type>,
 					::fast_io::details::empty>
 					dynamic_buffer;
 				output_char_type *it FAST_IO_INDETERMINATE;
@@ -538,11 +609,18 @@ print_freestanding_decay(outputstmtype optstm,
 					{
 						if constexpr (use_dynamic_storage)
 						{
-							it = dynamic_buffer.ptr = ::fast_io::details::allocate_iobuf_space<
-								output_char_type,
-								typename ::fast_io::details::local_operator_new_array_ptr<
-									output_char_type>::allocator_type>(total_to_allocate_size);
-							dynamic_buffer.size = total_to_allocate_size;
+							if constexpr (print_typed_allocator_type::has_status)
+							{
+								it = dynamic_buffer.allocate_new(
+									::fast_io::details::print_output_stream_allocator_handle<outputstmtype,
+																							 print_typed_allocator_type>(
+										optstm),
+									total_to_allocate_size);
+							}
+							else
+							{
+								it = dynamic_buffer.allocate_new(total_to_allocate_size);
+							}
 						}
 						else
 						{
@@ -554,11 +632,18 @@ print_freestanding_decay(outputstmtype optstm,
 				{
 					if constexpr (use_dynamic_storage)
 					{
-						it = dynamic_buffer.ptr = ::fast_io::details::allocate_iobuf_space<
-							output_char_type,
-							typename ::fast_io::details::local_operator_new_array_ptr<
-								output_char_type>::allocator_type>(total_to_allocate_size);
-						dynamic_buffer.size = total_to_allocate_size;
+						if constexpr (print_typed_allocator_type::has_status)
+						{
+							it = dynamic_buffer.allocate_new(
+								::fast_io::details::print_output_stream_allocator_handle<outputstmtype,
+																						 print_typed_allocator_type>(
+									optstm),
+								total_to_allocate_size);
+						}
+						else
+						{
+							it = dynamic_buffer.allocate_new(total_to_allocate_size);
+						}
 					}
 					else
 					{

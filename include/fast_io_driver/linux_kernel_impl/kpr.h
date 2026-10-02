@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+
+#include "../../fast_io_dsal/impl/misc/push_macros.h"
 
 namespace fast_io
 {
@@ -22,8 +24,21 @@ template <::std::integral ch_type>
 struct basic_kpr
 {
 	using char_type = ch_type;
+	using input_char_type = ch_type;
+	using output_char_type = ch_type;
+	using output_allocator_type =
+		::fast_io::generic_allocator_adapter<::fast_io::linux_kmalloc_allocator,
+											 ::fast_io::allocator_adapter_flags::throws_on_allocation_failure>;
 	kern level{kern::default_value};
+	typename output_allocator_type::handle_type allochdl{::fast_io::linux_kernel_gfp_kernel};
 };
+
+template <::std::integral ch_type>
+inline constexpr typename basic_kpr<ch_type>::output_allocator_type::handle_type
+output_stream_allocator_handle_define(basic_kpr<ch_type> kpr) noexcept
+{
+	return kpr.allochdl;
+}
 
 template <bool line>
 inline constexpr char8_t const *kern_to_fmt(kern k) noexcept
@@ -342,13 +357,6 @@ inline void deal_with_kpr_common(basic_kpr<char_type> kpr, Args... args)
 } // namespace details
 
 
-template <::std::integral char_type>
-inline void write_all_bytes_overflow_define(basic_kpr<char_type> kpr, ::std::byte const *first, ::std::byte const *last) noexcept
-{
-	::fast_io::details::linux_kpr_raw_write<false>(kpr.level, first, last);
-}
-#endif
-
 template <::std::integral ch_type>
 inline constexpr basic_kpr<ch_type> io_stream_ref_define(basic_kpr<ch_type> other) noexcept
 {
@@ -364,13 +372,13 @@ inline constexpr basic_kpr<ch_type> io_bytes_stream_ref_define(basic_kpr<ch_type
 template <::std::integral ch_type>
 inline constexpr void write_all_bytes_overflow_define(basic_kpr<ch_type> d, ::std::byte const *first, ::std::byte const *last) noexcept
 {
-	details::linux_kpr_raw_write<false>(kpr.level, first, last);
+	::fast_io::details::linux_kpr_raw_write<false>(d.level, first, last);
 }
 
 template <::std::integral ch_type>
 inline constexpr void pwrite_all_bytes_overflow_define(basic_kpr<ch_type> d, ::std::byte const *first, ::std::byte const *last) noexcept
 {
-	details::linux_kpr_raw_write<false>(kpr.level, first, last);
+	::fast_io::details::linux_kpr_raw_write<false>(d.level, first, last);
 }
 
 template <::std::integral ch_type>
@@ -406,3 +414,5 @@ inline constexpr void print_status_define(basic_kpr<ch_type> k, Args... args)
 }
 
 } // namespace fast_io
+
+#include "../../fast_io_dsal/impl/misc/pop_macros.h"
