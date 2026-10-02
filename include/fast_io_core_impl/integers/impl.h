@@ -1267,6 +1267,55 @@ inline constexpr void print_reserve_integral_main_impl(char_type *iter, T t, ::s
 	}
 }
 
+namespace jeaiii
+{
+
+template <::std::integral char_type, ::fast_io::details::my_unsigned_integral U>
+inline constexpr char_type *jeaiii_main(char_type *iter, U n) noexcept
+{
+	if constexpr (sizeof(U) <= sizeof(::std::uint_least8_t))
+	{
+		return jeaiii_main_u8(iter, static_cast<::std::uint_least8_t>(n));
+	}
+	else if constexpr (sizeof(U) <= sizeof(::std::uint_least16_t))
+	{
+		return jeaiii_main_u16(iter, static_cast<::std::uint_least16_t>(n));
+	}
+	else if constexpr (sizeof(U) <= sizeof(::std::uint_least32_t))
+	{
+		return jeaiii_main_u32(iter, static_cast<::std::uint_least32_t>(n));
+	}
+	else if constexpr (sizeof(U) <= sizeof(::std::uint_least64_t))
+	{
+		return jeaiii_main_u64(iter, static_cast<::std::uint_least64_t>(n));
+	}
+	else
+	{
+		::std::size_t const len{::fast_io::details::chars_len<10, false>(n)};
+		::fast_io::details::print_reserve_integral_main_impl<10, false>(iter + len, n, len);
+		return iter + len;
+	}
+}
+
+template <::std::integral char_type, ::fast_io::details::my_unsigned_integral U>
+inline constexpr void jeaiii_main_len(char_type *iter, U n, ::std::uint_least32_t len) noexcept
+{
+	if constexpr (sizeof(U) <= sizeof(::std::uint_least32_t))
+	{
+		jeaiii_len_u32(iter, static_cast<::std::uint_least32_t>(n), len);
+	}
+	else if constexpr (sizeof(U) <= sizeof(::std::uint_least64_t))
+	{
+		jeaiii_main_len_u64(iter, static_cast<::std::uint_least64_t>(n), len);
+	}
+	else
+	{
+		::fast_io::details::print_reserve_integral_main_impl<10, false>(iter + len, n, len);
+	}
+}
+
+} // namespace jeaiii
+
 template <bool full, ::std::size_t base, bool uppercase, ::std::integral char_type, my_unsigned_integral T>
 inline constexpr char_type *print_reserve_integral_withfull_main_impl(char_type *first, T u)
 {
@@ -1291,7 +1340,7 @@ inline constexpr char_type *print_reserve_integral_withfull_main_impl(char_type 
 		}
 		else
 		{
-			if constexpr (base == 10 && (::std::numeric_limits<::std::uint_least32_t>::digits == 32u))
+			if constexpr (base == 10)
 			{
 				if constexpr (false)
 				{
@@ -1477,7 +1526,7 @@ inline constexpr void print_reserve_integral_define_precise(char_type *start, ::
 			{
 				first = print_reserve_show_base_impl<base, uppercase_showbase>(first);
 			}
-			if constexpr (base == 10 && (::std::numeric_limits<::std::uint_least32_t>::digits == 32u))
+			if constexpr (base == 10)
 			{
 				return ::fast_io::details::jeaiii::jeaiii_main_len(first, u, static_cast<::std::uint_least32_t>(n));
 			}

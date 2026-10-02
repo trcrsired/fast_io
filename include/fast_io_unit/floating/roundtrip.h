@@ -429,7 +429,7 @@ inline constexpr char_type *print_rsv_fp_decimal_scientific_common_impl(char_typ
 																		::std::uint_least32_t m10len) noexcept
 {
 	auto itp1{iter + 1};
-	::fast_io::details::jeaiii::jeaiii_main_len<true>(itp1, m10, m10len);
+	::fast_io::details::jeaiii::jeaiii_main_len(itp1, m10, m10len);
 	*iter = *itp1;
 	*itp1 = char_literal_v < comma ? u8',' : u8'.', char_type > ;
 	return itp1 + m10len;
@@ -537,7 +537,7 @@ inline constexpr char_type *fixed_case0_full_integer(char_type *iter, typename i
 													 ::std::int_least32_t olength,
 													 ::std::int_least32_t real_exp) noexcept
 {
-	::fast_io::details::jeaiii::jeaiii_main_len<true>(iter, m10, static_cast<::std::uint_least32_t>(olength));
+	::fast_io::details::jeaiii::jeaiii_main_len(iter, m10, static_cast<::std::uint_least32_t>(olength));
 	iter += olength;
 	return fill_zeros_impl(iter, static_cast<::std::uint_least32_t>(real_exp + 1 - olength));
 }
@@ -550,13 +550,13 @@ fixed_case1_integer_and_point(char_type *iter, typename iec559_traits<flt>::mant
 	auto eposition(real_exp + 1);
 	if (olength == eposition)
 	{
-		::fast_io::details::jeaiii::jeaiii_main_len<true>(iter, m10, static_cast<::std::uint_least32_t>(olength));
+		::fast_io::details::jeaiii::jeaiii_main_len(iter, m10, static_cast<::std::uint_least32_t>(olength));
 		iter += olength;
 	}
 	else
 	{
 		auto tmp{iter};
-		::fast_io::details::jeaiii::jeaiii_main_len<true>(iter + 1, m10, static_cast<::std::uint_least32_t>(olength));
+		::fast_io::details::jeaiii::jeaiii_main_len(iter + 1, m10, static_cast<::std::uint_least32_t>(olength));
 		iter += olength + 1;
 		my_copy_n(tmp + 1, static_cast<::std::uint_least32_t>(eposition), tmp);
 		tmp[eposition] = char_literal_v<(comma ? u8',' : u8'.'), char_type>;
@@ -570,7 +570,7 @@ inline constexpr char_type *fixed_case2_all_point(char_type *iter, typename iec5
 {
 	iter = fill_zero_point_impl<comma>(iter);
 	iter = fill_zeros_impl(iter, static_cast<::std::uint_least32_t>(-real_exp - 1));
-	::fast_io::details::jeaiii::jeaiii_main_len<true>(iter, m10, static_cast<::std::uint_least32_t>(olength));
+	::fast_io::details::jeaiii::jeaiii_main_len(iter, m10, static_cast<::std::uint_least32_t>(olength));
 	iter += olength;
 	return iter;
 }
@@ -621,7 +621,7 @@ inline constexpr char_type *print_rsv_fp_decision_impl(char_type *iter, typename
 		{
 			auto iterp1{iter};
 			++iterp1;
-			auto new_iter{::fast_io::details::jeaiii::jeaiii_main<false>(iterp1, m10)};
+			auto new_iter{::fast_io::details::jeaiii::jeaiii_main(iterp1, m10)};
 			e10 += static_cast<::std::int_least32_t>(static_cast<::std::uint_least32_t>(new_iter - iterp1) - 1u);
 			*iter = *iterp1;
 			*iterp1 = char_literal_v < comma ? u8',' : u8'.', char_type > ;
