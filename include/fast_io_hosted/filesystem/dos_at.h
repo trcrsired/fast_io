@@ -315,9 +315,9 @@ inline auto dos_deal_with22(int olddirfd, old_path_type const &oldpath, int newd
 {
 	return ::fast_io::posix_api_common(
 		oldpath,
-		[&](char const *oldpath_c_str) {
+		[&](char const *oldpath_c_str) FAST_IO_HERBCEPTIONS_THROWS {
 			return ::fast_io::posix_api_common(
-				newpath, [&](char const *newpath_c_str) { return dos22_api_dispatcher<dsp>(olddirfd, oldpath_c_str, newdirfd, newpath_c_str, args...); });
+				newpath, [&](char const *newpath_c_str) FAST_IO_HERBCEPTIONS_THROWS { return dos22_api_dispatcher<dsp>(olddirfd, oldpath_c_str, newdirfd, newpath_c_str, args...); });
 		});
 }
 
@@ -328,9 +328,9 @@ inline auto dos_deal_with12(old_path_type const &oldpath, int newdirfd, new_path
 {
 	return ::fast_io::posix_api_common(
 		oldpath,
-		[&](char const *oldpath_c_str) {
+		[&](char const *oldpath_c_str) FAST_IO_HERBCEPTIONS_THROWS {
 			return ::fast_io::posix_api_common(
-				newpath, [&](char const *newpath_c_str) { return dos12_api_dispatcher<dsp>(oldpath_c_str, newdirfd, newpath_c_str, args...); });
+				newpath, [&](char const *newpath_c_str) FAST_IO_HERBCEPTIONS_THROWS { return dos12_api_dispatcher<dsp>(oldpath_c_str, newdirfd, newpath_c_str, args...); });
 		});
 }
 
@@ -338,14 +338,14 @@ template <posix_api_1x dsp, ::fast_io::constructible_to_os_c_str path_type, type
 inline auto dos_deal_with1x(int dirfd, path_type const &path, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::posix_api_common(path, [&](char const *path_c_str) { return dos1x_api_dispatcher<dsp>(dirfd, path_c_str, args...); });
+	return ::fast_io::posix_api_common(path, [&](char const *path_c_str) FAST_IO_HERBCEPTIONS_THROWS { return dos1x_api_dispatcher<dsp>(dirfd, path_c_str, args...); });
 }
 
 template <::std::integral char_type, posix_api_ct dsp, ::fast_io::constructible_to_os_c_str path_type, typename... Args>
 inline auto dos_deal_withct(int dirfd, path_type const &path, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::posix_api_common(path, [&](char const *path_c_str) { return dosct_api_dispatcher<char_type, dsp>(dirfd, path_c_str, args...); });
+	return ::fast_io::posix_api_common(path, [&](char const *path_c_str) FAST_IO_HERBCEPTIONS_THROWS { return dosct_api_dispatcher<char_type, dsp>(dirfd, path_c_str, args...); });
 }
 
 } // namespace details

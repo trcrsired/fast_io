@@ -370,7 +370,7 @@ inline constexpr iso8601_timestamp utc(posix_statx_timestamp64 timestamp) noexce
 	return details::unix_timestamp_to_iso8601_tsp_impl(timestamp.tv_sec, timestamp.tv_nsec);
 }
 
-inline constexpr posix_statx_timestamp64 to_timestamp(iso8601_timestamp const &timestamp) noexcept
+inline constexpr posix_statx_timestamp64 to_posix_statx_timestamp64(iso8601_timestamp const &timestamp) noexcept
 {
 	return details::iso8601_to_unix_timestamp_impl(timestamp);
 }

@@ -460,7 +460,7 @@ inline auto win32_9xa_deal_with1x(::fast_io::win32_9xa_dir_handle const &dir_han
 		= char8_t const *;
 
 	return win32_api_common_9xa(
-		path, [&](char const *path_c_str, ::std::size_t path_size) { return win32_9xa_1x_api_dispatcher<dsp>(dir_handle, reinterpret_cast<char8_t_const_may_alias_ptr>(path_c_str), path_size, args...); });
+		path, [&](char const *path_c_str, ::std::size_t path_size) FAST_IO_HERBCEPTIONS_THROWS { return win32_9xa_1x_api_dispatcher<dsp>(dir_handle, reinterpret_cast<char8_t_const_may_alias_ptr>(path_c_str), path_size, args...); });
 }
 
 template <::fast_io::details::posix_api_12 dsp, ::fast_io::constructible_to_os_c_str old_path_type,
@@ -476,9 +476,9 @@ inline auto win32_9xa_deal_with12(old_path_type const &oldpath, ::fast_io::win32
 
 	return win32_api_common_9xa(
 		oldpath,
-		[&](char const *oldpath_c_str, ::std::size_t oldpath_size) {
+		[&](char const *oldpath_c_str, ::std::size_t oldpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 			return win32_api_common_9xa(
-				newpath, [&](char const *newpath_c_str, ::std::size_t newpath_size) {
+				newpath, [&](char const *newpath_c_str, ::std::size_t newpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 					return win32_9xa_12_api_dispatcher<dsp>(reinterpret_cast<char8_t_const_may_alias_ptr>(oldpath_c_str), oldpath_size, newdirfd, reinterpret_cast<char8_t_const_may_alias_ptr>(newpath_c_str), newpath_size, args...);
 				});
 		});
@@ -495,9 +495,9 @@ inline auto win32_9xa_deal_with22(::fast_io::win32_9xa_dir_handle const &olddirh
 		= char8_t const *;
 
 	return win32_api_common_9xa(oldpath,
-								[&](char const *oldpath_c_str, ::std::size_t oldpath_size) {
+								[&](char const *oldpath_c_str, ::std::size_t oldpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 									return win32_api_common_9xa(newpath,
-																[&](char const *newpath_c_str, ::std::size_t newpath_size) {
+																[&](char const *newpath_c_str, ::std::size_t newpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 																	return win32_9xa_22_api_dispatcher<dsp>(olddirhd, reinterpret_cast<char8_t_const_may_alias_ptr>(oldpath_c_str), oldpath_size, newdirhd,
 																											reinterpret_cast<char8_t_const_may_alias_ptr>(newpath_c_str), newpath_size, args...);
 																});
@@ -516,7 +516,7 @@ inline auto win32_9xa_deal_withct(::fast_io::win32_9xa_dir_handle const &dir_han
 		= char8_t const *;
 
 	return win32_api_common_9xa(
-		path, [&](char const *path_c_str, ::std::size_t path_size) {
+		path, [&](char const *path_c_str, ::std::size_t path_size) FAST_IO_HERBCEPTIONS_THROWS {
 			return win32_9xa_ct_api_dispatcher<char_type, dsp>(
 				dir_handle,
 				reinterpret_cast<char8_t_const_may_alias_ptr>(path_c_str),

@@ -366,7 +366,7 @@ using ::fast_io::iso8601_timestamp;
 
 using ::fast_io::local;
 using ::fast_io::utc;
-using ::fast_io::to_timestamp;
+using ::fast_io::to_posix_statx_timestamp64;
 using ::fast_io::to_posix_statx_timestamp64_ftu64;
 using ::fast_io::posix_statx_timestamp64_to_ftu64;
 

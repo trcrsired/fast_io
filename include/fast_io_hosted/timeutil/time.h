@@ -517,7 +517,7 @@ inline iso8601_timestamp get_dos_iso8601_timestamp()
 inline posix_statx_timestamp64 get_dos_unix_timestamp()
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return to_timestamp(get_dos_iso8601_timestamp());
+	return to_posix_statx_timestamp64(get_dos_iso8601_timestamp());
 }
 
 inline void set_dos_unix_timestamp(posix_statx_timestamp64 tsp)

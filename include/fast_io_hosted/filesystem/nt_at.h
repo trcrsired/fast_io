@@ -953,7 +953,7 @@ inline auto nt_deal_with1x(void *dir_handle, path_type const &path, Args... args
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(
-		path, [&](char16_t const *path_c_str, ::std::size_t path_size) {
+		path, [&](char16_t const *path_c_str, ::std::size_t path_size) FAST_IO_HERBCEPTIONS_THROWS {
 			return nt1x_api_dispatcher<family == nt_family::zw, dsp>(dir_handle, path_c_str, path_size, args...);
 		});
 }
@@ -965,9 +965,9 @@ inline auto nt_deal_with12(old_path_type const &oldpath, void *newdirfd, new_pat
 {
 	return nt_api_common(
 		oldpath,
-		[&](char16_t const *oldpath_c_str, ::std::size_t oldpath_size) {
+		[&](char16_t const *oldpath_c_str, ::std::size_t oldpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 			return nt_api_common(
-				newpath, [&](char16_t const *newpath_c_str, ::std::size_t newpath_size) {
+				newpath, [&](char16_t const *newpath_c_str, ::std::size_t newpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 					return nt12_api_dispatcher<family == nt_family::zw, dsp>(oldpath_c_str, oldpath_size, newdirfd, newpath_c_str, newpath_size, args...);
 				});
 		});
@@ -978,9 +978,9 @@ inline auto nt_deal_with22(void *olddirhd, oldpath_type const &oldpath, void *ne
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(oldpath,
-						 [&](char16_t const *oldpath_c_str, ::std::size_t oldpath_size) {
+						 [&](char16_t const *oldpath_c_str, ::std::size_t oldpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 							 return nt_api_common(newpath,
-												  [&](char16_t const *newpath_c_str, ::std::size_t newpath_size) {
+												  [&](char16_t const *newpath_c_str, ::std::size_t newpath_size) FAST_IO_HERBCEPTIONS_THROWS {
 													  return nt22_api_dispatcher<family == nt_family::zw, dsp>(olddirhd, oldpath_c_str, oldpath_size, newdirhd,
 																											   newpath_c_str, newpath_size, args...);
 												  });
@@ -992,7 +992,7 @@ inline auto nt_deal_withct(void *dir_handle, path_type const &path, Args... args
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return nt_api_common(
-		path, [&](char16_t const *path_c_str, ::std::size_t path_size) {
+		path, [&](char16_t const *path_c_str, ::std::size_t path_size) FAST_IO_HERBCEPTIONS_THROWS {
 			return ntct_api_dispatcher<family == nt_family::zw, char_type, dsp>(dir_handle, path_c_str, path_size, args...);
 		});
 }
