@@ -221,7 +221,7 @@ inline constexpr char_type *jeaiii_main_u64(char_type *iter, ::std::uint_least64
 	constexpr auto const *digitstb{::fast_io::details::digits_table<char_type, 10, false>};
 	constexpr ::std::size_t tocopybytes{sizeof(char_type) * 2u};
 	constexpr ::std::uint_least64_t divisor{1000000000u};
-	if (n < (::std::uint_least64_t{1} << 32u))
+	if (static_cast<::std::uint_least32_t>(n) == n)
 	{
 		return jeaiii_main_u32_common(iter, static_cast<::std::uint_least32_t>(n), digitstb);
 	}
@@ -369,7 +369,7 @@ inline constexpr void jeaiii_main_len_u64(char_type *iter, ::std::uint_least64_t
 	constexpr auto const *digitstb{::fast_io::details::digits_table<char_type, 10, false>};
 	constexpr ::std::size_t tocopybytes{sizeof(char_type) * 2u};
 	constexpr ::std::uint_least64_t divisor{1000000000u};
-	if (n < (::std::uint_least64_t{1} << 32u))
+	if (static_cast<::std::uint_least32_t>(n) == n)
 	{
 		jeaiii_len_u32_common(iter, static_cast<::std::uint_least32_t>(n), len, digitstb);
 		return;
