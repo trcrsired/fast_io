@@ -6,9 +6,16 @@ export namespace fast_io
     using ::fast_io::aes128;
     using ::fast_io::aes192;
     using ::fast_io::aes256;
-    namespace details
+    using ::fast_io::ed25519;
+    namespace diffie_hellman
     {
-        using ::fast_io::details::support_hardware_crc32;
-        using ::fast_io::details::support_hardware_crc32c;
+        using ::fast_io::diffie_hellman::x25519;
+    }
+    namespace curve25519
+    {
+        using ::fast_io::curve25519::field_number;
+        using ::fast_io::curve25519::edp_blinding_context;
+        using ::fast_io::curve25519::ed25519_verify_context;
+        using ::fast_io::curve25519::default_blinding;
     }
 }

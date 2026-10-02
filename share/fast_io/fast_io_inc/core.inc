@@ -31,20 +31,10 @@ using ::fast_io::little_endian;
 using ::fast_io::big_endian;
 using ::fast_io::byte_swap;
 
-using ::fast_io::error;
-using ::fast_io::error_type_t;
-using ::fast_io::error_type;
-using ::fast_io::error_domain;
-using ::fast_io::is_domain;
-using ::fast_io::to_code;
-using ::fast_io::throw_parse_code;
-using ::fast_io::parse_domain_value;
-
 using ::fast_io::cstr_len;
 using ::fast_io::cstr_nlen;
 
 using ::fast_io::parse_by_scan;
-using ::fast_io::parse_code;
 
 using ::fast_io::io_dup;
 using ::fast_io::open_mode;
@@ -55,10 +45,6 @@ using ::fast_io::basic_io_lockable_nonmovable;
 using ::fast_io::input_stream_ref_define;
 using ::fast_io::output_stream_ref_define;
 using ::fast_io::io_stream_ref_define;
-
-using ::fast_io::input_decorators_ref_define;
-using ::fast_io::output_decorators_ref_define;
-// using ::fast_io::io_decorators_ref_define;
 
 using ::fast_io::ibuffer_begin;
 using ::fast_io::ibuffer_curr;
@@ -104,7 +90,6 @@ using ::fast_io::write_all_bytes_overflow_define;
 // using ::fast_io::scatter_write_some_bytes_overflow_define;
 // using ::fast_io::scatter_write_all_bytes_overflow_define;
 using ::fast_io::scatter_write_some_overflow_define;
-using ::fast_io::scatter_write_all_overflow_define;
 // using ::fast_io::obuffer_overflow_never_define;
 // using ::fast_io::output_stream_char_put_overflow_define;
 using ::fast_io::pwrite_some_bytes_overflow_define;
@@ -167,8 +152,6 @@ using ::fast_io::manipulators::os_c_str;
 using ::fast_io::manipulators::os_c_str_carr;
 
 using ::fast_io::manipulators::rgvw;
-
-using ::fast_io::manipulators::cond;
 
 using ::fast_io::manipulators::code_cvt;
 using ::fast_io::manipulators::code_cvt_os_c_str;
@@ -276,7 +259,7 @@ using ::fast_io::operations::io_stream_seek_bytes;
 
 namespace decay
 {
-using ::fast_io::operations::decay::scan_freestanding_decay;
+using ::fast_io::operations::decay::scan_some_freestanding_decay;
 using ::fast_io::operations::decay::print_freestanding_decay;
 
 using ::fast_io::operations::decay::stream_ref_decay_lock_guard;

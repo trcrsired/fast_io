@@ -1,4 +1,4 @@
-﻿module;
+module;
 
 #include <fast_io.h>
 #include <fast_io_device.h>
@@ -20,6 +20,7 @@
 
 export module fast_io;
 
+#include "fast_io_inc/herbceptions.inc"
 #include "fast_io_inc/core.inc"
 #include "fast_io_inc/core/allocation.inc"
 #include "fast_io_inc/freestanding.inc"
