@@ -822,7 +822,7 @@ struct fd_remapper
 };
 
 // only used in vfork_execveat_common_impl()
-inline void vfork_and_execveat(pid_t &pid, int dirfd, char const *cstr, char const *const *args, char const *const *envp, unsigned volatile &t_errno, process_mode mode)
+inline void vfork_and_execveat(pid_t &pid, int dirfd, char const *cstr, char const *const *args, char const *const *envp, int volatile &t_errno, process_mode mode)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// vfork can only be called through libc wrapper
@@ -858,7 +858,7 @@ inline pid_t vfork_execveat_common_impl(int dirfd, char const *cstr, char const 
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	pid_t pid{};
-	unsigned volatile t_errno{}; // receive error from vfork subproc
+	int volatile t_errno{}; // receive error from vfork subproc
 	{
 		fd_remapper fm;
 		fm.map(0, pio.in);
