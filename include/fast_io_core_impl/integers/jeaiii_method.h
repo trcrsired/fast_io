@@ -23,14 +23,15 @@ inline constexpr char_type *jeaiii_write9_common(char_type *iter, ::std::uint_le
 {
 	constexpr ::std::size_t tocopybytes{sizeof(char_type) * 2u};
 	::std::uint_least64_t t{(jeaiii_9digits * u >> 23u) + 4u};
-	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + ((t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + ((t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + ((t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + ((t >> 32u) << 1u), tocopybytes);
-	iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+	::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+	t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+	iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 	return iter + 9;
 }
 
@@ -54,12 +55,12 @@ inline constexpr char_type *jeaiii_main_u8(char_type *iter, ::std::uint_least8_t
 			*iter = ::fast_io::char_literal_add<char_type>(u);
 			return iter + 1;
 		}
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (u << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(u) << 1u), tocopybytes);
 		return iter + 2;
 	}
 	::std::uint_least32_t const h{u / 100u};
 	*iter = ::fast_io::char_literal_add<char_type>(h);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 1, digitstb + ((u - h * 100u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 1, digitstb + (static_cast<::std::size_t>(u - h * 100u) << 1u), tocopybytes);
 	return iter + 3;
 }
 
@@ -77,7 +78,7 @@ inline constexpr char_type *jeaiii_main_u16(char_type *iter, ::std::uint_least16
 			*iter = ::fast_io::char_literal_add<char_type>(u);
 			return iter + 1;
 		}
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (u << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(u) << 1u), tocopybytes);
 		return iter + 2;
 	}
 	if (u < 10000u)
@@ -85,21 +86,23 @@ inline constexpr char_type *jeaiii_main_u16(char_type *iter, ::std::uint_least16
 		if (u < 1000u)
 		{
 			t = jeaiii_3digits * u;
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-			iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+			t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+			iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 			return iter + 3;
 		}
 		t = jeaiii_4digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return iter + 4;
 	}
 	t = jeaiii_5digits * u;
-	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-	iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+	t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+	iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 	return iter + 5;
 }
 
@@ -117,20 +120,21 @@ inline constexpr char_type *jeaiii_main_u32_common(char_type *iter, ::std::uint_
 				*iter = ::fast_io::char_literal_add<char_type>(u);
 				return iter + 1;
 			}
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (u << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(u) << 1u), tocopybytes);
 			return iter + 2;
 		}
 		if (u < 1000u)
 		{
 			t = jeaiii_3digits * u;
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-			iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+			t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+			iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 			return iter + 3;
 		}
 		t = jeaiii_4digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return iter + 4;
 	}
 	if (u < 100000000u)
@@ -140,64 +144,67 @@ inline constexpr char_type *jeaiii_main_u32_common(char_type *iter, ::std::uint_
 			if (u < 100000u)
 			{
 				t = jeaiii_5digits * u;
-				::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+				::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 				t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-				::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-				iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+				::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+				t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+				iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 				return iter + 5;
 			}
 			t = jeaiii_6digits * u;
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 			t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-			::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 			t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-			::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 			return iter + 6;
 		}
 		if (u < 10000000u)
 		{
 			t = (jeaiii_7digits * u) >> 16u;
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 			t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-			::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 			t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-			::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-			iter[6] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+			::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+			t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+			iter[6] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 			return iter + 7;
 		}
 		t = (jeaiii_8digits * u >> 19u) + 4u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return iter + 8;
 	}
 	if (u < 1000000000u)
 	{
 		t = (jeaiii_9digits * u >> 23u) + 4u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-		iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+		t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+		iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 		return iter + 9;
 	}
 	t = (jeaiii_10digits * u >> 26u) + 4u;
-	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-	::fast_io::details::intrinsics::typed_memcpy(iter + 8, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+	::fast_io::details::intrinsics::typed_memcpy(iter + 8, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 	return iter + 10;
 }
 
@@ -233,7 +240,7 @@ inline constexpr char_type *jeaiii_main_u64(char_type *iter, ::std::uint_least64
 		}
 		else
 		{
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (v << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(v) << 1u), tocopybytes);
 			iter += 2;
 		}
 		iter = jeaiii_write9_common(iter, static_cast<::std::uint_least32_t>(a % divisor), digitstb);
@@ -255,91 +262,95 @@ inline constexpr void jeaiii_len_u32_common(char_type *iter, ::std::uint_least32
 	}
 	case 2:
 	{
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (u << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(u) << 1u), tocopybytes);
 		return;
 	}
 	case 3:
 	{
 		t = jeaiii_3digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-		iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+		t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+		iter[2] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 		return;
 	}
 	case 4:
 	{
 		t = jeaiii_4digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return;
 	}
 	case 5:
 	{
 		t = jeaiii_5digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-		iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+		t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+		iter[4] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 		return;
 	}
 	case 6:
 	{
 		t = jeaiii_6digits * u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return;
 	}
 	case 7:
 	{
 		t = (jeaiii_7digits * u) >> 16u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-		iter[6] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+		t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+		iter[6] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 		return;
 	}
 	case 8:
 	{
 		t = (jeaiii_8digits * u >> 19u) + 4u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return;
 	}
 	case 9:
 	{
 		t = (jeaiii_9digits * u >> 23u) + 4u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
-		iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>((::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t)) >> 32u));
+		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
+		t = ::std::uint_least64_t{10} * static_cast<::std::uint_least32_t>(t);
+		iter[8] = ::fast_io::char_literal_add<char_type>(static_cast<::std::uint_least32_t>(t >> 32u));
 		return;
 	}
 	default:
 	{
 		t = (jeaiii_10digits * u >> 26u) + 4u;
-		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 2, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 4, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 6, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		t = ::std::uint_least64_t{100} * static_cast<::std::uint_least32_t>(t);
-		::fast_io::details::intrinsics::typed_memcpy(iter + 8, digitstb + (static_cast<::std::uint_least32_t>(t >> 32u) << 1u), tocopybytes);
+		::fast_io::details::intrinsics::typed_memcpy(iter + 8, digitstb + (static_cast<::std::size_t>(t >> 32u) << 1u), tocopybytes);
 		return;
 	}
 	}
@@ -380,7 +391,7 @@ inline constexpr void jeaiii_main_len_u64(char_type *iter, ::std::uint_least64_t
 		}
 		else
 		{
-			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (v << 1u), tocopybytes);
+			::fast_io::details::intrinsics::typed_memcpy(iter, digitstb + (static_cast<::std::size_t>(v) << 1u), tocopybytes);
 			iter += 2;
 		}
 		iter = jeaiii_write9_common(iter, static_cast<::std::uint_least32_t>(a % divisor), digitstb);
