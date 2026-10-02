@@ -294,22 +294,30 @@ private:
 	static_assert(!alloc_with_status ||
 					  ::fast_io::containers::details::defaulted_alignment<value_type, typed_allocator_type::default_alignment>,
 				  "handle-based allocators do not support over-aligned element types");
+	// Containers never relocate elements through a potentially throwing move
+	// constructor: a throwing move would leave both buffers in an unusable
+	// state. Trivially relocatable element types relocate by byte copy and
+	// need no move constructor at all.
+	static_assert(!::fast_io::containers::details::may_throw_move_constructible<value_type> ||
+					  ::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>,
+				  "vector element types must be nothrow move constructible or trivially relocatable");
+	static_assert(::fast_io::containers::details::never_throw_destructible<value_type>,
+				  "vector element destructors must never throw");
 
 	static inline constexpr bool throwing_allocation{typed_allocator_type::throws_on_allocation_failure};
 	static inline constexpr bool throwing_violations{typed_allocator_type::throws_on_violations};
 	static inline constexpr bool throwing_any{throwing_allocation || throwing_violations};
 	// moving elements into a new buffer during growth may throw when the move
 	// can throw and the vector cannot fall back to copying
-	static inline constexpr bool throwing_relocation{
-		::fast_io::containers::details::may_throw_destructible<value_type> ||
-		(::fast_io::containers::details::may_throw_move_constructible<value_type> &&
-		 (!::fast_io::containers::details::copy_constructible<value_type> || ::fast_io::containers::details::may_throw_copy_constructible<value_type>))};
+	// relocation never throws: element move constructors are required to be
+	// nothrow (or the type is trivially relocatable), and destructors cannot
+	// report herbceptions
+	static inline constexpr bool throwing_relocation{false};
 	// shifting elements inside the buffer (insert/erase) may throw on
-	// move construction, move assignment or destruction
+	// move assignment; the move constructor is required not to throw and
+	// destruction cannot throw
 	static inline constexpr bool throwing_shift{
-		::fast_io::containers::details::may_throw_move_constructible<value_type> ||
-		::fast_io::containers::details::may_throw_move_assignable<value_type> ||
-		::fast_io::containers::details::may_throw_destructible<value_type>};
+		::fast_io::containers::details::may_throw_move_assignable<value_type>};
 
 public:
 	using pointer = value_type *;
@@ -382,7 +390,20 @@ private:
 			typed_allocator_type::deallocate_n(ptr, n);
 		}
 	}
-	inline constexpr void destroy() FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_destructible<value_type>)
+	// Constructs an empty vector bound to this container's allocator handle.
+	inline constexpr vector alloc_empty() noexcept
+	{
+		if constexpr (alloc_with_status)
+		{
+			return vector{this->allochdl};
+		}
+		else
+		{
+			return vector{};
+		}
+	}
+
+	inline constexpr void destroy() noexcept
 	{
 		clear();
 		if (imp.begin_ptr == nullptr)
@@ -688,7 +709,7 @@ public:
 	}
 
 	inline constexpr vector &operator=(vector const &vec)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type> || ::fast_io::containers::details::may_throw_destructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		// Using static_assert instead of requires to delay the check
 		// related to tests/0026.container/0001.vector/recursive.cc
@@ -810,8 +831,14 @@ private:
 				}
 				else
 				{
-					return reinterpret_cast<pointer>(::fast_io::containers::details::vector::grow_to_size_iter_impl<allocator_type, sizeof(value_type), alignof(value_type)>(*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)),
-																																											 iter, n));
+					::std::size_t newcapbytes;
+					if (__builtin_mul_overflow(sizeof(value_type), newcap, __builtin_addressof(newcapbytes))) [[unlikely]]
+					{
+						::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
+					}
+					return reinterpret_cast<pointer>(::fast_io::containers::details::vector::detemplate::grow_to_byte_size_iter_impl<allocator_type>(
+						*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)),
+						iter, newcapbytes, n * sizeof(value_type), sizeof(value_type), alignof(value_type)));
 				}
 			}
 		}
@@ -1032,7 +1059,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	inline constexpr void pop_back()
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || ::fast_io::containers::details::may_throw_destructible<value_type>)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		if (imp.curr_ptr == imp.begin_ptr) [[unlikely]]
 		{
@@ -1041,8 +1068,7 @@ public:
 		(--imp.curr_ptr)->~value_type();
 	}
 
-	inline constexpr void pop_back_unchecked()
-		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_destructible<value_type>)
+	inline constexpr void pop_back_unchecked() noexcept
 	{
 		(--imp.curr_ptr)->~value_type();
 	}
@@ -1068,6 +1094,98 @@ public:
 		static_cast<void>(this->emplace_back_unchecked(::std::move(value)));
 	}
 
+	// front insertion/removal is O(n): the tail is shifted right by one.
+	template <typename... Args>
+		requires std::constructible_from<value_type, Args...>
+	inline constexpr reference emplace_front(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+	{
+		return *this->emplace(imp.begin_ptr, ::std::forward<Args>(args)...);
+	}
+	inline constexpr void push_front(T const &value)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+	{
+		this->emplace_front(value);
+	}
+	inline constexpr void push_front(T &&value)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+	{
+		this->emplace_front(::std::move(value));
+	}
+	inline constexpr void pop_front()
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || throwing_shift)
+	{
+		if (imp.begin_ptr == imp.curr_ptr) [[unlikely]]
+		{
+			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		}
+		this->pop_front_unchecked();
+	}
+	inline constexpr void pop_front_unchecked()
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
+	{
+		this->erase_common(imp.begin_ptr);
+	}
+
+	// unchecked front insertion: the caller must have reserved the extra slot
+	template <typename... Args>
+		requires std::constructible_from<value_type, Args...>
+	inline constexpr reference emplace_front_unchecked(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift ||
+									   ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+	{
+		pointer it{imp.begin_ptr};
+		if constexpr (::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
+		{
+			value_type tmp(::std::forward<Args>(args)...);
+			if (it != imp.curr_ptr)
+			{
+				this->move_backward_one_impl(it);
+				if constexpr (::std::is_move_assignable_v<value_type>)
+				{
+					*it = ::std::move(tmp);
+				}
+				else
+				{
+					it->~value_type();
+					::new (static_cast<void *>(it)) value_type(::std::move(tmp));
+				}
+				++imp.curr_ptr;
+				return *it;
+			}
+			auto ret{::new (static_cast<void *>(it)) value_type(::std::move(tmp))};
+			++imp.curr_ptr;
+			return *ret;
+		}
+		else
+		{
+			if (it != imp.curr_ptr)
+			{
+				this->move_backward_one_impl(it);
+				it->~value_type();
+				::new (static_cast<void *>(it)) value_type(::std::forward<Args>(args)...);
+				++imp.curr_ptr;
+				return *it;
+			}
+			auto ret{::new (static_cast<void *>(it)) value_type(::std::forward<Args>(args)...)};
+			++imp.curr_ptr;
+			return *ret;
+		}
+	}
+	inline constexpr void push_front_unchecked(T const &value)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+	{
+		this->emplace_front_unchecked(value);
+	}
+	inline constexpr void push_front_unchecked(T &&value)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
+	{
+		this->emplace_front_unchecked(::std::move(value));
+	}
+
 	[[nodiscard]] inline constexpr pointer data() noexcept
 	{
 		return imp.begin_ptr;
@@ -1085,7 +1203,7 @@ public:
 	{
 		return imp.begin_ptr == imp.curr_ptr;
 	}
-	inline constexpr void clear() FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_destructible<value_type>)
+	inline constexpr void clear() noexcept
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
 		{
@@ -1290,7 +1408,7 @@ public:
 		return const_reverse_iterator{imp.begin_ptr};
 	}
 
-	inline constexpr void clear_destroy() FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_destructible<value_type>)
+	inline constexpr void clear_destroy() noexcept
 	{
 		this->destroy();
 		imp = {};
@@ -1321,14 +1439,15 @@ private:
 		{
 			if (thisvec)
 			{
-				FAST_IO_HERBCEPTIONS_TRY
+				auto newcurr{thisvec->imp.begin_ptr + static_cast<::std::ptrdiff_t>(oldn)};
+				if constexpr (!::std::is_trivially_destructible_v<value_type>)
 				{
-					static_cast<void>(thisvec->erase(thisvec->cbegin() + oldn, thisvec->cend()));
+					for (auto p{newcurr}; p != thisvec->imp.curr_ptr; ++p)
+					{
+						p->~value_type();
+					}
 				}
-				FAST_IO_HERBCEPTIONS_CATCH_ALL
-				{
-					::fast_io::fast_terminate();
-				}
+				thisvec->imp.curr_ptr = newcurr;
 			}
 		}
 	};
@@ -1338,7 +1457,7 @@ public:
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr void append_range(R &&rg)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
-									   ::fast_io::containers::details::may_throw_constructible<value_type, ::std::ranges::range_value_t<R>>)
+									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
 	{
 		if constexpr (::std::ranges::sized_range<R>)
 		{
@@ -1358,7 +1477,7 @@ public:
 			{
 				this->grow_to_size_impl(new_size);
 			}
-			if constexpr (!::fast_io::containers::details::may_throw_constructible<value_type, ::std::ranges::range_value_t<R>>)
+			if constexpr (!::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
 			{
 				for (auto &e : rg)
 				{
@@ -1379,7 +1498,7 @@ public:
 		}
 		else
 		{
-			if constexpr (!::fast_io::containers::details::may_throw_constructible<value_type, ::std::ranges::range_value_t<R>>)
+			if constexpr (!::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
 			{
 				for (auto &e : rg)
 				{
@@ -1525,6 +1644,233 @@ public:
 	}
 
 private:
+	/*
+	Rolls a partially filled insertion hole back: destroys the elements that
+	were constructed into the hole and moves the shifted tail back into place.
+	*/
+	struct insert_hole_guard
+	{
+		vector *thisvec;
+		pointer first;
+		size_type count;
+		size_type filled;
+		constexpr ~insert_hole_guard()
+		{
+			if (thisvec) [[unlikely]]
+			{
+				if constexpr (!::std::is_trivially_destructible_v<value_type>)
+				{
+					auto filllast{first + static_cast<::std::ptrdiff_t>(filled)};
+					for (auto p{first}; p != filllast; ++p)
+					{
+						p->~value_type();
+					}
+				}
+				::fast_io::freestanding::uninitialized_relocate(
+					first + static_cast<::std::ptrdiff_t>(count), thisvec->imp.curr_ptr, first);
+				thisvec->imp.curr_ptr -= static_cast<::std::ptrdiff_t>(count);
+			}
+		}
+	};
+
+	// Carves a count-wide uninitialized hole at it and fills it with val.
+	inline constexpr iterator insert_count_impl(pointer it, size_type count, const_reference val)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+	{
+		size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+		if (max_size() - old_size < count) [[unlikely]]
+		{
+			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
+		}
+		size_type const new_size{old_size + count};
+		if (static_cast<size_type>(imp.end_ptr - imp.curr_ptr) < count)
+		{
+			it = this->grow_to_size_iter_impl(new_size, it, count);
+		}
+		else
+		{
+			::fast_io::freestanding::uninitialized_relocate_backward(
+				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(count));
+		}
+		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
+		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
+		{
+			::fast_io::freestanding::uninitialized_fill_n(it, count, val);
+		}
+		else
+		{
+			insert_hole_guard guard{this, it, count, 0};
+			for (; guard.filled != count; ++guard.filled)
+			{
+				::new (static_cast<void *>(it + static_cast<::std::ptrdiff_t>(guard.filled))) value_type(val);
+			}
+			guard.thisvec = nullptr;
+		}
+		return it;
+	}
+
+	template <::std::ranges::range R>
+	inline constexpr iterator insert_range_hole_impl(pointer it, R &&rg, size_type rgsize)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
+	{
+		size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+		if (max_size() - old_size < rgsize) [[unlikely]]
+		{
+			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
+		}
+		size_type const new_size{old_size + rgsize};
+		if (static_cast<size_type>(imp.end_ptr - imp.curr_ptr) < rgsize)
+		{
+			it = this->grow_to_size_iter_impl(new_size, it, rgsize);
+		}
+		else
+		{
+			::fast_io::freestanding::uninitialized_relocate_backward(
+				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(rgsize));
+		}
+		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
+		if constexpr (!::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
+		{
+			auto d{it};
+			for (auto &e : rg)
+			{
+				::new (static_cast<void *>(d)) value_type(::std::forward<decltype(e)>(e));
+				++d;
+			}
+		}
+		else
+		{
+			insert_hole_guard guard{this, it, rgsize, 0};
+			for (auto &e : rg)
+			{
+				::new (static_cast<void *>(it + static_cast<::std::ptrdiff_t>(guard.filled))) value_type(::std::forward<decltype(e)>(e));
+				++guard.filled;
+			}
+			guard.thisvec = nullptr;
+		}
+		return it;
+	}
+
+	// Rotates [first, middle, last) left so that middle becomes the new first.
+	inline static constexpr void rotate_range_impl(pointer first, pointer middle, pointer last)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
+	{
+		// reverse all three segments; swap on move-assign may throw -> covered by throwing_shift
+		auto rev{[](pointer b, pointer e) {
+			while (b < e)
+			{
+				--e;
+				::fast_io::freestanding::iter_swap(b, e);
+				++b;
+			}
+		}};
+		rev(first, middle);
+		rev(middle, last);
+		rev(first, last);
+	}
+
+public:
+	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+	{
+		pointer it;
+		if (__builtin_is_constant_evaluated())
+		{
+			auto beginptr{imp.begin_ptr};
+			it = iter - beginptr + beginptr;
+		}
+		else
+		{
+			it = const_cast<pointer>(iter);
+		}
+		if (!count)
+		{
+			return it;
+		}
+		return this->insert_count_impl(it, count, val);
+	}
+
+	inline constexpr size_type insert_index(size_type idx, size_type count, const_reference val)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
+	{
+		auto beginptr{imp.begin_ptr};
+		size_type const sz{static_cast<size_type>(imp.curr_ptr - beginptr)};
+		if (sz < idx) [[unlikely]]
+		{
+			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		}
+		if (!count)
+		{
+			return idx;
+		}
+		this->insert_count_impl(beginptr + static_cast<::std::ptrdiff_t>(idx), count, val);
+		return idx;
+	}
+
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr iterator insert_range(const_iterator iter, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
+	{
+		pointer it;
+		if (__builtin_is_constant_evaluated())
+		{
+			auto beginptr{imp.begin_ptr};
+			it = iter - beginptr + beginptr;
+		}
+		else
+		{
+			it = const_cast<pointer>(iter);
+		}
+		if constexpr (::std::ranges::sized_range<R>)
+		{
+			size_type const rgsize{::std::ranges::size(rg)};
+			if (!rgsize)
+			{
+				return it;
+			}
+			return this->insert_range_hole_impl(it, ::std::forward<R>(rg), rgsize);
+		}
+		else
+		{
+			size_type const pos{static_cast<size_type>(it - imp.begin_ptr)};
+			size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+			this->append_range(::std::forward<R>(rg));
+			auto beginptr{imp.begin_ptr};
+			this->rotate_range_impl(beginptr + static_cast<::std::ptrdiff_t>(pos),
+									beginptr + static_cast<::std::ptrdiff_t>(old_size), imp.curr_ptr);
+			return beginptr + static_cast<::std::ptrdiff_t>(pos);
+		}
+	}
+
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr size_type insert_range_index(size_type idx, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || throwing_any || throwing_relocation || throwing_shift ||
+									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
+	{
+		size_type const sz{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+		if (sz < idx) [[unlikely]]
+		{
+			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		}
+		return static_cast<size_type>(this->insert_range(imp.begin_ptr + static_cast<::std::ptrdiff_t>(idx), ::std::forward<R>(rg)) - imp.begin_ptr);
+	}
+
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr void prepend_range(R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(this->insert_range(imp.begin_ptr, ::std::forward<R>(rg)))
+	{
+		this->insert_range(imp.begin_ptr, ::std::forward<R>(rg));
+	}
+
+private:
 	inline constexpr pointer erase_common(pointer it)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1660,8 +2006,7 @@ public:
 
 	inline constexpr void resize(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation ||
-									   ::fast_io::containers::details::may_throw_default_constructible<value_type> ||
-									   ::fast_io::containers::details::may_throw_destructible<value_type>)
+									   ::fast_io::containers::details::may_throw_default_constructible<value_type>)
 	{
 		auto beginptr{imp.begin_ptr};
 		auto currptr{imp.curr_ptr};
@@ -1692,8 +2037,7 @@ public:
 
 	inline constexpr void resize(size_type n, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation ||
-									   ::fast_io::containers::details::may_throw_copy_constructible<value_type> ||
-									   ::fast_io::containers::details::may_throw_destructible<value_type>)
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		auto beginptr{imp.begin_ptr};
 		auto currptr{imp.curr_ptr};
@@ -1720,10 +2064,32 @@ public:
 		}
 	}
 
+	inline constexpr void resize(size_type n, ::fast_io::for_overwrite_t)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation)
+	{
+		size_type const sz{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
+		if (sz < n)
+		{
+			// growing leaves the appended elements uninitialized
+			this->reserve(n);
+			imp.curr_ptr = imp.begin_ptr + n;
+		}
+		else if (n < sz)
+		{
+			if constexpr (!::std::is_trivially_destructible_v<value_type>)
+			{
+				for (auto p{imp.begin_ptr + n}; p != imp.curr_ptr; ++p)
+				{
+					p->~value_type();
+				}
+			}
+			imp.curr_ptr = imp.begin_ptr + n;
+		}
+	}
+
 	inline constexpr void assign(size_type n, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation ||
-									   ::fast_io::containers::details::may_throw_copy_constructible<value_type> ||
-									   ::fast_io::containers::details::may_throw_destructible<value_type>)
+									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->clear();
 		this->reserve(n);
@@ -1731,6 +2097,17 @@ public:
 		{
 			::new (static_cast<void *>(imp.curr_ptr)) value_type(val);
 		}
+	}
+
+	template <::std::ranges::range R>
+		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr void assign_range(R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(
+			!noexcept(this->construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg))))
+	{
+		auto temp{this->alloc_empty()};
+		temp.construct_vector_common_impl(::std::ranges::begin(rg), ::std::ranges::end(rg));
+		this->swap(temp);
 	}
 
 	inline constexpr void swap(vector &other) noexcept
@@ -1770,8 +2147,7 @@ inline constexpr void swap(vector<T, allocator> &lhs, vector<T, allocator> &rhs)
 template <typename ValueType, typename Alloc, typename U>
 inline constexpr ::fast_io::containers::vector<ValueType, Alloc>::size_type erase(::fast_io::containers::vector<ValueType, Alloc> &c, U const &value)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*c.begin() == value) ||
-								   ::fast_io::containers::details::may_throw_move_assignable<ValueType> ||
-								   ::fast_io::containers::details::may_throw_destructible<ValueType>)
+								   ::fast_io::containers::details::may_throw_move_assignable<ValueType>)
 {
 	auto first{c.begin()};
 	auto const last{c.end()};
@@ -1797,8 +2173,7 @@ inline constexpr ::fast_io::containers::vector<ValueType, Alloc>::size_type eras
 template <typename ValueType, typename Alloc, typename Pred>
 inline constexpr ::fast_io::containers::vector<ValueType, Alloc>::size_type erase_if(::fast_io::containers::vector<ValueType, Alloc> &c, Pred pred)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(pred(*c.begin())) ||
-								   ::fast_io::containers::details::may_throw_move_assignable<ValueType> ||
-								   ::fast_io::containers::details::may_throw_destructible<ValueType>)
+								   ::fast_io::containers::details::may_throw_move_assignable<ValueType>)
 {
 	auto first{c.begin()};
 	auto const last{c.end()};

@@ -609,6 +609,83 @@ if !consteval
 		allocator_type::handle_deallocate_aligned(handle, p, default_alignment);
 	}
 }
+
+static inline void handle_deallocate_aligned(handle_type handle, void *p, ::std::size_t alignment) noexcept
+	requires(has_status && has_handle_deallocate && !secure_clear)
+{
+	if constexpr (::fast_io::details::has_handle_deallocate_aligned_impl<alloc>)
+	{
+		allocator_type::handle_deallocate_aligned(handle, p, alignment);
+	}
+	else if constexpr (::fast_io::details::has_handle_deallocate_aligned_n_impl<alloc>)
+	{
+		allocator_type::handle_deallocate_aligned_n(handle, p, alignment, 0);
+	}
+	else if constexpr (::fast_io::details::has_handle_deallocate_n_impl<alloc>)
+	{
+		allocator_type::handle_deallocate_n(handle, p, 0);
+	}
+	else
+	{
+		if (p == nullptr)
+		{
+			return;
+		}
+		if (default_alignment < alignment)
+		{
+			p = reinterpret_cast<void **>(p)[-1];
+		}
+		allocator_type::handle_deallocate(handle, p);
+	}
+}
+
+static inline void handle_deallocate_aligned_n(handle_type handle, void *p, ::std::size_t alignment, ::std::size_t n) noexcept
+	requires(has_status && has_handle_deallocate)
+{
+	if constexpr (secure_clear)
+	{
+if !consteval
+		{
+			if (p != nullptr)
+			{
+				::fast_io::freestanding::bytes_secure_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
+		}
+	}
+	if constexpr (::fast_io::details::has_handle_deallocate_aligned_n_impl<alloc>)
+	{
+		allocator_type::handle_deallocate_aligned_n(handle, p, alignment, n);
+	}
+	else if constexpr (::fast_io::details::has_handle_deallocate_aligned_impl<alloc>)
+	{
+		allocator_type::handle_deallocate_aligned(handle, p, alignment);
+	}
+	else
+	{
+		if (p == nullptr)
+		{
+			return;
+		}
+		if (default_alignment < alignment)
+		{
+			auto start{reinterpret_cast<void **>(p)[-1]};
+			n += static_cast<::std::size_t>(reinterpret_cast<char unsigned *>(p) - reinterpret_cast<char unsigned *>(start));
+			p = start;
+		}
+		if constexpr (::fast_io::details::has_handle_deallocate_n_impl<alloc>)
+		{
+			allocator_type::handle_deallocate_n(handle, p, n);
+		}
+		else if constexpr (::fast_io::details::has_handle_deallocate_impl<alloc>)
+		{
+			allocator_type::handle_deallocate(handle, p);
+		}
+		else
+		{
+			static_assert(::fast_io::details::has_handle_deallocate_n_impl<alloc>);
+		}
+	}
+}
 }
 ;
 template <typename alloc, typename T,
@@ -1429,6 +1506,59 @@ if !consteval
 		requires(has_defaulted_alignment && has_handle_allocate_try)
 	{
 		return handle_allocate_zero_impl<true>(handle, n);
+	}
+
+	template <bool throwing>
+	static inline constexpr basic_allocation_least_result<T *>
+	handle_allocate_at_least_impl(handle_type handle, ::std::size_t n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+		requires(has_status && has_defaulted_alignment)
+	{
+#if __cpp_constexpr_dynamic_alloc >= 201907L
+		if (__builtin_is_constant_evaluated())
+		{
+			return {::fast_io::freestanding::allocator<T>{}.allocate(n), n};
+		}
+#endif
+		constexpr ::std::size_t mxn{::std::numeric_limits<::std::size_t>::max() / sizeof(T)};
+		if (n > mxn)
+		{
+			if constexpr (throwing)
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::value_too_large);
+			}
+			else
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+		if constexpr (::fast_io::details::has_handle_allocate_at_least_mode_impl<allocator_adaptor, throwing>)
+		{
+			auto newres{dispatch<throwing>::handle_allocate_at_least(handle, n * sizeof(T))};
+			return {reinterpret_cast<T *>(newres.ptr), newres.count / sizeof(T)};
+		}
+		else
+		{
+			return {handle_allocate_impl<throwing>(handle, n), n};
+		}
+	}
+
+	static inline constexpr basic_allocation_least_result<T *> handle_allocate_at_least(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+		requires(has_defaulted_alignment &&
+				 ((!throws_on_allocation_failure && has_handle_allocate) ||
+				  (throws_on_allocation_failure && has_handle_allocate_try)))
+	{
+		return handle_allocate_at_least_impl<throws_on_allocation_failure>(handle, n);
+	}
+	static inline constexpr basic_allocation_least_result<T *> handle_allocate_at_least_die(handle_type handle, ::std::size_t n) noexcept
+		requires(has_defaulted_alignment && has_handle_allocate)
+	{
+		return handle_allocate_at_least_impl<false>(handle, n);
+	}
+	static inline constexpr basic_allocation_least_result<T *> handle_allocate_at_least_try(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+		requires(has_defaulted_alignment && has_handle_allocate_try)
+	{
+		return handle_allocate_at_least_impl<true>(handle, n);
 	}
 
 	static inline constexpr bool has_handle_deallocate{allocator_adaptor::has_handle_deallocate};

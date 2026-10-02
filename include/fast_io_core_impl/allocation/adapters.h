@@ -346,63 +346,49 @@ inline constexpr ::fast_io::allocation_least_result allocator_pointer_aligned_at
 	return res;
 }
 
-#if 0
-template <typename alloc, bool zero>
-inline constexpr void *status_allocator_pointer_aligned_impl(typename alloc::handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+template <typename alloc, bool throwing>
+inline constexpr void *status_allocator_pointer_aligned_impl(typename alloc::handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
-	static_assert(::fast_io::generic_allocator_adapter<alloc>::has_native_handle_allocate);
+	using adapter = ::fast_io::generic_allocator_adapter<alloc>;
+	static_assert(adapter::has_native_handle_allocate);
 
-	constexpr ::std::size_t defaultalignment{::fast_io::details::calculate_default_alignment<alloc>()};
+	constexpr ::std::size_t defaultalignment{adapter::default_alignment};
 	bool const alignedadjustment{defaultalignment < alignment};
 	if (alignedadjustment)
 	{
-		n = ::fast_io::details::allocator_compute_aligned_total_size_impl(alignment, n);
+		n = ::fast_io::details::allocator_compute_aligned_total_size_impl<throwing>(alignment, n);
 	}
-	void *p;
-	if constexpr (zero)
-	{
-		p = ::fast_io::generic_allocator_adapter<alloc>::handle_allocate_zero(handle, n);
-	}
-	else
-	{
-		p = ::fast_io::generic_allocator_adapter<alloc>::handle_allocate(handle, n);
-	}
+	void *p{adapter::template handle_allocate_conditional_zero_impl<throwing>(handle, n, zero)};
 	if (alignedadjustment)
 	{
-		p = ::fast_io::details::allocator_adjust_ptr_to_aligned_impl(p,alignment);
+		p = ::fast_io::details::allocator_adjust_ptr_to_aligned_impl(p, alignment);
 	}
 	return p;
 }
 
-template <typename alloc, bool zero>
-inline constexpr ::fast_io::allocation_least_result status_allocator_pointer_aligned_impl(typename alloc::handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+template <typename alloc, bool throwing>
+inline constexpr ::fast_io::allocation_least_result status_allocator_pointer_aligned_at_least_impl(typename alloc::handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
-	static_assert(::fast_io::generic_allocator_adapter<alloc>::has_native_handle_allocate);
+	using adapter = ::fast_io::generic_allocator_adapter<alloc>;
+	static_assert(adapter::has_native_handle_allocate);
 
-	constexpr ::std::size_t defaultalignment{::fast_io::details::calculate_default_alignment<alloc>()};
+	constexpr ::std::size_t defaultalignment{adapter::default_alignment};
 	bool const alignedadjustment{defaultalignment < alignment};
 	if (alignedadjustment)
 	{
-		n = ::fast_io::details::allocator_compute_aligned_total_size_impl(alignment, n);
+		n = ::fast_io::details::allocator_compute_aligned_total_size_impl<throwing>(alignment, n);
 	}
-	::fast_io::allocation_least_result res;
-	if constexpr (zero)
-	{
-		res = ::fast_io::generic_allocator_adapter<alloc>::handle_allocate_zero_at_least(handle, n);
-	}
-	else
-	{
-		res = ::fast_io::generic_allocator_adapter<alloc>::handle_allocate_at_least(handle, n);
-	}
+	::fast_io::allocation_least_result res{adapter::template handle_allocate_conditional_zero_at_least_impl<throwing>(handle, n, zero)};
 	if (alignedadjustment)
 	{
 		auto resptr{res.ptr};
-		auto aligned_ptr = ::fast_io::details::allocator_adjust_ptr_to_aligned_impl(resptr,alignment);
-		res = {aligned_ptr,res.count-static_cast<::std::size_t>(reinterpret_cast<char unsigned*>(aligned_ptr)-reinterpret_cast<char unsigned*>(resptr))};
+		auto aligned_ptr{::fast_io::details::allocator_adjust_ptr_to_aligned_impl(resptr, alignment)};
+		res = {aligned_ptr, res.count - static_cast<::std::size_t>(reinterpret_cast<char unsigned *>(aligned_ptr) - reinterpret_cast<char unsigned *>(resptr))};
 	}
 	return res;
 }
-#endif
 } // namespace details
 
 } // namespace fast_io

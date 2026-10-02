@@ -64,8 +64,10 @@ concept may_throw_move_constructible = complete_type<T> && !::std::is_nothrow_mo
 template <typename T>
 concept may_throw_move_assignable = complete_type<T> && !::std::is_nothrow_assignable_v<T &, T>;
 
+// destructors are never allowed to report failures; incomplete types pass the
+// concept so recursive containers still instantiate
 template <typename T>
-concept may_throw_destructible = complete_type<T> && !::std::is_nothrow_destructible_v<T>;
+concept never_throw_destructible = !complete_type<T> || ::std::is_nothrow_destructible_v<T>;
 
 // constraint level short circuit keeps alignof(T) from being instantiated
 // while T is still incomplete; incomplete types are treated as defaulted

@@ -2644,3 +2644,344 @@ static inline constexpr void * handle_allocate_conditional_zero_try(handle_type 
 	return handle_allocate_conditional_zero_impl<true>(handle, n, zero);
 }
 
+template <bool throwing>
+#if __has_cpp_attribute(__gnu__::__returns_nonnull__)
+[[__gnu__::__returns_nonnull__]]
+#endif
+static inline void *handle_allocate_aligned_conditional_zero_impl(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_conditional_zero_mode_impl<alloc, throwing>)
+	{
+		return dispatch<throwing>::handle_allocate_aligned_conditional_zero(handle, alignment, n, zero);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_conditional_zero_at_least_mode_impl<alloc, throwing>)
+	{
+		return dispatch<throwing>::handle_allocate_aligned_conditional_zero_at_least(handle, alignment, n, zero).ptr;
+	}
+	else
+	{
+		if (alignment <= default_alignment)
+		{
+			return handle_allocate_conditional_zero_impl<throwing>(handle, n, zero);
+		}
+		if (zero)
+		{
+			if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_mode_impl<alloc, throwing>)
+			{
+				return dispatch<throwing>::handle_allocate_aligned_zero(handle, alignment, n);
+			}
+			else if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, throwing>)
+			{
+				return dispatch<throwing>::handle_allocate_aligned_zero_at_least(handle, alignment, n).ptr;
+			}
+		}
+		if constexpr (::fast_io::details::has_handle_allocate_aligned_mode_impl<alloc, throwing>)
+		{
+			auto p{dispatch<throwing>::handle_allocate_aligned(handle, alignment, n)};
+			if (zero)
+			{
+				::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
+			return p;
+		}
+		else if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, throwing>)
+		{
+			auto p{dispatch<throwing>::handle_allocate_aligned_at_least(handle, alignment, n).ptr};
+			if (zero)
+			{
+				::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(p), n);
+			}
+			return p;
+		}
+		else
+		{
+			return ::fast_io::details::status_allocator_pointer_aligned_impl<alloc, throwing>(handle, alignment, n, zero);
+		}
+	}
+}
+static inline constexpr void * handle_allocate_aligned_conditional_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, zero);
+}
+static inline constexpr void * handle_allocate_aligned_conditional_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, zero);
+}
+static inline constexpr void * handle_allocate_aligned_conditional_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, zero);
+}
+
+static inline constexpr void * handle_allocate_aligned(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, false);
+}
+static inline constexpr void * handle_allocate_aligned_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, false);
+}
+static inline constexpr void * handle_allocate_aligned_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, false);
+}
+
+static inline constexpr void * handle_allocate_aligned_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, true);
+}
+static inline constexpr void * handle_allocate_aligned_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, true);
+}
+static inline constexpr void * handle_allocate_aligned_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, true);
+}
+
+template <bool throwing>
+static inline ::fast_io::allocation_least_result handle_allocate_conditional_zero_at_least_impl(handle_type handle, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_conditional_zero_at_least_mode_impl<alloc, throwing>)
+	{
+		return dispatch<throwing>::handle_allocate_conditional_zero_at_least(handle, n, zero);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_conditional_zero_at_least_mode_impl<alloc, throwing>)
+	{
+		return dispatch<throwing>::handle_allocate_aligned_conditional_zero_at_least(handle, default_alignment, n, zero);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_at_least_mode_impl<alloc, throwing>)
+	{
+		auto res{dispatch<throwing>::handle_allocate_at_least(handle, n)};
+		if (zero)
+		{
+			::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(res.ptr), res.count);
+		}
+		return res;
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, throwing>)
+	{
+		auto res{dispatch<throwing>::handle_allocate_aligned_at_least(handle, default_alignment, n)};
+		if (zero)
+		{
+			::fast_io::freestanding::bytes_clear_n(reinterpret_cast<::std::byte *>(res.ptr), res.count);
+		}
+		return res;
+	}
+	else
+	{
+		return {handle_allocate_conditional_zero_impl<throwing>(handle, n, zero), n};
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_conditional_zero_at_least(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, n, zero);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_conditional_zero_at_least_die(handle_type handle, ::std::size_t n, bool zero) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_conditional_zero_at_least_impl<false>(handle, n, zero);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_conditional_zero_at_least_try(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_conditional_zero_at_least_impl<true>(handle, n, zero);
+}
+
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_at_least(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, n, false);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_at_least_die(handle_type handle, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_conditional_zero_at_least_impl<false>(handle, n, false);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_at_least_try(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_conditional_zero_at_least_impl<true>(handle, n, false);
+}
+
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_zero_at_least(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	if constexpr (::fast_io::details::has_handle_allocate_zero_at_least_mode_impl<alloc, throws_on_allocation_failure>)
+	{
+		return dispatch<throws_on_allocation_failure>::handle_allocate_zero_at_least(handle, n);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, throws_on_allocation_failure>)
+	{
+		return dispatch<throws_on_allocation_failure>::handle_allocate_aligned_zero_at_least(handle, default_alignment, n);
+	}
+	else
+	{
+		return handle_allocate_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, n, true);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_zero_at_least_die(handle_type handle, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_zero_at_least_mode_impl<alloc, false>)
+	{
+		return dispatch<false>::handle_allocate_zero_at_least(handle, n);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, false>)
+	{
+		return dispatch<false>::handle_allocate_aligned_zero_at_least(handle, default_alignment, n);
+	}
+	else
+	{
+		return handle_allocate_conditional_zero_at_least_impl<false>(handle, n, true);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_zero_at_least_try(handle_type handle, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_zero_at_least_mode_impl<alloc, true>)
+	{
+		return dispatch<true>::handle_allocate_zero_at_least(handle, n);
+	}
+	else if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, true>)
+	{
+		return dispatch<true>::handle_allocate_aligned_zero_at_least(handle, default_alignment, n);
+	}
+	else
+	{
+		return handle_allocate_conditional_zero_at_least_impl<true>(handle, n, true);
+	}
+}
+
+template <bool throwing>
+static inline ::fast_io::allocation_least_result handle_allocate_aligned_conditional_zero_at_least_impl(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_conditional_zero_at_least_mode_impl<alloc, throwing>)
+	{
+		return dispatch<throwing>::handle_allocate_aligned_conditional_zero_at_least(handle, alignment, n, zero);
+	}
+	else
+	{
+		if (alignment <= default_alignment)
+		{
+			return handle_allocate_conditional_zero_at_least_impl<throwing>(handle, n, zero);
+		}
+		if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, throwing> ||
+					  ::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, throwing> ||
+					  ::fast_io::details::has_handle_allocate_aligned_conditional_zero_mode_impl<alloc, throwing> ||
+					  ::fast_io::details::has_handle_allocate_aligned_mode_impl<alloc, throwing> ||
+					  ::fast_io::details::has_handle_allocate_aligned_zero_mode_impl<alloc, throwing>)
+		{
+			return {handle_allocate_aligned_conditional_zero_impl<throwing>(handle, alignment, n, zero), n};
+		}
+		else
+		{
+			return ::fast_io::details::status_allocator_pointer_aligned_at_least_impl<alloc, throwing>(handle, alignment, n, zero);
+		}
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_conditional_zero_at_least(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	return handle_allocate_aligned_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, alignment, n, zero);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_conditional_zero_at_least_die(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	return handle_allocate_aligned_conditional_zero_at_least_impl<false>(handle, alignment, n, zero);
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_conditional_zero_at_least_try(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	return handle_allocate_aligned_conditional_zero_at_least_impl<true>(handle, alignment, n, zero);
+}
+
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_at_least(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, throws_on_allocation_failure>)
+	{
+		return dispatch<throws_on_allocation_failure>::handle_allocate_aligned_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, alignment, n, false);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_at_least_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, false>)
+	{
+		return dispatch<false>::handle_allocate_aligned_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<false>(handle, alignment, n, false);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_at_least_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_at_least_mode_impl<alloc, true>)
+	{
+		return dispatch<true>::handle_allocate_aligned_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<true>(handle, alignment, n, false);
+	}
+}
+
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_zero_at_least(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, throws_on_allocation_failure>)
+	{
+		return dispatch<throws_on_allocation_failure>::handle_allocate_aligned_zero_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<throws_on_allocation_failure>(handle, alignment, n, true);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_zero_at_least_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+	requires(has_status && has_native_handle_allocate)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, false>)
+	{
+		return dispatch<false>::handle_allocate_aligned_zero_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<false>(handle, alignment, n, true);
+	}
+}
+static inline constexpr ::fast_io::allocation_least_result handle_allocate_aligned_zero_at_least_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(has_status && has_native_handle_allocate_try)
+{
+	if constexpr (::fast_io::details::has_handle_allocate_aligned_zero_at_least_mode_impl<alloc, true>)
+	{
+		return dispatch<true>::handle_allocate_aligned_zero_at_least(handle, alignment, n);
+	}
+	else
+	{
+		return handle_allocate_aligned_conditional_zero_at_least_impl<true>(handle, alignment, n, true);
+	}
+}
+

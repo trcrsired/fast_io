@@ -963,10 +963,41 @@ inline constexpr ForwardIt uninitialized_fill_n(ForwardIt first, ::std::size_t n
 	return ::fast_io::freestanding::uninitialized_fill(first, ::std::next(first, n), x);
 }
 
+template <::std::forward_iterator It1, ::std::forward_iterator It2>
+	requires ::std::same_as<::std::iter_value_t<It1>, ::std::iter_value_t<It2>>
+inline constexpr void iter_swap(It1 a, It2 b)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_move_constructible_v<::std::iter_value_t<It1>> ||
+		!::std::is_nothrow_move_assignable_v<::std::iter_value_t<It1>>)
+{
+	using valtype = ::std::iter_value_t<It1>;
+	valtype tmp(::std::move(*a));
+	*a = ::std::move(*b);
+	*b = ::std::move(tmp);
+}
+
+template <::std::bidirectional_iterator BidIt>
+inline constexpr void reverse(BidIt first, BidIt last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_move_constructible_v<::std::iter_value_t<BidIt>> ||
+		!::std::is_nothrow_move_assignable_v<::std::iter_value_t<BidIt>>)
+{
+	for (; first != last; ++first)
+	{
+		if (first == --last)
+		{
+			break;
+		}
+		iter_swap(first, last);
+	}
+}
+
 template <::std::forward_iterator ForwardIt>
 inline constexpr ForwardIt
-rotate(ForwardIt first, ForwardIt middle,
-	   ForwardIt last) noexcept(::std::is_nothrow_swappable_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
+rotate(ForwardIt first, ForwardIt middle, ForwardIt last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		!::std::is_nothrow_move_constructible_v<typename ::std::iterator_traits<ForwardIt>::value_type> ||
+		!::std::is_nothrow_move_assignable_v<typename ::std::iterator_traits<ForwardIt>::value_type>)
 {
 	// copied from cppreference, room for improvements
 	if (first == middle)
@@ -985,7 +1016,7 @@ rotate(ForwardIt first, ForwardIt middle,
 		{
 			next_read = read; // track where "first" went
 		}
-		::std::ranges::swap(*write, *read);
+		iter_swap(write, read);
 	}
 	// rotate the remaining sequence into place
 	rotate(write, next_read, last);
