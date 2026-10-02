@@ -23,6 +23,7 @@ using ::fast_io::scan_contiguous_define;
 using ::fast_io::scan_context_type;
 using ::fast_io::scan_context_define;
 using ::fast_io::scan_context_eof_define;
+using ::fast_io::scan_some_result_t;
 
 using ::fast_io::unreachable;
 using ::fast_io::noexcept_call;
@@ -215,7 +216,7 @@ using ::fast_io::char_category::ranges::to_c_halfwidth;
 } // namespace ranges
 } // namespace char_category
 
-namespace mnp = manipulators;
+namespace mnp = ::fast_io::manipulators;
 
 namespace operations
 {
