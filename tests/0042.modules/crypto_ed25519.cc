@@ -1,4 +1,5 @@
 // module consumer: curve25519 via import fast_io_crypto
+#include <cstddef>
 import fast_io_crypto;
 import fast_io;
 

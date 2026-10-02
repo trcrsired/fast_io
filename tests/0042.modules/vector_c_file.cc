@@ -15,7 +15,8 @@ int main()
 	catch throws(::std::error e)
 	{
 		::fast_io::io::perrln("caught through module: ", e,
-							  " eq:", e == ::std::errc::no_such_file_or_directory);
-		return !(e == ::std::errc::no_such_file_or_directory);
+							  " equivalent:",
+							  e.equivalent(::std::errc::no_such_file_or_directory));
+		return !e.equivalent(::std::errc::no_such_file_or_directory);
 	}
 }
