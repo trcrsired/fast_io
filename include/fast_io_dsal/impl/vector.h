@@ -1094,97 +1094,6 @@ public:
 		static_cast<void>(this->emplace_back_unchecked(::std::move(value)));
 	}
 
-	// front insertion/removal is O(n): the tail is shifted right by one.
-	template <typename... Args>
-		requires std::constructible_from<value_type, Args...>
-	inline constexpr reference emplace_front(Args &&...args)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
-									   ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
-	{
-		return *this->emplace(imp.begin_ptr, ::std::forward<Args>(args)...);
-	}
-	inline constexpr void push_front(T const &value)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
-									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
-	{
-		this->emplace_front(value);
-	}
-	inline constexpr void push_front(T &&value)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
-									   ::fast_io::containers::details::may_throw_move_constructible<value_type>)
-	{
-		this->emplace_front(::std::move(value));
-	}
-	inline constexpr void pop_front()
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || throwing_shift)
-	{
-		if (imp.begin_ptr == imp.curr_ptr) [[unlikely]]
-		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
-		}
-		this->pop_front_unchecked();
-	}
-	inline constexpr void pop_front_unchecked()
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
-	{
-		this->erase_common(imp.begin_ptr);
-	}
-
-	// unchecked front insertion: the caller must have reserved the extra slot
-	template <typename... Args>
-		requires std::constructible_from<value_type, Args...>
-	inline constexpr reference emplace_front_unchecked(Args &&...args)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift ||
-									   ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
-	{
-		pointer it{imp.begin_ptr};
-		if constexpr (::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
-		{
-			value_type tmp(::std::forward<Args>(args)...);
-			if (it != imp.curr_ptr)
-			{
-				this->move_backward_one_impl(it);
-				if constexpr (::std::is_move_assignable_v<value_type>)
-				{
-					*it = ::std::move(tmp);
-				}
-				else
-				{
-					it->~value_type();
-					::new (static_cast<void *>(it)) value_type(::std::move(tmp));
-				}
-				++imp.curr_ptr;
-				return *it;
-			}
-			auto ret{::new (static_cast<void *>(it)) value_type(::std::move(tmp))};
-			++imp.curr_ptr;
-			return *ret;
-		}
-		else
-		{
-			if (it != imp.curr_ptr)
-			{
-				this->move_backward_one_impl(it);
-				it->~value_type();
-				::new (static_cast<void *>(it)) value_type(::std::forward<Args>(args)...);
-				++imp.curr_ptr;
-				return *it;
-			}
-			auto ret{::new (static_cast<void *>(it)) value_type(::std::forward<Args>(args)...)};
-			++imp.curr_ptr;
-			return *ret;
-		}
-	}
-	inline constexpr void push_front_unchecked(T const &value)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
-	{
-		this->emplace_front_unchecked(value);
-	}
-	inline constexpr void push_front_unchecked(T &&value)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
-	{
-		this->emplace_front_unchecked(::std::move(value));
-	}
 
 	[[nodiscard]] inline constexpr pointer data() noexcept
 	{
@@ -1862,13 +1771,6 @@ public:
 		return static_cast<size_type>(this->insert_range(imp.begin_ptr + static_cast<::std::ptrdiff_t>(idx), ::std::forward<R>(rg)) - imp.begin_ptr);
 	}
 
-	template <::std::ranges::range R>
-		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
-	inline constexpr void prepend_range(R &&rg)
-		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(this->insert_range(imp.begin_ptr, ::std::forward<R>(rg)))
-	{
-		this->insert_range(imp.begin_ptr, ::std::forward<R>(rg));
-	}
 
 private:
 	inline constexpr pointer erase_common(pointer it)
