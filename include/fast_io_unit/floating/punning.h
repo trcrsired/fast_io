@@ -661,6 +661,11 @@ inline constexpr punning_result<flt> get_punned_result(flt f) noexcept
 			static_cast<bool>((unwrap >> total_bits) & 1u)};
 }
 
+// forward-declared unconditionally: discarded if-constexpr branches on
+// fp80-less targets (windows-msvc long double == double) still name it
+template <::std::size_t padding_size>
+struct float80_storage;
+
 #if defined(__SIZEOF_FLOAT80__) ||                                                                            \
 	(defined(__LDBL_MANT_DIG__) && defined(__LDBL_MAX_EXP__) && __LDBL_MANT_DIG__ == 64 &&                    \
 	 __LDBL_MAX_EXP__ == 16384)
