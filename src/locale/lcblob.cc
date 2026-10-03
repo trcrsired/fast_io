@@ -155,10 +155,14 @@ inline ::fast_io::u8string default_locale_name_win32() FAST_IO_HERBCEPTIONS_THRO
 	if (::fast_io::win32::RegOpenKeyW(hkcu, u"Control Panel\\International", __builtin_addressof(hkey)) == 0)
 	{
 		::std::uint_least32_t bytes{sizeof(buf)};
-		::std::int_least32_t res{::fast_io::win32::RegQueryValueExW(
+		auto const res{::fast_io::win32::RegQueryValueExW(
 			hkey, u"LocaleName", nullptr, nullptr, buf, __builtin_addressof(bytes))};
 		::fast_io::win32::RegCloseKey(hkey);
-		if (res == 0 && bytes >= 4)
+		if (res != 0)
+		{
+			::fast_io::throw_win32_error();
+		}
+		if (bytes >= 4)
 		{
 			return u16_to_u8(buf, (bytes / 2) - 1);
 		}
@@ -333,24 +337,31 @@ struct intl_key
 	}
 	intl_key(intl_key const &) = delete;
 	intl_key &operator=(intl_key const &) = delete;
-	inline bool get(char16_t const *vname, char16_t *buf, ::std::uint_least32_t cap,
-					::std::uint_least32_t &n) noexcept
+	// value length in u16 units; 0 = closed key/not-a-string value
+	inline ::std::uint_least32_t get(char16_t const *vname, char16_t *buf,
+									 ::std::uint_least32_t cap) FAST_IO_HERBCEPTIONS_THROWS
 	{
+		if (hkey == 0)
+		{
+			return 0;
+		}
 		::std::uint_least32_t bytes{cap * 2};
 		::std::uint_least32_t type{};
-		if (hkey == 0 ||
-			::fast_io::win32::RegQueryValueExW(hkey, vname, nullptr, __builtin_addressof(type), buf,
-											 __builtin_addressof(bytes)) != 0 ||
-			type != 1u || bytes < 2)
+		if (::fast_io::win32::RegQueryValueExW(hkey, vname, nullptr, __builtin_addressof(type), buf,
+											  __builtin_addressof(bytes)) != 0)
 		{
-			return false;
+			::fast_io::throw_win32_error();
 		}
-		n = bytes / 2;
+		if (type != 1u || bytes < 2) // want REG_SZ
+		{
+			return 0;
+		}
+		::std::uint_least32_t n{bytes / 2};
 		if (n != 0 && buf[n - 1] == 0) // REG_SZ terminator is included
 		{
 			--n;
 		}
-		return true;
+		return n;
 	}
 };
 
@@ -390,10 +401,21 @@ inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS
 {
 	char16_t buf[160];
 	constexpr ::std::uint_least32_t cap{160};
-	::std::uint_least32_t n{};
+	// absent key -> RegQueryValueExW throws; override keys are optional,
+	// absorb -> 0. Throws are cheap (carry flag), not C++ EH
+	auto Q{[&](char16_t const *vn) noexcept -> ::std::uint_least32_t {
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+			return key.get(vn, buf, cap);
+		}
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
+		{
+			return 0;
+		}
+	}};
 	auto S{[&](char16_t const *vn, ::std::uint_least32_t cat, ::std::uint_least32_t f)
 			   FAST_IO_HERBCEPTIONS_THROWS {
-		if (key.get(vn, buf, cap, n))
+		if (auto const n{Q(vn)}; n != 0)
 		{
 			b.add_str(cat, f, buf, n);
 		}
@@ -410,7 +432,8 @@ inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS
 	// grouping byte lists: "3;0" -> {3} (win32 trailing 0 = repeat last)
 	auto G{[&](char16_t const *vn, ::std::uint_least32_t cat, ::std::uint_least32_t f)
 			   FAST_IO_HERBCEPTIONS_THROWS {
-		if (!key.get(vn, buf, cap, n))
+		auto const n{Q(vn)};
+		if (n == 0)
 		{
 			return;
 		}
@@ -453,8 +476,9 @@ inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS
 	G(u"sMonGrouping", lcblob::lc_monetary, 4);
 	// integers
 	::std::int_least64_t v{};
-	auto I{[&](char16_t const *vn, ::std::int_least64_t &out) noexcept {
-		return key.get(vn, buf, cap, n) && parse_reg_int(buf, n, out);
+	auto I{[&](char16_t const *vn, ::std::int_least64_t &out) FAST_IO_HERBCEPTIONS_THROWS {
+		auto const n{Q(vn)};
+		return n != 0 && parse_reg_int(buf, n, out);
 	}};
 	if (I(u"iMeasure", v) && (v == 0 || v == 1))
 	{
@@ -545,11 +569,23 @@ inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS
 	{
 		char16_t am[160], pm[160];
 		::std::uint_least32_t nam{}, npm{};
-		bool const ham{key.get(u"s1159", am, cap, nam)};
-		bool const hpm{key.get(u"s2359", pm, cap, npm)};
-		if (ham || hpm)
+		FAST_IO_HERBCEPTIONS_TRY
 		{
-			b.add_strlist2(lcblob::lc_time, 11, am, ham ? nam : 0, pm, hpm ? npm : 0);
+			nam = key.get(u"s1159", am, cap);
+		}
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
+		{
+		}
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+			npm = key.get(u"s2359", pm, cap);
+		}
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
+		{
+		}
+		if (nam != 0 || npm != 0)
+		{
+			b.add_strlist2(lcblob::lc_time, 11, am, nam, pm, npm);
 		}
 	}
 }
