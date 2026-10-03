@@ -13,12 +13,14 @@ using ::fast_io::io_alias_type;
 using ::fast_io::io_reserve_type_t;
 using ::fast_io::io_reserve_type;
 using ::fast_io::print_alias_define;
+using ::fast_io::print_define;
 using ::fast_io::print_reserve_size;
 using ::fast_io::print_reserve_define;
 using ::fast_io::print_define_internal_shift;
 
 using ::fast_io::print_scatter_define;
 
+using ::fast_io::scan_alias_define;
 using ::fast_io::scan_contiguous_define;
 using ::fast_io::scan_context_type;
 using ::fast_io::scan_context_define;
