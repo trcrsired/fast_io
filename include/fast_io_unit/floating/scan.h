@@ -1,12 +1,16 @@
 #pragma once
 /*
-Decimal floating-point scanning.
+Floating-point scanning.
 
-Grammar: optional spaces (unless noskipws), optional sign, digits with an
-optional fractional point, an optional e/E exponent, and the spellings
-inf / infinity / nan when no digits were seen.  Significant digits beyond
-the per-format midpoint capacity are dropped with a sticky flag; the heavy
-conversion runs in the fast_io.floating module (fp_scan_decimal).
+Grammar: optional spaces (unless noskipws), optional sign, then decimal
+digits with an optional fractional point and an optional e/E exponent, a
+hexadecimal 0x/0X sequence with optional point and optional p/P binary
+exponent, or the spellings inf / infinity / nan when no digits were seen.
+Significant digits beyond the per-format midpoint capacity (nibbles for
+hex) are dropped with a sticky flag; the heavy conversion runs in the
+fast_io.floating module (fp_scan_decimal / fp_scan_hex).  Like the
+dangling e/E case, a 0x prefix with no hexadecimal digit behind it is
+invalid mid-stream and scans as the value 0 at end of stream.
 */
 namespace fast_io::details
 {
@@ -19,11 +23,18 @@ inline constexpr ::std::size_t scan_flt_digits_cap{
 	 16u) +
 	8u};
 
+// significant nibbles the hex scanner retains: enough that the kept
+// sequence always carries more than p significand bits whenever a nibble
+// had to be dropped, so the dropped part is a pure sticky flag
+template <typename flt>
+inline constexpr ::std::size_t scan_flt_hex_cap{(iec559_traits<flt>::mbits + 8u) / 4u};
+
 enum class scan_floating_phase : ::std::uint_least8_t
 {
 	space,
 	sign,
 	digits,
+	hex_digits,
 	exp_sign,
 	exp_digits,
 	special,
@@ -49,6 +60,7 @@ struct scan_floating_context
 	bool sticky{};
 	bool exp_has_digit{};
 	bool exp_overflow{};
+	bool hex{};
 
 	inline constexpr void reset() noexcept
 	{
@@ -61,6 +73,24 @@ inline constexpr bool scan_flt_ci(char_type ch, char8_t lower) noexcept
 {
 	auto const c{static_cast<::std::uint_least32_t>(ch)};
 	return c == lower || c == lower - 32u;
+}
+
+// nibble value of a hexadecimal digit, -1 when the char is not one
+template <::std::integral char_type>
+inline constexpr ::std::int_least32_t scan_flt_hex_val(char_type ch) noexcept
+{
+	auto const c{static_cast<::std::uint_least32_t>(ch)};
+	auto v{c - static_cast<::std::uint_least32_t>(u8'0')};
+	if (v > 9u)
+	{
+		v = (c | 32u) - static_cast<::std::uint_least32_t>(u8'a');
+		if (v > 5u)
+		{
+			return -1;
+		}
+		v += 10u;
+	}
+	return static_cast<::std::int_least32_t>(v);
 }
 
 // append one mantissa digit; the index runs over the combined int+frac stream
@@ -90,6 +120,47 @@ inline constexpr void scan_flt_digit(scan_floating_context<char_type, flt> &st, 
 	{
 		st.sticky = true;
 	}
+}
+
+// append one hexadecimal nibble (stored as its value, not the character)
+template <::std::integral char_type, typename flt>
+inline constexpr void scan_flt_hex_digit(scan_floating_context<char_type, flt> &st,
+										 ::std::uint_least32_t v) noexcept
+{
+	auto const idx{st.total_digits++};
+	if (!st.seen_point)
+	{
+		++st.int_digits;
+	}
+	st.has_digit = true;
+	if (!st.seen_sig)
+	{
+		if (!v)
+		{
+			return; // leading zero nibble: position only
+		}
+		st.seen_sig = true;
+		st.first_sig = idx;
+	}
+	if (st.ndigits < scan_flt_hex_cap<flt>)
+	{
+		st.buffer[st.ndigits++] = static_cast<char>(v);
+	}
+	else if (v)
+	{
+		st.sticky = true;
+	}
+}
+
+// a "0x" prefix was consumed: discard the bookkeeping of the prefix zero
+// and continue in hexadecimal mode
+template <::std::integral char_type, typename flt>
+inline constexpr void scan_flt_enter_hex(scan_floating_context<char_type, flt> &st) noexcept
+{
+	st.hex = true;
+	st.phase = scan_floating_phase::hex_digits;
+	st.int_digits = st.total_digits = st.first_sig = st.ndigits = 0;
+	st.has_digit = st.seen_point = st.seen_sig = st.sticky = false;
 }
 
 // write a kernel result into the floating value; the kernel's lo/hi hold
@@ -184,6 +255,28 @@ scan_flt_assign_result(scan_floating_context<char_type, flt> &st, flt &t) noexce
 		}
 		return ::fast_io::freestanding::parse_errc::ok;
 	}
+	if (st.hex)
+	{
+		if (!st.has_digit)
+		{
+			// bare "0x" at end of stream: the prefix zero is the value
+			fp_scan_result const z{};
+			scan_flt_assign(t, z, st.negative);
+			return ::fast_io::freestanding::parse_errc::ok;
+		}
+		// V = (S + tail) * 2^e2, S the retained nibble sequence
+		auto const e2{(st.exp_negative ? -st.exponent : st.exponent) +
+					  4 * (static_cast<::std::int_least64_t>(st.int_digits) -
+						   static_cast<::std::int_least64_t>(st.first_sig) -
+						   static_cast<::std::int_least64_t>(st.ndigits))};
+		using trait = iec559_traits<flt>;
+		auto const r{fp_scan_hex(st.buffer, st.ndigits, e2, st.sticky,
+								 static_cast<::std::uint_least32_t>(trait::mbits + 1u),
+								 static_cast<::std::uint_least32_t>(trait::ebits))};
+		scan_flt_assign(t, r, st.negative);
+		return r.code ? ::fast_io::freestanding::parse_errc::overflow
+					  : ::fast_io::freestanding::parse_errc::ok;
+	}
 	auto const e10{(st.exp_negative ? -st.exponent : st.exponent) +
 				   static_cast<::std::int_least64_t>(st.int_digits) -
 				   static_cast<::std::int_least64_t>(st.first_sig) -
@@ -275,10 +368,55 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 					++first;
 					break;
 				}
+				if (scan_flt_ci(ch, u8'x') && st.total_digits == 1u && st.int_digits == 1u &&
+					!st.seen_sig && !st.seen_point)
+				{
+					// "0x" prefix: hexadecimal scanning
+					scan_flt_enter_hex(st);
+					++first;
+					break;
+				}
 				st.phase = scan_floating_phase::done;
 				break;
 			}
 			if (first == last && st.phase == scan_floating_phase::digits)
+			{
+				return {first, partial};
+			}
+			break;
+		}
+		case scan_floating_phase::hex_digits:
+		{
+			while (first != last)
+			{
+				auto const ch{*first};
+				auto const hv{scan_flt_hex_val(ch)};
+				if (hv >= 0)
+				{
+					scan_flt_hex_digit(st, static_cast<::std::uint_least32_t>(hv));
+					++first;
+					continue;
+				}
+				if (ch == char_literal_v<u8'.', char_type> && !st.seen_point)
+				{
+					st.seen_point = true;
+					++first;
+					continue;
+				}
+				if (!st.has_digit)
+				{
+					return {first, invalid};
+				}
+				if (scan_flt_ci(ch, u8'p'))
+				{
+					st.phase = scan_floating_phase::exp_sign;
+					++first;
+					break;
+				}
+				st.phase = scan_floating_phase::done;
+				break;
+			}
+			if (first == last && st.phase == scan_floating_phase::hex_digits)
 			{
 				return {first, partial};
 			}
@@ -411,6 +549,9 @@ scan_flt_eof_impl(scan_floating_context<char_type, flt> &st, flt &t) noexcept
 		{
 			return invalid;
 		}
+		return scan_flt_assign_result(st, t);
+	case scan_floating_phase::hex_digits:
+		// a bare "0x" scans as the value 0 at end of stream
 		return scan_flt_assign_result(st, t);
 	case scan_floating_phase::exp_sign:
 	case scan_floating_phase::exp_digits:

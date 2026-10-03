@@ -1418,6 +1418,80 @@ fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t
 	return hi_res;
 }
 
+// hexfloat scanning: V = (S + tail) * 2^e2 where S is the retained
+// significant nibble sequence (values 0-15 in nibs[0..n)) and the tail
+// in [0,1) is nonzero iff sticky.  The header's retention cap keeps S
+// at 30 nibbles or fewer so it always fits in a u128, and guarantees a
+// dropped nibble sits strictly below the rounding bit (pure sticky).
+fp_scan_result
+fp_scan_hex(char const *nibs, ::std::size_t n, ::std::int_least64_t e2,
+			bool sticky, ::std::uint_least32_t p, ::std::uint_least32_t ebits) noexcept
+{
+	fp_scan_target const tg{p, ebits, (::std::int_least32_t{1} << (ebits - 1u)) - 1,
+							1 - ((::std::int_least32_t{1} << (ebits - 1u)) - 1) -
+								static_cast<::std::int_least32_t>(p) + 1};
+	__uint128_t sig{};
+	for (::std::size_t i{}; i != n; ++i)
+	{
+		sig = sig * 16u + static_cast<::std::uint_least32_t>(nibs[i]);
+	}
+	if (!sig)
+	{
+		return {0, 0, 0, 0};
+	}
+	auto const hi{static_cast<::std::uint_least64_t>(sig >> 64u)};
+	auto const bits{static_cast<::std::int_least64_t>(
+		hi ? 128u - ::std::countl_zero(hi)
+		   : 64u - ::std::countl_zero(static_cast<::std::uint_least64_t>(sig)))};
+	// value < (sig+1) * 2^e2 <= 2^(bits+e2): floor(log2 V) = e2 + bits - 1
+	auto const E{e2 + bits - 1};
+	auto const max_field{(::std::int_least64_t{1} << ebits) - 1};
+	if (E + tg.bias >= max_field)
+	{
+		return fp_scan_inf(tg);
+	}
+	if (E < tg.denorm_exp - 1)
+	{
+		// V < denorm_min/2 rounds to zero
+		return {0, 0, 0, 1};
+	}
+	auto const e_min{1 - tg.bias};
+	auto const c{E >= e_min ? E - static_cast<::std::int_least64_t>(p) + 1
+							: static_cast<::std::int_least64_t>(tg.denorm_exp)};
+	auto const drop{c - e2};
+	__uint128_t q{};
+	int rem_cmp{-1};
+	if (drop <= 0)
+	{
+		// exact grid hit; unreachable when sticky (a dropped nibble
+		// requires the retained sequence to carry more than p bits)
+		q = sig << static_cast<::std::uint_least32_t>(-drop);
+	}
+	else
+	{
+		auto const d{static_cast<::std::uint_least32_t>(drop)};
+		auto const one{static_cast<__uint128_t>(1)};
+		q = d >= 128u ? __uint128_t{} : sig >> d;
+		auto const rem{d >= 128u ? sig : sig & ((one << d) - 1u)};
+		auto const half{one << (d - 1u)};
+		rem_cmp = rem > half ? 1 : rem < half ? -1 : (sticky ? 1 : 0);
+	}
+	if (rem_cmp > 0 || (rem_cmp == 0 && (q & 1u)))
+	{
+		++q;
+	}
+	if (E < e_min)
+	{
+		// subnormal scale: q is the stored significand; q == 2^(p-1)
+		// rounds up to the least normal value
+		fp_scan_result r{static_cast<::std::uint_least64_t>(q),
+						 static_cast<::std::uint_least64_t>(q >> 64u),
+						 q >= (static_cast<__uint128_t>(1) << (p - 1u)) ? 1 : 0, !q};
+		return r;
+	}
+	return fp_scan_pack(q, E, tg);
+}
+
 } // namespace fast_io::details
 
 export module fast_io.floating;

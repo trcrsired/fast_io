@@ -97,6 +97,17 @@ fp_scan_result
 fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t e10,
 				bool sticky, ::std::uint_least32_t p, ::std::uint_least32_t ebits) noexcept;
 
+/*
+Hexadecimal scan, same result contract as fp_scan_decimal.  nibs holds
+the retained significant nibbles as values 0-15 and V = (S + tail) * 2^e2
+with tail in [0,1) nonzero iff sticky.  The caller's per-format nibble
+capacity keeps S inside 128 bits and every dropped nibble strictly below
+the rounding bit, so sticky is a pure boolean here.
+*/
+fp_scan_result
+fp_scan_hex(char const *nibs, ::std::size_t n, ::std::int_least64_t e2,
+			bool sticky, ::std::uint_least32_t p, ::std::uint_least32_t ebits) noexcept;
+
 template <typename flt>
 inline m10_result<typename fp_m10_type<flt>::type>
 to_decimal(typename iec559_traits<flt>::mantissa_type m2, ::std::int_least32_t e2) noexcept
