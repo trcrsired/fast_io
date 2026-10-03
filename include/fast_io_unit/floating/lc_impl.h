@@ -58,16 +58,11 @@ inline constexpr ::std::size_t lc_print_reserve_float_size_impl(basic_lc_all<cha
 		{
 			return lc_print_rsv_iec559_size<char_type, double, flags.floating>(all);
 		}
-		static_assert((::std::same_as<::std::remove_cvref_t<flt>, double> ||
-					   ::std::same_as<::std::remove_cvref_t<flt>, float>
-#ifdef __STDCPP_FLOAT32_T__
-					   || ::std::same_as<::std::remove_cvref_t<flt>, _Float32>
-#endif
-#ifdef __STDCPP_FLOAT64_T__
-					   || ::std::same_as<::std::remove_cvref_t<flt>, _Float64>
-#endif
-					   ),
-					  "currently only support iec559 float32 and float64, sorry");
+		using rsvflt_traits = details::iec559_traits<::std::remove_cvref_t<flt>>;
+		static_assert(rsvflt_traits::mbits == 7u || rsvflt_traits::mbits == 10u ||
+						  rsvflt_traits::mbits == 23u || rsvflt_traits::mbits == 52u ||
+						  rsvflt_traits::mbits == 63u || rsvflt_traits::mbits == 112u,
+					  "unsupported floating-point format for shortest conversion");
 		return lc_print_rsv_iec559_size<char_type, ::std::remove_cvref_t<flt>, flags.floating>(all);
 	}
 }
@@ -134,16 +129,11 @@ inline constexpr char_type *print_reserve_define(basic_lc_all<char_type> const *
 		else
 		{
 			// this is the case for every other platform, including xxx-windows-gnu
-			static_assert((::std::same_as<::std::remove_cvref_t<flt>, double> ||
-						   ::std::same_as<::std::remove_cvref_t<flt>, float>
-#ifdef __STDCPP_FLOAT32_T__
-						   || ::std::same_as<::std::remove_cvref_t<flt>, _Float32>
-#endif
-#ifdef __STDCPP_FLOAT64_T__
-						   || ::std::same_as<::std::remove_cvref_t<flt>, _Float64>
-#endif
-						   ),
-						  "currently only support iec559 float32 and float64, sorry");
+			using rsvflt_traits = details::iec559_traits<::std::remove_cvref_t<flt>>;
+			static_assert(rsvflt_traits::mbits == 7u || rsvflt_traits::mbits == 10u ||
+							  rsvflt_traits::mbits == 23u || rsvflt_traits::mbits == 52u ||
+							  rsvflt_traits::mbits == 63u || rsvflt_traits::mbits == 112u,
+						  "unsupported floating-point format for shortest conversion");
 			return ::fast_io::details::lc_print_rsvflt_define_impl<flags.showpos, flags.uppercase, flags.uppercase_e,
 																   flags.floating>(all, iter, f.reference);
 		}

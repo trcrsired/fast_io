@@ -314,15 +314,28 @@ struct float_alias_type_traits<float>
 template <>
 struct float_alias_type_traits<long double>
 {
+	// 80-bit and binary128 long double convert natively through
+	// iec559_traits<long double>; only an unsupported representation
+	// (e.g. IBM double-double) falls back to a wider or narrower type
+	static constexpr ::std::size_t ldbl_mbits{
+		static_cast<::std::size_t>(::std::numeric_limits<long double>::digits - 1)};
+#if defined(__SIZEOF_INT128__)
+	static constexpr bool ldbl_supported{ldbl_mbits == 52u || ldbl_mbits == 63u || ldbl_mbits == 112u};
+#else
+	static constexpr bool ldbl_supported{ldbl_mbits == 52u};
+#endif
+	using alias_type =
+		::std::conditional_t<ldbl_supported, long double,
 #if defined(__SIZEOF_INT128__) && (defined(__STDCPP_FLOAT128_T__) || defined(__FLOAT128__))
 #ifdef __STDCPP_FLOAT128_T__
-	using alias_type = _Float128;
+							 _Float128
 #else
-	using alias_type = __float128;
+							 __float128
 #endif
 #else
-	using alias_type = typename float_alias_type_traits<double>::alias_type;
+							 typename float_alias_type_traits<double>::alias_type
 #endif
+							 >;
 };
 
 #if (defined(__SIZEOF_FLOAT16__) || defined(__FLOAT16__)) && defined(__STDCPP_FLOAT16_T__)

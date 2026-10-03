@@ -164,7 +164,7 @@ concept my_floating_point = ::std::floating_point<T>
 #ifdef __STDCPP_BFLOAT16_T__
 							|| ::std::same_as<::std::remove_cv_t<T>, decltype(0.0bf16)>
 #endif
-#ifdef __STDCPP_FLOAT16_T__
+#if defined(__STDCPP_FLOAT16_T__) || defined(__FLT16_MANT_DIG__)
 							|| ::std::same_as<::std::remove_cv_t<T>, _Float16>
 #endif
 #ifdef __STDCPP_FLOAT32_T__

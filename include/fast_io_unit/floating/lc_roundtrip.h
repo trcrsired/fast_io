@@ -56,7 +56,7 @@ struct lc_fixed_carrier
 
 template <typename flt, ::std::integral char_type>
 inline constexpr char_type *
-lc_no_grouping_fixed_case1_integer_and_point(char_type *iter, typename iec559_traits<flt>::mantissa_type m10,
+lc_no_grouping_fixed_case1_integer_and_point(char_type *iter, typename fp_m10_type<flt>::type m10,
 											 lc_fixed_carrier carrier,
 											 basic_io_scatter_t<char_type> const &decimal_point) noexcept
 {
@@ -90,7 +90,7 @@ lc_no_grouping_fixed_case1_integer_and_point(char_type *iter, typename iec559_tr
 
 template <typename flt, ::std::integral char_type>
 inline constexpr char_type *
-lc_grouping_fixed_case2_all_point(char_type *iter, typename iec559_traits<flt>::mantissa_type m10,
+lc_grouping_fixed_case2_all_point(char_type *iter, typename fp_m10_type<flt>::type m10,
 								  lc_fixed_carrier carrier, basic_io_scatter_t<char_type> const &decimal_point) noexcept
 {
 	*iter = char_literal_v<u8'0', char_type>;
@@ -207,7 +207,7 @@ inline constexpr destIter grouping_handle_buffer(srcIter first, srcIter last, de
 
 template <typename flt, ::std::random_access_iterator Iter>
 inline constexpr Iter lc_grouping_fixed_case1_integer_and_point(
-	Iter iter, typename iec559_traits<flt>::mantissa_type m10, lc_fixed_carrier carrier,
+	Iter iter, typename fp_m10_type<flt>::type m10, lc_fixed_carrier carrier,
 	basic_io_scatter_t<::std::iter_value_t<Iter>> const &decimal_point, ::std::size_t const *grouping_base,
 	::std::size_t grouping_len, ::std::iter_value_t<Iter> const *thousands_sep_base,
 	::std::size_t thousands_sep_len) noexcept
@@ -253,7 +253,7 @@ inline constexpr Iter lc_grouping_fixed_case1_integer_and_point(
 
 template <typename flt, ::std::integral char_type>
 inline constexpr char_type *lc_print_rsv_fp_fixed_decision_impl(basic_lc_all<char_type> const *all, char_type *iter,
-																typename iec559_traits<flt>::mantissa_type m10,
+																typename fp_m10_type<flt>::type m10,
 																::std::int_least32_t e10) noexcept
 {
 	auto const &numeric_ref{all->numeric};
@@ -305,7 +305,7 @@ inline constexpr char_type *lc_print_rsv_fp_fixed_decision_impl(basic_lc_all<cha
 
 template <typename flt, bool uppercase_e, ::fast_io::manipulators::floating_format mt, ::std::integral char_type>
 inline constexpr char_type *lc_print_rsv_fp_decision_impl(basic_lc_all<char_type> const *all, char_type *iter,
-														  typename iec559_traits<flt>::mantissa_type m10,
+														  typename fp_m10_type<flt>::type m10,
 														  ::std::int_least32_t e10) noexcept
 {
 	if constexpr (mt == ::fast_io::manipulators::floating_format::general)
@@ -452,7 +452,7 @@ inline constexpr char_type *lc_print_rsvflt_define_impl(basic_lc_all<char_type> 
 				return prsv_fp_dece0<uppercase>(iter);
 			}
 		}
-		auto [m10, e10] = dragonbox_impl<flt>(mantissa, static_cast<::std::int_least32_t>(exponent));
+		auto [m10, e10] = to_decimal<flt>(mantissa, static_cast<::std::int_least32_t>(exponent));
 		if constexpr (mt == ::fast_io::manipulators::floating_format::fixed)
 		{
 			return lc_print_rsv_fp_fixed_decision_impl<flt>(all, iter, m10, e10);
