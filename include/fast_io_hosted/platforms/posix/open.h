@@ -553,6 +553,7 @@ inline constexpr int posix_openat_file_impl(int, T const &, open_mode, perms)
 #else
 template <::fast_io::constructible_to_os_c_str T>
 inline constexpr int posix_openat_file_impl(int dirfd, T const &t, open_mode om, perms pm)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::posix_api_common(
 		t,

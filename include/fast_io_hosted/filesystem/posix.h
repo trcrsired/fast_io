@@ -360,6 +360,7 @@ inline posix_directory_iterator &operator++(posix_directory_iterator &pdit)
 }
 
 inline posix_directory_iterator begin(posix_directory_generator const &pdg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto dirp{pdg.dir_fl.dirp};
 	::fast_io::noexcept_call(::rewinddir, dirp);
