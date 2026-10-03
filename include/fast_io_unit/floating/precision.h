@@ -2,20 +2,20 @@
 /*
 Precision-based decimal output.
 
-The exact significant digits of the value come from fp_decimal_to_digits
-in the fast_io.floating module; this header rounds them on the requested
-decimal grid (round to nearest, ties to even) and emits fixed, scientific,
-general or decimal spellings directly from the digit string, so precision
-of any size works for every format.
+The exact significant digit values of the value come from
+fp_decimal_to_digits in the fast_io.floating module; this header rounds
+them on the requested decimal grid (round to nearest, ties to even) and
+emits fixed, scientific, general or decimal spellings directly from the
+digit array, so precision of any size works for every format.
 */
 namespace fast_io::details
 {
 
 // round the exact expansion to keep significant digits, ties to even.
-// digits has n characters, v = 0.digits * 10^e10.  keep may be <= 0, in
-// which case the value rounds to zero or to the unit at the cut position.
-// Returns the new digit count (out may gain a leading '1' after carry;
-// e10 is bumped accordingly).  Trailing zeros are NOT stripped here.
+// digits holds n digit values (0-9), v = 0.digits * 10^e10.  keep may be
+// <= 0, in which case the value rounds to zero or to the unit at the cut
+// position.  Returns the new digit count (out may gain a leading 1 after
+// carry; e10 is bumped accordingly).  Trailing zeros are NOT stripped.
 inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::int_least32_t &e10,
 										  ::std::int_least64_t keep) noexcept
 {
@@ -24,14 +24,14 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 		// grid unit sits at or above the leading digit: nonzero only when
 		// the value exceeds the half unit (possible solely for keep == 0);
 		// an exact 0.5 ties to even, which is zero
-		if (keep == 0 && digits[0] >= '5')
+		if (keep == 0 && digits[0] >= 5)
 		{
-			bool up{digits[0] > '5'};
+			bool up{digits[0] > 5};
 			if (!up)
 			{
 				for (::std::size_t i{1u}; i != n; ++i)
 				{
-					if (digits[i] != '0')
+					if (digits[i])
 					{
 						up = true;
 						break;
@@ -40,7 +40,7 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 			}
 			if (up)
 			{
-				digits[0] = '1';
+				digits[0] = 1;
 				++e10;
 				return 1u;
 			}
@@ -52,12 +52,12 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 	{
 		return n;
 	}
-	bool up{digits[k] > '5'};
-	if (!up && digits[k] == '5')
+	bool up{digits[k] > 5};
+	if (!up && digits[k] == 5)
 	{
 		for (::std::size_t i{k + 1u}; i != n; ++i)
 		{
-			if (digits[i] != '0')
+			if (digits[i])
 			{
 				up = true;
 				break;
@@ -66,7 +66,7 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 		if (!up)
 		{
 			// exact tie: round to even
-			up = ((digits[k - 1u] - '0') & 1u) != 0u;
+			up = (digits[k - 1u] & 1u) != 0u;
 		}
 	}
 	if (up)
@@ -74,15 +74,15 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 		::std::size_t i{k};
 		while (i-- != 0u)
 		{
-			if (digits[i] != '9')
+			if (digits[i] != 9)
 			{
 				++digits[i];
 				return k;
 			}
-			digits[i] = '0';
+			digits[i] = 0;
 		}
 		// all kept digits were 9: carry out into 1000..0
-		digits[0] = '1';
+		digits[0] = 1;
 		++e10;
 	}
 	return k;
@@ -94,7 +94,7 @@ inline constexpr char_type *fp_precision_fill_digits(char_type *iter, char const
 {
 	for (::std::size_t i{}; i != want; ++i)
 	{
-		*iter = i < n ? static_cast<char_type>(digits[i]) : char_literal_v<u8'0', char_type>;
+		*iter = i < n ? ::fast_io::char_literal_add<char_type>(digits[i]) : char_literal_v<u8'0', char_type>;
 		++iter;
 	}
 	return iter;
@@ -129,7 +129,7 @@ inline constexpr char_type *fp_precision_emit_fixed(char_type *iter, char const 
 	auto const int_digits{static_cast<::std::size_t>(e10)};
 	for (::std::size_t i{}; i != int_digits; ++i)
 	{
-		*iter = i < n ? static_cast<char_type>(digits[i]) : char_literal_v<u8'0', char_type>;
+		*iter = i < n ? ::fast_io::char_literal_add<char_type>(digits[i]) : char_literal_v<u8'0', char_type>;
 		++iter;
 	}
 	if (!frac)
@@ -141,7 +141,7 @@ inline constexpr char_type *fp_precision_emit_fixed(char_type *iter, char const 
 	for (::std::size_t i{}; i != frac; ++i)
 	{
 		auto const pos{int_digits + i};
-		*iter = pos < n ? static_cast<char_type>(digits[pos]) : char_literal_v<u8'0', char_type>;
+		*iter = pos < n ? ::fast_io::char_literal_add<char_type>(digits[pos]) : char_literal_v<u8'0', char_type>;
 		++iter;
 	}
 	return iter;
@@ -153,7 +153,7 @@ inline constexpr char_type *fp_precision_emit_scientific(char_type *iter, char c
 														 ::std::size_t n, ::std::int_least32_t e10,
 														 ::std::size_t frac) noexcept
 {
-	*iter = n ? static_cast<char_type>(digits[0]) : char_literal_v<u8'0', char_type>;
+	*iter = n ? ::fast_io::char_literal_add<char_type>(digits[0]) : char_literal_v<u8'0', char_type>;
 	++iter;
 	if (frac)
 	{
@@ -162,7 +162,7 @@ inline constexpr char_type *fp_precision_emit_scientific(char_type *iter, char c
 		for (::std::size_t i{}; i != frac; ++i)
 		{
 			auto const pos{i + 1u};
-			*iter = pos < n ? static_cast<char_type>(digits[pos]) : char_literal_v<u8'0', char_type>;
+			*iter = pos < n ? ::fast_io::char_literal_add<char_type>(digits[pos]) : char_literal_v<u8'0', char_type>;
 			++iter;
 		}
 	}
@@ -207,7 +207,7 @@ inline constexpr char_type *fp_precision_emit_plain_scientific(char_type *iter, 
 															   ::std::size_t n,
 															   ::std::int_least32_t e10) noexcept
 {
-	*iter = static_cast<char_type>(digits[0]);
+	*iter = ::fast_io::char_literal_add<char_type>(digits[0]);
 	++iter;
 	if (n > 1u)
 	{
@@ -221,7 +221,7 @@ inline constexpr char_type *fp_precision_emit_plain_scientific(char_type *iter, 
 // significant digits of 0.digits*10^e10 with trailing zeros stripped
 inline ::std::size_t fp_strip_trailing_zeros(char const *digits, ::std::size_t n) noexcept
 {
-	while (n > 1u && digits[n - 1u] == '0')
+	while (n > 1u && !digits[n - 1u])
 	{
 		--n;
 	}
@@ -353,7 +353,7 @@ inline constexpr char_type *print_precision_flt_define_impl(char_type *iter, flt
 									static_cast<::std::int_least64_t>(precision) + 1)};
 		if (!n)
 		{
-			digits[0] = '0';
+			digits[0] = 0;
 			n = 1u;
 		}
 		return fp_precision_emit_scientific<comma, uppercase_e, flt>(iter, digits, n, e10, precision);

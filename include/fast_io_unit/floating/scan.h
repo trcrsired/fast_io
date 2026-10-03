@@ -68,32 +68,42 @@ struct scan_floating_context
 	}
 };
 
-template <::std::integral char_type>
-inline constexpr bool scan_flt_ci(char_type ch, char8_t lower) noexcept
+// case-insensitive letter compare; the case delta is charset dependent
+// (0x20 ASCII, 0x40 EBCDIC) so both spellings go through char_literal_v
+template <char8_t lo, char8_t up, ::std::integral char_type>
+inline constexpr bool scan_flt_ci(char_type ch) noexcept
 {
-	auto const c{static_cast<::std::uint_least32_t>(ch)};
-	return c == lower || c == lower - 32u;
+	return ch == char_literal_v<lo, char_type> || ch == char_literal_v<up, char_type>;
 }
 
-// nibble value of a hexadecimal digit, -1 when the char is not one
+// nibble value of a hexadecimal digit, -1 when the char is not one.
+// '0'-'9', 'a'-'f' and 'A'-'F' are each contiguous in both ASCII and
+// EBCDIC, so each range decodes against its own literal
 template <::std::integral char_type>
 inline constexpr ::std::int_least32_t scan_flt_hex_val(char_type ch) noexcept
 {
-	auto const c{static_cast<::std::uint_least32_t>(ch)};
-	auto v{c - static_cast<::std::uint_least32_t>(u8'0')};
-	if (v > 9u)
+	using utype = ::std::make_unsigned_t<char_type>;
+	auto const c{static_cast<utype>(ch)};
+	auto v{static_cast<utype>(c - static_cast<utype>(char_literal_v<u8'0', char_type>))};
+	if (v <= 9u)
 	{
-		v = (c | 32u) - static_cast<::std::uint_least32_t>(u8'a');
-		if (v > 5u)
-		{
-			return -1;
-		}
-		v += 10u;
+		return static_cast<::std::int_least32_t>(v);
 	}
-	return static_cast<::std::int_least32_t>(v);
+	v = static_cast<utype>(c - static_cast<utype>(char_literal_v<u8'a', char_type>));
+	if (v <= 5u)
+	{
+		return static_cast<::std::int_least32_t>(v + 10u);
+	}
+	v = static_cast<utype>(c - static_cast<utype>(char_literal_v<u8'A', char_type>));
+	if (v <= 5u)
+	{
+		return static_cast<::std::int_least32_t>(v + 10u);
+	}
+	return -1;
 }
 
-// append one mantissa digit; the index runs over the combined int+frac stream
+// append one mantissa digit; the index runs over the combined int+frac
+// stream and the buffer stores the digit value, not the character
 template <::std::integral char_type, typename flt>
 inline constexpr void scan_flt_digit(scan_floating_context<char_type, flt> &st, char_type ch) noexcept
 {
@@ -103,9 +113,10 @@ inline constexpr void scan_flt_digit(scan_floating_context<char_type, flt> &st, 
 		++st.int_digits;
 	}
 	st.has_digit = true;
+	auto const v{static_cast<char>(ch - char_literal_v<u8'0', char_type>)};
 	if (!st.seen_sig)
 	{
-		if (ch == char_literal_v<u8'0', char_type>)
+		if (!v)
 		{
 			return; // leading zero: position only
 		}
@@ -114,9 +125,9 @@ inline constexpr void scan_flt_digit(scan_floating_context<char_type, flt> &st, 
 	}
 	if (st.ndigits < scan_flt_digits_cap<flt>)
 	{
-		st.buffer[st.ndigits++] = static_cast<char>(ch);
+		st.buffer[st.ndigits++] = v;
 	}
-	else if (ch != char_literal_v<u8'0', char_type>)
+	else if (v)
 	{
 		st.sticky = true;
 	}
@@ -352,9 +363,9 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 				}
 				if (!st.has_digit)
 				{
-					if (scan_flt_ci(ch, u8'i') || scan_flt_ci(ch, u8'n'))
+					if (scan_flt_ci<u8'i', u8'I'>(ch) || scan_flt_ci<u8'n', u8'N'>(ch))
 					{
-						st.buffer[0] = scan_flt_ci(ch, u8'i') ? 'i' : 'n';
+						st.buffer[0] = scan_flt_ci<u8'i', u8'I'>(ch) ? 'i' : 'n';
 						st.special_idx = 1;
 						st.phase = scan_floating_phase::special;
 						++first;
@@ -368,7 +379,7 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 					++first;
 					break;
 				}
-				if (scan_flt_ci(ch, u8'x') && st.total_digits == 1u && st.int_digits == 1u &&
+				if (scan_flt_ci<u8'x', u8'X'>(ch) && st.total_digits == 1u && st.int_digits == 1u &&
 					!st.seen_sig && !st.seen_point)
 				{
 					// "0x" prefix: hexadecimal scanning
@@ -407,7 +418,7 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 				{
 					return {first, invalid};
 				}
-				if (scan_flt_ci(ch, u8'p'))
+				if (scan_flt_ci<u8'p', u8'P'>(ch))
 				{
 					st.phase = scan_floating_phase::exp_sign;
 					++first;
@@ -487,8 +498,12 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 				auto const ch{*first};
 				if (st.buffer[0] == 'n')
 				{
-					static constexpr char8_t tail[]{'a', 'n'};
-					if (st.special_idx < 3u && scan_flt_ci(ch, tail[st.special_idx - 1u]))
+					static constexpr char_type tail_lo[]{char_literal_v<u8'a', char_type>,
+														 char_literal_v<u8'n', char_type>};
+					static constexpr char_type tail_up[]{char_literal_v<u8'A', char_type>,
+														 char_literal_v<u8'N', char_type>};
+					if (st.special_idx < 3u &&
+						(ch == tail_lo[st.special_idx - 1u] || ch == tail_up[st.special_idx - 1u]))
 					{
 						++st.special_idx;
 						continue;
@@ -500,8 +515,22 @@ scan_flt_define_impl(scan_floating_context<char_type, flt> &st, char_type const 
 					st.phase = scan_floating_phase::done;
 					break;
 				}
-				static constexpr char8_t tail[]{'n', 'f', 'i', 'n', 'i', 't', 'y'};
-				if (st.special_idx < 8u && scan_flt_ci(ch, tail[st.special_idx - 1u]))
+				static constexpr char_type tail_lo[]{char_literal_v<u8'n', char_type>,
+													 char_literal_v<u8'f', char_type>,
+													 char_literal_v<u8'i', char_type>,
+													 char_literal_v<u8'n', char_type>,
+													 char_literal_v<u8'i', char_type>,
+													 char_literal_v<u8't', char_type>,
+													 char_literal_v<u8'y', char_type>};
+				static constexpr char_type tail_up[]{char_literal_v<u8'N', char_type>,
+													 char_literal_v<u8'F', char_type>,
+													 char_literal_v<u8'I', char_type>,
+													 char_literal_v<u8'N', char_type>,
+													 char_literal_v<u8'I', char_type>,
+													 char_literal_v<u8'T', char_type>,
+													 char_literal_v<u8'Y', char_type>};
+				if (st.special_idx < 8u &&
+					(ch == tail_lo[st.special_idx - 1u] || ch == tail_up[st.special_idx - 1u]))
 				{
 					++st.special_idx;
 					continue;

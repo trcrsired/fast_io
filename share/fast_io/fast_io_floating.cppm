@@ -927,8 +927,8 @@ inline ::std::uint_least64_t fp_big_divmod_u64(fp_bigint &v, ::std::uint_least64
 // ---------------------------------------------------------------------------
 // fp_decimal_to_digits: exact significant decimal digits of v = m * 2^e2.
 // m is a nonzero significand of up to 113 bits passed as two words.
-// Writes ASCII digits into out (capacity fp_digits_capacity) and returns
-// {n, e10} with v = 0.d[0]d[1]...d[n-1] * 10^e10, d[0] != '0'.
+// Writes digit values 0-9 into out (capacity fp_digits_capacity) and
+// returns {n, e10} with v = 0.d[0]d[1]...d[n-1] * 10^e10, d[0] != 0.
 // fp_digits_result and fp_digits_capacity are declared in roundtrip.h.
 // ---------------------------------------------------------------------------
 
@@ -957,12 +957,12 @@ fp_decimal_to_digits(::std::uint_least64_t m_lo, ::std::uint_least64_t m_hi, ::s
 		auto r{fp_big_divmod_u64(n, group)};
 		for (::std::uint_least32_t i{}; i != 19u; ++i)
 		{
-			out[len++] = static_cast<char>('0' + r % 10u);
+			out[len++] = static_cast<char>(r % 10u);
 			r /= 10u;
 		}
 	}
 	// leading zeros only appear in the top group
-	while (len > 1u && out[len - 1u] == '0')
+	while (len > 1u && !out[len - 1u])
 	{
 		--len;
 	}
@@ -1227,11 +1227,11 @@ inline fp_digits_result fp_scan_midpoint_digits(__uint128_t odd_sig,
 		auto r{fp_big_divmod_u64(n, group)};
 		for (::std::uint_least32_t i{}; i != 19u; ++i)
 		{
-			out[len++] = static_cast<char>('0' + r % 10u);
+			out[len++] = static_cast<char>(r % 10u);
 			r /= 10u;
 		}
 	}
-	while (len > 1u && out[len - 1u] == '0')
+	while (len > 1u && !out[len - 1u])
 	{
 		--len;
 	}
@@ -1260,7 +1260,7 @@ fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t
 	fp_big_set_u64(d, 0u);
 	for (::std::size_t i{}; i != n_digits; ++i)
 	{
-		fp_big_mul_add_u64(d, 10u, static_cast<::std::uint_least64_t>(digits[i] - '0'));
+		fp_big_mul_add_u64(d, 10u, static_cast<::std::uint_least64_t>(digits[i]));
 	}
 	if (!d.size)
 	{
@@ -1293,7 +1293,7 @@ fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t
 		::std::uint_least64_t sig{};
 		for (::std::size_t i{}; i != n_digits; ++i)
 		{
-			sig = sig * 10u + static_cast<::std::uint_least64_t>(digits[i] - '0');
+			sig = sig * 10u + static_cast<::std::uint_least64_t>(digits[i]);
 		}
 		auto const lz{static_cast<::std::int_least32_t>(::std::countl_zero(sig))};
 		auto const q10{static_cast<::std::int_least32_t>(e10)};
@@ -1384,15 +1384,15 @@ fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t
 	}
 	else
 	{
-		// compare digit strings at equal exponent, '0' padding the shorter;
-		// the midpoint expansion never exceeds the retained capacity
+		// compare digit strings at equal exponent, zeros padding the
+		// shorter; the midpoint expansion never exceeds the capacity
 		auto const k{n_digits > static_cast<::std::size_t>(md.n)
 						 ? n_digits
 						 : static_cast<::std::size_t>(md.n)};
 		for (::std::size_t i{}; i != k; ++i)
 		{
-			auto const a{i < n_digits ? digits[i] : '0'};
-			auto const b{i < static_cast<::std::size_t>(md.n) ? mid_digits[i] : '0'};
+			auto const a{i < n_digits ? digits[i] : 0};
+			auto const b{i < static_cast<::std::size_t>(md.n) ? mid_digits[i] : 0};
 			if (a != b)
 			{
 				order = a < b ? -1 : 1;

@@ -56,13 +56,14 @@ to_decimal_binary80(::std::uint_least64_t m2, ::std::int_least32_t e2) noexcept;
 Exact decimal expansion and decimal scan, also compiled in the
 fast_io.floating module.
 
-fp_decimal_to_digits writes the exact significant decimal digits of
-m * 2^e2 (m nonzero, up to 113 bits) into out and returns {n, e10} with
-v = 0.d1..dn * 10^e10.  fp_digits_capacity bounds n for every supported
-format.
+fp_decimal_to_digits writes the exact significant decimal digit values
+(0-9, not character codes) of m * 2^e2 (m nonzero, up to 113 bits) into
+out and returns {n, e10} with v = 0.d1..dn * 10^e10.  fp_digits_capacity
+bounds n for every supported format.
 
 fp_scan_decimal rounds digits * 10^e10 to the format described by
-p (total significand bits, implicit bit included) and ebits.  The caller
+p (total significand bits, implicit bit included) and ebits.  digits
+holds digit values 0-9, not character codes.  The caller
 retains at most the per-format midpoint capacity significant digits (at
 most fp_scan_digits_cap for the widest format) and sets sticky when a
 dropped nonzero digit exists; the retained count must cover the longest
