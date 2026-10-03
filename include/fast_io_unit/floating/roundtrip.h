@@ -52,6 +52,51 @@ m10_result<__uint128_t>
 to_decimal_binary80(::std::uint_least64_t m2, ::std::int_least32_t e2) noexcept;
 #endif
 
+/*
+Exact decimal expansion and decimal scan, also compiled in the
+fast_io.floating module.
+
+fp_decimal_to_digits writes the exact significant decimal digits of
+m * 2^e2 (m nonzero, up to 113 bits) into out and returns {n, e10} with
+v = 0.d1..dn * 10^e10.  fp_digits_capacity bounds n for every supported
+format.
+
+fp_scan_decimal rounds digits * 10^e10 to the format described by
+p (total significand bits, implicit bit included) and ebits.  The caller
+retains at most the per-format midpoint capacity significant digits (at
+most fp_scan_digits_cap for the widest format) and sets sticky when a
+dropped nonzero digit exists; the retained count must cover the longest
+midpoint expansion of the target format so the straddle comparison fits.
+The result is the full significand with the implicit bit set for normals
+(binary80 stores the explicit integer bit in lo); callers mask to the
+stored width.  code is 1 for out-of-range results (infinity or a value
+that rounded to zero).
+*/
+struct fp_digits_result
+{
+	::std::int_least32_t n;
+	::std::int_least32_t e10;
+};
+
+inline constexpr ::std::size_t fp_digits_capacity{11566u};
+inline constexpr ::std::size_t fp_scan_digits_cap{11534u};
+
+fp_digits_result
+fp_decimal_to_digits(::std::uint_least64_t m_lo, ::std::uint_least64_t m_hi,
+					 ::std::int_least32_t e2, char *out) noexcept;
+
+struct fp_scan_result
+{
+	::std::uint_least64_t lo;
+	::std::uint_least64_t hi;
+	::std::int_least32_t efield;
+	::std::int_least32_t code;
+};
+
+fp_scan_result
+fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t e10,
+				bool sticky, ::std::uint_least32_t p, ::std::uint_least32_t ebits) noexcept;
+
 template <typename flt>
 inline m10_result<typename fp_m10_type<flt>::type>
 to_decimal(typename iec559_traits<flt>::mantissa_type m2, ::std::int_least32_t e2) noexcept

@@ -1,6 +1,12 @@
 module;
 
 #include <fast_io_freestanding.h>
+#include <fast_io_unit/floating/punning.h>
+#include <fast_io_unit/floating/hexfloat.h>
+#include <fast_io_unit/floating/roundtrip.h>
+#include <fast_io_unit/floating/precision.h>
+#include <fast_io_unit/floating/scan.h>
+#include <fast_io_unit/floating/impl.h>
 
 /*
 Shortest round-trip floating-point conversion, separately compiled.
@@ -654,6 +660,763 @@ to_decimal_binary80(::std::uint_least64_t m2, ::std::int_least32_t e2) noexcept
 }
 
 #endif
+
+// ---------------------------------------------------------------------------
+// arbitrary-precision integer used by the exact decimal expansion (precision
+// output) and by the exact scan fallback.  Little-endian u64 limbs; the
+// capacity covers binary80/binary128 worst cases: scanned coefficients and
+// midpoint expansions are at most 11532 decimal digits (~38300 bits), powers
+// of five reach 5^16495 (~38300 bits), and large positive exponents need
+// 2^16384 times a 113-bit significand (~16500 bits).
+// ---------------------------------------------------------------------------
+
+inline constexpr ::std::size_t fp_bigint_limbs{704u};
+
+struct fp_bigint
+{
+	::std::uint_least64_t limb[fp_bigint_limbs];
+	::std::size_t size;
+};
+
+inline void fp_big_normalize(fp_bigint &v) noexcept
+{
+	while (v.size && !v.limb[v.size - 1u])
+	{
+		--v.size;
+	}
+}
+
+inline void fp_big_set_u64(fp_bigint &v, ::std::uint_least64_t x) noexcept
+{
+	v.limb[0] = x;
+	v.size = x != 0u;
+}
+
+inline void fp_big_set_u128(fp_bigint &v, ::std::uint_least64_t lo, ::std::uint_least64_t hi) noexcept
+{
+	v.limb[0] = lo;
+	v.limb[1] = hi;
+	v.size = hi ? 2u : (lo != 0u);
+}
+
+// v = v * m + a, limb-wise carry chain
+inline void fp_big_mul_add_u64(fp_bigint &v, ::std::uint_least64_t m, ::std::uint_least64_t a) noexcept
+{
+	::std::uint_least64_t carry{a};
+	for (::std::size_t i{}; i != v.size; ++i)
+	{
+		::std::uint_least64_t hi;
+		auto const lo{::fast_io::intrinsics::umul(v.limb[i], m, hi)};
+		auto const s{lo + carry};
+		v.limb[i] = s;
+		carry = hi + (s < lo);
+	}
+	if (carry)
+	{
+		v.limb[v.size++] = carry;
+	}
+}
+
+inline void fp_big_add_u64(fp_bigint &v, ::std::uint_least64_t a) noexcept
+{
+	if (!v.size)
+	{
+		fp_big_set_u64(v, a);
+		return;
+	}
+	auto s{v.limb[0] + a};
+	bool carry{s < v.limb[0]};
+	v.limb[0] = s;
+	for (::std::size_t i{1u}; carry && i != v.size; ++i)
+	{
+		carry = !++v.limb[i];
+	}
+	if (carry)
+	{
+		v.limb[v.size++] = 1u;
+	}
+}
+
+// v *= 5^k via 5^27 chunks
+inline void fp_big_mul_pow5(fp_bigint &v, ::std::uint_least64_t k) noexcept
+{
+	constexpr ::std::uint_least64_t pow5_27{7450580596923828125u}; // 5^27
+	for (; k >= 27u; k -= 27u)
+	{
+		fp_big_mul_add_u64(v, pow5_27, 0u);
+	}
+	if (k)
+	{
+		::std::uint_least64_t m{1u};
+		for (::std::uint_least64_t i{}; i != k; ++i)
+		{
+			m *= 5u;
+		}
+		fp_big_mul_add_u64(v, m, 0u);
+	}
+}
+
+// v <<= k, growing limbs as needed
+inline void fp_big_shl(fp_bigint &v, ::std::size_t k) noexcept
+{
+	if (!v.size || !k)
+	{
+		return;
+	}
+	auto const limbs{k >> 6u};
+	auto const bits{static_cast<::std::uint_least32_t>(k & 63u)};
+	if (limbs)
+	{
+		for (::std::size_t i{v.size}; i-- != 0u;)
+		{
+			v.limb[i + limbs] = v.limb[i];
+		}
+		for (::std::size_t i{}; i != limbs; ++i)
+		{
+			v.limb[i] = 0u;
+		}
+		v.size += limbs;
+	}
+	if (bits)
+	{
+		::std::uint_least64_t carry{};
+		for (::std::size_t i{}; i != v.size; ++i)
+		{
+			auto const cur{v.limb[i]};
+			v.limb[i] = (cur << bits) | carry;
+			carry = cur >> (64u - bits);
+		}
+		if (carry)
+		{
+			v.limb[v.size++] = carry;
+		}
+	}
+}
+
+inline ::std::size_t fp_big_bitlen(fp_bigint const &v) noexcept
+{
+	return v.size ? ((v.size - 1u) << 6u) +
+						static_cast<::std::size_t>(64u - static_cast<unsigned>(
+														::std::countl_zero(v.limb[v.size - 1u])))
+					: 0u;
+}
+
+inline int fp_big_cmp(fp_bigint const &a, fp_bigint const &b) noexcept
+{
+	if (a.size != b.size)
+	{
+		return a.size < b.size ? -1 : 1;
+	}
+	for (::std::size_t i{a.size}; i-- != 0u;)
+	{
+		if (a.limb[i] != b.limb[i])
+		{
+			return a.limb[i] < b.limb[i] ? -1 : 1;
+		}
+	}
+	return 0;
+}
+
+// a -= b, requires a >= b
+inline void fp_big_sub(fp_bigint &a, fp_bigint const &b) noexcept
+{
+	::std::uint_least64_t borrow{};
+	for (::std::size_t i{}; i != a.size; ++i)
+	{
+		auto const bi{i < b.size ? b.limb[i] : 0u};
+		auto const t{a.limb[i] - bi};
+		auto const s{t - borrow};
+		borrow = (t > a.limb[i]) || (s > t);
+		a.limb[i] = s;
+	}
+	fp_big_normalize(a);
+}
+
+inline bool fp_big_bit(fp_bigint const &v, ::std::size_t i) noexcept
+{
+	auto const l{i >> 6u};
+	return l < v.size && ((v.limb[l] >> (i & 63u)) & 1u) != 0u;
+}
+
+// any set bit strictly below position i
+inline bool fp_big_any_below(fp_bigint const &v, ::std::size_t i) noexcept
+{
+	auto const l{i >> 6u};
+	for (::std::size_t k{}; k != l && k != v.size; ++k)
+	{
+		if (v.limb[k])
+		{
+			return true;
+		}
+	}
+	return l < v.size && (v.limb[l] & ((::std::uint_least64_t{1} << (i & 63u)) - 1u)) != 0u;
+}
+
+// a ? b<<k without materializing the shifted operand
+inline int fp_big_cmp_shifted(fp_bigint const &a, fp_bigint const &b, ::std::size_t k) noexcept
+{
+	auto const lb{fp_big_bitlen(b) + k};
+	auto const la{fp_big_bitlen(a)};
+	if (la != lb)
+	{
+		return la < lb ? -1 : 1;
+	}
+	for (::std::size_t i{la}; i-- != 0u;)
+	{
+		auto const idx{i >= k ? i - k : i};
+		::std::uint_least64_t bv{};
+		if (i >= k)
+		{
+			auto const l{idx >> 6u};
+			bv = (b.limb[l] >> (idx & 63u));
+			if ((idx & 63u) && l + 1u < b.size)
+			{
+				bv |= b.limb[l + 1u] << (64u - (idx & 63u));
+			}
+		}
+		auto const l{i >> 6u};
+		auto const av{l < a.size ? (a.limb[l] >> (i & 63u)) & 1u : 0u};
+		if (av != (bv & 1u))
+		{
+			return av ? 1 : -1;
+		}
+	}
+	return 0;
+}
+
+// a -= b<<k, requires a >= b<<k
+inline void fp_big_sub_shifted(fp_bigint &a, fp_bigint const &b, ::std::size_t k) noexcept
+{
+	auto const limbs{k >> 6u};
+	auto const bits{static_cast<::std::uint_least32_t>(k & 63u)};
+	::std::uint_least64_t borrow{};
+	for (::std::size_t i{}; i != a.size; ++i)
+	{
+		::std::uint_least64_t bv{};
+		if (i >= limbs)
+		{
+			auto const l{i - limbs};
+			bv = l < b.size ? b.limb[l] : 0u;
+			if (bits)
+			{
+				bv = (bv << bits) | (l && l - 1u < b.size ? b.limb[l - 1u] >> (64u - bits) : 0u);
+			}
+		}
+		auto const t{a.limb[i] - bv};
+		auto const s{t - borrow};
+		borrow = (t > a.limb[i]) || (s > t);
+		a.limb[i] = s;
+	}
+	fp_big_normalize(a);
+}
+
+// v /= d (u64), returns remainder; used to emit decimal digit groups
+inline ::std::uint_least64_t fp_big_divmod_u64(fp_bigint &v, ::std::uint_least64_t d) noexcept
+{
+	::std::uint_least64_t rem{};
+	for (::std::size_t i{v.size}; i-- != 0u;)
+	{
+		auto const qr{::fast_io::intrinsics::udivmod(v.limb[i], rem, d, ::std::uint_least64_t{0})};
+		v.limb[i] = qr.quotientlow;
+		rem = qr.remainderlow;
+	}
+	fp_big_normalize(v);
+	return rem;
+}
+
+// ---------------------------------------------------------------------------
+// fp_decimal_to_digits: exact significant decimal digits of v = m * 2^e2.
+// m is a nonzero significand of up to 113 bits passed as two words.
+// Writes ASCII digits into out (capacity fp_digits_capacity) and returns
+// {n, e10} with v = 0.d[0]d[1]...d[n-1] * 10^e10, d[0] != '0'.
+// fp_digits_result and fp_digits_capacity are declared in roundtrip.h.
+// ---------------------------------------------------------------------------
+
+fp_digits_result
+fp_decimal_to_digits(::std::uint_least64_t m_lo, ::std::uint_least64_t m_hi, ::std::int_least32_t e2,
+					 char *out) noexcept
+{
+	fp_bigint n;
+	fp_big_set_u128(n, m_lo, m_hi);
+	::std::int_least32_t e10{};
+	if (e2 >= 0)
+	{
+		fp_big_shl(n, static_cast<::std::size_t>(e2));
+	}
+	else
+	{
+		fp_big_mul_pow5(n, static_cast<::std::uint_least64_t>(
+							 -static_cast<::std::int_least64_t>(e2)));
+		e10 = e2;
+	}
+	// digits of n, least significant first
+	constexpr ::std::uint_least64_t group{10000000000000000000u};
+	::std::size_t len{};
+	while (n.size)
+	{
+		auto r{fp_big_divmod_u64(n, group)};
+		for (::std::uint_least32_t i{}; i != 19u; ++i)
+		{
+			out[len++] = static_cast<char>('0' + r % 10u);
+			r /= 10u;
+		}
+	}
+	// leading zeros only appear in the top group
+	while (len > 1u && out[len - 1u] == '0')
+	{
+		--len;
+	}
+	// reverse to most-significant-first
+	for (::std::size_t i{}, j{len - 1u}; i < j; ++i, --j)
+	{
+		auto const t{out[i]};
+		out[i] = out[j];
+		out[j] = t;
+	}
+	return {static_cast<::std::int_least32_t>(len),
+			e10 + static_cast<::std::int_least32_t>(len)};
+}
+
+// ---------------------------------------------------------------------------
+// decimal scan:  D * 10^e10  ->  nearest-even IEEE bits.
+//
+// The parser keeps at most fp_scan_digits_cap significant input digits plus a
+// sticky flag for the dropped tail.  For p <= 53 a 64x128 product against the
+// cached power of ten resolves almost every input: the product's error is
+// strictly below 2^64 in the remainder units, so a remainder within 2^64 of
+// the rounding midpoint is the only ambiguity and falls through to the exact
+// path.  The exact path rounds the full retained integer by limb arithmetic;
+// it covers binary80, binary128, exponents outside the cache and inputs of
+// more than 19 digits.
+//
+// A truncated (sticky) input is decided by rounding both interval endpoints;
+// they are at most one ulp apart because the dropped unit sits at least ~750
+// decimal orders below the leading digit.  When the endpoints disagree the
+// input digits are compared against the binary midpoint's own decimal
+// expansion, which never exceeds fp_scan_digits_cap digits.
+// ---------------------------------------------------------------------------
+
+// fp_scan_result and fp_scan_digits_cap are declared in roundtrip.h:
+// lo/hi carry the full significand (implicit bit set for normals, binary80
+// stores the explicit integer bit), efield the encoded exponent field, and
+// code is 0 ok / 1 out-of-range (infinity or a value that rounded to zero).
+
+// floor(q * log2(10)) for the decimal exponent range we care about
+inline constexpr ::std::int_least32_t fp_scan_pow10_log2(::std::int_least64_t q) noexcept
+{
+	return static_cast<::std::int_least32_t>((q * 1741647) >> 19u);
+}
+
+// compare a against 2^s: a is a limb integer, s any exponent
+inline int fp_big_cmp_pow2(fp_bigint const &a, ::std::int_least64_t s) noexcept
+{
+	if (s < 0)
+	{
+		return a.size ? 1 : -1;
+	}
+	auto const alen{fp_big_bitlen(a)};
+	if (alen != static_cast<::std::size_t>(s + 1))
+	{
+		return alen < static_cast<::std::size_t>(s + 1) ? -1 : 1;
+	}
+	// a == 2^s iff its only set bit is the top one
+	return fp_big_any_below(a, alen - 1u) ? 1 : 0;
+}
+
+// compare a*2^sa against b*2^sb without materializing a shifted operand
+inline int fp_big_cmp_shift(fp_bigint const &a, fp_bigint const &b,
+							::std::int_least64_t sb_minus_sa) noexcept
+{
+	if (sb_minus_sa >= 0)
+	{
+		return fp_big_cmp_shifted(a, b, static_cast<::std::size_t>(sb_minus_sa));
+	}
+	return -fp_big_cmp_shifted(b, a, static_cast<::std::size_t>(-sb_minus_sa));
+}
+
+// compare D * 10^E against 2^e
+inline int fp_scan_cmp_value_pow2(fp_bigint const &d, ::std::int_least64_t e10,
+								  ::std::int_least64_t e2) noexcept
+{
+	if (e10 >= 0)
+	{
+		fp_bigint n;
+		n = d;
+		fp_big_mul_pow5(n, static_cast<::std::uint_least64_t>(e10));
+		return fp_big_cmp_pow2(n, e2 - e10);
+	}
+	fp_bigint den;
+	fp_big_set_u64(den, 1u);
+	fp_big_mul_pow5(den, static_cast<::std::uint_least64_t>(-e10));
+	return fp_big_cmp_shift(d, den, e2 - e10);
+}
+
+struct fp_scan_target
+{
+	::std::uint_least32_t p;     // total significand bits including implicit
+	::std::uint_least32_t ebits; // exponent field bits
+	::std::int_least32_t bias;
+	::std::int_least32_t denorm_exp; // exponent of the denormal unit: e_min - (p-1)
+};
+
+// exact floor(V * 2^-c) quotient and remainder-vs-half classification.
+// e10 >= 0:  V * 2^-c = (D * 5^E) * 2^(E-c)
+// e10 < 0 :  V * 2^-c = D * 2^(E-c) / 5^-E
+// d is consumed.  rem_cmp: -1, 0, +1 for below / exactly at / above half.
+inline void fp_scan_quotient(fp_bigint &d, ::std::int_least64_t e10,
+							 ::std::int_least64_t c, __uint128_t &quot,
+							 int &rem_cmp) noexcept
+{
+	if (e10 >= 0)
+	{
+		fp_big_mul_pow5(d, static_cast<::std::uint_least64_t>(e10));
+		auto const t{e10 - c};
+		if (t >= 0)
+		{
+			fp_big_shl(d, static_cast<::std::size_t>(t));
+			quot = static_cast<__uint128_t>(d.limb[0]) |
+				   (static_cast<__uint128_t>(d.size > 1u ? d.limb[1] : 0u) << 64u);
+			rem_cmp = -1;
+			return;
+		}
+		auto const s{static_cast<::std::size_t>(-t)};
+		quot = 0u;
+		for (::std::uint_least32_t i{}; i != 128u; ++i)
+		{
+			if (fp_big_bit(d, s + i))
+			{
+				quot |= static_cast<__uint128_t>(1) << i;
+			}
+		}
+		rem_cmp = fp_big_bit(d, s - 1u) ? (fp_big_any_below(d, s - 1u) ? 1 : 0) : -1;
+		return;
+	}
+	fp_bigint den;
+	fp_big_set_u64(den, 1u);
+	fp_big_mul_pow5(den, static_cast<::std::uint_least64_t>(-e10));
+	auto const t{e10 - c};
+	if (t >= 0)
+	{
+		fp_big_shl(d, static_cast<::std::size_t>(t));
+	}
+	else
+	{
+		fp_big_shl(den, static_cast<::std::size_t>(-t));
+	}
+	quot = 0u;
+	auto j{fp_big_bitlen(d) > fp_big_bitlen(den) ? fp_big_bitlen(d) - fp_big_bitlen(den)
+												: ::std::size_t{}};
+	for (auto i{j + 1u}; i-- != 0u;)
+	{
+		if (fp_big_cmp_shifted(d, den, i) >= 0)
+		{
+			fp_big_sub_shifted(d, den, i);
+			if (i < 128u)
+			{
+				quot |= static_cast<__uint128_t>(1) << i;
+			}
+		}
+	}
+	if (!d.size)
+	{
+		rem_cmp = -1;
+		return;
+	}
+	// 2*remainder vs den == compare den vs rem<<1, negated
+	auto const cmp{fp_big_cmp_shifted(den, d, 1u)};
+	rem_cmp = cmp < 0 ? 1 : (cmp == 0 ? 0 : -1);
+}
+
+// overflow result: for binary80 the explicit integer bit stays set on
+// infinity; every other format stores a zero significand on infinity
+inline fp_scan_result fp_scan_inf(fp_scan_target const &tg) noexcept
+{
+	auto const max_field{(::std::int_least64_t{1} << tg.ebits) - 1};
+	return {tg.p == 64u ? ::std::uint_least64_t{1} << 63u : ::std::uint_least64_t{},
+			0u, static_cast<::std::int_least32_t>(max_field), 1};
+}
+
+// pack a rounded full significand (top bit = implicit) and exponent into
+// the stored-words result; no implicit stripping, callers mask per format
+inline fp_scan_result fp_scan_pack(__uint128_t q, ::std::int_least64_t e2,
+								   fp_scan_target const &tg) noexcept
+{
+	fp_scan_result r{0, 0, 0, 0};
+	auto const max_field{(::std::int_least64_t{1} << tg.ebits) - 1};
+	if (q >> tg.p)
+	{
+		q >>= 1u;
+		++e2;
+	}
+	if (e2 + tg.bias >= max_field)
+	{
+		return fp_scan_inf(tg);
+	}
+	r.efield = static_cast<::std::int_least32_t>(e2 + tg.bias);
+	r.lo = static_cast<::std::uint_least64_t>(q);
+	r.hi = static_cast<::std::uint_least64_t>(q >> 64u);
+	return r;
+}
+
+// exact-path rounding of V = d * 10^e10 (d consumed)
+inline fp_scan_result fp_scan_exact_one(fp_bigint &d, ::std::int_least64_t e10,
+										fp_scan_target const &tg) noexcept
+{
+	auto const e_min{1 - tg.bias};
+	auto const max_field{(::std::int_least64_t{1} << tg.ebits) - 1};
+	// exact e2 = floor(log2 V): fixed-point estimate then limb comparisons
+	auto e2{static_cast<::std::int_least64_t>(fp_scan_pow10_log2(e10)) +
+			static_cast<::std::int_least64_t>(fp_big_bitlen(d)) - 1};
+	for (; fp_scan_cmp_value_pow2(d, e10, e2 + 1) >= 0; ++e2)
+	{
+	}
+	for (; fp_scan_cmp_value_pow2(d, e10, e2) < 0; --e2)
+	{
+	}
+	if (e2 + tg.bias >= max_field)
+	{
+		return fp_scan_inf(tg);
+	}
+	if (e2 < tg.denorm_exp - 1)
+	{
+		// V < denorm_min/2 rounds to zero
+		return {0, 0, 0, 1};
+	}
+	auto const c{e2 >= e_min ? e2 - static_cast<::std::int_least64_t>(tg.p) + 1
+							 : static_cast<::std::int_least64_t>(tg.denorm_exp)};
+	__uint128_t q{};
+	int rem_cmp{};
+	fp_scan_quotient(d, e10, c, q, rem_cmp);
+	if (rem_cmp > 0 || (rem_cmp == 0 && (q & 1u)))
+	{
+		++q;
+	}
+	if (e2 < e_min)
+	{
+		// subnormal scale: q is the stored significand; q == 2^(p-1) rounds
+		// up to the least normal value
+		fp_scan_result r{static_cast<::std::uint_least64_t>(q),
+						 static_cast<::std::uint_least64_t>(q >> 64u),
+						 q >= (static_cast<__uint128_t>(1) << (tg.p - 1u)) ? 1 : 0, !q};
+		return r;
+	}
+	return fp_scan_pack(q, e2, tg);
+}
+
+// exact significant digits of the midpoint (2k+1) * 2^t
+inline fp_digits_result fp_scan_midpoint_digits(__uint128_t odd_sig,
+												::std::int_least64_t t, char *out) noexcept
+{
+	fp_bigint n;
+	fp_big_set_u128(n, static_cast<::std::uint_least64_t>(odd_sig),
+					static_cast<::std::uint_least64_t>(odd_sig >> 64u));
+	::std::int_least32_t e10{};
+	if (t >= 0)
+	{
+		fp_big_shl(n, static_cast<::std::size_t>(t));
+	}
+	else
+	{
+		fp_big_mul_pow5(n, static_cast<::std::uint_least64_t>(-t));
+		e10 = static_cast<::std::int_least32_t>(t);
+	}
+	constexpr ::std::uint_least64_t group{10000000000000000000u};
+	::std::size_t len{};
+	while (n.size)
+	{
+		auto r{fp_big_divmod_u64(n, group)};
+		for (::std::uint_least32_t i{}; i != 19u; ++i)
+		{
+			out[len++] = static_cast<char>('0' + r % 10u);
+			r /= 10u;
+		}
+	}
+	while (len > 1u && out[len - 1u] == '0')
+	{
+		--len;
+	}
+	for (::std::size_t i{}, j{len - 1u}; i < j; ++i, --j)
+	{
+		auto const tc{out[i]};
+		out[i] = out[j];
+		out[j] = tc;
+	}
+	return {static_cast<::std::int_least32_t>(len),
+			e10 + static_cast<::std::int_least32_t>(len)};
+}
+
+fp_scan_result
+fp_scan_decimal(char const *digits, ::std::size_t n_digits, ::std::int_least64_t e10,
+				bool sticky, ::std::uint_least32_t p, ::std::uint_least32_t ebits) noexcept
+{
+	fp_scan_target const tg{p, ebits, (::std::int_least32_t{1} << (ebits - 1u)) - 1,
+							1 - ((::std::int_least32_t{1} << (ebits - 1u)) - 1) -
+								static_cast<::std::int_least32_t>(p) + 1};
+	if (!n_digits)
+	{
+		return {0, 0, 0, 0};
+	}
+	fp_bigint d;
+	fp_big_set_u64(d, 0u);
+	for (::std::size_t i{}; i != n_digits; ++i)
+	{
+		fp_big_mul_add_u64(d, 10u, static_cast<::std::uint_least64_t>(digits[i] - '0'));
+	}
+	if (!d.size)
+	{
+		return {0, 0, 0, 0};
+	}
+	auto const max_field{(::std::int_least64_t{1} << ebits) - 1};
+	auto const dec_exp{e10 + static_cast<::std::int_least64_t>(n_digits)};
+	// definite overflow: V >= 10^(dec_exp-1) with dec_exp-1 > floor(log10 max)+1
+	{
+		auto const bound{static_cast<::std::int_least64_t>(
+			((static_cast<::std::int_least64_t>(tg.bias) + 1) * 78913) >> 18u) + 2};
+		if (dec_exp > bound)
+		{
+			return fp_scan_inf(tg);
+		}
+	}
+	// definite zero: V < 10^dec_exp <= 2^(denorm_exp-1) = denorm_min/2
+	{
+		auto const bound{static_cast<::std::int_least64_t>(
+			(static_cast<::std::int_least64_t>(tg.denorm_exp) - 1) * 78913 >> 18u)};
+		if (dec_exp <= bound)
+		{
+			return {0, 0, 0, 1};
+		}
+	}
+	auto const e_min{1 - tg.bias};
+	// fast path: exact short input inside the cached power range, narrow target
+	if (n_digits <= 19u && !sticky && e10 >= -293 && e10 <= 324 && p <= 53u)
+	{
+		::std::uint_least64_t sig{};
+		for (::std::size_t i{}; i != n_digits; ++i)
+		{
+			sig = sig * 10u + static_cast<::std::uint_least64_t>(digits[i] - '0');
+		}
+		auto const lz{static_cast<::std::int_least32_t>(::std::countl_zero(sig))};
+		auto const q10{static_cast<::std::int_least32_t>(e10)};
+		auto const power{floating_pow10_get(q10)};
+		auto const product{floating_umul64x128_hi(sig << lz, power.lo, power.hi)};
+		auto const upperbit{static_cast<::std::int_least32_t>(product.hi >> 63u)};
+		auto const e2{static_cast<::std::int_least64_t>(63) +
+					  fp_scan_pow10_log2(q10) - lz + upperbit};
+		if (e2 + tg.bias >= max_field)
+		{
+			return fp_scan_inf(tg);
+		}
+		if (e2 < tg.denorm_exp - 1)
+		{
+			return {0, 0, 0, 1};
+		}
+		// the product is V * 2^(126+ub-e2); bit j of it carries 2^c where
+		// c is the kept-grid exponent (e2-p+1 normals, denorm_exp subnormals)
+		auto const j{e2 >= e_min ? 127 + upperbit - static_cast<::std::int_least32_t>(p)
+								 : 127 + upperbit - static_cast<::std::int_least32_t>(p) + (e_min - e2)};
+		__uint128_t const prod{(static_cast<__uint128_t>(product.hi) << 64u) | product.lo};
+		if (j <= 128)
+		{
+			auto const rem{j == 128 ? prod : prod & ((static_cast<__uint128_t>(1)
+													<< static_cast<unsigned>(j)) - 1u)};
+			auto const halfv{static_cast<__uint128_t>(1) << static_cast<unsigned>(j - 1)};
+			auto const diff{rem > halfv ? rem - halfv : halfv - rem};
+			if (diff > (static_cast<__uint128_t>(1) << 64u))
+			{
+				// unambiguous: product error < 2^64 cannot cross the midpoint
+				auto q{j == 128 ? __uint128_t{} : prod >> static_cast<unsigned>(j)};
+				if (rem > halfv)
+				{
+					++q;
+				}
+				if (e2 < e_min)
+				{
+					fp_scan_result r{static_cast<::std::uint_least64_t>(q),
+									 static_cast<::std::uint_least64_t>(q >> 64u),
+									 q >= (static_cast<__uint128_t>(1) << (p - 1u)) ? 1 : 0,
+									 !q};
+					return r;
+				}
+				return fp_scan_pack(q, e2, tg);
+			}
+		}
+	}
+	// exact path
+	if (!sticky)
+	{
+		return fp_scan_exact_one(d, e10, tg);
+	}
+	// truncated input: round both endpoints; <= 1 ulp apart by the capacity bound
+	fp_bigint dlo{d};
+	auto lo_res{fp_scan_exact_one(dlo, e10, tg)};
+	fp_bigint dhi{d};
+	fp_big_add_u64(dhi, 1u);
+	auto hi_res{fp_scan_exact_one(dhi, e10, tg)};
+	if (lo_res.lo == hi_res.lo && lo_res.hi == hi_res.hi && lo_res.efield == hi_res.efield)
+	{
+		return lo_res;
+	}
+	// straddles the midpoint above lo_res: compare the input digits against
+	// the midpoint's exact decimal expansion (bounded by fp_scan_digits_cap)
+	__uint128_t odd_sig;
+	::std::int_least64_t mt;
+	if (!lo_res.efield)
+	{
+		// subnormal unit grid: M = (2*sig+1) * 2^(denorm_exp-1)
+		auto const full{(static_cast<__uint128_t>(lo_res.hi) << 64u) | lo_res.lo};
+		odd_sig = full * 2u + 1u;
+		mt = static_cast<::std::int_least64_t>(tg.denorm_exp) - 1;
+	}
+	else
+	{
+		auto const full{((static_cast<__uint128_t>(lo_res.hi) << 64u) | lo_res.lo) |
+						(static_cast<__uint128_t>(1) << (p - 1u))};
+		odd_sig = full * 2u + 1u;
+		mt = static_cast<::std::int_least64_t>(lo_res.efield) - tg.bias -
+			 static_cast<::std::int_least64_t>(p);
+	}
+	char mid_digits[fp_scan_digits_cap];
+	auto const md{fp_scan_midpoint_digits(odd_sig, mt, mid_digits)};
+	int order{};
+	if (dec_exp != md.e10)
+	{
+		order = dec_exp < md.e10 ? -1 : 1;
+	}
+	else
+	{
+		// compare digit strings at equal exponent, '0' padding the shorter;
+		// the midpoint expansion never exceeds the retained capacity
+		auto const k{n_digits > static_cast<::std::size_t>(md.n)
+						 ? n_digits
+						 : static_cast<::std::size_t>(md.n)};
+		for (::std::size_t i{}; i != k; ++i)
+		{
+			auto const a{i < n_digits ? digits[i] : '0'};
+			auto const b{i < static_cast<::std::size_t>(md.n) ? mid_digits[i] : '0'};
+			if (a != b)
+			{
+				order = a < b ? -1 : 1;
+				break;
+			}
+		}
+		if (!order)
+		{
+			// input matches the midpoint through every retained digit: the
+			// dropped tail decides, positive iff any dropped digit is nonzero
+			order = sticky ? 1 : 0;
+		}
+	}
+	if (order < 0)
+	{
+		return lo_res;
+	}
+	if (order == 0)
+	{
+		// exact tie: nearest-even keeps the even endpoint
+		return (lo_res.lo & 1u) ? hi_res : lo_res;
+	}
+	return hi_res;
+}
 
 } // namespace fast_io::details
 

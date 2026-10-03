@@ -16,7 +16,7 @@
 
 #include "fast_io_freestanding_impl/exception.h"
 // #include"fast_io_freestanding_impl/posix_error.h"
-// compile floating point is slow since it requires algorithms like ryu
+// compile floating point is slow; the conversion machinery is separately compiled in fast_io.floating
 #ifndef FAST_IO_DISABLE_FLOATING_POINT
 #include "fast_io_unit/floating/impl.h"
 #endif
