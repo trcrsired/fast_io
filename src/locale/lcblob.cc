@@ -158,16 +158,12 @@ inline ::fast_io::u8string default_locale_name_win32() FAST_IO_HERBCEPTIONS_THRO
 		auto const res{::fast_io::win32::RegQueryValueExW(
 			hkey, u"LocaleName", nullptr, nullptr, buf, __builtin_addressof(bytes))};
 		::fast_io::win32::RegCloseKey(hkey);
-		if (res != 0)
-		{
-			::fast_io::throw_win32_error();
-		}
-		if (bytes >= 4)
+		if (res == 0 && bytes >= 4)
 		{
 			return u16_to_u8(buf, (bytes / 2) - 1);
 		}
 	}
-	return {};
+	return {}; // "" resolution falls back to C like other platforms
 }
 
 // ---------------------------------------------------------------------------
@@ -271,35 +267,42 @@ struct ovr_builder
 		}
 		return off;
 	}
-	inline void rec_hdr(::std::uint_least32_t cat, ::std::uint_least32_t f,
-						::std::uint_least64_t tag) FAST_IO_HERBCEPTIONS_THROWS
+	// a record is published into idx only once fully written — a throw
+	// mid-record leaves unreferenced bytes, never a dangling pair
+	inline void rec_pub(::std::uint_least32_t cat, ::std::uint_least32_t f,
+						::std::uint_least32_t rec_off) FAST_IO_HERBCEPTIONS_THROWS
 	{
 		idx.push_back(fld_key(cat, f));
-		idx.push_back(static_cast<::std::uint_least32_t>(seg.size()));
-		put_leb(tag);
+		idx.push_back(rec_off);
 	}
 	inline void add_int(::std::uint_least32_t cat, ::std::uint_least32_t f,
 						::std::int_least64_t v) FAST_IO_HERBCEPTIONS_THROWS
 	{
-		rec_hdr(cat, f, static_cast<::std::uint_least64_t>(lcblob::slot_tag::integer));
+		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
+		put_leb(static_cast<::std::uint_least64_t>(lcblob::slot_tag::integer));
 		put_sleb(v);
+		rec_pub(cat, f, off);
 	}
 	inline void add_str(::std::uint_least32_t cat, ::std::uint_least32_t f, char16_t const *s,
 						::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	{
-		::std::uint_least32_t const off{put_u16(s, n)};
-		rec_hdr(cat, f, static_cast<::std::uint_least64_t>(lcblob::slot_tag::string));
-		put_leb(off);
-		put_leb(seg.size() - off);
+		::std::uint_least32_t const poff{put_u16(s, n)};
+		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
+		put_leb(static_cast<::std::uint_least64_t>(lcblob::slot_tag::string));
+		put_leb(poff);
+		put_leb(seg.size() - poff);
+		rec_pub(cat, f, off);
 	}
 	inline void add_bytes(::std::uint_least32_t cat, ::std::uint_least32_t f, char8_t const *d,
 						  ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	{
-		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
+		::std::uint_least32_t const poff{static_cast<::std::uint_least32_t>(seg.size())};
 		seg.append(d, n);
-		rec_hdr(cat, f, static_cast<::std::uint_least64_t>(lcblob::slot_tag::bytes));
-		put_leb(off);
+		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
+		put_leb(static_cast<::std::uint_least64_t>(lcblob::slot_tag::bytes));
+		put_leb(poff);
 		put_leb(n);
+		rec_pub(cat, f, off);
 	}
 	inline void add_strlist2(::std::uint_least32_t cat, ::std::uint_least32_t f, char16_t const *a,
 							 ::std::size_t an, char16_t const *b, ::std::size_t bn) FAST_IO_HERBCEPTIONS_THROWS
@@ -314,8 +317,10 @@ struct ovr_builder
 		put_leb(lena);
 		put_leb(offb);
 		put_leb(lenb);
-		rec_hdr(cat, f, static_cast<::std::uint_least64_t>(lcblob::slot_tag::strlist));
+		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
+		put_leb(static_cast<::std::uint_least64_t>(lcblob::slot_tag::strlist));
 		put_leb(body);
+		rec_pub(cat, f, off);
 	}
 };
 
@@ -590,35 +595,10 @@ inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS
 	}
 }
 
-inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
-	FAST_IO_HERBCEPTIONS_THROWS
+// Windows lacks many locale fields the standard requires — HKCU's
+// International values stand in, serialized per section
+inline void fill_user_overrides(locale_entry &e) FAST_IO_HERBCEPTIONS_THROWS
 {
-	// overrides apply only to the user's own locale
-	::fast_io::u8string d{default_locale_name_win32()};
-	if (d.size() != lname.size())
-	{
-		return;
-	}
-	{
-		bool eq{true};
-		for (::std::size_t i{}; i < d.size(); ++i)
-		{
-			char8_t c{d[i]};
-			if (c == u8'-')
-			{
-				c = u8'_';
-			}
-			if (c != lname.data()[i])
-			{
-				eq = false;
-				break;
-			}
-		}
-		if (!eq)
-		{
-			return;
-		}
-	}
 	intl_key key;
 	if (key.hkey == 0)
 	{
@@ -646,7 +626,14 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 			break;
 		}
 		ovr_builder b{{}, {}, enc};
-		fill_ovr_charset(b, key);
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+			fill_ovr_charset(b, key);
+		}
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
+		{
+			// keep whatever the section managed to fill
+		}
 		if (!b.idx.empty())
 		{
 			e.ovr_storage[c] = static_cast<::fast_io::u8string &&>(b.seg);
@@ -699,8 +686,11 @@ inline void parse_codeset(::fast_io::u8string_view cs, lcblob::locale_charset &o
 // lang[_TERRITORY][.codeset][@modifier] form: '-' -> '_' (BCP-47 vs posix
 // spellings), codeset is normalized into out_cs (absent -> utf8), the
 // modifier stays attached to the file basename.
+// out  = canonical file basename  base.codeset[@mod]
+// key  = canonical locale id      base[@mod]  (codeset-insensitive;
+//        win32 uses it to test whether the request IS the user's locale)
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
-								lcblob::locale_charset &out_cs,
+								::fast_io::u8string &key, lcblob::locale_charset &out_cs,
 								lcblob::locale_charset const *enc = nullptr) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string raw;
@@ -708,11 +698,15 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 	{
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
 		raw = default_locale_name_win32();
+		if (raw.empty())
+		{
+			raw.append(u8"C", 1); // no user locale -> C like POSIX
+		}
 #else
 		char const *env{};
-		for (char const *key : {"L10N", "LC_ALL", "LANG"})
+		for (char const *var : {"L10N", "LC_ALL", "LANG"})
 		{
-			if (char const *v{lc_getenv(key)}; v != nullptr && *v != 0)
+			if (char const *v{lc_getenv(var)}; v != nullptr && *v != 0)
 			{
 				env = v;
 				break;
@@ -770,6 +764,7 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 		 raw.data()[2] == u8'S' && raw.data()[3] == u8'I' && raw.data()[4] == u8'X'))
 	{
 		out.append(u8"POSIX.UTF-8", 11);
+		key.append(u8"POSIX", 5);
 		out_cs = lcblob::locale_charset::utf8;
 	}
 	else
@@ -778,8 +773,10 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 		out.append(raw.data(), base_end); // base name
 		out.push_back(u8'.');
 		out.append(csn, ::fast_io::cstr_len(csn)); // canonical codeset
+		key.append(raw.data(), base_end);
 	}
-	out.append(raw.data() + mod, n - mod); // @modifier, if any
+	key.append(raw.data() + mod, n - mod); // @modifier, if any
+	out.append(raw.data() + mod, n - mod);
 	check_name(::fast_io::u8string_view{out.data(), out.size()});
 }
 
@@ -809,7 +806,8 @@ namespace details
 {
 
 inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view lname,
-													 lcblob::locale_charset cs) FAST_IO_HERBCEPTIONS_THROWS
+													 lcblob::locale_charset cs,
+													 bool user) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string_view dir{locale_dir()};
 	if (dir.empty())
@@ -867,22 +865,25 @@ inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view ln
 				entry->loc.sec_catdir[c] = secs[c].cat_dir;
 			}
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-			FAST_IO_HERBCEPTIONS_TRY
+			if (user)
 			{
-				fill_user_overrides(*entry, lname);
-			}
+				FAST_IO_HERBCEPTIONS_TRY
+				{
+					fill_user_overrides(*entry);
+				}
 #if defined(__HERBCEPTIONS__)
-			catch throws (::std::error e)
-			{
-				// unreadable user settings must not break the load —
-				// the blob data still applies on its own
-				::fast_io::perrln(e);
-			}
+				catch throws (::std::error e)
+				{
+					// unreadable user settings must not break the load —
+					// the blob data still applies on its own
+					::fast_io::perrln(e);
+				}
 #else
-			catch (...)
-			{
-			}
+				catch (...)
+				{
+				}
 #endif
+			}
 #endif
 			for (::std::size_t c{}; c < lcblob::blob_charset_count; ++c)
 			{
@@ -905,23 +906,49 @@ inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view ln
 
 } // namespace details
 
+// on Windows the request IS the user's locale when its canonical key
+// equals the default's — then HKCU overrides fill in (the user's
+// International settings, since Windows lacks the fields itself)
+inline bool locale_is_user([[maybe_unused]] ::fast_io::u8string_view key) noexcept
+{
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+	FAST_IO_HERBCEPTIONS_TRY
+	{
+		::fast_io::u8string dname, dkey;
+		lcblob::locale_charset dcs{};
+		details::resolve_locale_name(::fast_io::u8string_view{}, dname, dkey, dcs);
+		return key.size() == dkey.size() &&
+			   ::fast_io::freestanding::my_memcmp(key.data(), dkey.data(), key.size()) == 0;
+	}
+	FAST_IO_HERBCEPTIONS_CATCH_ALL
+	{
+		return false; // default resolution failed -> just don't override
+	}
+#else
+	(void)key;
+	return false;
+#endif
+}
+
 FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::u8string lname;
+	::fast_io::u8string lname, key;
 	lcblob::locale_charset cs{};
-	details::resolve_locale_name(name, lname, cs);
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs);
+	details::resolve_locale_name(name, lname, key, cs);
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs,
+								 locale_is_user(::fast_io::u8string_view{key.data(), key.size()}));
 }
 
 FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name,
 																   lcblob::locale_charset enc)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::u8string lname;
+	::fast_io::u8string lname, key;
 	lcblob::locale_charset cs{};
-	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc));
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs);
+	details::resolve_locale_name(name, lname, key, cs, __builtin_addressof(enc));
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs,
+								 locale_is_user(::fast_io::u8string_view{key.data(), key.size()}));
 }
 
 } // namespace fast_io::i18n
