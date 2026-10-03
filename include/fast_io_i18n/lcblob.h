@@ -294,11 +294,20 @@ enum class locale_charset : ::std::uint_least8_t
 
 // Returns a never-freed pointer to the mapped lcblob for
 // <dir>/<name>.<utf8|utf16|utf32>.bin.
+//
+//   name is a standard locale name: lang[_TERRITORY][.codeset][@modifier]
+//     "de_DE.UTF-8" / "de_DE.utf8" / "de_DE@euro.UTF-16" ...
+//     codeset is case/ punctuation-normalized (UTF-8, utf-16le, ...);
+//     no codeset defaults to utf8. Unsupported codesets are rejected.
 //   name ""      -> system default locale (L10N/LC_ALL/LANG on POSIX;
 //                   GetUserDefaultLocaleName then the registry on Windows).
 //   name "C"/"POSIX" load their blob files like any other locale.
 //   dir          from FAST_IO_LOCALE_PATH env, else the compile-time
 //                FAST_IO_I18N_LOCALE_DIR macro, else /usr/lib/fast_io/locale.
+FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast_io::u8string_view name)
+	FAST_IO_HERBCEPTIONS_THROWS;
+
+// explicit-charset form for programmatic callers
 FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast_io::u8string_view name,
 									 locale_charset enc)
 	FAST_IO_HERBCEPTIONS_THROWS;

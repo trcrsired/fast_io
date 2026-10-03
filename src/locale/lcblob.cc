@@ -151,15 +151,55 @@ inline ::fast_io::u8string default_locale_name_win32() FAST_IO_HERBCEPTIONS_THRO
 
 #endif
 
-// "" -> system default; normalize '-' -> '_' (BCP-47 vs posix spellings)
-// and drop a trailing ".codeset" — charset is selected by enc, not the name
-inline ::fast_io::u8string resolve_locale_name(::fast_io::u8string_view name) FAST_IO_HERBCEPTIONS_THROWS
+// codeset text -> blob charset; normalized: lowercase, '-'/'_' dropped
+// (UTF-8, utf-16, UTF_32LE ...). Files are little-endian only.
+inline void parse_codeset(::fast_io::u8string_view cs, lcblob::blob_charset &out) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::u8string out;
+	char buf[8];
+	::std::size_t n{};
+	for (char8_t ch : cs)
+	{
+		if (ch == u8'-' || ch == u8'_' || ch == u8' ')
+		{
+			continue;
+		}
+		if (n >= sizeof(buf))
+		{
+			throw_einval();
+		}
+		buf[n++] = static_cast<char>(ch >= u8'A' && ch <= u8'Z' ? ch + 0x20 : ch);
+	}
+	::std::string_view sv{buf, n};
+	if (sv == "utf8")
+	{
+		out = lcblob::blob_charset::utf8;
+	}
+	else if (sv == "utf16" || sv == "utf16le")
+	{
+		out = lcblob::blob_charset::utf16;
+	}
+	else if (sv == "utf32" || sv == "utf32le")
+	{
+		out = lcblob::blob_charset::utf32;
+	}
+	else
+	{
+		throw_einval();
+	}
+}
+
+// "" -> system default. Parses the standard
+// lang[_TERRITORY][.codeset][@modifier] form: '-' -> '_' (BCP-47 vs posix
+// spellings), codeset is normalized into out_cs (absent -> utf8), the
+// modifier stays attached to the file basename.
+inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
+								lcblob::blob_charset &out_cs) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::u8string raw;
 	if (name.empty())
 	{
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-		out = default_locale_name_win32();
+		raw = default_locale_name_win32();
 #else
 		char const *env{};
 		for (char const *key : {"L10N", "LC_ALL", "LANG"})
@@ -172,34 +212,48 @@ inline ::fast_io::u8string resolve_locale_name(::fast_io::u8string_view name) FA
 		}
 		if (env == nullptr)
 		{
-			out.append(u8"C", 1);
+			raw.append(u8"C", 1);
 		}
 		else
 		{
 			auto *e8{reinterpret_cast<char8_t const *>(env)};
-			out.append(e8, ::std::char_traits<char>::length(env));
+			raw.append(e8, ::std::char_traits<char>::length(env));
 		}
 #endif
 	}
 	else
 	{
-		out.append(name.data(), name.size());
+		raw.append(name.data(), name.size());
 	}
-	for (::std::size_t i{}, n{out.size()}; i < n; ++i)
+	::std::size_t n{raw.size()};
+	::std::size_t mod{n}, dot{n};
+	for (::std::size_t i{}; i < n; ++i)
 	{
-		char8_t ch{out.data()[i]};
+		char8_t ch{raw.data()[i]};
+		if (ch == u8'@' && mod == n)
+		{
+			mod = i;
+		}
+		else if (ch == u8'.' && dot == n && mod == n)
+		{
+			dot = i;
+		}
+	}
+	out_cs = lcblob::blob_charset::utf8; // no codeset -> utf8
+	if (dot != n)
+	{
+		parse_codeset(::fast_io::u8string_view{raw.data() + dot + 1, mod - dot - 1}, out_cs);
+	}
+	out.append(raw.data(), dot == n ? mod : dot); // base name
+	out.append(raw.data() + mod, n - mod);		  // @modifier, if any
+	for (char8_t &ch : out)
+	{
 		if (ch == u8'-')
 		{
-			out.data()[i] = u8'_';
-		}
-		else if (ch == u8'.')
-		{
-			out.resize(i); // drop .codeset
-			break;
+			ch = u8'_';
 		}
 	}
 	check_name(::fast_io::u8string_view{out.data(), out.size()});
-	return out;
 }
 
 inline ::fast_io::u8string_view locale_dir() noexcept
@@ -224,32 +278,32 @@ inline ::fast_io::u8string_view locale_dir() noexcept
 
 } // namespace details
 
-FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast_io::u8string_view name,
-																		 locale_charset enc)
-	FAST_IO_HERBCEPTIONS_THROWS
+namespace details
 {
-	::fast_io::u8string lname{details::resolve_locale_name(name)};
-	char8_t const *enc_c{lcblob::blob_charset_name(
-		static_cast<lcblob::blob_charset>(static_cast<::std::uint_least8_t>(enc)))};
+
+inline ::fast_io::native_file_loader const *load_blob_impl(::fast_io::u8string_view lname,
+														   lcblob::blob_charset cs) FAST_IO_HERBCEPTIONS_THROWS
+{
+	char8_t const *enc_c{lcblob::blob_charset_name(cs)};
 	::fast_io::u8string_view enc_name{enc_c, ::std::char_traits<char8_t>::length(enc_c)};
-	::fast_io::u8string_view dir{details::locale_dir()};
+	::fast_io::u8string_view dir{locale_dir()};
 	if (dir.empty())
 	{
-		details::throw_einval();
+		throw_einval();
 	}
 	// key = the resolved file path
 	::fast_io::u8string path{::fast_io::u8concat_fast_io(dir, u8"/", lname, u8".", enc_name, u8".bin")};
 	::fast_io::u8string_view key{path.data(), path.size()};
 
-	if (auto it{details::thread_cache().find_key(key)}; it != details::thread_cache().end())
+	if (auto it{thread_cache().find_key(key)}; it != thread_cache().end())
 	{
 		return it->mapped();
 	}
 
-	details::loader_ptr p;
+	loader_ptr p;
 	{
-		details::cache_guard g;
-		auto &gm{details::global_cache()};
+		cache_guard g;
+		auto &gm{global_cache()};
 		if (auto it{gm.find_key(key)}; it != gm.end())
 		{
 			p = it->mapped();
@@ -272,8 +326,30 @@ FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast
 			gm.insert_key(key, p);
 		}
 	}
-	details::thread_cache().insert_key(key, p);
+	thread_cache().insert_key(key, p);
 	return p;
+}
+
+} // namespace details
+
+FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast_io::u8string_view name)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::u8string lname;
+	lcblob::blob_charset cs{};
+	details::resolve_locale_name(name, lname, cs);
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs);
+}
+
+FAST_IO_I18N_EXPORT ::fast_io::native_file_loader const *load_locale_blob(::fast_io::u8string_view name,
+																		 locale_charset enc)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::fast_io::u8string lname;
+	lcblob::blob_charset cs_ignored{};
+	details::resolve_locale_name(name, lname, cs_ignored);
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()},
+								 static_cast<lcblob::blob_charset>(static_cast<::std::uint_least8_t>(enc)));
 }
 
 } // namespace fast_io::i18n
