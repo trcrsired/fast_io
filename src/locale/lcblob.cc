@@ -29,6 +29,7 @@
 // Windows. "C"/"POSIX" are loaded from their blob files like any locale.
 
 #include <fast_io.h>
+#include <fast_io_unit/gb18030.h>
 #include <fast_io_dsal/string.h>
 #include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/str_swiss_map.h>
@@ -70,48 +71,43 @@ struct locale_entry
 	}
 	::fast_io::native_file_loader loader;
 	::fast_io::i18n::locale loc;
-	::fast_io::u8string ovr_storage;
-	::fast_io::vector<::std::uint_least32_t> ovr_idx;
+	::fast_io::u8string ovr_storage[lcblob::blob_charset_count];
+	::fast_io::vector<::std::uint_least32_t> ovr_idx[lcblob::blob_charset_count];
 };
 
-using entry_ptr = locale_entry const *;
-using cache_map = ::fast_io::u8str_swiss_map<entry_ptr>;
+// entries are allocated once through our own allocator and leaked —
+// locale data is never unloaded. The maps only keep pointers to them,
+// so a rehash can never invalidate anything a caller was handed.
+using cache_map = ::fast_io::u8str_swiss_map<::fast_io::i18n::locale const *>;
 
-// leaked globals — no destruction-order hazards, cache lives for the
-// process lifetime by design
-inline cache_map &global_cache() noexcept
+// allocate + construct one object through fast_io's own allocator —
+// cache entries are never freed by design
+template <typename T, typename... Args>
+inline T *lc_new(Args &&...args) FAST_IO_HERBCEPTIONS_THROWS
 {
-	static cache_map *m{new cache_map{}};
-	return *m;
+	return new (::fast_io::native_typed_global_allocator<T>::allocate(1))
+		T{::fast_io::freestanding::forward<Args>(args)...};
 }
 
-inline ::fast_io::native_mutex &global_cache_lock() noexcept
-{
-	static ::fast_io::native_mutex *m{new ::fast_io::native_mutex{}};
-	return *m;
-}
+// plain globals. TLS first (no lock), then the process-wide map.
+::fast_io::native_mutex global_mtx;
+cache_map global_map;
+thread_local cache_map tls_map;
 
 struct cache_guard
 {
-	inline cache_guard() FAST_IO_HERBCEPTIONS_THROWS
+	inline explicit cache_guard(::fast_io::native_mutex &m) FAST_IO_HERBCEPTIONS_THROWS : mtx{m}
 	{
-		global_cache_lock().lock();
+		mtx.lock();
 	}
 	inline ~cache_guard() noexcept
 	{
-		global_cache_lock().unlock();
+		mtx.unlock();
 	}
+	::fast_io::native_mutex &mtx;
 	cache_guard(cache_guard const &) = delete;
 	cache_guard &operator=(cache_guard const &) = delete;
 };
-
-// lazily-allocated, intentionally leaked: safe to touch from other TLS
-// destructors and never torn down
-inline cache_map &thread_cache() noexcept
-{
-	static thread_local cache_map *m{new cache_map{}};
-	return *m;
-}
 
 [[noreturn]] inline void throw_einval() FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -184,11 +180,21 @@ constexpr ::std::uint_least32_t fld_key(::std::uint_least32_t cat, ::std::uint_l
 	return (cat << 8) | f;
 }
 
+// payload encoding of one section slot for the override segment
+enum class ovr_enc : ::std::uint_least8_t
+{
+	utf8,
+	utf16,
+	utf32,
+	gb18030,
+	utf_ebcdic,
+};
+
 struct ovr_builder
 {
 	::fast_io::u8string seg;
 	::fast_io::vector<::std::uint_least32_t> idx;
-	lcblob::blob_charset cs;
+	ovr_enc enc;
 
 	inline void put_leb(::std::uint_least64_t v) noexcept
 	{
@@ -202,13 +208,13 @@ struct ovr_builder
 		auto *e{::fast_io::details::pr_rsv_leb128_impl(buf, v)};
 		seg.append(buf, static_cast<::std::size_t>(e - buf));
 	}
-	// utf-16 registry text -> blob charset payload; returns segment offset
+	// utf-16 registry text -> section payload bytes; returns segment offset
 	inline ::std::uint_least32_t put_u16(char16_t const *s, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	{
 		::std::uint_least32_t const off{static_cast<::std::uint_least32_t>(seg.size())};
-		switch (cs)
+		switch (enc)
 		{
-		case lcblob::blob_charset::utf16:
+		case ovr_enc::utf16:
 		{
 			for (::std::size_t i{}; i < n; ++i)
 			{
@@ -218,7 +224,7 @@ struct ovr_builder
 			}
 			break;
 		}
-		case lcblob::blob_charset::utf32:
+		case ovr_enc::utf32:
 		{
 			::fast_io::u32string t{::fast_io::u32concat_fast_io(
 				::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
@@ -232,6 +238,24 @@ struct ovr_builder
 					seg.push_back(static_cast<char8_t>(u >> (k * 8)));
 				}
 			}
+			break;
+		}
+		case ovr_enc::gb18030:
+		{
+			::fast_io::string t{::fast_io::concat_fast_io(
+				::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+										 ::fast_io::encoding_scheme::gb18030>(
+					::fast_io::basic_io_scatter_t<char16_t>{s, n}))};
+			seg.append(reinterpret_cast<char8_t const *>(t.data()), t.size());
+			break;
+		}
+		case ovr_enc::utf_ebcdic:
+		{
+			::fast_io::string t{::fast_io::concat_fast_io(
+				::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+										 ::fast_io::encoding_scheme::utf_ebcdic>(
+					::fast_io::basic_io_scatter_t<char16_t>{s, n}))};
+			seg.append(reinterpret_cast<char8_t const *>(t.data()), t.size());
 			break;
 		}
 		default:
@@ -361,41 +385,9 @@ inline bool parse_reg_int(char16_t const *s, ::std::size_t n, ::std::int_least64
 	return true;
 }
 
-inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
-	FAST_IO_HERBCEPTIONS_THROWS
+// fill one charset's override segment from the open International key
+inline void fill_ovr_charset(ovr_builder &b, intl_key &key) FAST_IO_HERBCEPTIONS_THROWS
 {
-	// overrides apply only to the user's own locale
-	::fast_io::u8string d{default_locale_name_win32()};
-	if (d.size() != lname.size())
-	{
-		return;
-	}
-	{
-		bool eq{true};
-		for (::std::size_t i{}; i < d.size(); ++i)
-		{
-			char8_t c{d[i]};
-			if (c == u8'-')
-			{
-				c = u8'_';
-			}
-			if (c != lname.data()[i])
-			{
-				eq = false;
-				break;
-			}
-		}
-		if (!eq)
-		{
-			return;
-		}
-	}
-	intl_key key;
-	if (key.hkey == 0)
-	{
-		return;
-	}
-	ovr_builder b{{}, {}, e.loc.charset};
 	char16_t buf[160];
 	constexpr ::std::uint_least32_t cap{160};
 	::std::uint_least32_t n{};
@@ -407,14 +399,14 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 		}
 	}};
 	// LC_NUMERIC / LC_MONETARY strings
-	S(u"sDecimal", lcblob::cat_numeric, 0);		 // decimal_point
-	S(u"sThousand", lcblob::cat_numeric, 1);		 // thousands_sep
-	S(u"sCurrency", lcblob::cat_monetary, 1);		 // currency_symbol
-	S(u"sMonDecimalSep", lcblob::cat_monetary, 2); // mon_decimal_point
-	S(u"sMonThousandSep", lcblob::cat_monetary, 3);
-	S(u"sPositiveSign", lcblob::cat_monetary, 5);
-	S(u"sNegativeSign", lcblob::cat_monetary, 6);
-	S(u"sCountry", lcblob::cat_address, 1); // country_name
+	S(u"sDecimal", lcblob::lc_numeric, 0);		 // decimal_point
+	S(u"sThousand", lcblob::lc_numeric, 1);		 // thousands_sep
+	S(u"sCurrency", lcblob::lc_monetary, 1);		 // currency_symbol
+	S(u"sMonDecimalSep", lcblob::lc_monetary, 2); // mon_decimal_point
+	S(u"sMonThousandSep", lcblob::lc_monetary, 3);
+	S(u"sPositiveSign", lcblob::lc_monetary, 5);
+	S(u"sNegativeSign", lcblob::lc_monetary, 6);
+	S(u"sCountry", lcblob::lc_address, 1); // country_name
 	// grouping byte lists: "3;0" -> {3} (win32 trailing 0 = repeat last)
 	auto G{[&](char16_t const *vn, ::std::uint_least32_t cat, ::std::uint_least32_t f)
 			   FAST_IO_HERBCEPTIONS_THROWS {
@@ -457,8 +449,8 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 		}
 		b.add_bytes(cat, f, gb, m);
 	}};
-	G(u"sGrouping", lcblob::cat_numeric, 2);
-	G(u"sMonGrouping", lcblob::cat_monetary, 4);
+	G(u"sGrouping", lcblob::lc_numeric, 2);
+	G(u"sMonGrouping", lcblob::lc_monetary, 4);
 	// integers
 	::std::int_least64_t v{};
 	auto I{[&](char16_t const *vn, ::std::int_least64_t &out) noexcept {
@@ -466,25 +458,25 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 	}};
 	if (I(u"iMeasure", v) && (v == 0 || v == 1))
 	{
-		b.add_int(lcblob::cat_measurement, 0, v + 1); // win32 0/1 -> glibc 1/2
+		b.add_int(lcblob::lc_measurement, 0, v + 1); // win32 0/1 -> glibc 1/2
 	}
 	if (I(u"iDigits", v))
 	{
-		b.add_int(lcblob::cat_monetary, 8, v); // frac_digits
+		b.add_int(lcblob::lc_monetary, 8, v); // frac_digits
 	}
 	if (I(u"iCurrDigits", v))
 	{
-		b.add_int(lcblob::cat_monetary, 7, v); // int_frac_digits
+		b.add_int(lcblob::lc_monetary, 7, v); // int_frac_digits
 	}
 	if (I(u"iCurrency", v) && v >= 0 && v <= 3)
 	{
 		// 0 "$1.1" 1 "1.1$" 2 "$ 1.1" 3 "1.1 $"
 		::std::int_least64_t const prec{v == 0 || v == 2};
 		::std::int_least64_t const sep{v >= 2};
-		b.add_int(lcblob::cat_monetary, 9, prec);	 // p_cs_precedes
-		b.add_int(lcblob::cat_monetary, 10, sep);	 // p_sep_by_space
-		b.add_int(lcblob::cat_monetary, 13, prec); // int_*
-		b.add_int(lcblob::cat_monetary, 14, sep);
+		b.add_int(lcblob::lc_monetary, 9, prec);	 // p_cs_precedes
+		b.add_int(lcblob::lc_monetary, 10, sep);	 // p_sep_by_space
+		b.add_int(lcblob::lc_monetary, 13, prec); // int_*
+		b.add_int(lcblob::lc_monetary, 14, sep);
 	}
 	if (I(u"iNegCurr", v) && v >= 0 && v <= 15)
 	{
@@ -507,20 +499,20 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 			{1, 1, 0}, // ($ 1.1)
 			{0, 1, 0}, // (1.1 $)
 		};
-		b.add_int(lcblob::cat_monetary, 11, tab[v][0]); // n_cs_precedes
-		b.add_int(lcblob::cat_monetary, 12, tab[v][1]); // n_sep_by_space
-		b.add_int(lcblob::cat_monetary, 18, tab[v][2]); // n_sign_posn
-		b.add_int(lcblob::cat_monetary, 15, tab[v][0]); // int_*
-		b.add_int(lcblob::cat_monetary, 16, tab[v][1]);
-		b.add_int(lcblob::cat_monetary, 20, tab[v][2]);
+		b.add_int(lcblob::lc_monetary, 11, tab[v][0]); // n_cs_precedes
+		b.add_int(lcblob::lc_monetary, 12, tab[v][1]); // n_sep_by_space
+		b.add_int(lcblob::lc_monetary, 18, tab[v][2]); // n_sign_posn
+		b.add_int(lcblob::lc_monetary, 15, tab[v][0]); // int_*
+		b.add_int(lcblob::lc_monetary, 16, tab[v][1]);
+		b.add_int(lcblob::lc_monetary, 20, tab[v][2]);
 	}
 	if (I(u"iFirstDayOfWeek", v) && v >= 0 && v <= 6)
 	{
-		b.add_int(lcblob::cat_time, 18, v + 1); // win32 0=Mon..6=Sun -> 1..7
+		b.add_int(lcblob::lc_time, 18, v + 1); // win32 0=Mon..6=Sun -> 1..7
 	}
 	if (I(u"iFirstWorkday", v) && v >= 0 && v <= 6)
 	{
-		b.add_int(lcblob::cat_time, 19, v + 1);
+		b.add_int(lcblob::lc_time, 19, v + 1);
 	}
 	if (I(u"iPaperSize", v))
 	{
@@ -545,8 +537,8 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 		}
 		if (hw != 0)
 		{
-			b.add_int(lcblob::cat_paper, 0, hw / 1000);
-			b.add_int(lcblob::cat_paper, 1, hw % 1000);
+			b.add_int(lcblob::lc_paper, 0, hw / 1000);
+			b.add_int(lcblob::lc_paper, 1, hw % 1000);
 		}
 	}
 	// am/pm designators — one strlist slot, so it is overridden whole
@@ -557,24 +549,84 @@ inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
 		bool const hpm{key.get(u"s2359", pm, cap, npm)};
 		if (ham || hpm)
 		{
-			b.add_strlist2(lcblob::cat_time, 11, am, ham ? nam : 0, pm, hpm ? npm : 0);
+			b.add_strlist2(lcblob::lc_time, 11, am, ham ? nam : 0, pm, hpm ? npm : 0);
 		}
 	}
-	if (b.idx.empty())
+}
+
+inline void fill_user_overrides(locale_entry &e, ::fast_io::u8string_view lname)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	// overrides apply only to the user's own locale
+	::fast_io::u8string d{default_locale_name_win32()};
+	if (d.size() != lname.size())
 	{
 		return;
 	}
-	e.ovr_storage = static_cast<::fast_io::u8string &&>(b.seg);
-	e.ovr_idx = static_cast<::fast_io::vector<::std::uint_least32_t> &&>(b.idx);
+	{
+		bool eq{true};
+		for (::std::size_t i{}; i < d.size(); ++i)
+		{
+			char8_t c{d[i]};
+			if (c == u8'-')
+			{
+				c = u8'_';
+			}
+			if (c != lname.data()[i])
+			{
+				eq = false;
+				break;
+			}
+		}
+		if (!eq)
+		{
+			return;
+		}
+	}
+	intl_key key;
+	if (key.hkey == 0)
+	{
+		return;
+	}
+	// the same registry values serialized per section — every section
+	// of the blob sees user settings in its own encoding
+	for (::std::size_t c{}; c < lcblob::blob_charset_count; ++c)
+	{
+		ovr_enc enc{ovr_enc::utf8};
+		switch (static_cast<lcblob::blob_charset>(c))
+		{
+		case lcblob::blob_charset::utf16:
+			enc = ovr_enc::utf16;
+			break;
+		case lcblob::blob_charset::utf32:
+			enc = ovr_enc::utf32;
+			break;
+		case lcblob::blob_charset::charset:
+			enc = e.loc.codeset == lcblob::locale_charset::gb18030 ? ovr_enc::gb18030
+				  : e.loc.codeset == lcblob::locale_charset::utf_ebcdic	? ovr_enc::utf_ebcdic
+																		: ovr_enc::utf8;
+			break;
+		default:
+			break;
+		}
+		ovr_builder b{{}, {}, enc};
+		fill_ovr_charset(b, key);
+		if (!b.idx.empty())
+		{
+			e.ovr_storage[c] = static_cast<::fast_io::u8string &&>(b.seg);
+			e.ovr_idx[c] = static_cast<::fast_io::vector<::std::uint_least32_t> &&>(b.idx);
+		}
+	}
 }
 
 #endif
 
-// codeset text -> blob charset; normalized: lowercase, '-'/'_' dropped
-// (UTF-8, utf-16, UTF_32LE ...). Files are little-endian only.
-inline void parse_codeset(::fast_io::u8string_view cs, lcblob::blob_charset &out) FAST_IO_HERBCEPTIONS_THROWS
+// codeset text -> locale charset; normalized: lowercase, '-'/'_'/' '
+// dropped (UTF-8, gb18030, UTF_EBCDIC ...). Only the three supported
+// codesets are accepted.
+inline void parse_codeset(::fast_io::u8string_view cs, lcblob::locale_charset &out) FAST_IO_HERBCEPTIONS_THROWS
 {
-	char buf[8];
+	char buf[16];
 	::std::size_t n{};
 	for (char8_t ch : cs)
 	{
@@ -588,18 +640,18 @@ inline void parse_codeset(::fast_io::u8string_view cs, lcblob::blob_charset &out
 		}
 		buf[n++] = static_cast<char>(ch >= u8'A' && ch <= u8'Z' ? ch + 0x20 : ch);
 	}
-	::std::string_view sv{buf, n};
+	::fast_io::string_view sv{buf, n};
 	if (sv == "utf8")
 	{
-		out = lcblob::blob_charset::utf8;
+		out = lcblob::locale_charset::utf8;
 	}
-	else if (sv == "utf16" || sv == "utf16le")
+	else if (sv == "gb18030")
 	{
-		out = lcblob::blob_charset::utf16;
+		out = lcblob::locale_charset::gb18030;
 	}
-	else if (sv == "utf32" || sv == "utf32le")
+	else if (sv == "utfebcdic")
 	{
-		out = lcblob::blob_charset::utf32;
+		out = lcblob::locale_charset::utf_ebcdic;
 	}
 	else
 	{
@@ -612,7 +664,8 @@ inline void parse_codeset(::fast_io::u8string_view cs, lcblob::blob_charset &out
 // spellings), codeset is normalized into out_cs (absent -> utf8), the
 // modifier stays attached to the file basename.
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
-								lcblob::blob_charset &out_cs) FAST_IO_HERBCEPTIONS_THROWS
+								lcblob::locale_charset &out_cs,
+								lcblob::locale_charset const *enc = nullptr) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string raw;
 	if (name.empty())
@@ -636,13 +689,20 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 		else
 		{
 			auto *e8{reinterpret_cast<char8_t const *>(env)};
-			raw.append(e8, ::std::char_traits<char>::length(env));
+			raw.append(e8, ::fast_io::cstr_len(env));
 		}
 #endif
 	}
 	else
 	{
 		raw.append(name.data(), name.size());
+	}
+	for (char8_t &ch : raw) // '-' -> '_' (BCP-47 vs posix spellings)
+	{
+		if (ch == u8'-')
+		{
+			ch = u8'_';
+		}
 	}
 	::std::size_t n{raw.size()};
 	::std::size_t mod{n}, dot{n};
@@ -658,20 +718,32 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 			dot = i;
 		}
 	}
-	out_cs = lcblob::blob_charset::utf8; // no codeset -> utf8
+	out_cs = lcblob::locale_charset::utf8; // no codeset -> UTF-8
 	if (dot != n)
 	{
 		parse_codeset(::fast_io::u8string_view{raw.data() + dot + 1, mod - dot - 1}, out_cs);
 	}
-	out.append(raw.data(), dot == n ? mod : dot); // base name
-	out.append(raw.data() + mod, n - mod);		  // @modifier, if any
-	for (char8_t &ch : out)
+	if (enc != nullptr)
 	{
-		if (ch == u8'-')
-		{
-			ch = u8'_';
-		}
+		out_cs = *enc; // explicit codeset wins over the name's
 	}
+	::std::size_t const base_end{dot == n ? mod : dot};
+	// C and POSIX are the same UTF-8 locale — canonical name POSIX.UTF-8
+	if ((base_end == 1 && raw.data()[0] == u8'C') ||
+		(base_end == 5 && raw.data()[0] == u8'P' && raw.data()[1] == u8'O' &&
+		 raw.data()[2] == u8'S' && raw.data()[3] == u8'I' && raw.data()[4] == u8'X'))
+	{
+		out.append(u8"POSIX.UTF-8", 11);
+		out_cs = lcblob::locale_charset::utf8;
+	}
+	else
+	{
+		auto const *csn{lcblob::locale_charset_name(out_cs)};
+		out.append(raw.data(), base_end); // base name
+		out.push_back(u8'.');
+		out.append(csn, ::fast_io::cstr_len(csn)); // canonical codeset
+	}
+	out.append(raw.data() + mod, n - mod); // @modifier, if any
 	check_name(::fast_io::u8string_view{out.data(), out.size()});
 }
 
@@ -681,7 +753,7 @@ inline ::fast_io::u8string_view locale_dir() noexcept
 	if (char const *v{lc_getenv("FAST_IO_LOCALE_PATH")}; v != nullptr && *v != 0)
 	{
 		return ::fast_io::u8string_view{reinterpret_cast<char8_t const *>(v),
-										::std::char_traits<char>::length(v)};
+										::fast_io::cstr_len(v)};
 	}
 #endif
 #ifdef FAST_IO_I18N_LOCALE_DIR
@@ -701,29 +773,26 @@ namespace details
 {
 
 inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view lname,
-													 lcblob::blob_charset cs) FAST_IO_HERBCEPTIONS_THROWS
+													 lcblob::locale_charset cs) FAST_IO_HERBCEPTIONS_THROWS
 {
-	char8_t const *enc_c{lcblob::blob_charset_name(cs)};
-	::fast_io::u8string_view enc_name{enc_c, ::std::char_traits<char8_t>::length(enc_c)};
 	::fast_io::u8string_view dir{locale_dir()};
 	if (dir.empty())
 	{
 		throw_einval();
 	}
-	// key = the resolved file path
-	::fast_io::u8string path{::fast_io::u8concat_fast_io(dir, u8"/", lname, u8".", enc_name, u8".bin")};
+	// one file per locale carries every charset — key = resolved path
+	::fast_io::u8string path{::fast_io::u8concat_fast_io(dir, u8"/", lname, u8".bin")};
 	::fast_io::u8string_view key{path.data(), path.size()};
 
-	if (auto it{thread_cache().find_key(key)}; it != thread_cache().end())
+	if (auto it{tls_map.find_key(key)}; it != tls_map.end())
 	{
-		return __builtin_addressof(it->mapped()->loc);
+		return it->mapped();
 	}
 
-	locale_entry const *p;
+	::fast_io::i18n::locale const *p;
 	{
-		cache_guard g;
-		auto &gm{global_cache()};
-		if (auto it{gm.find_key(key)}; it != gm.end())
+		cache_guard g{global_mtx};
+		if (auto it{global_map.find_key(key)}; it != global_map.end())
 		{
 			p = it->mapped();
 		}
@@ -736,11 +805,31 @@ inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view ln
 			::fast_io::u8string_view bv{reinterpret_cast<char8_t const *>(loader.data()),
 										loader.size()};
 			lcblob::blob_header const hdr{lcblob::read_header(bv)};
-			auto *entry{new locale_entry(static_cast<::fast_io::native_file_loader &&>(loader))};
+			lcblob::section_header secs[lcblob::blob_charset_count];
+			for (::std::size_t c{}; c < lcblob::blob_charset_count; ++c)
+			{
+				if (hdr.sec_rva[c] == 0)
+				{
+					continue;
+				}
+				secs[c] = lcblob::read_section_header(bv.data() + hdr.sec_rva[c],
+													hdr.sec_size[c]);
+			}
+			auto *entry{lc_new<locale_entry>(static_cast<::fast_io::native_file_loader &&>(loader))};
 			entry->loc.header = hdr;
 			entry->loc.blob_begin = bv.data();
 			entry->loc.blob_end = bv.data() + bv.size();
-			entry->loc.charset = cs;
+			entry->loc.codeset = cs;
+			for (::std::size_t c{}; c < lcblob::blob_charset_count; ++c)
+			{
+				if (hdr.sec_rva[c] == 0)
+				{
+					continue;
+				}
+				entry->loc.sec_begin[c] = bv.data() + hdr.sec_rva[c];
+				entry->loc.sec_end[c] = bv.data() + hdr.sec_rva[c] + hdr.sec_size[c];
+				entry->loc.sec_catdir[c] = secs[c].cat_dir;
+			}
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
 			FAST_IO_HERBCEPTIONS_TRY
 			{
@@ -759,19 +848,23 @@ inline ::fast_io::i18n::locale const *load_blob_impl(::fast_io::u8string_view ln
 			}
 #endif
 #endif
-			if (!entry->ovr_idx.empty())
+			for (::std::size_t c{}; c < lcblob::blob_charset_count; ++c)
 			{
-				entry->loc.ovr_begin = entry->ovr_storage.data();
-				entry->loc.ovr_end = entry->ovr_storage.data() + entry->ovr_storage.size();
-				entry->loc.ovr_index = entry->ovr_idx.data();
-				entry->loc.ovr_count = static_cast<::std::uint_least32_t>(entry->ovr_idx.size() / 2);
+				if (!entry->ovr_idx[c].empty())
+				{
+					entry->loc.ovr_begin[c] = entry->ovr_storage[c].data();
+					entry->loc.ovr_end[c] = entry->ovr_storage[c].data() + entry->ovr_storage[c].size();
+					entry->loc.ovr_index[c] = entry->ovr_idx[c].data();
+					entry->loc.ovr_count[c] =
+						static_cast<::std::uint_least32_t>(entry->ovr_idx[c].size() / 2);
+				}
 			}
-			p = entry;
-			gm.insert_key(key, p);
+			p = __builtin_addressof(entry->loc);
+			global_map.insert_key(key, p);
 		}
 	}
-	thread_cache().insert_key(key, p);
-	return __builtin_addressof(p->loc);
+	tls_map.insert_key(key, p);
+	return p;
 }
 
 } // namespace details
@@ -780,20 +873,19 @@ FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string lname;
-	lcblob::blob_charset cs{};
+	lcblob::locale_charset cs{};
 	details::resolve_locale_name(name, lname, cs);
 	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs);
 }
 
 FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name,
-																   locale_charset enc)
+																   lcblob::locale_charset enc)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string lname;
-	lcblob::blob_charset cs_ignored{};
-	details::resolve_locale_name(name, lname, cs_ignored);
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()},
-								 static_cast<lcblob::blob_charset>(static_cast<::std::uint_least8_t>(enc)));
+	lcblob::locale_charset cs{};
+	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc));
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()}, cs);
 }
 
 } // namespace fast_io::i18n

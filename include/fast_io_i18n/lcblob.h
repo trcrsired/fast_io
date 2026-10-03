@@ -8,17 +8,23 @@
 //
 // The container is flat, position-independent and ARCHITECTURE-NEUTRAL:
 // every reference is an RVA offset, every numeric field is LEB128, and the
-// two fixed-width fields (u32 magic, u32 RVA table entries) are stored
+// fixed-width fields (u32 magic, u32 RVA table entries) are stored
 // little-endian. One .bin serves 32/64-bit and all platforms alike.
 //
-// Layout: [header][cat_dir u32*12][pool][slot tables][records]
+// One file carries ALL charsets — no transcoding ever happens at runtime.
 //
-//   header:   u32 magic 'FCL1' | uleb version | uleb total_size | uleb flags
-//             | strref name | strref encoding | uleb cat_dir_rva
-//   cat_dir:  u32 rva per category (0 = category absent)
-//   pool:     string / program / list-body bytes (strref targets)
-//   slot tbl: u32 rva per field (0 = slot absent)
-//   records:  uleb tag | payload
+// Layout: [outer header][section dir][utf8 section][utf16][utf32]
+//
+//   outer header: u32 magic 'FCL1' | uleb version | uleb total_size | uleb flags
+//                 | strref name | strref encoding   (utf8; 'encoding' is the
+//                 |                               locale's declared codeset
+//                 |                               for char-typed text)
+//                 | (uleb rva | uleb size) * 3      (0 rva = section absent)
+//   section:      a complete blob of the charset — same body layout:
+//                 u32 magic | uleb version | uleb total_size | uleb flags
+//                 | strref name | strref encoding | uleb cat_dir_rva
+//                 | [cat_dir u32*12][pool][slot tables][records]
+//                 all RVAs inside a section are relative to the section base.
 
 namespace fast_io::i18n
 {
@@ -32,19 +38,19 @@ inline constexpr ::std::uint_least64_t blob_version{1};
 // categories — fixed ids
 enum lc_cat : ::std::uint_least32_t
 {
-	cat_identification = 0,
-	cat_ctype = 1,
-	cat_collate = 2,
-	cat_time = 3,
-	cat_numeric = 4,
-	cat_monetary = 5,
-	cat_messages = 6,
-	cat_paper = 7,
-	cat_name = 8,
-	cat_address = 9,
-	cat_telephone = 10,
-	cat_measurement = 11,
-	cat_count = 12,
+	lc_identification = 0,
+	lc_ctype = 1,
+	lc_collate = 2,
+	lc_time = 3,
+	lc_numeric = 4,
+	lc_monetary = 5,
+	lc_messages = 6,
+	lc_paper = 7,
+	lc_name = 8,
+	lc_address = 9,
+	lc_telephone = 10,
+	lc_measurement = 11,
+	lc_cat_count = 12,
 };
 
 enum class slot_tag : ::std::uint_least8_t
@@ -105,6 +111,8 @@ inline constexpr field_def numeric_fields[]{
 	{"grouping", slot_tag::bytes},
 };
 
+// LC_NUMERIC field indices — fixed positions in the schema above:
+// 0 decimal_point, 1 thousands_sep, 2 grouping
 inline constexpr field_def monetary_fields[]{
 	{"int_curr_symbol", slot_tag::string}, {"currency_symbol", slot_tag::string},
 	{"mon_decimal_point", slot_tag::string}, {"mon_thousands_sep", slot_tag::string},
@@ -158,7 +166,7 @@ struct cat_schema
 	char const *glibc_name;
 };
 
-inline constexpr cat_schema cat_schemas[cat_count]{
+inline constexpr cat_schema cat_schemas[lc_cat_count]{
 	{identification_fields, "LC_IDENTIFICATION"}, {ctype_fields, "LC_CTYPE"},
 	{collate_fields, "LC_COLLATE"},		  {time_fields, "LC_TIME"},
 	{numeric_fields, "LC_NUMERIC"},		  {monetary_fields, "LC_MONETARY"},
@@ -167,23 +175,38 @@ inline constexpr cat_schema cat_schemas[cat_count]{
 	{telephone_fields, "LC_TELEPHONE"},	  {measurement_fields, "LC_MEASUREMENT"},
 };
 
+// section selector. Slot charset is the locale's declared codeset view
+// for char (utf8 / gb18030 / utf_ebcdic — see header.encoding); it is
+// always present and aliases the utf8 section when the codeset IS utf8.
 enum class blob_charset : ::std::uint_least8_t
 {
-	utf8 = 0,
-	utf16 = 1, // LE
-	utf32 = 2, // LE
+	charset = 0,
+	utf8 = 1,
+	utf16 = 2, // LE
+	utf32 = 3, // LE
 };
 
-inline constexpr char8_t const *blob_charset_name(blob_charset cs) noexcept
+inline constexpr ::std::size_t blob_charset_count{4};
+
+// the codesets a locale file can declare for its char view — the only
+// three supported
+enum class locale_charset : ::std::uint_least8_t
+{
+	utf8 = 0,
+	gb18030 = 1,
+	utf_ebcdic = 2,
+};
+
+inline constexpr char8_t const *locale_charset_name(locale_charset cs) noexcept
 {
 	switch (cs)
 	{
-	case blob_charset::utf8:
-		return u8"utf8";
-	case blob_charset::utf16:
-		return u8"utf16";
+	case locale_charset::gb18030:
+		return u8"GB18030";
+	case locale_charset::utf_ebcdic:
+		return u8"UTF-EBCDIC";
 	default:
-		return u8"utf32";
+		return u8"UTF-8";
 	}
 }
 
@@ -210,6 +233,12 @@ inline char8_t const *read_leb(char8_t const *p, char8_t const *e, T &v) FAST_IO
 	return it;
 }
 
+// section sub-header — what a section's own blob header contributes
+struct section_header
+{
+	char8_t const *cat_dir{}; // -> u32[lc_cat_count] within the section
+};
+
 struct blob_header
 {
 	::std::uint_least64_t version{};
@@ -217,9 +246,53 @@ struct blob_header
 	::std::uint_least64_t flags{};
 	::fast_io::u8string_view name{};
 	::fast_io::u8string_view encoding{};
-	::std::uint_least64_t cat_dir_rva{};
-	char8_t const *cat_dir{}; // -> u32[cat_count]
+	::std::uint_least64_t sec_rva[blob_charset_count]{};
+	::std::uint_least64_t sec_size[blob_charset_count]{};
 };
+
+// one embedded section header — validates and returns its cat_dir
+inline section_header read_section_header(char8_t const *sec,
+										  ::std::uint_least64_t sec_size) FAST_IO_HERBCEPTIONS_THROWS
+{
+	if (sec_size < 4 || read_u32(sec) != magic)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	char8_t const *p{sec + 4};
+	char8_t const *e{sec + sec_size};
+	::std::uint_least64_t v{};
+	p = read_leb(p, e, v); // version
+	if (v > blob_version)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	p = read_leb(p, e, v); // total_size
+	if (v > sec_size)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	p = read_leb(p, e, v); // flags
+	::std::uint_least64_t rva{}, len{};
+	p = read_leb(p, e, rva); // name
+	p = read_leb(p, e, len);
+	if (rva > sec_size || len > sec_size - rva)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	p = read_leb(p, e, rva); // encoding
+	p = read_leb(p, e, len);
+	if (rva > sec_size || len > sec_size - rva)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	::std::uint_least64_t cat_dir_rva{};
+	p = read_leb(p, e, cat_dir_rva);
+	if (cat_dir_rva > sec_size || lc_cat_count * 4 > sec_size - cat_dir_rva)
+	{
+		::fast_io::throw_posix_error(EINVAL);
+	}
+	return {sec + cat_dir_rva};
+}
 
 inline blob_header read_header(::fast_io::u8string_view blob) FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -256,12 +329,20 @@ inline blob_header read_header(::fast_io::u8string_view blob) FAST_IO_HERBCEPTIO
 		::fast_io::throw_posix_error(EINVAL);
 	}
 	h.encoding = ::fast_io::u8string_view{blob.data() + rva, len};
-	p = read_leb(p, e, h.cat_dir_rva);
-	if (h.cat_dir_rva + cat_count * 4 > blob.size())
+	for (::std::size_t c{}; c < blob_charset_count; ++c)
 	{
-		::fast_io::throw_posix_error(EINVAL);
+		p = read_leb(p, e, rva);
+		p = read_leb(p, e, len);
+		if (rva != 0)
+		{
+			if (rva > blob.size() || len > blob.size() - rva || len < 4)
+			{
+				::fast_io::throw_posix_error(EINVAL);
+			}
+		}
+		h.sec_rva[c] = rva;
+		h.sec_size[c] = len;
 	}
-	h.cat_dir = blob.data() + h.cat_dir_rva;
 	return h;
 }
 
@@ -432,7 +513,7 @@ inline void era_elem(::fast_io::i18n::locale_slot const &s, ::std::uint_least64_
 inline ::std::ptrdiff_t field_index(::std::uint_least32_t cat,
 									::fast_io::u8string_view fname) noexcept
 {
-	if (cat >= cat_count)
+	if (cat >= lc_cat_count)
 	{
 		return -1;
 	}
@@ -483,126 +564,88 @@ inline ::std::ptrdiff_t field_index(::std::uint_least32_t cat,
 struct locale
 {
 	lcblob::blob_header header{};
-	lcblob::blob_charset charset{};
+	lcblob::locale_charset codeset{}; // the char-view codeset the caller asked for
 	char8_t const *blob_begin{};
 	char8_t const *blob_end{};
-	char8_t const *ovr_begin{};
-	char8_t const *ovr_end{};
-	::std::uint_least32_t const *ovr_index{};
-	::std::uint_least32_t ovr_count{};
+	// per-charset section spans + validated cat_dir (null = absent)
+	char8_t const *sec_begin[lcblob::blob_charset_count]{};
+	char8_t const *sec_end[lcblob::blob_charset_count]{};
+	char8_t const *sec_catdir[lcblob::blob_charset_count]{};
+	// per-charset override segment (Windows user settings)
+	char8_t const *ovr_begin[lcblob::blob_charset_count]{};
+	char8_t const *ovr_end[lcblob::blob_charset_count]{};
+	::std::uint_least32_t const *ovr_index[lcblob::blob_charset_count]{};
+	::std::uint_least32_t ovr_count[lcblob::blob_charset_count]{};
 };
 
-// view over the cached representation — a pointer plus inline accessors
-struct locale_view
+// where one slot record lives: rec is 'uleb tag | payload' (nullptr =
+// absent); string/strref RVAs inside the record are relative to
+// seg_begin, and seg_end bounds it. Feed rec/seg_begin/seg_end to
+// lcblob::read_slot / strlist_elem / era_elem.
+struct locale_field_ref
 {
-	::fast_io::i18n::locale const *l_{};
+	char8_t const *rec{};
+	char8_t const *seg_begin{};
+	char8_t const *seg_end{};
+};
 
-	inline constexpr locale_view() noexcept = default;
-	inline constexpr locale_view(::fast_io::i18n::locale const *p) noexcept : l_{p}
+// locate the slot record for (cat,fidx) in charset section cs:
+// user overrides first (Windows), then the blob section. Returns {}
+// when absent or out of range — no exceptions.
+inline locale_field_ref locale_field(::fast_io::i18n::locale const *l, lcblob::lc_cat cat,
+									 ::std::uint_least32_t fidx, lcblob::blob_charset cs) noexcept
+{
+	if (l == nullptr || static_cast<::std::uint_least32_t>(cat) >= lcblob::lc_cat_count ||
+		fidx >= lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size() ||
+		static_cast<::std::size_t>(cs) >= lcblob::blob_charset_count)
 	{
+		return {};
 	}
-	inline constexpr explicit operator bool() const noexcept
+	::std::size_t const ci{static_cast<::std::size_t>(cs)};
+	if (l->ovr_count[ci] != 0)
 	{
-		return l_ != nullptr;
-	}
-	inline constexpr ::fast_io::i18n::locale const *get() const noexcept
-	{
-		return l_;
-	}
-	inline constexpr ::fast_io::i18n::locale const &operator*() const noexcept
-	{
-		return *l_;
-	}
-	inline constexpr ::fast_io::i18n::locale const *operator->() const noexcept
-	{
-		return l_;
-	}
-	// raw byte views — for utf16/utf32 blobs the text is little-endian
-	// char units, not utf-8
-	inline constexpr ::fast_io::u8string_view name() const noexcept
-	{
-		return l_ == nullptr ? ::fast_io::u8string_view{} : l_->header.name;
-	}
-	inline constexpr ::fast_io::u8string_view encoding() const noexcept
-	{
-		return l_ == nullptr ? ::fast_io::u8string_view{} : l_->header.encoding;
-	}
-	inline constexpr lcblob::blob_charset charset() const noexcept
-	{
-		return l_ == nullptr ? lcblob::blob_charset::utf8 : l_->charset;
-	}
-	inline constexpr ::fast_io::u8string_view data() const noexcept
-	{
-		return l_ == nullptr ? ::fast_io::u8string_view{}
-							 : ::fast_io::u8string_view{l_->blob_begin,
-														static_cast<::std::size_t>(l_->blob_end - l_->blob_begin)};
-	}
-	inline constexpr ::std::size_t field_count(lcblob::lc_cat cat) const noexcept
-	{
-		return static_cast<::std::uint_least32_t>(cat) < lcblob::cat_count
-				   ? lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size()
-				   : 0;
-	}
-
-	// decode one field: user overrides first (Windows), then the blob.
-	// Absent fields return a slot with tag absent, not an error.
-	inline locale_slot field(lcblob::lc_cat cat,
-							 ::std::uint_least32_t fidx) const FAST_IO_HERBCEPTIONS_THROWS
-	{
-		if (l_ == nullptr || static_cast<::std::uint_least32_t>(cat) >= lcblob::cat_count ||
-			fidx >= lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size())
+		::std::uint_least32_t const key{(static_cast<::std::uint_least32_t>(cat) << 8) | fidx};
+		for (::std::uint_least32_t i{}; i < l->ovr_count[ci]; ++i)
 		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		if (l_->ovr_count != 0)
-		{
-			::std::uint_least32_t const key{(static_cast<::std::uint_least32_t>(cat) << 8) | fidx};
-			for (::std::uint_least32_t i{}; i < l_->ovr_count; ++i)
+			if (l->ovr_index[ci][i * 2] == key)
 			{
-				if (l_->ovr_index[i * 2] == key)
-				{
-					locale_slot s;
-					lcblob::read_slot(l_->ovr_begin + l_->ovr_index[i * 2 + 1], l_->ovr_end,
-									  l_->ovr_begin, s);
-					return s;
-				}
+				return {l->ovr_begin[ci] + l->ovr_index[ci][i * 2 + 1], l->ovr_begin[ci],
+						l->ovr_end[ci]};
 			}
 		}
-		::std::uint_least32_t const tbl{
-			lcblob::read_u32(l_->header.cat_dir + static_cast<::std::uint_least32_t>(cat) * 4)};
-		if (tbl == 0)
-		{
-			return {};
-		}
-		::std::uint_least64_t const bsz{
-			static_cast<::std::uint_least64_t>(l_->blob_end - l_->blob_begin)};
-		::std::uint_least64_t const nf{
-			lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size() * 4};
-		if (tbl > bsz || nf > bsz - tbl) // malformed: table must fit in the blob
-		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		::std::uint_least32_t const srva{lcblob::read_u32(l_->blob_begin + tbl + fidx * 4)};
-		if (srva == 0)
-		{
-			return {};
-		}
-		locale_slot s;
-		lcblob::read_slot(l_->blob_begin + srva, l_->blob_end, l_->blob_begin, s);
-		return s;
 	}
-
-	inline locale_slot field(lcblob::lc_cat cat,
-							 ::fast_io::u8string_view fname) const FAST_IO_HERBCEPTIONS_THROWS
+	char8_t const *sbase{l->sec_begin[ci]};
+	if (sbase == nullptr)
 	{
-		::std::ptrdiff_t const i{lcblob::field_index(static_cast<::std::uint_least32_t>(cat), fname)};
-		if (i < 0)
-		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		return field(cat, static_cast<::std::uint_least32_t>(i));
+		return {};
 	}
-};
+	::std::uint_least32_t const tbl{
+		lcblob::read_u32(l->sec_catdir[ci] + static_cast<::std::uint_least32_t>(cat) * 4)};
+	if (tbl == 0)
+	{
+		return {};
+	}
+	::std::uint_least64_t const bsz{static_cast<::std::uint_least64_t>(l->sec_end[ci] - sbase)};
+	::std::uint_least64_t const nf{
+		lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size() * 4};
+	if (tbl > bsz || nf > bsz - tbl)
+	{
+		return {};
+	}
+	::std::uint_least32_t const srva{lcblob::read_u32(sbase + tbl + fidx * 4)};
+	if (srva == 0 || srva >= bsz)
+	{
+		return {};
+	}
+	return {sbase + srva, sbase, l->sec_end[ci]};
+}
+
+// same, in the char view (slot charset — the locale's declared codeset)
+inline locale_field_ref locale_field(::fast_io::i18n::locale const *l, lcblob::lc_cat cat,
+									 ::std::uint_least32_t fidx) noexcept
+{
+	return locale_field(l, cat, fidx, lcblob::blob_charset::charset);
+}
 
 // ---------------------------------------------------------------------------
 // shared-library loading API — implemented in src/locale/lcblob.cc.
@@ -610,13 +653,6 @@ struct locale_view
 // then the global map under a mutex; entries are leaked and never unloaded
 // so reloads are pointer lookups, never remaps.
 // ---------------------------------------------------------------------------
-
-enum class locale_charset : ::std::uint_least8_t
-{
-	utf8 = 0,
-	utf16 = 1,
-	utf32 = 2,
-};
 
 #if defined(FAST_IO_I18N_SHARED)
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -632,20 +668,22 @@ enum class locale_charset : ::std::uint_least8_t
 #define FAST_IO_I18N_EXPORT
 #endif
 
-// Returns a pointer to the cached locale representation (never freed —
-// views into it stay valid for the process lifetime). Wrap in
-// locale_view for typed access. native_file_loader is an implementation
-// detail of the library and is not exposed.
+// Returns a pointer to the cached locale representation — a plain
+// C-style struct, never freed (locale data is never unloaded). Every
+// pointer inside it targets mmap'd blob content or cache-owned buffers
+// and stays valid for the process lifetime. native_file_loader is an
+// implementation detail of the library and is not exposed.
 //
 //   name is a standard locale name: lang[_TERRITORY][.codeset][@modifier]
-//     "de_DE.UTF-8" / "de_DE.utf8" / "de_DE@euro.UTF-16" ...
-//     codeset is case/ punctuation-normalized (UTF-8, utf-16le, ...);
-//     no codeset defaults to utf8. Unsupported codesets are rejected.
+//     "de_DE.UTF-8" / "de_DE.gb18030" / "de_DE.UTF-EBCDIC" ...
+//     the codeset names the char view only — char8_t/char16_t/char32_t
+//     sections are always present in the same file. Supported codesets:
+//     UTF-8, GB18030, UTF-EBCDIC; no codeset defaults to UTF-8.
 //   name ""      -> system default locale (L10N/LC_ALL/LANG on POSIX;
 //                   GetUserDefaultLocaleName then the registry on Windows).
 //                   On Windows the user's International settings override
 //                   the overridable slots for that locale.
-//   name "C"/"POSIX" load their blob files like any other locale.
+//   name "C"/"POSIX" resolve to the canonical POSIX.UTF-8 locale.
 //   dir          from FAST_IO_LOCALE_PATH env, else the compile-time
 //                FAST_IO_I18N_LOCALE_DIR macro, else /usr/lib/fast_io/locale.
 FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name)
@@ -653,7 +691,7 @@ FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u
 
 // explicit-charset form for programmatic callers
 FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name,
-									 locale_charset enc)
+									 lcblob::locale_charset enc)
 	FAST_IO_HERBCEPTIONS_THROWS;
 
 } // namespace fast_io::i18n

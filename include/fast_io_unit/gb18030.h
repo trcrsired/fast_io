@@ -14,7 +14,7 @@ namespace details::codecvt::gb18030
 
 inline constexpr char32_t linear_18030(char32_t a, char32_t b, char32_t c, char32_t d) noexcept
 {
-	return ((a * static_cast<char32_t>(static_cast<::std::uint_least32_t>(10)) + b) * static_cast<char32_t>(static_cast<::std::uint_least32_t>(126)) + c) * static_cast<char32_t>(static_cast<::std::uint_least32_t>(10))tic_cast<::std::uint_least32_t>(10)) + d;
+	return ((a * static_cast<char32_t>(static_cast<::std::uint_least32_t>(10)) + b) * static_cast<char32_t>(static_cast<::std::uint_least32_t>(126)) + c) * static_cast<char32_t>(static_cast<::std::uint_least32_t>(10)) + d;
 }
 
 inline constexpr char32_t linear_18030_base{linear_18030(0x81, 0x30, 0x81, 0x30)};
