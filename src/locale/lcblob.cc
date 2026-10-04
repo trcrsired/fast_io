@@ -629,8 +629,13 @@ inline void patch_user_section(lcblob::basic_lc_all<char> *a,
 
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
 								lcblob::locale_charset &out_cs,
-								bool ignore_system_settings = false) FAST_IO_HERBCEPTIONS_THROWS
+								bool ignore_system_settings = false,
+								bool *from_os_default = nullptr) FAST_IO_HERBCEPTIONS_THROWS
 {
+	if (from_os_default != nullptr)
+	{
+		*from_os_default = false;
+	}
 	::fast_io::u8string raw;
 	if (name.is_empty())
 	{
@@ -650,6 +655,12 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 			if (raw.is_empty())
 			{
 				raw.append(u8"C", 1);
+			}
+			// the name came from the OS itself — only this result is
+			// the user locale the HKCU\International overrides belong to
+			if (from_os_default != nullptr)
+			{
+				*from_os_default = true;
 			}
 		}
 #else
@@ -888,17 +899,32 @@ inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view
 
 } // namespace details
 
-FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8string_view name,
-																   l10n_load_flags flags)
-	FAST_IO_HERBCEPTIONS_THROWS
+extern "C" FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
+fast_io_l10n_load(char8_t const *name, ::std::size_t name_len,
+				  ::std::uint_least32_t cflags) FAST_IO_HERBCEPTIONS_THROWS
 {
+	::fast_io::u8string_view name_sv;
+	if (name_len != 0)
+	{
+		if (name == nullptr)
+		{
+			details::throw_einval();
+		}
+		name_sv = ::fast_io::u8string_view{name, name_len};
+	}
+	l10n_load_flags const flags{static_cast<l10n_load_flags>(cflags)};
 	::fast_io::u8string lname;
 	lcblob::locale_charset cs{};
 	bool const ignore_system_settings{
 		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
-	details::resolve_locale_name(name, lname, cs, ignore_system_settings);
+	bool from_os_default{};
+	details::resolve_locale_name(name_sv, lname, cs, ignore_system_settings,
+								 __builtin_addressof(from_os_default));
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-	bool const user{name.is_empty() && !ignore_system_settings};
+	// registry user overrides only belong to the OS-default locale —
+	// an env- or caller-named locale is an explicit choice and must
+	// load its blob unpatched
+	bool const user{from_os_default && !ignore_system_settings};
 #else
 	bool const user{false};
 #endif

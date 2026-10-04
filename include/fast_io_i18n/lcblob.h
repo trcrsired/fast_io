@@ -401,9 +401,27 @@ inline constexpr l10n_load_flags &operator|=(l10n_load_flags &x, l10n_load_flags
 //   dir          from FAST_IO_L10N_PATH env, else the compile-time
 //                FAST_IO_I18N_LOCALE_DIR macro — unset throws.
 //   flags        ignore_system_settings skips the Windows registry fallback
-FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
+//
+// ---------------------------------------------------------------------------
+// C ABI — the stable boundary for FFI and non-C++ consumers. Plain
+// pointer + length + flag bits; no C++ types cross it.
+//   name/name_len : locale-name bytes; name nullptr or name_len 0 -> ""
+//                   (system default). nullptr with nonzero length throws.
+//   flags         : bitmask of l10n_load_flags as uint32
+// ---------------------------------------------------------------------------
+extern "C" FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
+fast_io_l10n_load(char8_t const *name, ::std::size_t name_len,
+				  ::std::uint_least32_t flags) FAST_IO_HERBCEPTIONS_THROWS;
+
+// C++ wrapper — typed view + flag enum. inline over the C ABI so the
+// DLL never exports an Itanium-mangled symbol (breaks MSVC consumers).
+inline ::fast_io::l10n::lc_locale const *
 load_l10n(::fast_io::u8string_view name,
-		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
+		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return fast_io_l10n_load(name.data(), name.size(),
+							 static_cast<::std::uint_least32_t>(flags));
+}
 
 #endif
 
