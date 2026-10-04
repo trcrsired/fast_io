@@ -32,10 +32,7 @@
 // LEB128 is used ONLY inside compiled format programs (d_t_fmt & co) —
 // never in the container itself.
 
-namespace fast_io::i18n
-{
-
-namespace lcblob
+namespace fast_io::l10n
 {
 
 inline constexpr ::std::uint_least32_t magic{0x314C4346}; // 'FCL1' LE
@@ -312,7 +309,6 @@ inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) n
 	}
 }
 
-} // namespace lcblob
 
 // ---------------------------------------------------------------------------
 // shared-library loading API — implemented in src/locale/lcblob.cc.
@@ -335,6 +331,37 @@ inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) n
 #define FAST_IO_I18N_EXPORT
 #endif
 
+// load flags — bits controlling how much of the OS's own locale
+// settings the load consults
+enum class l10n_load_flags : ::std::uint_least32_t
+{
+	none = 0,
+	// ignore the system's own user-locale data when resolving "" —
+	// on Windows the HKCU\Control Panel\International registry value
+	// is never read; GetUserDefaultLocaleName still resolves "" as
+	// the normal OS lookup. POSIX env (L10N/LC_ALL/LANG) and
+	// FAST_IO_LOCALE_PATH are the normal mechanism, not overrides,
+	// and stay active
+	ignore_system_settings = static_cast<::std::uint_least32_t>(1) << 0,
+};
+
+inline constexpr l10n_load_flags operator&(l10n_load_flags x, l10n_load_flags y) noexcept
+{
+	using utype = typename ::std::underlying_type<l10n_load_flags>::type;
+	return static_cast<l10n_load_flags>(static_cast<utype>(x) & static_cast<utype>(y));
+}
+
+inline constexpr l10n_load_flags operator|(l10n_load_flags x, l10n_load_flags y) noexcept
+{
+	using utype = typename ::std::underlying_type<l10n_load_flags>::type;
+	return static_cast<l10n_load_flags>(static_cast<utype>(x) | static_cast<utype>(y));
+}
+
+inline constexpr l10n_load_flags &operator|=(l10n_load_flags &x, l10n_load_flags y) noexcept
+{
+	return x = x | y;
+}
+
 // Returns a pointer to the lc_locale inside the mapped file — image data
 // is never unloaded, so the pointer (and every pointer lc_get_rva hands
 // out) stays valid for the process lifetime. native_file_loader is an
@@ -349,15 +376,17 @@ inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) n
 //                   GetUserDefaultLocaleName then the registry on Windows).
 //   name "C"/"POSIX" resolve to the canonical POSIX.UTF-8 locale.
 //   dir          from FAST_IO_LOCALE_PATH env, else the compile-time
-//                FAST_IO_I18N_LOCALE_DIR macro, else /usr/lib/fast_io/locale.
-FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *
-load_l10n(::fast_io::u8string_view name) FAST_IO_HERBCEPTIONS_THROWS;
+//                FAST_IO_I18N_LOCALE_DIR macro — unset throws.
+//   flags        ignore_system_settings skips the Windows registry fallback
+FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
+load_l10n(::fast_io::u8string_view name,
+		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
 
 // explicit-charset form for programmatic callers
-FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *
-load_l10n(::fast_io::u8string_view name,
-				 lcblob::locale_charset enc) FAST_IO_HERBCEPTIONS_THROWS;
+FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
+load_l10n(::fast_io::u8string_view name, locale_charset enc,
+		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
 
-} // namespace fast_io::i18n
+} // namespace fast_io::l10n
 
 #include "../fast_io_dsal/impl/misc/pop_macros.h"

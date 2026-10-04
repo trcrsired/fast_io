@@ -15,6 +15,11 @@
 #include "fast_io_i18n/imbuer.h"
 #include "fast_io_i18n/lc_print_status.h"
 #include "fast_io_i18n/lc_numbers/impl.h"
+#include "fast_io_i18n/lc_concat.h"
+
+#ifndef FAST_IO_DISABLE_FLOATING_POINT
+#include "../fast_io_unit/floating/lc_impl.h"
+#endif
 
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
 

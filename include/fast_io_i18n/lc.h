@@ -24,10 +24,10 @@ inline constexpr ::std::size_t lc_sep_capacity{16};
 template <::std::integral char_type>
 struct lc_ctx
 {
-	::fast_io::i18n::lcblob::lc_locale const *loc{};
+	::fast_io::l10n::lc_locale const *loc{};
 	// the section image — wire-layout identical for every char_type,
 	// so it is read through the char instantiation
-	::fast_io::i18n::lcblob::basic_lc_all<char> const *all{};
+	::fast_io::l10n::basic_lc_all<char> const *all{};
 	// hot LC_NUMERIC fields decoded once per imbue: thousands_sep as
 	// char_type units and grouping as u8 group sizes (both capped — a
 	// longer field disables grouping rather than allocating)
@@ -42,39 +42,39 @@ struct lc_ctx
 	// char_type. rva==0 gives {nullptr,0}
 	template <typename T>
 	inline constexpr ::fast_io::basic_io_scatter_t<char_type> sc(
-		::fast_io::i18n::lcblob::lc_scatter<T> s) const noexcept
+		::fast_io::l10n::lc_scatter<T> s) const noexcept
 	{
-		auto const r{::fast_io::i18n::lcblob::lc_get_scatter(loc, s)};
+		auto const r{::fast_io::l10n::lc_get_scatter(loc, s)};
 		return {reinterpret_cast<char_type const *>(r.base), r.len};
 	}
 	// resolve a wire rva member to a pointer; rva==0 gives nullptr
 	template <typename T>
-	inline constexpr T const *pt(::fast_io::i18n::lcblob::lc_rva<T> r) const noexcept
+	inline constexpr T const *pt(::fast_io::l10n::lc_rva<T> r) const noexcept
 	{
-		return ::fast_io::i18n::lcblob::lc_get_rva(loc, r);
+		return ::fast_io::l10n::lc_get_rva(loc, r);
 	}
 	// a strref-table element of a dynamic string list (alt_digits and
 	// friends): member is {tbl_rva,count}, tbl = lc_scatter[count]
 	template <typename T>
 	inline constexpr ::fast_io::basic_io_scatter_t<char_type> sc_elem(
-		::fast_io::i18n::lcblob::lc_scatter<::fast_io::i18n::lcblob::lc_scatter<T>> s,
+		::fast_io::l10n::lc_scatter<::fast_io::l10n::lc_scatter<T>> s,
 		::std::size_t i) const noexcept
 	{
 		auto const *tbl{pt(s.ref)};
-		if (tbl == nullptr || i >= ::fast_io::i18n::lcblob::lc_u32(s.len))
+		if (tbl == nullptr || i >= ::fast_io::l10n::lc_u32(s.len))
 		{
 			return {};
 		}
-		auto const e{::fast_io::i18n::lcblob::lc_get_scatter(loc, tbl[i])};
+		auto const e{::fast_io::l10n::lc_get_scatter(loc, tbl[i])};
 		return {reinterpret_cast<char_type const *>(e.base), e.len};
 	}
 };
 
 template <::std::integral char_type>
 inline lc_ctx<char_type>
-lc_load_ctx(::fast_io::i18n::lcblob::lc_locale const *v) noexcept
+lc_load_ctx(::fast_io::l10n::lc_locale const *v) noexcept
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	lc_ctx<char_type> ctx{};
 	auto const *all{lc::lc_get_all<char_type>(v)};
 	if (all == nullptr)
@@ -98,6 +98,75 @@ lc_load_ctx(::fast_io::i18n::lcblob::lc_locale const *v) noexcept
 	}
 	return ctx;
 }
+
+
+namespace details
+{
+
+// glibc grouping semantics: entry gi is the group size for group gi
+// counting from the right; past the end the last value repeats; a 0
+// repeats the previous value; 0xFF (CHAR_MAX) or 0-with-no-previous
+// stops grouping entirely
+template <::std::integral char_type>
+inline ::std::uint_least8_t lc_group_size(lc_ctx<char_type> const *ctx,
+										  ::std::size_t gi,
+										  ::std::uint_least8_t prev) noexcept
+{
+	if (gi < ctx->grouping_len) [[likely]]
+	{
+		auto g{static_cast<::std::uint_least8_t>(ctx->grouping[gi])};
+		if (g == 0xFFu) [[unlikely]]
+		{
+			return 0;
+		}
+		if (g != 0)
+		{
+			return g;
+		}
+		return prev;
+	}
+	return prev;
+}
+
+
+// the count and write sinks every lc_* emitter shares — count and
+// write passes run the same code through these, so they can never
+// disagree
+template <::std::integral char_type>
+struct lc_count_sink
+{
+	::std::size_t n{};
+	inline constexpr void put(char_type) noexcept
+	{
+		++n;
+	}
+	inline constexpr void put_units(char_type const *, ::std::size_t len) noexcept
+	{
+		n += len;
+	}
+};
+
+template <::std::integral char_type>
+struct lc_write_sink
+{
+	char_type *it{}, *dend{};
+	inline constexpr void put(char_type ch) noexcept
+	{
+		if (it != dend) [[likely]]
+		{
+			*it = ch;
+			++it;
+		}
+	}
+	inline constexpr void put_units(char_type const *p, ::std::size_t len) noexcept
+	{
+		auto const n{::std::min(len, static_cast<::std::size_t>(dend - it))};
+		::fast_io::details::my_memcpy(it, p, n * sizeof(char_type));
+		it += n;
+	}
+};
+
+} // namespace details
 
 } // namespace fast_io
 

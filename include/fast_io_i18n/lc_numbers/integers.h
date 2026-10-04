@@ -8,31 +8,6 @@ namespace fast_io
 namespace details
 {
 
-// glibc grouping semantics: entry gi is the group size for group gi
-// counting from the right; past the end the last value repeats; a 0
-// repeats the previous value; 0xFF (CHAR_MAX) or 0-with-no-previous
-// stops grouping entirely
-template <::std::integral char_type>
-inline ::std::uint_least8_t lc_group_size(lc_ctx<char_type> const *ctx,
-										  ::std::size_t gi,
-										  ::std::uint_least8_t prev) noexcept
-{
-	if (gi < ctx->grouping_len) [[likely]]
-	{
-		auto g{static_cast<::std::uint_least8_t>(ctx->grouping[gi])};
-		if (g == 0xFFu) [[unlikely]]
-		{
-			return 0;
-		}
-		if (g != 0)
-		{
-			return g;
-		}
-		return prev;
-	}
-	return prev;
-}
-
 // how many separators does an ndigits-digit number get
 template <::std::integral char_type>
 inline ::std::size_t lc_grouped_count(lc_ctx<char_type> const *ctx,

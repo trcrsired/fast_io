@@ -215,40 +215,6 @@ struct lc_prog_reader
 // passes share the logic
 // ---------------------------------------------------------------------------
 
-template <::std::integral char_type>
-struct lc_count_sink
-{
-	::std::size_t n{};
-	inline constexpr void put(char_type) noexcept
-	{
-		++n;
-	}
-	inline constexpr void put_units(char_type const *, ::std::size_t len) noexcept
-	{
-		n += len;
-	}
-};
-
-template <::std::integral char_type>
-struct lc_write_sink
-{
-	char_type *it{}, *dend{};
-	inline constexpr void put(char_type ch) noexcept
-	{
-		if (it != dend) [[likely]]
-		{
-			*it = ch;
-			++it;
-		}
-	}
-	inline constexpr void put_units(char_type const *p, ::std::size_t len) noexcept
-	{
-		auto const n{::std::min(len, static_cast<::std::size_t>(dend - it))};
-		::fast_io::details::my_memcpy(it, p, n * sizeof(char_type));
-		it += n;
-	}
-};
-
 // padded decimal — pad: 1 zero, 2 space, 3 none
 template <::std::integral char_type, typename sink>
 inline constexpr void lc_put_num(sink &sk, ::std::int_least64_t v,
@@ -328,11 +294,11 @@ inline constexpr char_type lc_case(char_type ch, ::std::uint_least32_t mode) noe
 // ---------------------------------------------------------------------------
 
 template <::std::integral char_type>
-inline constexpr ::fast_io::i18n::lcblob::basic_lc_time_era<char> const *
+inline constexpr ::fast_io::l10n::basic_lc_time_era<char> const *
 lc_era_lookup(lc_ctx<char_type> const *ctx, ::std::int_least64_t y,
 			  ::std::uint_least32_t mo, ::std::uint_least32_t dy) noexcept
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	auto const &eras{ctx->all->time.era};
 	auto const *tbl{ctx->pt(eras.ref)};
 	auto const n{lc::lc_u32(eras.len)};
@@ -420,12 +386,12 @@ inline constexpr void lc_prog_run(char8_t const *prog, ::std::size_t plen,
 // the era's year number there, not another fmt recursion
 template <::std::integral char_type, typename sink>
 inline constexpr void lc_run_member(sink &sk, lc_ctx<char_type> const *ctx,
-									::fast_io::i18n::lcblob::lc_scatter<char8_t> prog,
+									::fast_io::l10n::lc_scatter<char8_t> prog,
 									lc_tm const &tm, ::std::uint_least32_t depth,
 									bool in_era = false)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	auto const off{lc::lc_u32(prog.ref.off)};
 	if (off == 0)
 	{
@@ -438,7 +404,7 @@ inline constexpr void lc_run_member(sink &sk, lc_ctx<char_type> const *ctx,
 // a name member with optional case fold
 template <::std::integral char_type, typename sink>
 inline constexpr void lc_put_name(sink &sk, lc_ctx<char_type> const *ctx,
-								  ::fast_io::i18n::lcblob::lc_scatter<char> member,
+								  ::fast_io::l10n::lc_scatter<char> member,
 								  ::std::uint_least32_t casef) noexcept
 {
 	auto const s{ctx->sc(member)};
@@ -470,7 +436,7 @@ inline constexpr void lc_pct_conv(sink &sk, lc_ctx<char_type> const *ctx,
 								  bool in_era)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	auto const &t{ctx->all->time};
 	// pad param bits: bit0 '-'(no pad) bit1 '_'(space) bit2 '0'(zero)
 	::std::uint_least32_t const pad_kind{
@@ -839,10 +805,10 @@ inline constexpr void lc_prog_run(char8_t const *prog, ::std::size_t plen,
 // pick the program member for a time_flag, era formats falling back to
 // the plain one when empty — master's semantics
 template <::fast_io::manipulators::lc_time_flag tf, ::std::integral char_type>
-inline constexpr ::fast_io::i18n::lcblob::lc_scatter<char8_t>
+inline constexpr ::fast_io::l10n::lc_scatter<char8_t>
 lc_time_program(lc_ctx<char_type> const *ctx) noexcept
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	namespace mp = ::fast_io::manipulators;
 	auto const &t{ctx->all->time};
 	lc::lc_scatter<char8_t> prog{};
@@ -1023,7 +989,7 @@ print_reserve_size(lc_ctx<char_type> const *ctx,
 				   ::fast_io::manipulators::scalar_manip_t<flags, T> t)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	if (ctx->all == nullptr)
 	{
 		return 0;
@@ -1051,7 +1017,7 @@ print_reserve_define(lc_ctx<char_type> const *ctx, char_type *iter,
 					 ::fast_io::manipulators::scalar_manip_t<flags, T> t)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	if (ctx->all == nullptr)
 	{
 		return iter;
@@ -1086,7 +1052,7 @@ print_define(lc_ctx<char_type> const *ctx, output out,
 			 ::fast_io::manipulators::scalar_manip_t<flags, T> t)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	namespace lc = ::fast_io::i18n::lcblob;
+	namespace lc = ::fast_io::l10n;
 	if (ctx->all == nullptr)
 	{
 		return;

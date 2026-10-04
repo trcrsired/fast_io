@@ -32,8 +32,11 @@
 #include <fast_io_i18n/lcblob.h>
 #include <fast_io_dsal/impl/misc/push_macros.h>
 
-namespace fast_io::i18n
+namespace fast_io::l10n
 {
+
+namespace lcblob = ::fast_io::l10n;
+
 
 namespace details
 {
@@ -70,7 +73,7 @@ struct locale_entry
 	::fast_io::native_file_loader loader;
 };
 
-using cache_map = ::fast_io::u8str_swiss_map<::fast_io::i18n::lcblob::lc_locale const *>;
+using cache_map = ::fast_io::u8str_swiss_map<::fast_io::l10n::lc_locale const *>;
 
 // allocate + construct one object through fast_io's own allocator —
 // cache entries are never freed by design
@@ -133,7 +136,7 @@ inline ::fast_io::u8string u16_to_u8(char16_t const *s, ::std::size_t n) FAST_IO
 			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
 }
 
-inline ::fast_io::u8string default_locale_name_win32() FAST_IO_HERBCEPTIONS_THROWS
+inline ::fast_io::u8string default_locale_name_win32(bool ignore_system_settings) FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t locale_name_max{85}; // LOCALE_NAME_MAX_LENGTH
 	char16_t buf[locale_name_max];
@@ -141,18 +144,22 @@ inline ::fast_io::u8string default_locale_name_win32() FAST_IO_HERBCEPTIONS_THRO
 	{
 		return u16_to_u8(buf, static_cast<::std::size_t>(r - 1));
 	}
-	// registry fallback: HKCU\Control Panel\International\LocaleName
-	constexpr ::std::size_t hkcu{0x80000001u};
-	::std::size_t hkey{};
-	if (::fast_io::win32::RegOpenKeyW(hkcu, u"Control Panel\\International", __builtin_addressof(hkey)) == 0)
+	// registry fallback — skipped under ignore_system_settings
+	if (!ignore_system_settings)
 	{
-		::std::uint_least32_t bytes{sizeof(buf)};
-		auto const res{::fast_io::win32::RegQueryValueExW(
-			hkey, u"LocaleName", nullptr, nullptr, buf, __builtin_addressof(bytes))};
-		::fast_io::win32::RegCloseKey(hkey);
-		if (res == 0 && bytes >= 4)
+		constexpr ::std::size_t hkcu{0x80000001u};
+		::std::size_t hkey{};
+		if (::fast_io::win32::RegOpenKeyW(hkcu, u"Control Panel\\International",
+										__builtin_addressof(hkey)) == 0)
 		{
-			return u16_to_u8(buf, (bytes / 2) - 1);
+			::std::uint_least32_t bytes{sizeof(buf)};
+			auto const res{::fast_io::win32::RegQueryValueExW(
+				hkey, u"LocaleName", nullptr, nullptr, buf, __builtin_addressof(bytes))};
+			::fast_io::win32::RegCloseKey(hkey);
+			if (res == 0 && bytes >= 4)
+			{
+				return u16_to_u8(buf, (bytes / 2) - 1);
+			}
 		}
 	}
 	return {}; // "" resolution falls back to C like other platforms
@@ -205,16 +212,19 @@ inline void parse_codeset(::fast_io::u8string_view cs, lcblob::locale_charset &o
 // out = canonical file basename  base.codeset[@mod]
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
 								lcblob::locale_charset &out_cs,
-								lcblob::locale_charset const *enc = nullptr) FAST_IO_HERBCEPTIONS_THROWS
+								lcblob::locale_charset const *enc = nullptr,
+								bool ignore_system_settings = false) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string raw;
 	if (name.empty())
 	{
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-		raw = default_locale_name_win32();
+		// ignore_system_settings only gates the registry fallback — the
+		// GetUserDefaultLocaleName API is the standard OS lookup
+		raw = default_locale_name_win32(ignore_system_settings);
 		if (raw.empty())
 		{
-			raw.append(u8"C", 1); // no user locale -> C like POSIX
+			raw.append(u8"C", 1);
 		}
 #else
 		char const *env{};
@@ -315,7 +325,7 @@ inline ::fast_io::u8string_view locale_dir() FAST_IO_HERBCEPTIONS_THROWS
 // to it (openat semantics), never by string concatenation
 inline ::fast_io::dir_file *locale_dir_file{};
 
-inline ::fast_io::i18n::lcblob::lc_locale const *load_blob_impl(::fast_io::u8string_view lname)
+inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view lname)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// one file per locale+codeset — key = canonical file name
@@ -327,7 +337,7 @@ inline ::fast_io::i18n::lcblob::lc_locale const *load_blob_impl(::fast_io::u8str
 		return it->mapped();
 	}
 
-	::fast_io::i18n::lcblob::lc_locale const *p;
+	::fast_io::l10n::lc_locale const *p;
 	{
 		cache_guard g{global_mtx};
 		if (auto it{global_map.find_key(key)}; it != global_map.end())
@@ -369,25 +379,31 @@ inline ::fast_io::i18n::lcblob::lc_locale const *load_blob_impl(::fast_io::u8str
 
 } // namespace details
 
-FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *load_l10n(::fast_io::u8string_view name)
+FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8string_view name,
+																   l10n_load_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string lname;
 	lcblob::locale_charset cs{};
-	details::resolve_locale_name(name, lname, cs);
+	bool const ignore_system_settings{
+		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
+	details::resolve_locale_name(name, lname, cs, nullptr, ignore_system_settings);
 	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()});
 }
 
-FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *load_l10n(::fast_io::u8string_view name,
-																   lcblob::locale_charset enc)
+FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8string_view name,
+																   lcblob::locale_charset enc,
+																   l10n_load_flags flags)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string lname;
 	lcblob::locale_charset cs{};
-	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc));
+	bool const ignore_system_settings{
+		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
+	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc), ignore_system_settings);
 	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()});
 }
 
-} // namespace fast_io::i18n
+} // namespace fast_io::l10n
 
 #include <fast_io_dsal/impl/misc/pop_macros.h>
