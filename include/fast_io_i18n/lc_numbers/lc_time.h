@@ -748,7 +748,8 @@ inline constexpr void lc_prog_run(char8_t const *prog, ::std::size_t plen,
 		else if (code == 3) // op_pct
 		{
 			::std::uint_least32_t conv{}, pad{}, casef{}, modifier{}, colons{},
-				width{}, prec{};
+				width{};
+			[[maybe_unused]] ::std::uint_least32_t prec{};
 			if (kind == 1)
 			{
 				conv = static_cast<::std::uint_least32_t>(r.get_uleb());

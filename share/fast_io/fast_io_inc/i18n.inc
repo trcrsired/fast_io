@@ -46,4 +46,10 @@ using ::fast_io::basic_lc_concat;
 using ::fast_io::lc_concat;
 using ::fast_io::lc_concatln;
 
+namespace manipulators
+{
+using ::fast_io::manipulators::lc_dump_t;
+using ::fast_io::manipulators::lc_dump;
+} // namespace manipulators
+
 } // namespace fast_io

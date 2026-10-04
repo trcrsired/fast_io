@@ -83,16 +83,47 @@ inline constexpr void lc_write_lc(lc_ctx<typename output::output_char_type> cons
 				return;
 			}
 		}
-		// non-obuffer output — write into a capped stack buffer, then
-		// scatter. Anything larger truncates through the reserve
-		// hooks' own bounded writes
+		// non-obuffer output — small reserves go through the stack
+		// buffer; anything larger needs a scratch allocation sized by
+		// the count pass (the reserve hooks write the full count, so a
+		// too-small destination is an overflow, not a truncation)
 		constexpr ::std::size_t cap{512};
-		char_type buf[cap];
-		auto const it{print_reserve_define(cp, buf, t)};
-		::fast_io::operations::print_freestanding<false>(
-			out,
-			::fast_io::basic_io_scatter_t<char_type>{
-				buf, static_cast<::std::size_t>(it - buf)});
+		if (need <= cap)
+		{
+			char_type buf[cap];
+			auto const it{print_reserve_define(cp, buf, t)};
+			::fast_io::operations::print_freestanding<false>(
+				out,
+				::fast_io::basic_io_scatter_t<char_type>{
+					buf, static_cast<::std::size_t>(it - buf)});
+		}
+		else
+		{
+			using print_allocator_type =
+				::fast_io::operations::decay::output_stream_allocator_t<output>;
+			using print_typed_allocator_type =
+				::fast_io::typed_generic_allocator_adapter<print_allocator_type, char_type>;
+			::fast_io::details::buffer_alloc_arr_ptr<char_type, false,
+													 print_allocator_type>
+				scratch;
+			char_type *base;
+			if constexpr (print_typed_allocator_type::has_status)
+			{
+				base = scratch.allocate_new(
+					::fast_io::details::print_output_stream_allocator_handle<
+						output, print_typed_allocator_type>(out),
+					need);
+			}
+			else
+			{
+				base = scratch.allocate_new(need);
+			}
+			auto const it{print_reserve_define(cp, base, t)};
+			::fast_io::operations::print_freestanding<false>(
+				out,
+				::fast_io::basic_io_scatter_t<char_type>{
+					base, static_cast<::std::size_t>(it - base)});
+		}
 	}
 	else
 	{

@@ -25,6 +25,7 @@
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 #include "fast_io_i18n/lc_numbers/chrono.h"
 #endif
+#include "fast_io_i18n/lc_print.h"
 #include "fast_io_i18n/lc_print_status.h"
 #include "fast_io_i18n/imbuer.h"
 #include "fast_io_i18n/lc_concat.h"

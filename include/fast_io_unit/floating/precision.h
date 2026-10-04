@@ -66,7 +66,7 @@ inline ::std::size_t fp_round_significant(char *digits, ::std::size_t n, ::std::
 		if (!up)
 		{
 			// exact tie: round to even
-			up = (digits[k - 1u] & 1u) != 0u;
+			up = (digits[k - 1u] & 1) != 0;
 		}
 	}
 	if (up)

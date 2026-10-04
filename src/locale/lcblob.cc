@@ -170,7 +170,7 @@ inline ::fast_io::u8string u16_to_ebcdic(char16_t const *s, ::std::size_t n) FAS
 
 // env var as u8 text: W + transcode on NT, raw ANSI bytes on 9x.
 // empty string means unset
-inline ::fast_io::u8string env_u8(char16_t const *wname, char const *aname) FAST_IO_HERBCEPTIONS_THROWS
+inline ::fast_io::u8string env_u8([[maybe_unused]] char16_t const *wname, [[maybe_unused]] char const *aname) FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32_WINDOWS)
 	char buf[512];
@@ -629,7 +629,7 @@ inline void patch_user_section(lcblob::basic_lc_all<char> *a,
 
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
 								lcblob::locale_charset &out_cs,
-								bool ignore_system_settings = false,
+								[[maybe_unused]] bool ignore_system_settings = false,
 								bool *from_os_default = nullptr) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (from_os_default != nullptr)
