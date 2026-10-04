@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.15)
 
 project(fast_io C CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-
 include(GNUInstallDirs)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ TYPE INCLUDE)
@@ -19,7 +17,6 @@ option(BUILD_I18N_LIB "build the fast_io_i18n locale library" OFF)
 if(BUILD_I18N_LIB)
 	add_library(fast_io_i18n SHARED src/locale/lcblob.cc)
 	target_include_directories(fast_io_i18n PUBLIC ${CMAKE_SOURCE_DIR}/include)
-	set_target_properties(fast_io_i18n PROPERTIES CXX_STANDARD 26 CXX_STANDARD_REQUIRED ON)
 	target_compile_definitions(fast_io_i18n PRIVATE FAST_IO_I18N_BUILDING)
 	target_compile_definitions(fast_io_i18n PUBLIC FAST_IO_I18N_SHARED)
 	# static twin — same output name as the shared lib where the
@@ -28,7 +25,6 @@ if(BUILD_I18N_LIB)
 	# fast_io_i18n_static.lib
 	add_library(fast_io_i18n_static STATIC src/locale/lcblob.cc)
 	target_include_directories(fast_io_i18n_static PUBLIC ${CMAKE_SOURCE_DIR}/include)
-	set_target_properties(fast_io_i18n_static PROPERTIES CXX_STANDARD 26 CXX_STANDARD_REQUIRED ON)
 	if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "Cygwin" OR CMAKE_SYSTEM_NAME STREQUAL "Msys")
 		set_target_properties(fast_io_i18n_static PROPERTIES OUTPUT_NAME fast_io_i18n_static)
 	else()
@@ -51,7 +47,6 @@ if(BUILD_LOCALE_TOOLS)
 	foreach(tool fast_io_l10n_gen fast_io_l10n_dump)
 		target_include_directories(${tool} PRIVATE ${CMAKE_SOURCE_DIR}/include)
 		set_target_properties(${tool} PROPERTIES
-			CXX_STANDARD 26 CXX_STANDARD_REQUIRED ON
 			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 		install(TARGETS ${tool} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 	endforeach()
@@ -62,8 +57,6 @@ option(ENABLE_TESTS "Enable tests" OFF)
 if(${ENABLE_TESTS})
 	include(CTest)
 	include_directories(include)
-	set(CMAKE_CXX_STANDARD 23)
-	set(CMAKE_CXX_STANDARD_EXTENSION OFF)
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE)
 	endif()
