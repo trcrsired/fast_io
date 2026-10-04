@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include "../fast_io_dsal/string_view.h"
 
 // lcblob — the binary locale container (spec: fast_io_tools/binfmt/spec.md).
 //
@@ -416,4 +414,3 @@ load_l10n(::fast_io::u8string_view name, locale_charset enc,
 
 } // namespace fast_io::l10n
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

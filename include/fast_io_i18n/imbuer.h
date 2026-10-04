@@ -1,9 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include "lcblob.h"
-#include "lc.h"
-#include "lc_print_status.h"
 
 // locale-aware printing. imbue(loc, out) wraps an output stream so that
 // locale-printable arguments format through the mapped locale:
@@ -75,4 +71,3 @@ inline constexpr void status_print_define(::fast_io::lc_imbuer<output> imb, Args
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

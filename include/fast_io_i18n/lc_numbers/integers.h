@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
 
 namespace fast_io
 {
@@ -210,4 +209,3 @@ print_reserve_define(lc_ctx<char_type> const *ctx, char_type *iter,
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

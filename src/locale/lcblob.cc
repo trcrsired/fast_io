@@ -29,9 +29,9 @@
 #include <fast_io_device.h>
 #include <fast_io_dsal/string.h>
 #include <fast_io_dsal/str_swiss_map.h>
-#include <fast_io_i18n/lcblob.h>
 #include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/impl/misc/push_macros.h>
+#include <fast_io_i18n/lcblob.h>
 
 #if !defined(FAST_IO_FREESTANDING)
 

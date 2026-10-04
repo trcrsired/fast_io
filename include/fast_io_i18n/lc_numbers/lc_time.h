@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
 
 // lc_time — run a compiled binfmt time program (LC_TIME *_fmt fields)
 // against a timestamp. The program is the binary representation of a
@@ -1180,4 +1179,3 @@ era_t_fmt(T const &tsp) noexcept
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

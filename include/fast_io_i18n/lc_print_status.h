@@ -1,8 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include "lc.h"
-#include "lc_numbers/impl.h"
 
 // lc_print_status — the locale-aware print concepts, keyed on lc_ctx
 // (the all-equivalent: file pointer + section image + hot fields).
@@ -162,4 +159,3 @@ inline constexpr void lc_status_print_impl(lc_ctx<typename output::output_char_t
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

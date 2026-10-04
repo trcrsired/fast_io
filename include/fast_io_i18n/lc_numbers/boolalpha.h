@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
 
 namespace fast_io
 {
@@ -19,4 +18,3 @@ print_scatter_define(lc_ctx<char_type> const *ctx,
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include <chrono>
 
 namespace fast_io
 {
@@ -134,4 +132,3 @@ print_reserve_define(::fast_io::io_reserve_type_t<char_type, T>,
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

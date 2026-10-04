@@ -1,10 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include "../fast_io_dsal/string.h"
-#include "lcblob.h"
-#include "lc.h"
-#include "lc_print_status.h"
 
 // locale-aware string concat — the lc_concat family. The string is a
 // strlike output stream; locale-aware args go through their lc hooks,
@@ -78,4 +73,3 @@ inline constexpr ::fast_io::basic_string<char_type> lc_concatln(
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"

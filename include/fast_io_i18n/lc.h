@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../fast_io_dsal/impl/misc/push_macros.h"
-#include "lcblob.h"
 
 // lc — the runtime locale context every lc_* print hook is keyed on.
 // Master's hooks take `basic_lc_all<char_type> const*`; here the key is
@@ -182,4 +180,3 @@ struct lc_write_sink
 
 } // namespace fast_io
 
-#include "../fast_io_dsal/impl/misc/pop_macros.h"
