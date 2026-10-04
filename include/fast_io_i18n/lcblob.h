@@ -405,11 +405,6 @@ FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
 load_l10n(::fast_io::u8string_view name,
 		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
 
-// explicit-charset form for programmatic callers
-FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
-load_l10n(::fast_io::u8string_view name, locale_charset enc,
-		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
-
 #endif
 
 } // namespace fast_io::l10n

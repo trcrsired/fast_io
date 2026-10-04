@@ -603,7 +603,6 @@ inline void patch_user_section(lcblob::basic_lc_all<char> *a,
 
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
 								lcblob::locale_charset &out_cs,
-								lcblob::locale_charset const *enc = nullptr,
 								bool ignore_system_settings = false) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string raw;
@@ -668,10 +667,6 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 	{
 		parse_codeset(::fast_io::u8string_view{raw.data() + dot + 1, mod - dot - 1}, out_cs);
 	}
-	if (enc != nullptr)
-	{
-		out_cs = *enc; // explicit codeset wins over the name's
-	}
 	::std::size_t const base_end{dot == n ? mod : dot};
 	// C and POSIX are the same UTF-8 locale — canonical name POSIX.UTF-8
 	if ((base_end == 1 && raw.data()[0] == u8'C') ||
@@ -697,7 +692,41 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 // there is no system-wide default to silently guess.
 inline ::fast_io::u8string_view locale_dir() FAST_IO_HERBCEPTIONS_THROWS
 {
-#if (!defined(_WIN32) || defined(__WINE__)) && !defined(__CYGWIN__)
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+#if defined(_WIN32_WINDOWS)
+	// 9x has no *W APIs — read once into a static byte buffer and
+	// view it directly (it is a dir path, kept raw ANSI bytes)
+	static char env_buf[512];
+	static ::std::size_t const env_n{[] {
+		auto const n{::fast_io::win32::GetEnvironmentVariableA(
+			reinterpret_cast<char const *>(u8"FAST_IO_LOCALE_PATH"),
+			env_buf, 512)};
+		return n < 512 ? n : ::std::size_t{};
+	}()};
+	if (env_n != 0)
+	{
+		return ::fast_io::u8string_view{reinterpret_cast<char8_t const *>(env_buf), env_n};
+	}
+#else
+	// NT: GetEnvironmentVariableW, transcoded once into a
+	// process-lifetime string (u16_to_u8 returns an owned u8string,
+	// the static keeps it alive — no dangling view)
+	static ::fast_io::u8string const env_dir{[]() FAST_IO_HERBCEPTIONS_THROWS {
+		char16_t buf[512];
+		auto const n{::fast_io::win32::GetEnvironmentVariableW(u"FAST_IO_LOCALE_PATH",
+															 buf, 512)};
+		if (n == 0 || n >= 512)
+		{
+			return ::fast_io::u8string{};
+		}
+		return u16_to_u8(buf, n);
+	}()};
+	if (!env_dir.empty())
+	{
+		return ::fast_io::u8string_view{env_dir.data(), env_dir.size()};
+	}
+#endif
+#else
 	if (char const *v{lc_getenv("FAST_IO_LOCALE_PATH")}; v != nullptr && *v != 0)
 	{
 		return ::fast_io::u8string_view{reinterpret_cast<char8_t const *>(v),
@@ -855,27 +884,7 @@ FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8str
 	lcblob::locale_charset cs{};
 	bool const ignore_system_settings{
 		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
-	details::resolve_locale_name(name, lname, cs, nullptr, ignore_system_settings);
-#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-	bool const user{name.empty() && !ignore_system_settings};
-#else
-	bool const user{false};
-#endif
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()},
-								   user);
-}
-
-
-FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8string_view name,
-																   lcblob::locale_charset enc,
-																   l10n_load_flags flags)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	::fast_io::u8string lname;
-	lcblob::locale_charset cs{};
-	bool const ignore_system_settings{
-		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
-	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc), ignore_system_settings);
+	details::resolve_locale_name(name, lname, cs, ignore_system_settings);
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
 	bool const user{name.empty() && !ignore_system_settings};
 #else
