@@ -22,7 +22,19 @@ if(BUILD_I18N_LIB)
 	set_target_properties(fast_io_i18n PROPERTIES CXX_STANDARD 26 CXX_STANDARD_REQUIRED ON)
 	target_compile_definitions(fast_io_i18n PRIVATE FAST_IO_I18N_BUILDING)
 	target_compile_definitions(fast_io_i18n PUBLIC FAST_IO_I18N_SHARED)
-	install(TARGETS fast_io_i18n
+	# static twin — same output name as the shared lib where the
+	# suffixes differ (libfast_io_i18n.{a,so}); on Windows the import
+	# library already owns fast_io_i18n.lib so the static one is
+	# fast_io_i18n_static.lib
+	add_library(fast_io_i18n_static STATIC src/locale/lcblob.cc)
+	target_include_directories(fast_io_i18n_static PUBLIC ${CMAKE_SOURCE_DIR}/include)
+	set_target_properties(fast_io_i18n_static PROPERTIES CXX_STANDARD 26 CXX_STANDARD_REQUIRED ON)
+	if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "Cygwin" OR CMAKE_SYSTEM_NAME STREQUAL "Msys")
+		set_target_properties(fast_io_i18n_static PROPERTIES OUTPUT_NAME fast_io_i18n_static)
+	else()
+		set_target_properties(fast_io_i18n_static PROPERTIES OUTPUT_NAME fast_io_i18n)
+	endif()
+	install(TARGETS fast_io_i18n fast_io_i18n_static
 		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
