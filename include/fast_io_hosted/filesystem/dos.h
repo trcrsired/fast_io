@@ -117,7 +117,7 @@ public:
 
 	template <typename native_hd>
 		requires ::std::same_as<native_handle_type, ::std::remove_cvref_t<native_hd>>
-	inline constexpr dos_directory_file(native_hd dirp1)
+	inline constexpr dos_directory_file(native_hd dirp1) noexcept
 		: dos_directory_io_observer{dirp1}
 	{
 	}
@@ -134,6 +134,7 @@ public:
 	}
 
 	inline dos_directory_file &operator=(dos_directory_file const &other)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
 		{
@@ -339,6 +340,7 @@ inline dos_directory_entry operator*(dos_directory_iterator pdit) noexcept
 }
 
 inline dos_directory_iterator &operator++(dos_directory_iterator &pdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	/*
 	To fix: avoid setting errno
@@ -367,6 +369,7 @@ inline dos_directory_iterator &operator++(dos_directory_iterator &pdit)
 }
 
 inline dos_directory_iterator begin(posix_directory_generator const &pdg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto dirp{pdg.dir_fl.dirp.dirp};
 	::fast_io::noexcept_call(::rewinddir, dirp);
@@ -416,7 +419,7 @@ struct basic_dos_recursive_directory_iterator
 	stack_type stack;
 	inline constexpr basic_dos_recursive_directory_iterator() = default;
 
-	inline explicit constexpr basic_dos_recursive_directory_iterator(dos_DIR dp)
+	inline explicit constexpr basic_dos_recursive_directory_iterator(dos_DIR dp) noexcept
 		: dirp(dp)
 	{}
 
@@ -444,6 +447,7 @@ inline ::std::size_t depth(basic_dos_recursive_directory_iterator<StackType> con
 
 template <typename StackType>
 inline basic_dos_recursive_directory_iterator<StackType> &operator++(basic_dos_recursive_directory_iterator<StackType> &prdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (;;)
 	{
@@ -512,7 +516,8 @@ inline basic_dos_recursive_directory_iterator<StackType> &operator++(basic_dos_r
 }
 
 template <typename StackType>
-inline void pop(basic_dos_recursive_directory_iterator<StackType> &prdit) noexcept
+inline void pop(basic_dos_recursive_directory_iterator<StackType> &prdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (prdit.stack.empty())
 	{
@@ -528,6 +533,7 @@ inline void pop(basic_dos_recursive_directory_iterator<StackType> &prdit) noexce
 
 template <typename StackType>
 inline basic_dos_recursive_directory_iterator<StackType> begin(basic_posix_recursive_directory_generator<StackType> const &pdg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::noexcept_call(::rewinddir, pdg.dir_fl.dirp.dirp);
 	basic_dos_recursive_directory_iterator<StackType> pdit{pdg.dir_fl.dirp};

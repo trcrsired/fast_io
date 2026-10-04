@@ -253,6 +253,7 @@ inline nt_directory_entry operator*(nt_family_directory_iterator<family> pdit) n
 
 template <nt_family family>
 inline nt_family_directory_iterator<family> &operator++(nt_family_directory_iterator<family> &pdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	pdit.entry = win32::nt::details::nt_dirent_next<family>(pdit.entry);
 	return pdit;
@@ -339,12 +340,12 @@ inline ::std::default_sentinel_t end(basic_nt_family_directory_generator<family,
 using nt_directory_generator = nt_family_directory_generator<nt_family::nt>;
 using zw_directory_generator = nt_family_directory_generator<nt_family::zw>;
 
-inline nt_directory_generator current(nt_at_entry nate)
+inline nt_directory_generator current(nt_at_entry nate) noexcept
 {
 	return nt_directory_generator(nate.handle);
 }
 
-inline zw_directory_generator current(zw_at_entry nate)
+inline zw_directory_generator current(zw_at_entry nate) noexcept
 {
 	return zw_directory_generator(nate.handle);
 }
@@ -357,7 +358,7 @@ struct basic_nt_family_recursive_directory_iterator
 	nt_dirent *entry{};
 	stack_type stack;
 	inline constexpr basic_nt_family_recursive_directory_iterator() = default;
-	inline basic_nt_family_recursive_directory_iterator(void *root_han, nt_dirent *ent)
+	inline basic_nt_family_recursive_directory_iterator(void *root_han, nt_dirent *ent) noexcept
 		: root_handle(root_han), entry(ent)
 	{}
 	inline basic_nt_family_recursive_directory_iterator(basic_nt_family_recursive_directory_iterator const &) = delete;
@@ -377,7 +378,7 @@ struct basic_nt_family_recursive_directory_generator
 	void *root_handle{};
 	nt_dirent *entry{};
 	inline constexpr basic_nt_family_recursive_directory_generator() = default;
-	inline explicit constexpr basic_nt_family_recursive_directory_generator(void *rhd)
+	inline explicit constexpr basic_nt_family_recursive_directory_generator(void *rhd) noexcept
 		: root_handle(rhd), entry(::fast_io::win32::nt::details::new_nt_dirent<Allocator>())
 	{
 	}
@@ -420,6 +421,7 @@ inline ::std::size_t depth(basic_nt_family_recursive_directory_iterator<family, 
 template <nt_family family, typename StackType>
 inline basic_nt_family_recursive_directory_iterator<family, StackType> &
 operator++(basic_nt_family_recursive_directory_iterator<family, StackType> &prdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (;;)
 	{
@@ -464,6 +466,7 @@ operator++(basic_nt_family_recursive_directory_iterator<family, StackType> &prdi
 
 template <nt_family family, typename StackType>
 inline void pop(basic_nt_family_recursive_directory_iterator<family, StackType> &prdit)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (prdit.stack.empty())
 	{
@@ -478,7 +481,8 @@ inline void pop(basic_nt_family_recursive_directory_iterator<family, StackType> 
 
 template <nt_family family, typename AllocatorType, typename StackType>
 inline basic_nt_family_recursive_directory_iterator<family, StackType>
-begin(basic_nt_family_recursive_directory_generator<family, AllocatorType, StackType> const &prg) noexcept
+begin(basic_nt_family_recursive_directory_generator<family, AllocatorType, StackType> const &prg)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	basic_nt_family_recursive_directory_iterator<family, StackType> prdit{prg.root_handle, prg.entry};
 	prdit.entry->d_handle = prg.root_handle;
@@ -554,12 +558,12 @@ using nt_family_recursive_directory_generator = basic_nt_family_recursive_direct
 using nt_recursive_directory_generator = nt_family_recursive_directory_generator<nt_family::nt>;
 using zw_recursive_directory_generator = nt_family_recursive_directory_generator<nt_family::zw>;
 
-inline nt_recursive_directory_generator recursive(nt_at_entry nate)
+inline nt_recursive_directory_generator recursive(nt_at_entry nate) noexcept
 {
 	return nt_recursive_directory_generator{nate.handle};
 }
 
-inline zw_recursive_directory_generator recursive(zw_at_entry zate)
+inline zw_recursive_directory_generator recursive(zw_at_entry zate) noexcept
 {
 	return zw_recursive_directory_generator{zate.handle};
 }
