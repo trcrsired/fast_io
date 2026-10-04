@@ -17,9 +17,11 @@
 #include "fast_io_i18n/lc_numbers/impl.h"
 #include "fast_io_i18n/lc_concat.h"
 
-#ifndef FAST_IO_DISABLE_FLOATING_POINT
-#include "../fast_io_unit/floating/lc_impl.h"
-#endif
+// locale-aware floating print hooks live in
+// fast_io_unit/floating/lc_impl.h — they exist only when the
+// fast_io.floating module provides the conversion routines, so they
+// are not pulled in here. Include it explicitly (or via the module)
+// when locale-aware floating output is wanted.
 
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
 
