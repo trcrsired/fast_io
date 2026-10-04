@@ -36,7 +36,8 @@ int main()
 			println(f, u8"Current Timestamp:", ts);
 			char8_t format_buffer[3]{u8'%', u8'%', u8'%'};
 			fast_io::basic_io_scatter_t<char8_t> test_format{format_buffer, 2};
-			fast_io::native_l10n loc(fast_io::mnp::os_c_str(fnm));
+			auto const *loc{::fast_io::i18n::load_l10n(
+				::fast_io::u8string_view{reinterpret_cast<char8_t const *>(fnm)})};
 			auto test = [&](char8_t i) {
 				std::size_t reserved{::fast_io::details::lc_print_reserve_size_time_format_common_impl(loc.loc.u8all->time, ts, test_format)};
 				u8s.resize(reserved);

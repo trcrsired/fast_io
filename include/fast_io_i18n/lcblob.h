@@ -1,30 +1,36 @@
-﻿#pragma once
+#pragma once
 
 #include "../fast_io_dsal/impl/misc/push_macros.h"
 #include "../fast_io_dsal/string_view.h"
 
-// lcblob consumer — read side of the binary locale container emitted by
-// fast_io_tools/binfmt (see binfmt/spec.md there for the wire format).
+// lcblob — the binary locale container (spec: fast_io_tools/binfmt/spec.md).
 //
-// The container is flat, position-independent and ARCHITECTURE-NEUTRAL:
-// every reference is an RVA offset, every numeric field is LEB128, and the
-// fixed-width fields (u32 magic, u32 RVA table entries) are stored
-// little-endian. One .bin serves 32/64-bit and all platforms alike.
+// The file IS the locale data: a flat, position-independent image of the
+// same C-struct layout the runtime used to hold as pointers — every
+// pointer is now an lc_rva<T> (a u32 file offset) and every
+// basic_io_scatter_t is an lc_scatter<T> (lc_rva + u32 unit count).
+// All fields are little-endian u32/s32, so the image is architecture
+// neutral; on little-endian hosts it is read in place with zero parsing.
 //
-// One file carries ALL charsets — no transcoding ever happens at runtime.
+// Loading a locale is: mmap (private copy-on-write) + check magic and
+// version + return a pointer to the lc_locale in the file. That is all —
+// there is no decoding step. COW pages also mean a user may patch rva
+// fields in their own mapping without touching the shared file image.
 //
-// Layout: [outer header][section dir][utf8 section][utf16][utf32]
+// File layout:
+//   [lc_locale root]                    (40 bytes, offsets are constants)
+//   [outer pool: name bytes, utf8]
+//   [basic_lc_all<char>     charset ]   all    — the locale's declared
+//   [basic_lc_all<char8_t>  utf8    ]   u8all    codeset for char-typed
+//   [basic_lc_all<char16_t> utf16   ]   u16all   text (UTF-8, GB18030 or
+//   [basic_lc_all<char32_t> utf32   ]   u32all   UTF-EBCDIC); all aliases
+//                                                 u8all when it is UTF-8
+// each followed by its own payload pool. Every rva is relative to the
+// file base — resolve with lc_get_rva(base, field.ref) / read scalars
+// with lc_u32(field).
 //
-//   outer header: u32 magic 'FCL1' | uleb version | uleb total_size | uleb flags
-//                 | strref name | strref encoding   (utf8; 'encoding' is the
-//                 |                               locale's declared codeset
-//                 |                               for char-typed text)
-//                 | (uleb rva | uleb size) * 3      (0 rva = section absent)
-//   section:      a complete blob of the charset — same body layout:
-//                 u32 magic | uleb version | uleb total_size | uleb flags
-//                 | strref name | strref encoding | uleb cat_dir_rva
-//                 | [cat_dir u32*12][pool][slot tables][records]
-//                 all RVAs inside a section are relative to the section base.
+// LEB128 is used ONLY inside compiled format programs (d_t_fmt & co) —
+// never in the container itself.
 
 namespace fast_io::i18n
 {
@@ -33,160 +39,215 @@ namespace lcblob
 {
 
 inline constexpr ::std::uint_least32_t magic{0x314C4346}; // 'FCL1' LE
-inline constexpr ::std::uint_least64_t blob_version{1};
+inline constexpr ::std::uint_least32_t blob_version{1};
 
-// categories — fixed ids
-enum lc_cat : ::std::uint_least32_t
+// little-endian file scalars -> host
+inline constexpr ::std::uint_least32_t lc_u32(::std::uint_least32_t v) noexcept
 {
-	lc_identification = 0,
-	lc_ctype = 1,
-	lc_collate = 2,
-	lc_time = 3,
-	lc_numeric = 4,
-	lc_monetary = 5,
-	lc_messages = 6,
-	lc_paper = 7,
-	lc_name = 8,
-	lc_address = 9,
-	lc_telephone = 10,
-	lc_measurement = 11,
-	lc_cat_count = 12,
-};
+	if constexpr (::std::endian::native == ::std::endian::big)
+	{
+		v = ::std::byteswap(v);
+	}
+	return v;
+}
 
-enum class slot_tag : ::std::uint_least8_t
+inline constexpr ::std::int_least32_t lc_s32(::std::uint_least32_t v) noexcept
 {
-	absent = 0,
-	string = 1,
-	strlist = 2,
-	integer = 3,
-	bytes = 4,
-	program = 5,
-	int3 = 6,
-	eralist = 7,
-};
+	return static_cast<::std::int_least32_t>(lc_u32(v));
+}
 
-struct field_def
+// a pointer in the file: u32 offset from the file base. T carries the
+// pointee semantics — lc_rva<char16_t> resolves to char16_t const*.
+template <typename T>
+struct lc_rva
 {
-	char const *name;
-	slot_tag tag;
+	::std::uint_least32_t off;
 };
 
-// slot schemas — field order is fixed by the emitter (fast_io_tools)
-inline constexpr field_def identification_fields[]{
-	{"title", slot_tag::string},	{"source", slot_tag::string},
-	{"address", slot_tag::string},	{"contact", slot_tag::string},
-	{"email", slot_tag::string},	{"tel", slot_tag::string},
-	{"fax", slot_tag::string},	{"language", slot_tag::string},
-	{"territory", slot_tag::string}, {"audience", slot_tag::string},
-	{"application", slot_tag::string},
-	{"abbreviation", slot_tag::string}, {"revision", slot_tag::string},
-	{"date", slot_tag::string},
-};
-
-inline constexpr field_def ctype_fields[]{
-	{"codeset", slot_tag::string},
-};
-
-inline constexpr field_def collate_fields[]{
-	{"collation", slot_tag::integer},
-};
-
-inline constexpr field_def time_fields[]{
-	{"abday", slot_tag::strlist},	{"day", slot_tag::strlist},
-	{"abmon", slot_tag::strlist},	{"ab_alt_mon", slot_tag::strlist},
-	{"mon", slot_tag::strlist},	{"alt_mon", slot_tag::strlist},
-	{"d_t_fmt", slot_tag::program}, {"d_fmt", slot_tag::program},
-	{"t_fmt", slot_tag::program},	{"t_fmt_ampm", slot_tag::program},
-	{"date_fmt", slot_tag::program}, {"am_pm", slot_tag::strlist},
-	{"era", slot_tag::eralist},	{"era_d_fmt", slot_tag::program},
-	{"era_d_t_fmt", slot_tag::program}, {"era_t_fmt", slot_tag::program},
-	{"alt_digits", slot_tag::strlist}, {"week", slot_tag::int3},
-	{"first_weekday", slot_tag::integer}, {"first_workday", slot_tag::integer},
-	{"cal_direction", slot_tag::integer}, {"timezone", slot_tag::strlist},
-};
-
-inline constexpr field_def numeric_fields[]{
-	{"decimal_point", slot_tag::string},
-	{"thousands_sep", slot_tag::string},
-	{"grouping", slot_tag::bytes},
-};
-
-// LC_NUMERIC field indices — fixed positions in the schema above:
-// 0 decimal_point, 1 thousands_sep, 2 grouping
-inline constexpr field_def monetary_fields[]{
-	{"int_curr_symbol", slot_tag::string}, {"currency_symbol", slot_tag::string},
-	{"mon_decimal_point", slot_tag::string}, {"mon_thousands_sep", slot_tag::string},
-	{"mon_grouping", slot_tag::bytes},	   {"positive_sign", slot_tag::string},
-	{"negative_sign", slot_tag::string},   {"int_frac_digits", slot_tag::integer},
-	{"frac_digits", slot_tag::integer},	   {"p_cs_precedes", slot_tag::integer},
-	{"p_sep_by_space", slot_tag::integer}, {"n_cs_precedes", slot_tag::integer},
-	{"n_sep_by_space", slot_tag::integer}, {"int_p_cs_precedes", slot_tag::integer},
-	{"int_p_sep_by_space", slot_tag::integer}, {"int_n_cs_precedes", slot_tag::integer},
-	{"int_n_sep_by_space", slot_tag::integer}, {"p_sign_posn", slot_tag::integer},
-	{"n_sign_posn", slot_tag::integer},    {"int_p_sign_posn", slot_tag::integer},
-	{"int_n_sign_posn", slot_tag::integer},
-};
-
-inline constexpr field_def messages_fields[]{
-	{"yesexpr", slot_tag::string}, {"noexpr", slot_tag::string},
-	{"yesstr", slot_tag::string},  {"nostr", slot_tag::string},
-};
-
-inline constexpr field_def paper_fields[]{
-	{"height", slot_tag::integer}, {"width", slot_tag::integer},
-};
-
-inline constexpr field_def name_fields[]{
-	{"name_fmt", slot_tag::program}, {"name_gen", slot_tag::string},
-	{"name_miss", slot_tag::string}, {"name_mr", slot_tag::string},
-	{"name_mrs", slot_tag::string},	 {"name_ms", slot_tag::string},
-};
-
-inline constexpr field_def address_fields[]{
-	{"postal_fmt", slot_tag::program}, {"country_name", slot_tag::string},
-	{"country_post", slot_tag::string}, {"country_ab2", slot_tag::string},
-	{"country_ab3", slot_tag::string},  {"country_num", slot_tag::integer},
-	{"country_car", slot_tag::string},  {"country_isbn", slot_tag::string},
-	{"lang_name", slot_tag::string},    {"lang_ab", slot_tag::string},
-	{"lang_term", slot_tag::string},    {"lang_lib", slot_tag::string},
-};
-
-inline constexpr field_def telephone_fields[]{
-	{"tel_int_fmt", slot_tag::program}, {"tel_dom_fmt", slot_tag::program},
-	{"int_select", slot_tag::string},   {"int_prefix", slot_tag::string},
-};
-
-inline constexpr field_def measurement_fields[]{
-	{"measurement", slot_tag::integer},
-};
-
-struct cat_schema
+// a basic_io_scatter_t<T> in the file: rva + element count in T units
+template <typename T>
+struct lc_scatter
 {
-	::std::span<field_def const> fields;
-	char const *glibc_name;
+	lc_rva<T> ref;
+	::std::uint_least32_t len;
 };
 
-inline constexpr cat_schema cat_schemas[lc_cat_count]{
-	{identification_fields, "LC_IDENTIFICATION"}, {ctype_fields, "LC_CTYPE"},
-	{collate_fields, "LC_COLLATE"},		  {time_fields, "LC_TIME"},
-	{numeric_fields, "LC_NUMERIC"},		  {monetary_fields, "LC_MONETARY"},
-	{messages_fields, "LC_MESSAGES"},	  {paper_fields, "LC_PAPER"},
-	{name_fields, "LC_NAME"},		  {address_fields, "LC_ADDRESS"},
-	{telephone_fields, "LC_TELEPHONE"},	  {measurement_fields, "LC_MEASUREMENT"},
-};
-
-// section selector. Slot charset is the locale's declared codeset view
-// for char (utf8 / gb18030 / utf_ebcdic — see header.encoding); it is
-// always present and aliases the utf8 section when the codeset IS utf8.
-enum class blob_charset : ::std::uint_least8_t
+// resolve an rva against the file base (the lc_locale pointer itself,
+// or anything aliasing the mapped image). off 0 = absent -> nullptr.
+template <typename T>
+inline constexpr T const *lc_get_rva(void const *base, lc_rva<T> r) noexcept
 {
-	charset = 0,
-	utf8 = 1,
-	utf16 = 2, // LE
-	utf32 = 3, // LE
+	::std::uint_least32_t const off{lc_u32(r.off)};
+	if (off == 0)
+	{
+		return nullptr;
+	}
+	return reinterpret_cast<T const *>(static_cast<char8_t const *>(base) + off);
+}
+
+// resolve a scatter to a host {base,len} pair — T units. {nullptr,0}
+// when absent.
+template <typename T>
+inline constexpr ::fast_io::basic_io_scatter_t<T>
+lc_get_scatter(void const *base, lc_scatter<T> s) noexcept
+{
+	return {lc_get_rva(base, s.ref),
+			lc_u32(s.ref.off) == 0 ? 0 : static_cast<::std::size_t>(lc_u32(s.len))};
+}
+
+// ---------------------------------------------------------------------------
+// the file structs — basic_lc_* of the old runtime with pointers as rvas.
+// Text fields are lc_scatter<char_type>; compiled programs and raw byte
+// lists (grouping) are lc_scatter<char8_t> byte streams. Integer fields
+// are s32. Layout is all-u32: deterministic on every ABI.
+// ---------------------------------------------------------------------------
+
+template <typename char_type>
+struct basic_lc_identification
+{
+	lc_scatter<char_type> name, encoding, title, source, address, contact,
+		email, tel, fax, language, territory, audience, application,
+		abbreviation, revision, date;
 };
 
-inline constexpr ::std::size_t blob_charset_count{4};
+template <typename char_type>
+struct basic_lc_monetary
+{
+	lc_scatter<char_type> int_curr_symbol, currency_symbol, mon_decimal_point,
+		mon_thousands_sep;
+	lc_scatter<char8_t> mon_grouping; // byte list, charset-neutral
+	lc_scatter<char_type> positive_sign, negative_sign;
+	::std::int_least32_t int_frac_digits, frac_digits, p_cs_precedes,
+		p_sep_by_space, n_cs_precedes, n_sep_by_space, int_p_cs_precedes,
+		int_p_sep_by_space, int_n_cs_precedes, int_n_sep_by_space,
+		p_sign_posn, n_sign_posn, int_p_sign_posn, int_n_sign_posn;
+};
+
+template <typename char_type>
+struct basic_lc_numeric
+{
+	lc_scatter<char_type> decimal_point, thousands_sep;
+	lc_scatter<char8_t> grouping; // byte list, charset-neutral
+};
+
+template <typename char_type>
+struct basic_lc_time_era
+{
+	::std::int_least32_t direction; // +1 / -1
+	::std::int_least32_t offset;
+	::std::int_least32_t start_year;
+	::std::uint_least32_t start_month;
+	::std::uint_least32_t start_day;
+	::std::int_least32_t end_year; // INT32_MIN/MAX = -*/+*
+	::std::uint_least32_t end_month;
+	::std::uint_least32_t end_day;
+	lc_scatter<char_type> name;
+	lc_scatter<char8_t> era_format; // compiled program
+};
+
+template <typename char_type>
+struct basic_lc_time
+{
+	lc_scatter<char_type> abday[7];
+	lc_scatter<char_type> day[7];
+	lc_scatter<char_type> abmon[12];
+	lc_scatter<char_type> ab_alt_mon[12];
+	lc_scatter<char_type> mon[12];
+	lc_scatter<char_type> alt_mon[12];
+	lc_scatter<char8_t> d_t_fmt, d_fmt, t_fmt, t_fmt_ampm, date_fmt;
+	lc_scatter<char_type> am_pm[2];
+	lc_scatter<basic_lc_time_era<char_type>> era;
+	lc_scatter<char8_t> era_d_fmt, era_d_t_fmt, era_t_fmt;
+	lc_scatter<lc_scatter<char_type>> alt_digits;
+	struct
+	{
+		::std::int_least32_t ndays;
+		::std::int_least32_t first_day;
+		::std::int_least32_t first_week;
+	} week;
+	::std::int_least32_t first_weekday, first_workday, cal_direction;
+	lc_scatter<lc_scatter<char_type>> timezone;
+};
+
+template <typename char_type>
+struct basic_lc_messages
+{
+	lc_scatter<char_type> yesexpr, noexpr, yesstr, nostr;
+};
+
+struct basic_lc_paper
+{
+	::std::int_least32_t width, height; // mm
+};
+
+template <typename char_type>
+struct basic_lc_telephone
+{
+	lc_scatter<char8_t> tel_int_fmt, tel_dom_fmt; // programs
+	lc_scatter<char_type> int_select, int_prefix;
+};
+
+template <typename char_type>
+struct basic_lc_name
+{
+	lc_scatter<char8_t> name_fmt; // program
+	lc_scatter<char_type> name_gen, name_miss, name_mr, name_mrs, name_ms;
+};
+
+template <typename char_type>
+struct basic_lc_address
+{
+	lc_scatter<char8_t> postal_fmt; // program
+	lc_scatter<char_type> country_name, country_post, country_ab2, country_ab3;
+	::std::int_least32_t country_num;
+	lc_scatter<char_type> country_car, country_isbn, lang_name, lang_ab,
+		lang_term, lang_lib;
+};
+
+struct basic_lc_measurement
+{
+	::std::int_least32_t measurement; // 1 = metric, 2 = US
+};
+
+template <typename char_type>
+struct basic_lc_keyboard
+{
+	lc_scatter<lc_scatter<char_type>> keyboards;
+};
+
+template <typename char_type>
+struct basic_lc_all
+{
+	basic_lc_identification<char_type> identification;
+	basic_lc_monetary<char_type> monetary;
+	basic_lc_numeric<char_type> numeric;
+	basic_lc_time<char_type> time;
+	basic_lc_messages<char_type> messages;
+	basic_lc_paper paper;
+	basic_lc_telephone<char_type> telephone;
+	basic_lc_name<char_type> name;
+	basic_lc_address<char_type> address;
+	basic_lc_measurement measurement;
+	basic_lc_keyboard<char_type> keyboard;
+};
+
+// ---------------------------------------------------------------------------
+// file root — the object load_l10n returns a pointer to.
+// ---------------------------------------------------------------------------
+
+struct lc_locale
+{
+	::std::uint_least32_t magic;
+	::std::uint_least32_t version;
+	::std::uint_least32_t total; // file size
+	::std::uint_least32_t flags;
+	::std::uint_least32_t codeset; // == locale_charset, the char view
+	lc_scatter<char8_t> name;      // canonical locale name, utf8
+	lc_rva<basic_lc_all<char>> all;
+	lc_rva<basic_lc_all<char8_t>> u8all;
+	lc_rva<basic_lc_all<char16_t>> u16all;
+	lc_rva<basic_lc_all<char32_t>> u32all;
+};
 
 // the codesets a locale file can declare for its char view — the only
 // three supported
@@ -210,442 +271,48 @@ inline constexpr char8_t const *locale_charset_name(locale_charset cs) noexcept
 	}
 }
 
-// fixed-width file fields are little-endian — swap on big-endian hosts
-inline ::std::uint_least32_t read_u32(char8_t const *p) noexcept
+// the section struct for a stream char_type: char reads the charset
+// slot (the locale's declared codeset), char8_t/16/32 their own UTF
+// sections, wchar_t follows its size. nullptr when the slot is absent.
+template <::std::integral char_type>
+inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) noexcept
 {
-	::std::uint_least32_t v{};
-	::fast_io::details::my_memcpy(__builtin_addressof(v), p, 4);
-	if constexpr (::std::endian::native == ::std::endian::big)
+	if constexpr (::std::same_as<char_type, char>)
 	{
-		v = ::std::byteswap(v);
+		return lc_get_rva(l, l->all);
 	}
-	return v;
-}
-
-template <::std::integral T>
-inline char8_t const *read_leb(char8_t const *p, char8_t const *e, T &v) FAST_IO_HERBCEPTIONS_THROWS
-{
-	auto [it, ec]{::fast_io::parse_by_scan(p, e, ::fast_io::manipulators::leb128_get(v))};
-	if (ec != ::fast_io::freestanding::parse_errc::ok)
+	else if constexpr (::std::same_as<char_type, char8_t>)
 	{
-		::fast_io::herbceptions::throws_parse_errc(ec);
+		return lc_get_rva(l, l->u8all);
 	}
-	return it;
-}
-
-// section sub-header — what a section's own blob header contributes
-struct section_header
-{
-	char8_t const *cat_dir{}; // -> u32[lc_cat_count] within the section
-};
-
-struct blob_header
-{
-	::std::uint_least64_t version{};
-	::std::uint_least64_t total_size{};
-	::std::uint_least64_t flags{};
-	::fast_io::u8string_view name{};
-	::fast_io::u8string_view encoding{};
-	::std::uint_least64_t sec_rva[blob_charset_count]{};
-	::std::uint_least64_t sec_size[blob_charset_count]{};
-};
-
-// one embedded section header — validates and returns its cat_dir
-inline section_header read_section_header(char8_t const *sec,
-										  ::std::uint_least64_t sec_size) FAST_IO_HERBCEPTIONS_THROWS
-{
-	if (sec_size < 4 || read_u32(sec) != magic)
+	else if constexpr (::std::same_as<char_type, char16_t>)
 	{
-		::fast_io::throw_posix_error(EINVAL);
+		return lc_get_rva(l, l->u16all);
 	}
-	char8_t const *p{sec + 4};
-	char8_t const *e{sec + sec_size};
-	::std::uint_least64_t v{};
-	p = read_leb(p, e, v); // version
-	if (v > blob_version)
+	else if constexpr (::std::same_as<char_type, char32_t>)
 	{
-		::fast_io::throw_posix_error(EINVAL);
+		return lc_get_rva(l, l->u32all);
 	}
-	p = read_leb(p, e, v); // total_size
-	if (v > sec_size)
+	else if constexpr (::std::same_as<char_type, wchar_t>)
 	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	p = read_leb(p, e, v); // flags
-	::std::uint_least64_t rva{}, len{};
-	p = read_leb(p, e, rva); // name
-	p = read_leb(p, e, len);
-	if (rva > sec_size || len > sec_size - rva)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	p = read_leb(p, e, rva); // encoding
-	p = read_leb(p, e, len);
-	if (rva > sec_size || len > sec_size - rva)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	::std::uint_least64_t cat_dir_rva{};
-	p = read_leb(p, e, cat_dir_rva);
-	if (cat_dir_rva > sec_size || lc_cat_count * 4 > sec_size - cat_dir_rva)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	return {sec + cat_dir_rva};
-}
-
-inline blob_header read_header(::fast_io::u8string_view blob) FAST_IO_HERBCEPTIONS_THROWS
-{
-	if (blob.size() < 4)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	if (read_u32(blob.data()) != magic)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	char8_t const *p{blob.data() + 4};
-	char8_t const *e{blob.data() + blob.size()};
-	blob_header h;
-	p = read_leb(p, e, h.version);
-	if (h.version > blob_version)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	p = read_leb(p, e, h.total_size);
-	p = read_leb(p, e, h.flags);
-	::std::uint_least64_t rva{}, len{};
-	p = read_leb(p, e, rva);
-	p = read_leb(p, e, len);
-	if (rva + len > blob.size())
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	h.name = ::fast_io::u8string_view{blob.data() + rva, len};
-	p = read_leb(p, e, rva);
-	p = read_leb(p, e, len);
-	if (rva + len > blob.size())
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	h.encoding = ::fast_io::u8string_view{blob.data() + rva, len};
-	for (::std::size_t c{}; c < blob_charset_count; ++c)
-	{
-		p = read_leb(p, e, rva);
-		p = read_leb(p, e, len);
-		if (rva != 0)
+		if constexpr (sizeof(wchar_t) == 2)
 		{
-			if (rva > blob.size() || len > blob.size() - rva || len < 4)
-			{
-				::fast_io::throw_posix_error(EINVAL);
-			}
+			return reinterpret_cast<basic_lc_all<wchar_t> const *>(
+				lc_get_rva(l, l->u16all));
 		}
-		h.sec_rva[c] = rva;
-		h.sec_size[c] = len;
+		else
+		{
+			return reinterpret_cast<basic_lc_all<wchar_t> const *>(
+				lc_get_rva(l, l->u32all));
+		}
 	}
-	return h;
+	else
+	{
+		return lc_get_rva(l, l->u32all);
+	}
 }
 
 } // namespace lcblob
-
-// ---------------------------------------------------------------------------
-// decoded slot — result of looking up one field in a locale.
-//
-// base..seg_end is the segment RVAs resolve against (the blob itself, or
-// the per-user override segment). For strlist/eralist, ptr points at the
-// first strref/era record (the count leb already consumed into count).
-// ---------------------------------------------------------------------------
-
-struct locale_slot
-{
-	char8_t const *base{};
-	char8_t const *ptr{};
-	char8_t const *seg_end{};
-	::std::uint_least64_t len{};	// string/program/bytes payload size
-	::std::uint_least64_t count{}; // strlist/eralist element count
-	::std::int_least64_t ints[3]{}; // integer/int3 payloads
-	lcblob::slot_tag tag{lcblob::slot_tag::absent};
-
-	inline constexpr bool absent() const noexcept
-	{
-		return tag == lcblob::slot_tag::absent;
-	}
-	// string/program/bytes payload; for utf16/utf32 blobs these are
-	// little-endian char units, not utf-8.
-	inline constexpr ::fast_io::u8string_view bytes() const noexcept
-	{
-		return ::fast_io::u8string_view{ptr, len};
-	}
-};
-
-namespace lcblob
-{
-
-// decode one slot record at rec within the segment [base, seg_end)
-inline void read_slot(char8_t const *rec, char8_t const *seg_end, char8_t const *base,
-					  ::fast_io::i18n::locale_slot &out) FAST_IO_HERBCEPTIONS_THROWS
-{
-	if (rec == nullptr || rec < base || rec >= seg_end)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	::std::uint_least64_t tag{};
-	rec = read_leb(rec, seg_end, tag);
-	out = {};
-	out.base = base;
-	out.seg_end = seg_end;
-	out.tag = static_cast<slot_tag>(tag);
-	::std::uint_least64_t const seg{static_cast<::std::uint_least64_t>(seg_end - base)};
-	switch (out.tag)
-	{
-	case slot_tag::string:
-	case slot_tag::bytes:
-	case slot_tag::program:
-	{
-		::std::uint_least64_t rva{}, len{};
-		rec = read_leb(rec, seg_end, rva);
-		rec = read_leb(rec, seg_end, len);
-		if (rva > seg || len > seg - rva)
-		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		out.ptr = base + rva;
-		out.len = len;
-		break;
-	}
-	case slot_tag::strlist:
-	case slot_tag::eralist:
-	{
-		::std::uint_least64_t rva{};
-		rec = read_leb(rec, seg_end, rva);
-		if (rva >= seg)
-		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		char8_t const *q{base + rva};
-		q = read_leb(q, seg_end, out.count);
-		out.ptr = q;
-		break;
-	}
-	case slot_tag::integer:
-	{
-		rec = read_leb(rec, seg_end, out.ints[0]);
-		break;
-	}
-	case slot_tag::int3:
-	{
-		rec = read_leb(rec, seg_end, out.ints[0]);
-		rec = read_leb(rec, seg_end, out.ints[1]);
-		rec = read_leb(rec, seg_end, out.ints[2]);
-		break;
-	}
-	default:
-	{
-		out.tag = slot_tag::absent;
-		break;
-	}
-	}
-}
-
-// element i of a strlist slot (sequential strref walk; lists are small)
-inline void strlist_elem(::fast_io::i18n::locale_slot const &s, ::std::uint_least64_t i,
-						 ::fast_io::u8string_view &out) FAST_IO_HERBCEPTIONS_THROWS
-{
-	if (s.tag != slot_tag::strlist || i >= s.count)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	char8_t const *p{s.ptr};
-	for (::std::uint_least64_t k{};; ++k)
-	{
-		::std::uint_least64_t rva{}, len{};
-		p = read_leb(p, s.seg_end, rva);
-		p = read_leb(p, s.seg_end, len);
-		::std::uint_least64_t const seg{static_cast<::std::uint_least64_t>(s.seg_end - s.base)};
-		if (rva > seg || len > seg - rva)
-		{
-			::fast_io::throw_posix_error(EINVAL);
-		}
-		if (k == i)
-		{
-			out = ::fast_io::u8string_view{s.base + rva, len};
-			return;
-		}
-	}
-}
-
-// raw record bytes of era element i (era_rec decode lives with the
-// consumer; the rec layout is in fast_io_tools/binfmt/spec.md)
-inline void era_elem(::fast_io::i18n::locale_slot const &s, ::std::uint_least64_t i,
-					 ::fast_io::u8string_view &out) FAST_IO_HERBCEPTIONS_THROWS
-{
-	if (s.tag != slot_tag::eralist || i >= s.count)
-	{
-		::fast_io::throw_posix_error(EINVAL);
-	}
-	char8_t const *p{s.ptr};
-	for (::std::uint_least64_t k{};; ++k)
-	{
-		char8_t const *rec{p};
-		::std::int_least64_t iv{};
-		::std::uint_least64_t uv{}, uv2{};
-		p = read_leb(p, s.seg_end, iv);	 // direction
-		p = read_leb(p, s.seg_end, iv);	 // offset
-		p = read_leb(p, s.seg_end, iv);	 // start_year
-		p = read_leb(p, s.seg_end, uv);	 // start_month
-		p = read_leb(p, s.seg_end, uv);	 // start_day
-		p = read_leb(p, s.seg_end, iv);	 // end_year
-		p = read_leb(p, s.seg_end, uv);	 // end_month
-		p = read_leb(p, s.seg_end, uv);	 // end_day
-		p = read_leb(p, s.seg_end, uv);	 // name rva
-		p = read_leb(p, s.seg_end, uv2); // name len
-		p = read_leb(p, s.seg_end, uv);	 // fmt rva
-		p = read_leb(p, s.seg_end, uv2); // fmt len
-		if (k == i)
-		{
-			out = ::fast_io::u8string_view{rec, static_cast<::std::size_t>(p - rec)};
-			return;
-		}
-	}
-}
-
-// field index by schema name (linear; field counts are ~20 max)
-inline ::std::ptrdiff_t field_index(::std::uint_least32_t cat,
-									::fast_io::u8string_view fname) noexcept
-{
-	if (cat >= lc_cat_count)
-	{
-		return -1;
-	}
-	auto const &fs{cat_schemas[cat].fields};
-	for (::std::size_t i{}; i < fs.size(); ++i)
-	{
-		char const *n{fs[i].name};
-		::std::size_t nl{::std::char_traits<char>::length(n)};
-		if (nl != fname.size())
-		{
-			continue;
-		}
-		bool eq{true};
-		for (::std::size_t j{}; j < nl; ++j)
-		{
-			if (static_cast<char8_t>(n[j]) != fname.data()[j])
-			{
-				eq = false;
-				break;
-			}
-		}
-		if (eq)
-		{
-			return static_cast<::std::ptrdiff_t>(i);
-		}
-	}
-	return -1;
-}
-
-} // namespace lcblob
-
-// ---------------------------------------------------------------------------
-// The locale representation. Storage is owned by the fast_io_i18n cache
-// and never unloaded — a pointer stays valid for the process lifetime.
-//
-// The blob is mapped on private (copy-on-write) pages: PROT_READ|
-// PROT_WRITE|MAP_PRIVATE on POSIX, PAGE_WRITECOPY/FILE_MAP_COPY on
-// Windows — the default native_file_loader mode. The file image is
-// shared through the OS page cache but a process can never write back.
-//
-// ovr_* is the per-user override segment (Windows user settings from
-// HKCU\Control Panel\International — empty elsewhere). Records use the
-// same encoding as blob slots with RVAs relative to ovr_begin; ovr_index
-// is {key = cat<<8 | field_index, record_off} pairs. Only slots present
-// in the index are overridden — everything else comes from the blob.
-// ---------------------------------------------------------------------------
-
-struct locale
-{
-	lcblob::blob_header header{};
-	lcblob::locale_charset codeset{}; // the char-view codeset the caller asked for
-	char8_t const *blob_begin{};
-	char8_t const *blob_end{};
-	// per-charset section spans + validated cat_dir (null = absent)
-	char8_t const *sec_begin[lcblob::blob_charset_count]{};
-	char8_t const *sec_end[lcblob::blob_charset_count]{};
-	char8_t const *sec_catdir[lcblob::blob_charset_count]{};
-	// per-charset override segment (Windows user settings)
-	char8_t const *ovr_begin[lcblob::blob_charset_count]{};
-	char8_t const *ovr_end[lcblob::blob_charset_count]{};
-	::std::uint_least32_t const *ovr_index[lcblob::blob_charset_count]{};
-	::std::uint_least32_t ovr_count[lcblob::blob_charset_count]{};
-};
-
-// where one slot record lives: rec is 'uleb tag | payload' (nullptr =
-// absent); string/strref RVAs inside the record are relative to
-// seg_begin, and seg_end bounds it. Feed rec/seg_begin/seg_end to
-// lcblob::read_slot / strlist_elem / era_elem.
-struct locale_field_ref
-{
-	char8_t const *rec{};
-	char8_t const *seg_begin{};
-	char8_t const *seg_end{};
-};
-
-// locate the slot record for (cat,fidx) in charset section cs:
-// user overrides first (Windows), then the blob section. Returns {}
-// when absent or out of range — no exceptions.
-inline locale_field_ref locale_field(::fast_io::i18n::locale const *l, lcblob::lc_cat cat,
-									 ::std::uint_least32_t fidx, lcblob::blob_charset cs) noexcept
-{
-	if (l == nullptr || static_cast<::std::uint_least32_t>(cat) >= lcblob::lc_cat_count ||
-		fidx >= lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size() ||
-		static_cast<::std::size_t>(cs) >= lcblob::blob_charset_count)
-	{
-		return {};
-	}
-	::std::size_t const ci{static_cast<::std::size_t>(cs)};
-	if (l->ovr_count[ci] != 0)
-	{
-		::std::uint_least32_t const key{(static_cast<::std::uint_least32_t>(cat) << 8) | fidx};
-		for (::std::uint_least32_t i{}; i < l->ovr_count[ci]; ++i)
-		{
-			if (l->ovr_index[ci][i * 2] == key)
-			{
-				return {l->ovr_begin[ci] + l->ovr_index[ci][i * 2 + 1], l->ovr_begin[ci],
-						l->ovr_end[ci]};
-			}
-		}
-	}
-	char8_t const *sbase{l->sec_begin[ci]};
-	if (sbase == nullptr)
-	{
-		return {};
-	}
-	::std::uint_least32_t const tbl{
-		lcblob::read_u32(l->sec_catdir[ci] + static_cast<::std::uint_least32_t>(cat) * 4)};
-	if (tbl == 0)
-	{
-		return {};
-	}
-	::std::uint_least64_t const bsz{static_cast<::std::uint_least64_t>(l->sec_end[ci] - sbase)};
-	::std::uint_least64_t const nf{
-		lcblob::cat_schemas[static_cast<::std::uint_least32_t>(cat)].fields.size() * 4};
-	if (tbl > bsz || nf > bsz - tbl)
-	{
-		return {};
-	}
-	::std::uint_least32_t const srva{lcblob::read_u32(sbase + tbl + fidx * 4)};
-	if (srva == 0 || srva >= bsz)
-	{
-		return {};
-	}
-	return {sbase + srva, sbase, l->sec_end[ci]};
-}
-
-// same, in the char view (slot charset — the locale's declared codeset)
-inline locale_field_ref locale_field(::fast_io::i18n::locale const *l, lcblob::lc_cat cat,
-									 ::std::uint_least32_t fidx) noexcept
-{
-	return locale_field(l, cat, fidx, lcblob::blob_charset::charset);
-}
 
 // ---------------------------------------------------------------------------
 // shared-library loading API — implemented in src/locale/lcblob.cc.
@@ -668,31 +335,28 @@ inline locale_field_ref locale_field(::fast_io::i18n::locale const *l, lcblob::l
 #define FAST_IO_I18N_EXPORT
 #endif
 
-// Returns a pointer to the cached locale representation — a plain
-// C-style struct, never freed (locale data is never unloaded). Every
-// pointer inside it targets mmap'd blob content or cache-owned buffers
-// and stays valid for the process lifetime. native_file_loader is an
+// Returns a pointer to the lc_locale inside the mapped file — image data
+// is never unloaded, so the pointer (and every pointer lc_get_rva hands
+// out) stays valid for the process lifetime. native_file_loader is an
 // implementation detail of the library and is not exposed.
 //
 //   name is a standard locale name: lang[_TERRITORY][.codeset][@modifier]
 //     "de_DE.UTF-8" / "de_DE.gb18030" / "de_DE.UTF-EBCDIC" ...
-//     the codeset names the char view only — char8_t/char16_t/char32_t
-//     sections are always present in the same file. Supported codesets:
-//     UTF-8, GB18030, UTF-EBCDIC; no codeset defaults to UTF-8.
+//     the codeset names the char view only — the utf8/16/32 sections are
+//     always in the same file. Supported codesets: UTF-8, GB18030,
+//     UTF-EBCDIC; no codeset defaults to UTF-8.
 //   name ""      -> system default locale (L10N/LC_ALL/LANG on POSIX;
 //                   GetUserDefaultLocaleName then the registry on Windows).
-//                   On Windows the user's International settings override
-//                   the overridable slots for that locale.
 //   name "C"/"POSIX" resolve to the canonical POSIX.UTF-8 locale.
 //   dir          from FAST_IO_LOCALE_PATH env, else the compile-time
 //                FAST_IO_I18N_LOCALE_DIR macro, else /usr/lib/fast_io/locale.
-FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name)
-	FAST_IO_HERBCEPTIONS_THROWS;
+FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *
+load_l10n(::fast_io::u8string_view name) FAST_IO_HERBCEPTIONS_THROWS;
 
 // explicit-charset form for programmatic callers
-FAST_IO_I18N_EXPORT ::fast_io::i18n::locale const *load_locale_blob(::fast_io::u8string_view name,
-									 lcblob::locale_charset enc)
-	FAST_IO_HERBCEPTIONS_THROWS;
+FAST_IO_I18N_EXPORT ::fast_io::i18n::lcblob::lc_locale const *
+load_l10n(::fast_io::u8string_view name,
+				 lcblob::locale_charset enc) FAST_IO_HERBCEPTIONS_THROWS;
 
 } // namespace fast_io::i18n
 

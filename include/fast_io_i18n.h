@@ -11,7 +11,10 @@
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 
 #include "fast_io_i18n/lcblob.h"
+#include "fast_io_i18n/lc.h"
 #include "fast_io_i18n/imbuer.h"
+#include "fast_io_i18n/lc_print_status.h"
+#include "fast_io_i18n/lc_numbers/impl.h"
 
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
 

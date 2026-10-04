@@ -12,7 +12,8 @@ int main()
 	using namespace fast_io::mnp;
 	for (auto fnm : files)
 	{
-		fast_io::native_l10n loc(os_c_str(fnm));
+		auto const *loc{::fast_io::i18n::load_l10n(
+			::fast_io::u8string_view{reinterpret_cast<char8_t const *>(fnm)})};
 		auto v{posix_clock_gettime(fast_io::posix_clock_id::realtime)};
 		fast_io::iso8601_timestamp utc_tsp{utc(v)};
 		fast_io::iso8601_timestamp tsp{local(v)};
