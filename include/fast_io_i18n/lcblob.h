@@ -338,8 +338,8 @@ enum class l10n_load_flags : ::std::uint_least32_t
 	// ignore the system's own user-locale data when resolving "" —
 	// on Windows the HKCU\Control Panel\International registry value
 	// is never read; GetUserDefaultLocaleName still resolves "" as
-	// the normal OS lookup. POSIX env (L10N/LC_ALL/LANG) and
-	// FAST_IO_LOCALE_PATH are the normal mechanism, not overrides,
+	// the normal OS lookup. POSIX env (FAST_IO_L10N_LANG/LC_ALL/LANG)
+	// and FAST_IO_L10N_PATH are the normal mechanism, not overrides,
 	// and stay active
 	ignore_system_settings = static_cast<::std::uint_least32_t>(1) << 0,
 };
@@ -395,10 +395,10 @@ inline constexpr l10n_load_flags &operator|=(l10n_load_flags &x, l10n_load_flags
 //     the codeset names the char view only — the utf8/16/32 sections are
 //     always in the same file. Supported codesets: UTF-8, GB18030,
 //     UTF-EBCDIC; no codeset defaults to UTF-8.
-//   name ""      -> system default locale (L10N/LC_ALL/LANG on POSIX;
+//   name ""      -> system default locale (FAST_IO_L10N_LANG/LC_ALL/LANG on POSIX;
 //                   GetUserDefaultLocaleName then the registry on Windows).
 //   name "C"/"POSIX" resolve to the canonical POSIX.UTF-8 locale.
-//   dir          from FAST_IO_LOCALE_PATH env, else the compile-time
+//   dir          from FAST_IO_L10N_PATH env, else the compile-time
 //                FAST_IO_I18N_LOCALE_DIR macro — unset throws.
 //   flags        ignore_system_settings skips the Windows registry fallback
 FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *

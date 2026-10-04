@@ -21,7 +21,7 @@
 // users may also patch rva fields in their own mapping to customize
 // fields without touching the shared image.
 //
-// name "" resolves to the system default locale: L10N/LC_ALL/LANG on
+// name "" resolves to the system default locale: FAST_IO_L10N_LANG/LC_ALL/LANG on
 // POSIX, GetUserDefaultLocaleName + the International registry key on
 // Windows. "C"/"POSIX" are loaded from their blob files like any locale.
 
@@ -125,7 +125,7 @@ struct cache_guard
 inline void check_name(::fast_io::u8string_view name) FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t size_restriction{256u};
-	if (name.empty() || name.size() >= size_restriction)
+	if (name.is_empty() || name.size() >= size_restriction)
 	{
 		throw_einval();
 	}
@@ -165,6 +165,31 @@ inline ::fast_io::u8string u16_to_ebcdic(char16_t const *s, ::std::size_t n) FAS
 		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
 								 ::fast_io::encoding_scheme::utf_ebcdic>(
 			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+}
+
+// env var as u8 text: W + transcode on NT, raw ANSI bytes on 9x.
+// empty string means unset
+inline ::fast_io::u8string env_u8(char16_t const *wname, char const *aname) FAST_IO_HERBCEPTIONS_THROWS
+{
+#if defined(_WIN32_WINDOWS)
+	char buf[512];
+	auto const n{::fast_io::win32::GetEnvironmentVariableA(aname, buf, 512)};
+	if (n == 0 || n >= 512)
+	{
+		return {};
+	}
+	::fast_io::u8string s;
+	s.append(reinterpret_cast<char8_t const *>(buf), n);
+	return s;
+#else
+	char16_t buf[512];
+	auto const n{::fast_io::win32::GetEnvironmentVariableW(wname, buf, 512)};
+	if (n == 0 || n >= 512)
+	{
+		return {};
+	}
+	return u16_to_u8(buf, n);
+#endif
 }
 
 inline ::fast_io::u8string default_locale_name_win32(bool ignore_system_settings) FAST_IO_HERBCEPTIONS_THROWS
@@ -606,19 +631,29 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 								bool ignore_system_settings = false) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::u8string raw;
-	if (name.empty())
+	if (name.is_empty())
 	{
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-		// ignore_system_settings only gates the registry fallback — the
-		// GetUserDefaultLocaleName API is the standard OS lookup
-		raw = default_locale_name_win32(ignore_system_settings);
-		if (raw.empty())
+		// FAST_IO_L10N_LANG then LC_ALL env wins over the OS
+		// default, same as posix; ignore_system_settings only gates
+		// the registry fallback — the GetUserDefaultLocaleName API
+		// is the standard OS lookup
+		raw = env_u8(u"FAST_IO_L10N_LANG", "FAST_IO_L10N_LANG");
+		if (raw.is_empty())
 		{
-			raw.append(u8"C", 1);
+			raw = env_u8(u"LC_ALL", "LC_ALL");
+		}
+		if (raw.is_empty())
+		{
+			raw = default_locale_name_win32(ignore_system_settings);
+			if (raw.is_empty())
+			{
+				raw.append(u8"C", 1);
+			}
 		}
 #else
 		char const *env{};
-		for (char const *var : {"L10N", "LC_ALL", "LANG"})
+		for (char const *var : {"FAST_IO_L10N_LANG", "LC_ALL", "LANG"})
 		{
 			if (char const *v{lc_getenv(var)}; v != nullptr && *v != 0)
 			{
@@ -687,47 +722,23 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 	check_name(::fast_io::u8string_view{out.data(), out.size()});
 }
 
-// the locale data directory: FAST_IO_LOCALE_PATH, or the build-time
+// the locale data directory: FAST_IO_L10N_PATH, or the build-time
 // FAST_IO_I18N_LOCALE_DIR default. Nothing configured is an error —
 // there is no system-wide default to silently guess.
 inline ::fast_io::u8string_view locale_dir() FAST_IO_HERBCEPTIONS_THROWS
 {
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-#if defined(_WIN32_WINDOWS)
-	// 9x has no *W APIs — read once into a static byte buffer and
-	// view it directly (it is a dir path, kept raw ANSI bytes)
-	static char env_buf[512];
-	static ::std::size_t const env_n{[] {
-		auto const n{::fast_io::win32::GetEnvironmentVariableA(
-			reinterpret_cast<char const *>(u8"FAST_IO_LOCALE_PATH"),
-			env_buf, 512)};
-		return n < 512 ? n : ::std::size_t{};
-	}()};
-	if (env_n != 0)
-	{
-		return ::fast_io::u8string_view{reinterpret_cast<char8_t const *>(env_buf), env_n};
-	}
-#else
-	// NT: GetEnvironmentVariableW, transcoded once into a
-	// process-lifetime string (u16_to_u8 returns an owned u8string,
-	// the static keeps it alive — no dangling view)
-	static ::fast_io::u8string const env_dir{[]() FAST_IO_HERBCEPTIONS_THROWS {
-		char16_t buf[512];
-		auto const n{::fast_io::win32::GetEnvironmentVariableW(u"FAST_IO_LOCALE_PATH",
-															 buf, 512)};
-		if (n == 0 || n >= 512)
-		{
-			return ::fast_io::u8string{};
-		}
-		return u16_to_u8(buf, n);
-	}()};
-	if (!env_dir.empty())
+	// read once into a process-lifetime string; the view into it is
+	// what callers take (env_u8 returns an owned u8string — the
+	// static keeps it alive, no dangling view)
+	static ::fast_io::u8string const env_dir{env_u8(u"FAST_IO_L10N_PATH",
+												  "FAST_IO_L10N_PATH")};
+	if (!env_dir.is_empty())
 	{
 		return ::fast_io::u8string_view{env_dir.data(), env_dir.size()};
 	}
-#endif
 #else
-	if (char const *v{lc_getenv("FAST_IO_LOCALE_PATH")}; v != nullptr && *v != 0)
+	if (char const *v{lc_getenv("FAST_IO_L10N_PATH")}; v != nullptr && *v != 0)
 	{
 		return ::fast_io::u8string_view{reinterpret_cast<char8_t const *>(v),
 										::fast_io::cstr_len(v)};
@@ -886,7 +897,7 @@ FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8str
 		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
 	details::resolve_locale_name(name, lname, cs, ignore_system_settings);
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-	bool const user{name.empty() && !ignore_system_settings};
+	bool const user{name.is_empty() && !ignore_system_settings};
 #else
 	bool const user{false};
 #endif

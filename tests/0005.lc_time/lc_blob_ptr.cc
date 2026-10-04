@@ -10,10 +10,10 @@ using namespace fast_io::io;
 
 int main() try
 {
-	char const *dir{::std::getenv("FAST_IO_LOCALE_PATH")};
+	char const *dir{::std::getenv("FAST_IO_L10N_PATH")};
 	if (dir == nullptr)
 	{
-		::fast_io::perrln("FAST_IO_LOCALE_PATH unset — skipped");
+		::fast_io::perrln("FAST_IO_L10N_PATH unset — skipped");
 		return 0;
 	}
 	::fast_io::native_file_loader loader{
