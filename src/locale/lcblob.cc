@@ -142,9 +142,10 @@ inline void check_name(::fast_io::u8string_view name) FAST_IO_HERBCEPTIONS_THROW
 
 inline ::fast_io::u8string u16_to_u8(char16_t const *s, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
+	// dst scheme defaults to execution_charset (utf8 for u8) — a
+	// utf_le->utf_le cvt would dump the raw u16 units into the string
 	return ::fast_io::u8concat_fast_io(
-		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
-								 ::fast_io::encoding_scheme::utf_le>(
+		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le>(
 			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
 }
 
