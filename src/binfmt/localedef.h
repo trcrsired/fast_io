@@ -433,32 +433,19 @@ inline void parse_file(::fast_io::dir_file const &df, ::fast_io::string const &n
 inline ::std::int_least64_t to_i64(::std::string_view tok, parse_ctx const &ctx,
 				   ::std::string_view line) throws
 {
-	if (tok.empty())
+	if (!tok.empty() && tok.front() == '+')
 	{
-		pfails(ctx, "empty integer", line);
-	}
-	bool neg{};
-	::std::size_t i{};
-	if (tok.front() == '-' || tok.front() == '+')
-	{
-		neg = tok.front() == '-';
-		i = 1;
-	}
-	if (i == tok.size())
-	{
-		pfails(ctx, "sign with no digits", line);
+		tok.remove_prefix(1);
 	}
 	::std::int_least64_t v{};
-	for (; i < tok.size(); ++i)
+	char const *const b{tok.data()};
+	auto const r{::fast_io::details::scan_int_contiguous_define_impl<10, true, false, true>(
+		b, b + tok.size(), v)};
+	if (r.code != ::fast_io::freestanding::parse_errc::ok || r.iter != b + tok.size())
 	{
-		char c{tok[i]};
-		if (c < '0' || c > '9')
-		{
-			pfails(ctx, "bad integer", line);
-		}
-		v = v * 10 + (c - '0');
+		pfails(ctx, "bad integer", line);
 	}
-	return neg ? -v : v;
+	return v;
 }
 
 // era token: "dir:offset:start:end:name:fmt" — already unquoted-decoded

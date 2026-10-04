@@ -40,14 +40,6 @@ struct src_ctx
 namespace details
 {
 
-inline constexpr bool is_digit(char8_t c) noexcept
-{
-	return u8'0' <= c && c <= u8'9';
-}
-inline constexpr bool is_alpha(char8_t c) noexcept
-{
-	return (u8'a' <= c && c <= u8'z') || (u8'A' <= c && c <= u8'Z');
-}
 
 // bytes of the UTF-8 code point starting at s[i]; 0 = invalid
 inline constexpr ::std::size_t utf8_cp_size(::std::u8string_view s,
@@ -81,16 +73,16 @@ inline ::std::uint_least32_t parse_u32(::std::u8string_view s,
 				       ::std::size_t &i, ::std::size_t j,
 				       src_ctx ctx, ::std::string_view what) throws
 {
-	::std::uint_least64_t v{};
-	for (; i < j && is_digit(s[i]); ++i)
+	::std::uint_least32_t v{};
+	char8_t const *const b{s.data()};
+	auto const r{::fast_io::details::scan_int_contiguous_define_impl<10, true, false, true>(
+		b + i, b + j, v)};
+	if (r.code != ::fast_io::freestanding::parse_errc::ok || r.iter == b + i)
 	{
-		v = v * 10u + (s[i] - u8'0');
-		if (v > 0xFFFFFFFEu)
-		{
-			fail(ctx, s, i, what);
-		}
+		fail(ctx, s, i, what);
 	}
-	return static_cast<::std::uint_least32_t>(v);
+	i = static_cast<::std::size_t>(r.iter - b);
+	return v;
 }
 
 class litbuf
@@ -231,7 +223,7 @@ inline ::fast_io::string compile_pct_impl(::std::u8string_view s, pct_options op
 		}
 		::std::uint_least32_t width{};
 		bool has_width{};
-		if (i < s.size() && is_digit(s[i]))
+		if (i < s.size() && ::fast_io::char_category::is_c_digit(s[i]))
 		{
 			width = parse_u32(s, i, s.size(), ctx, "width too large");
 			has_width = true;
@@ -421,7 +413,7 @@ inline fmt_spec parse_fmt_standard(::std::u8string_view spec, src_ctx ctx,
 	{
 		fail(ctx, spec, i, "dynamic width not supported");
 	}
-	if (i < n && is_digit(spec[i]))
+	if (i < n && ::fast_io::char_category::is_c_digit(spec[i]))
 	{
 		k.node_uleb(static_cast<::std::uint_least32_t>(field_param::width),
 			    parse_u32(spec, i, n, ctx, "width too large"));
@@ -437,7 +429,7 @@ inline fmt_spec parse_fmt_standard(::std::u8string_view spec, src_ctx ctx,
 		{
 			fail(ctx, spec, i, "dynamic precision not supported");
 		}
-		if (i == n || !is_digit(spec[i]))
+		if (i == n || !::fast_io::char_category::is_c_digit(spec[i]))
 		{
 			fail(ctx, spec, i, "bare '.' precision");
 		}
@@ -572,7 +564,7 @@ inline ::std::size_t parse_fmt_field(::std::u8string_view s, ::std::size_t pos,
 	::fast_io::vector<::fast_io::string> children;
 	encoder k;
 	// arg id
-	if (i < n && is_digit(s[i]))
+	if (i < n && ::fast_io::char_category::is_c_digit(s[i]))
 	{
 		k.node_uleb(static_cast<::std::uint_least32_t>(field_param::arg),
 			    parse_u32(s, i, n, ctx, "arg index too large"));
@@ -723,7 +715,7 @@ inline ::fast_io::string compile_generic_pct(::std::u8string_view s,
 			lit.push(u8'%');
 			continue;
 		}
-		if (!details::is_alpha(c2))
+		if (!::fast_io::char_category::is_c_alpha(c2))
 		{
 			fail(ctx, s, i - 1, "bad % directive in generic format");
 		}
@@ -803,10 +795,10 @@ inline ::fast_io::string compile_stdio(::std::u8string_view s, src_ctx ctx = {},
 			children.emplace_back(::std::move(e.buf));
 		};
 		// [argnum$]
-		if (details::is_digit(s[i]))
+		if (::fast_io::char_category::is_c_digit(s[i]))
 		{
 			::std::size_t j{i};
-			while (j < s.size() && details::is_digit(s[j]))
+			while (j < s.size() && ::fast_io::char_category::is_c_digit(s[j]))
 			{
 				++j;
 			}
@@ -865,7 +857,7 @@ inline ::fast_io::string compile_stdio(::std::u8string_view s, src_ctx ctx = {},
 		{
 			fail(ctx, s, i, "dynamic '*' width not supported");
 		}
-		if (i < s.size() && details::is_digit(s[i]))
+		if (i < s.size() && ::fast_io::char_category::is_c_digit(s[i]))
 		{
 			k.node_uleb(static_cast<::std::uint_least32_t>(field_param::width),
 				    details::parse_u32(s, i, s.size(), ctx, "width too large"));
@@ -882,7 +874,7 @@ inline ::fast_io::string compile_stdio(::std::u8string_view s, src_ctx ctx = {},
 			{
 				fail(ctx, s, i, "dynamic '*' precision not supported");
 			}
-			if (i < s.size() && details::is_digit(s[i]))
+			if (i < s.size() && ::fast_io::char_category::is_c_digit(s[i]))
 			{
 				prec = details::parse_u32(s, i, s.size(), ctx, "precision too large");
 			}

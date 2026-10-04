@@ -54,6 +54,29 @@ inline bool parse_cset(::std::string_view sv, ::fast_io_i18n::lcblob::blob_chars
 	return true;
 }
 
+// a localedef source file name: aa_DJ / de_DE@euro / i18n / bokmal / C.
+// Everything else in a localedata tree (test sources, makefiles,
+// generated *.in intermediates, README/SUPPORTED/Depend) is skipped.
+inline bool locale_file_name(::std::string_view s) noexcept
+{
+	if (s == "C")
+	{
+		return true;
+	}
+	if (s.empty() || !::fast_io::char_category::is_c_lower(s.front()))
+	{
+		return false;
+	}
+	for (char c : s)
+	{
+		if (!::fast_io::char_category::is_c_alnum(c) && c != '_' && c != '@')
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 int main(int argc, char **argv) try
 {
 	using namespace ::fast_io_i18n;
@@ -93,13 +116,50 @@ int main(int argc, char **argv) try
 	localedef::file_cache cache;
 	for (auto ent : ::fast_io::current(::fast_io::at(df)))
 	{
+		// regular files only — localedata source dirs also hold
+		// subdirectories, tests and generated intermediates
+		auto const ft{::fast_io::type(ent)};
+		if (ft != ::fast_io::file_type::regular && ft != ::fast_io::file_type::unknown)
+		{
+			continue;
+		}
 		auto fn{::fast_io::u8filename(ent)};
 		::std::u8string_view uname{fn.c_str(), fn.c_str() + fn.n};
+		// accept raw localedef sources (no extension) and the *.in
+		// preprocessed intermediates the glibc build tree produces —
+		// every other extension is test code/scripts, never a locale
+		auto const ext{::fast_io::u8extension(ent)};
+		::std::u8string_view const extsv{ext.c_str(), ext.size()};
+		bool const is_in{extsv == u8".in"};
+		if (!extsv.empty() && !is_in)
+		{
+			continue;
+		}
 		// file name as char string for parsing/writing
 		::fast_io::string name;
 		name.append(reinterpret_cast<char const *>(fn.c_str()), fn.n);
 		::std::string_view nsv{name.data(), name.size()};
-		if (nsv == "." || nsv == ".." || nsv == "cns11643_stroke" ||
+		// canonical locale name: an am_ET.UTF-8.in intermediate names
+		// the am_ET locale (file-name charset is dropped — the output
+		// codeset is appended later); plain sources name it directly
+		::std::string_view oname{nsv};
+		if (is_in)
+		{
+			oname = nsv.substr(0, nsv.find_last_of('.'));
+			auto const d2{oname.find_last_of('.')};
+			if (d2 != ::std::string_view::npos)
+			{
+				oname = oname.substr(0, d2);
+			}
+		}
+		// locale file names look like aa_DJ / de_DE@euro / i18n / C —
+		// anything else (test files, makefiles) is not a locale and
+		// must never produce a blob
+		if (!locale_file_name(oname))
+		{
+			continue;
+		}
+		if (nsv == "cns11643_stroke" ||
 		    nsv == "i18n_ctype" || nsv == "POSIX" || nsv.substr(0, 8) == "iso14651" ||
 		    nsv.substr(0, 8) == "translit")
 		{
@@ -114,6 +174,18 @@ int main(int argc, char **argv) try
 			localedef::parse_file(df, name, d, cache, 0);
 			::fast_io_i18n::lcblob::cat_src cats[::fast_io_i18n::lcblob::cat_count]{};
 			localedef::to_cats(d, cats, {{name.data(), name.size()}, 0});
+			// zero categories -> not a localedef source (charmap
+			// conversion tables, misnamed files): emit nothing
+			bool any{};
+			for (auto const &c : cats)
+			{
+				any = any || c.present;
+			}
+			if (!any)
+			{
+				::fast_io::println("  ^^ skipped (no locale data)");
+				continue;
+			}
 			::std::string_view ctx{name.data(), name.size()};
 			for (::std::size_t e{}; e < (is_c ? 1 : nenc); ++e)
 			{
@@ -125,7 +197,8 @@ int main(int argc, char **argv) try
 				}
 				else
 				{
-					lname.append(uname.data(), uname.size());
+					lname.append(reinterpret_cast<char8_t const *>(oname.data()),
+								 oname.size());
 					lname.push_back(u8'.');
 					lname.append(encn[e].data(), encn[e].size());
 				}
