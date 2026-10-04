@@ -287,12 +287,13 @@ inline constexpr ::std::size_t get_gb18030_code_units_unhappy_pdstsz(char32_t u3
 	return get_gb18030_invalid_code_units(p_dst);
 }
 
-template <>
-inline constexpr ::std::size_t get_gb18030_code_units(char32_t cdpt, char *p_dst) noexcept
+template <typename T>
+	requires(sizeof(T) == 1)
+inline constexpr ::std::size_t get_gb18030_code_units(char32_t cdpt, T *p_dst) noexcept
 {
 	if (cdpt < 0x80) [[likely]]
 	{
-		*p_dst = static_cast<char unsigned>(static_cast<char unsigned>(cdpt));
+		*p_dst = static_cast<T>(cdpt);
 		return 1;
 	}
 	return get_gb18030_code_units_unhappy(cdpt, p_dst);

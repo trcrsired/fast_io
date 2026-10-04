@@ -32,6 +32,11 @@
 #include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/impl/misc/push_macros.h>
 #include <fast_io_i18n/lcblob.h>
+// win32 user-override path transcodes registry text through
+// code_cvt<utf_le, gb18030> — the gb18030 tables are a unit
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+#include <fast_io_unit/gb18030.h>
+#endif
 
 #if !defined(FAST_IO_FREESTANDING)
 
@@ -140,6 +145,25 @@ inline ::fast_io::u8string u16_to_u8(char16_t const *s, ::std::size_t n) FAST_IO
 	return ::fast_io::u8concat_fast_io(
 		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
 								 ::fast_io::encoding_scheme::utf_le>(
+			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+}
+
+// code_cvt concat must live in non-template functions — instantiating
+// first_print_define_index_range for code_cvt_t inside a template
+// context fails constexpr evaluation (clang expansion-statement bug)
+inline ::fast_io::u8string u16_to_gb18030(char16_t const *s, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::u8concat_fast_io(
+		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+								 ::fast_io::encoding_scheme::gb18030>(
+			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+}
+
+inline ::fast_io::u8string u16_to_ebcdic(char16_t const *s, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	return ::fast_io::u8concat_fast_io(
+		::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+								 ::fast_io::encoding_scheme::utf_ebcdic>(
 			::fast_io::basic_io_scatter_t<char16_t>{s, n}));
 }
 
@@ -326,17 +350,11 @@ struct user_blob_builder
 			::fast_io::u8string u8;
 			if constexpr (enc == user_enc::gb18030)
 			{
-				u8 = ::fast_io::u8concat_fast_io(
-					::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
-											 ::fast_io::encoding_scheme::gb18030>(
-						::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+				u8 = u16_to_gb18030(s, n);
 			}
 			else if constexpr (enc == user_enc::ebcdic)
 			{
-				u8 = ::fast_io::u8concat_fast_io(
-					::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
-											 ::fast_io::encoding_scheme::utf_ebcdic>(
-						::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+				u8 = u16_to_ebcdic(s, n);
 			}
 			else
 			{
