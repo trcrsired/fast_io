@@ -73,7 +73,8 @@ inline constexpr void lc_put_grouped_digits(lc_ctx<char_type> const *ctx,
 template <bool group, ::std::integral char_type, typename sink>
 inline constexpr void lc_float_rewrite(lc_ctx<char_type> const *ctx,
 									   char_type const *f,
-									   char_type const *l, sink &sk) noexcept
+									   char_type const *l, sink &sk)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const dp{ctx->sc(ctx->all->numeric.decimal_point)};
 	// split at '.' or the exponent marker, whichever comes first

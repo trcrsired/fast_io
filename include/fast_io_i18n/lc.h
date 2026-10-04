@@ -42,14 +42,15 @@ struct lc_ctx
 	// char_type. rva==0 gives {nullptr,0}
 	template <typename T>
 	inline constexpr ::fast_io::basic_io_scatter_t<char_type> sc(
-		::fast_io::l10n::lc_scatter<T> s) const noexcept
+		::fast_io::l10n::lc_scatter<T> s) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		auto const r{::fast_io::l10n::lc_get_scatter(loc, s)};
 		return {reinterpret_cast<char_type const *>(r.base), r.len};
 	}
 	// resolve a wire rva member to a pointer; rva==0 gives nullptr
 	template <typename T>
-	inline constexpr T const *pt(::fast_io::l10n::lc_rva<T> r) const noexcept
+	inline constexpr T const *pt(::fast_io::l10n::lc_rva<T> r) const
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return ::fast_io::l10n::lc_get_rva(loc, r);
 	}
@@ -58,21 +59,24 @@ struct lc_ctx
 	template <typename T>
 	inline constexpr ::fast_io::basic_io_scatter_t<char_type> sc_elem(
 		::fast_io::l10n::lc_scatter<::fast_io::l10n::lc_scatter<T>> s,
-		::std::size_t i) const noexcept
+		::std::size_t i) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		auto const *tbl{pt(s.ref)};
-		if (tbl == nullptr || i >= ::fast_io::l10n::lc_u32(s.len))
+		// the table itself is bounded first — off + len*sizeof covers
+		// the whole element array, so tbl[i] is always inside the image
+		auto const tbl{::fast_io::l10n::lc_get_scatter(loc, s)};
+		if (tbl.base == nullptr || i >= tbl.len)
 		{
 			return {};
 		}
-		auto const e{::fast_io::l10n::lc_get_scatter(loc, tbl[i])};
+		auto const e{::fast_io::l10n::lc_get_scatter(loc, tbl.base[i])};
 		return {reinterpret_cast<char_type const *>(e.base), e.len};
 	}
 };
 
 template <::std::integral char_type>
 inline lc_ctx<char_type>
-lc_load_ctx(::fast_io::l10n::lc_locale const *v) noexcept
+lc_load_ctx(::fast_io::l10n::lc_locale const *v)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	namespace lc = ::fast_io::l10n;
 	lc_ctx<char_type> ctx{};
@@ -85,14 +89,22 @@ lc_load_ctx(::fast_io::l10n::lc_locale const *v) noexcept
 	ctx.all = reinterpret_cast<lc::basic_lc_all<char> const *>(all);
 	// payload units already are char_type — no codecvt anywhere
 	if (auto const sep{lc::lc_get_scatter(v, all->numeric.thousands_sep)};
-		sep.base != nullptr && sep.len != 0 && sep.len <= lc_sep_capacity)
+		sep.base != nullptr && sep.len != 0)
 	{
+		if (sep.len > lc_sep_capacity)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::invalid_argument);
+		}
 		::fast_io::details::my_memcpy(ctx.sep, sep.base, sep.len * sizeof(char_type));
 		ctx.sep_len = sep.len;
 	}
 	if (auto const g{lc::lc_get_scatter(v, all->numeric.grouping)};
-		g.base != nullptr && g.len != 0 && g.len <= lc_sep_capacity)
+		g.base != nullptr && g.len != 0)
 	{
+		if (g.len > lc_sep_capacity)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::invalid_argument);
+		}
 		::fast_io::details::my_memcpy(ctx.grouping, g.base, g.len);
 		ctx.grouping_len = g.len;
 	}

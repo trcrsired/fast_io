@@ -69,28 +69,6 @@ struct lc_scatter
 	::std::uint_least32_t len;
 };
 
-// resolve an rva against the file base (the lc_locale pointer itself,
-// or anything aliasing the mapped image). off 0 = absent -> nullptr.
-template <typename T>
-inline constexpr T const *lc_get_rva(void const *base, lc_rva<T> r) noexcept
-{
-	::std::uint_least32_t const off{lc_u32(r.off)};
-	if (off == 0)
-	{
-		return nullptr;
-	}
-	return reinterpret_cast<T const *>(static_cast<char8_t const *>(base) + off);
-}
-
-// resolve a scatter to a host {base,len} pair — T units. {nullptr,0}
-// when absent.
-template <typename T>
-inline constexpr ::fast_io::basic_io_scatter_t<T>
-lc_get_scatter(void const *base, lc_scatter<T> s) noexcept
-{
-	return {lc_get_rva(base, s.ref),
-			lc_u32(s.ref.off) == 0 ? 0 : static_cast<::std::size_t>(lc_u32(s.len))};
-}
 
 // ---------------------------------------------------------------------------
 // the file structs — basic_lc_* of the old runtime with pointers as rvas.
@@ -228,10 +206,6 @@ struct basic_lc_all
 	basic_lc_keyboard<char_type> keyboard;
 };
 
-// ---------------------------------------------------------------------------
-// file root — the object load_l10n returns a pointer to.
-// ---------------------------------------------------------------------------
-
 struct lc_locale
 {
 	::std::uint_least32_t magic;
@@ -245,6 +219,48 @@ struct lc_locale
 	lc_rva<basic_lc_all<char16_t>> u16all;
 	lc_rva<basic_lc_all<char32_t>> u32all;
 };
+
+// resolve an rva against the file base — the lc_locale pointer itself.
+// off 0 = absent -> nullptr; anything outside the image is a malformed
+// file, so it throws rather than resolving a wild pointer
+template <typename T>
+inline constexpr T const *lc_get_rva(void const *base, lc_rva<T> r)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::uint_least32_t const off{lc_u32(r.off)};
+	if (off == 0)
+	{
+		return nullptr;
+	}
+	if (off >= lc_u32(static_cast<lc_locale const *>(base)->total))
+	{
+		::fast_io::herbceptions::throws_errc(::std::errc::invalid_argument);
+	}
+	return reinterpret_cast<T const *>(static_cast<char8_t const *>(base) + off);
+}
+
+// resolve a scatter to a host {base,len} pair — T units. {nullptr,0}
+// when absent; the whole range must fit inside the image
+template <typename T>
+inline constexpr ::fast_io::basic_io_scatter_t<T>
+lc_get_scatter(void const *base, lc_scatter<T> s)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::uint_least32_t const off{lc_u32(s.ref.off)};
+	if (off == 0)
+	{
+		return {};
+	}
+	auto const total{lc_u32(static_cast<lc_locale const *>(base)->total)};
+	auto const len{static_cast<::std::size_t>(lc_u32(s.len))};
+	if (off >= total || len > (total - off) / sizeof(T))
+	{
+		::fast_io::herbceptions::throws_errc(::std::errc::invalid_argument);
+	}
+	return {reinterpret_cast<T const *>(static_cast<char8_t const *>(base) + off),
+			len};
+}
+
 
 // the codesets a locale file can declare for its char view — the only
 // three supported
@@ -272,7 +288,8 @@ inline constexpr char8_t const *locale_charset_name(locale_charset cs) noexcept
 // slot (the locale's declared codeset), char8_t/16/32 their own UTF
 // sections, wchar_t follows its size. nullptr when the slot is absent.
 template <::std::integral char_type>
-inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) noexcept
+inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (::std::same_as<char_type, char>)
 	{
@@ -292,7 +309,12 @@ inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) n
 	}
 	else if constexpr (::std::same_as<char_type, wchar_t>)
 	{
-		if constexpr (sizeof(wchar_t) == 2)
+		if constexpr (sizeof(wchar_t) == 1)
+		{
+			return reinterpret_cast<basic_lc_all<wchar_t> const *>(
+				lc_get_rva(l, l->u8all));
+		}
+		else if constexpr (sizeof(wchar_t) == 2)
 		{
 			return reinterpret_cast<basic_lc_all<wchar_t> const *>(
 				lc_get_rva(l, l->u16all));
@@ -309,27 +331,6 @@ inline constexpr basic_lc_all<char_type> const *lc_get_all(lc_locale const *l) n
 	}
 }
 
-
-// ---------------------------------------------------------------------------
-// shared-library loading API — implemented in src/locale/lcblob.cc.
-// The compiled library owns the process-wide cache: thread-local map first,
-// then the global map under a mutex; entries are leaked and never unloaded
-// so reloads are pointer lookups, never remaps.
-// ---------------------------------------------------------------------------
-
-#if defined(FAST_IO_I18N_SHARED)
-#if defined(_WIN32) || defined(__CYGWIN__)
-#if defined(FAST_IO_I18N_BUILDING)
-#define FAST_IO_I18N_EXPORT __declspec(dllexport)
-#else
-#define FAST_IO_I18N_EXPORT __declspec(dllimport)
-#endif
-#else
-#define FAST_IO_I18N_EXPORT __attribute__((__visibility__("default")))
-#endif
-#else
-#define FAST_IO_I18N_EXPORT
-#endif
 
 // load flags — bits controlling how much of the OS's own locale
 // settings the load consults
@@ -362,6 +363,30 @@ inline constexpr l10n_load_flags &operator|=(l10n_load_flags &x, l10n_load_flags
 	return x = x | y;
 }
 
+
+#if !defined(FAST_IO_FREESTANDING)
+
+// ---------------------------------------------------------------------------
+// shared-library loading API — implemented in src/locale/lcblob.cc.
+// The compiled library owns the process-wide cache: thread-local map first,
+// then the global map under a mutex; entries are leaked and never unloaded
+// so reloads are pointer lookups, never remaps.
+// ---------------------------------------------------------------------------
+
+#if defined(FAST_IO_I18N_SHARED)
+#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(FAST_IO_I18N_BUILDING)
+#define FAST_IO_I18N_EXPORT __declspec(dllexport)
+#else
+#define FAST_IO_I18N_EXPORT __declspec(dllimport)
+#endif
+#else
+#define FAST_IO_I18N_EXPORT __attribute__((__visibility__("default")))
+#endif
+#else
+#define FAST_IO_I18N_EXPORT
+#endif
+
 // Returns a pointer to the lc_locale inside the mapped file — image data
 // is never unloaded, so the pointer (and every pointer lc_get_rva hands
 // out) stays valid for the process lifetime. native_file_loader is an
@@ -386,6 +411,8 @@ load_l10n(::fast_io::u8string_view name,
 FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *
 load_l10n(::fast_io::u8string_view name, locale_charset enc,
 		  l10n_load_flags flags = l10n_load_flags::none) FAST_IO_HERBCEPTIONS_THROWS;
+
+#endif
 
 } // namespace fast_io::l10n
 

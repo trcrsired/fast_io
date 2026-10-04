@@ -11,7 +11,7 @@ namespace fast_io
 template <::std::integral char_type>
 inline constexpr ::fast_io::basic_io_scatter_t<char_type>
 print_scatter_define(lc_ctx<char_type> const *ctx,
-					 ::std::chrono::weekday wd) noexcept
+					 ::std::chrono::weekday wd) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!wd.ok())
 	{
@@ -23,7 +23,7 @@ print_scatter_define(lc_ctx<char_type> const *ctx,
 template <::std::integral char_type>
 inline constexpr ::fast_io::basic_io_scatter_t<char_type>
 print_scatter_define(lc_ctx<char_type> const *ctx,
-					 ::std::chrono::weekday_indexed wdi) noexcept
+					 ::std::chrono::weekday_indexed wdi) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!wdi.ok())
 	{
@@ -36,7 +36,7 @@ print_scatter_define(lc_ctx<char_type> const *ctx,
 template <::std::integral char_type>
 inline constexpr ::fast_io::basic_io_scatter_t<char_type>
 print_scatter_define(lc_ctx<char_type> const *ctx,
-					 ::std::chrono::weekday_last wdl) noexcept
+					 ::std::chrono::weekday_last wdl) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!wdl.ok())
 	{
@@ -49,7 +49,7 @@ print_scatter_define(lc_ctx<char_type> const *ctx,
 template <::std::integral char_type>
 inline constexpr ::fast_io::basic_io_scatter_t<char_type>
 print_scatter_define(lc_ctx<char_type> const *ctx,
-					 ::std::chrono::month m) noexcept
+					 ::std::chrono::month m) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!m.ok())
 	{

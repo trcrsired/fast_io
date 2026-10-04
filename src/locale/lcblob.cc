@@ -30,7 +30,10 @@
 #include <fast_io_dsal/string.h>
 #include <fast_io_dsal/str_swiss_map.h>
 #include <fast_io_i18n/lcblob.h>
+#include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/impl/misc/push_macros.h>
+
+#if !defined(FAST_IO_FREESTANDING)
 
 namespace fast_io::l10n
 {
@@ -71,6 +74,10 @@ struct locale_entry
 	{
 	}
 	::fast_io::native_file_loader loader;
+	// "" user-locale loads (Windows): a private copy of the image with
+	// the registry overrides appended — the published lc_locale points
+	// into it, not into the mapping
+	::fast_io::vector<unsigned char> img;
 };
 
 using cache_map = ::fast_io::u8str_swiss_map<::fast_io::l10n::lc_locale const *>;
@@ -210,6 +217,372 @@ inline void parse_codeset(::fast_io::u8string_view cs, lcblob::locale_charset &o
 // spellings), codeset is normalized (absent -> utf8), the modifier stays
 // attached to the file basename.
 // out = canonical file basename  base.codeset[@mod]
+
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+
+// ---------------------------------------------------------------------------
+// user-locale overrides ("" loads only): the image is copied into a
+// process-private vector, the HKCU\Control Panel\International values
+// are appended after it, and the affected field rvas are repointed —
+// the blob is position-independent so a byte copy + append is all it
+// takes. Each section gets its own charset encoding of every string.
+// ---------------------------------------------------------------------------
+
+enum class user_enc : ::std::uint_least8_t
+{
+	utf8,
+	gb18030,
+	utf16,
+	utf32,
+	ebcdic
+};
+
+// registry integer text -> i64; false on empty/non-numeric
+inline bool parse_reg_int(char16_t const *buf, ::std::uint_least32_t n,
+						  ::std::int_least64_t &out) noexcept
+{
+	if (n == 0)
+	{
+		return false;
+	}
+	::std::uint_least32_t i{};
+	bool neg{};
+	if (buf[0] == u'-')
+	{
+		neg = true;
+		i = 1;
+	}
+	else if (buf[0] == u'+')
+	{
+		i = 1;
+	}
+	if (i >= n)
+	{
+		return false;
+	}
+	::std::int_least64_t v{};
+	for (; i < n; ++i)
+	{
+		if (buf[i] < u'0' || buf[i] > u'9')
+		{
+			return false;
+		}
+		v = v * 10 + static_cast<::std::int_least64_t>(buf[i] - u'0');
+	}
+	out = neg ? -v : v;
+	return true;
+}
+
+struct user_blob_builder
+{
+	::fast_io::vector<unsigned char> &img;
+
+	inline ::std::uint_least32_t app(unsigned char const *p, ::std::size_t n)
+		FAST_IO_HERBCEPTIONS_THROWS
+	{
+		auto const off{static_cast<::std::uint_least32_t>(img.size())};
+		img.resize(img.size() + n);
+		::fast_io::details::my_memcpy(img.data() + off, p, n);
+		return off;
+	}
+
+	// encode registry u16 text into the section charset and append it;
+	// returns the field value {off, units} (units in section units)
+	template <user_enc enc>
+	inline ::std::pair<::std::uint_least32_t, ::std::uint_least32_t>
+	put_str(char16_t const *s, ::std::uint_least32_t n) FAST_IO_HERBCEPTIONS_THROWS
+	{
+		if constexpr (enc == user_enc::utf16)
+		{
+			return {app(reinterpret_cast<unsigned char const *>(s), n * 2), n};
+		}
+		else if constexpr (enc == user_enc::utf32)
+		{
+			// u16 -> u32 code points, surrogate pairs decoded
+			::fast_io::vector<unsigned char> tmp;
+			tmp.reserve(n * 4 + 4);
+			for (::std::uint_least32_t i{}; i < n;)
+			{
+				::std::uint_least32_t cp{static_cast<char16_t>(s[i++])};
+				if (cp >= 0xD800u && cp <= 0xDBFFu && i < n)
+				{
+					auto const lo{static_cast<char16_t>(s[i])};
+					if (lo >= 0xDC00u && lo <= 0xDFFFu)
+					{
+						++i;
+						cp = 0x10000u + ((cp - 0xD800u) << 10u) + (lo - 0xDC00u);
+					}
+				}
+				auto const le{lcblob::lc_u32(cp)};
+				auto const pos{tmp.size()};
+				tmp.resize(pos + 4);
+				::fast_io::details::my_memcpy(tmp.data() + pos, __builtin_addressof(le), 4);
+			}
+			return {app(tmp.data(), tmp.size()),
+					static_cast<::std::uint_least32_t>(tmp.size() / 4)};
+		}
+		else
+		{
+			::fast_io::u8string u8;
+			if constexpr (enc == user_enc::gb18030)
+			{
+				u8 = ::fast_io::u8concat_fast_io(
+					::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+											 ::fast_io::encoding_scheme::gb18030>(
+						::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+			}
+			else if constexpr (enc == user_enc::ebcdic)
+			{
+				u8 = ::fast_io::u8concat_fast_io(
+					::fast_io::mnp::code_cvt<::fast_io::encoding_scheme::utf_le,
+											 ::fast_io::encoding_scheme::utf_ebcdic>(
+						::fast_io::basic_io_scatter_t<char16_t>{s, n}));
+			}
+			else
+			{
+				u8 = u16_to_u8(s, n);
+			}
+			return {app(reinterpret_cast<unsigned char const *>(u8.data()), u8.size()),
+					static_cast<::std::uint_least32_t>(u8.size())};
+		}
+	}
+
+	inline ::std::pair<::std::uint_least32_t, ::std::uint_least32_t>
+	put_bytes(unsigned char const *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return {app(p, n), static_cast<::std::uint_least32_t>(n)};
+	}
+};
+
+struct intl_key
+{
+	inline intl_key() noexcept
+	{
+		constexpr ::std::size_t hkcu{0x80000001u};
+		if (::fast_io::win32::RegOpenKeyW(hkcu, u"Control Panel\\International",
+										__builtin_addressof(hkey)) != 0)
+		{
+			hkey = 0;
+		}
+	}
+	inline ~intl_key() noexcept
+	{
+		if (hkey != 0)
+		{
+			::fast_io::win32::RegCloseKey(hkey);
+		}
+	}
+	::std::size_t hkey{};
+};
+
+// one registry value into buf; returns the u16 unit count, 0 when
+// absent — every RegQueryValueExW failure absorbs to 0 (optional data)
+inline ::std::uint_least32_t intl_get(::std::size_t hkey, char16_t const *vname,
+									  char16_t *buf, ::std::uint_least32_t cap) noexcept
+{
+	if (hkey == 0)
+	{
+		return 0;
+	}
+	::std::uint_least32_t type{}, bytes{cap * 2};
+	FAST_IO_HERBCEPTIONS_TRY
+	{
+		auto const res{::fast_io::win32::RegQueryValueExW(
+			hkey, vname, nullptr, __builtin_addressof(type), buf,
+			__builtin_addressof(bytes))};
+		if (res == 0 && bytes >= 2)
+		{
+			auto const n{bytes / 2};
+			return buf[n - 1] == 0 ? n - 1 : n; // strip the trailing NUL
+		}
+	}
+	FAST_IO_HERBCEPTIONS_CATCH_ALL
+	{
+	}
+	return 0;
+}
+
+// patch one section in place inside the private image. all is a
+// basic_lc_all<char>* pointing into img — its rva fields are rewritten
+// to point at the appended bytes
+template <user_enc enc>
+inline void patch_user_section(lcblob::basic_lc_all<char> *a,
+							   user_blob_builder &b,
+							   ::std::size_t hkey) FAST_IO_HERBCEPTIONS_THROWS
+{
+	char16_t buf[160];
+	constexpr ::std::uint_least32_t cap{160};
+
+	auto S{[&](char16_t const *vn, lcblob::lc_scatter<char> &f)
+			   FAST_IO_HERBCEPTIONS_THROWS {
+		if (auto const n{intl_get(hkey, vn, buf, cap)}; n != 0)
+		{
+			auto const r{b.template put_str<enc>(buf, n)};
+			f.ref.off = lcblob::lc_u32(r.first);
+			f.len = lcblob::lc_u32(r.second);
+		}
+	}};
+	S(u"sDecimal", a->numeric.decimal_point);
+	S(u"sThousand", a->numeric.thousands_sep);
+	S(u"sCurrency", a->monetary.currency_symbol);
+	S(u"sMonDecimalSep", a->monetary.mon_decimal_point);
+	S(u"sMonThousandSep", a->monetary.mon_thousands_sep);
+	S(u"sPositiveSign", a->monetary.positive_sign);
+	S(u"sNegativeSign", a->monetary.negative_sign);
+	S(u"sCountry", a->address.country_name);
+	S(u"s1159", a->time.am_pm[0]);
+	S(u"s2359", a->time.am_pm[1]);
+
+	// grouping byte lists: "3;0" -> {3} — the win32 trailing 0 means
+	// "repeat the last value", glibc repeats too, so it drops out
+	auto G{[&](char16_t const *vn, lcblob::lc_scatter<char8_t> &f)
+			   FAST_IO_HERBCEPTIONS_THROWS {
+		auto const n{intl_get(hkey, vn, buf, cap)};
+		if (n == 0)
+		{
+			return;
+		}
+		char8_t gb[16];
+		::std::size_t m{};
+		::std::uint_least32_t v{};
+		bool has{};
+		for (::std::uint_least32_t i{}; i <= n; ++i)
+		{
+			if (i == n || buf[i] == u';')
+			{
+				if (!has)
+				{
+					return;
+				}
+				if (m < sizeof(gb))
+				{
+					gb[m++] = static_cast<char8_t>(v > 127 ? 127 : v);
+				}
+				v = 0;
+				has = false;
+			}
+			else if (buf[i] >= u'0' && buf[i] <= u'9')
+			{
+				v = v * 10 + static_cast<::std::uint_least32_t>(buf[i] - u'0');
+				has = true;
+			}
+			else
+			{
+				return;
+			}
+		}
+		while (m != 0 && gb[m - 1] == 0)
+		{
+			--m;
+		}
+		if (m != 0)
+		{
+			auto const r{b.put_bytes(reinterpret_cast<unsigned char const *>(gb), m)};
+			f.ref.off = lcblob::lc_u32(r.first);
+			f.len = lcblob::lc_u32(r.second);
+		}
+	}};
+	G(u"sGrouping", a->numeric.grouping);
+	G(u"sMonGrouping", a->monetary.mon_grouping);
+
+	// integer fields
+	auto I{[&](char16_t const *vn, ::std::int_least64_t &out) noexcept {
+		auto const n{intl_get(hkey, vn, buf, cap)};
+		return n != 0 && parse_reg_int(buf, n, out);
+	}};
+	auto const set_int{[](::std::int_least32_t &f, ::std::int_least64_t v) noexcept {
+		f = static_cast<::std::int_least32_t>(
+			lcblob::lc_u32(static_cast<::std::uint_least32_t>(v)));
+	}};
+	::std::int_least64_t v{};
+	if (I(u"iMeasure", v) && (v == 0 || v == 1))
+	{
+		set_int(a->measurement.measurement, v + 1); // win32 0/1 -> glibc 1/2
+	}
+	if (I(u"iDigits", v))
+	{
+		set_int(a->monetary.frac_digits, v);
+	}
+	if (I(u"iCurrDigits", v))
+	{
+		set_int(a->monetary.int_frac_digits, v);
+	}
+	if (I(u"iCurrency", v) && v >= 0 && v <= 3)
+	{
+		// 0 "$1.1" 1 "1.1$" 2 "$ 1.1" 3 "1.1 $"
+		auto const prec{static_cast<::std::int_least64_t>(v == 0 || v == 2)};
+		auto const sep{v >= 2 ? 1 : 0};
+		set_int(a->monetary.p_cs_precedes, prec);
+		set_int(a->monetary.p_sep_by_space, sep);
+		set_int(a->monetary.int_p_cs_precedes, prec);
+		set_int(a->monetary.int_p_sep_by_space, sep);
+	}
+	if (I(u"iNegCurr", v) && v >= 0 && v <= 15)
+	{
+		// -> {n_cs_precedes, n_sep_by_space, n_sign_posn}
+		constexpr ::std::int_least8_t tab[16][3]{
+			{1, 0, 0}, // ($1.1)
+			{1, 0, 3}, // -$1.1
+			{1, 0, 4}, // $-1.1
+			{1, 0, 2}, // $1.1-
+			{0, 0, 0}, // (1.1$)
+			{0, 0, 1}, // -1.1$
+			{0, 0, 2}, // 1.1-$
+			{0, 0, 2}, // 1.1$-
+			{0, 1, 1}, // -1.1 $
+			{1, 1, 3}, // -$ 1.1
+			{0, 1, 2}, // 1.1 $-
+			{1, 1, 2}, // $ 1.1-
+			{1, 1, 4}, // $ -1.1
+			{0, 1, 2}, // 1.1- $
+			{1, 1, 0}, // ($ 1.1)
+			{0, 1, 0}, // (1.1 $)
+		};
+		set_int(a->monetary.n_cs_precedes, tab[v][0]);
+		set_int(a->monetary.n_sep_by_space, tab[v][1]);
+		set_int(a->monetary.n_sign_posn, tab[v][2]);
+		set_int(a->monetary.int_n_cs_precedes, tab[v][0]);
+		set_int(a->monetary.int_n_sep_by_space, tab[v][1]);
+		set_int(a->monetary.int_n_sign_posn, tab[v][2]);
+	}
+	if (I(u"iFirstDayOfWeek", v) && v >= 0 && v <= 6)
+	{
+		set_int(a->time.first_weekday, v + 1); // win32 0=Mon..6=Sun -> 1..7
+	}
+	if (I(u"iFirstWorkday", v) && v >= 0 && v <= 6)
+	{
+		set_int(a->time.first_workday, v + 1);
+	}
+	if (I(u"iPaperSize", v))
+	{
+		::std::int_least64_t hw{};
+		switch (v)
+		{
+		case 1:
+			hw = 279 * 1000 + 216;
+			break; // Letter
+		case 5:
+			hw = 356 * 1000 + 216;
+			break; // Legal
+		case 8:
+			hw = 420 * 1000 + 297;
+			break; // A3
+		case 9:
+			hw = 297 * 1000 + 210;
+			break; // A4
+		default:
+			break;
+		}
+		if (hw != 0)
+		{
+			set_int(a->paper.height, hw / 1000);
+			set_int(a->paper.width, hw % 1000);
+		}
+	}
+}
+
+#endif
+
 inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8string &out,
 								lcblob::locale_charset &out_cs,
 								lcblob::locale_charset const *enc = nullptr,
@@ -325,11 +698,21 @@ inline ::fast_io::u8string_view locale_dir() FAST_IO_HERBCEPTIONS_THROWS
 // to it (openat semantics), never by string concatenation
 inline ::fast_io::dir_file *locale_dir_file{};
 
-inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view lname)
+inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view lname,
+													  bool user)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	// one file per locale+codeset — key = canonical file name
-	::fast_io::u8string path{::fast_io::u8concat_fast_io(lname, u8".bin")};
+	// one file per locale+codeset — key = canonical file name; the
+	// user-locale (""-resolved) copy gets a \x01 suffix so it can never
+	// collide with the plain load of the same file
+	// the file is lname.bin; the user-locale copy carries a \x01 cache
+	// suffix so it never collides with a plain load of the same file
+	::fast_io::u8string file{::fast_io::u8concat_fast_io(lname, u8".bin")};
+	::fast_io::u8string path{file};
+	if (user)
+	{
+		path.push_back(1);
+	}
 	::fast_io::u8string_view key{path.data(), path.size()};
 
 	if (auto it{tls_map.find_key(key)}; it != tls_map.end())
@@ -355,7 +738,7 @@ inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view
 			// the only checks are magic and version; everything else
 			// is the file's own struct layout.
 			::fast_io::native_file_loader loader{::fast_io::at(*locale_dir_file),
-												 path};
+												 file};
 			::fast_io::u8string_view bv{reinterpret_cast<char8_t const *>(loader.data()),
 										loader.size()};
 			if (bv.size() < sizeof(lcblob::lc_locale))
@@ -369,7 +752,74 @@ inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view
 				throw_einval();
 			}
 			auto *entry{lc_new<locale_entry>(static_cast<::fast_io::native_file_loader &&>(loader))};
-			p = reinterpret_cast<lcblob::lc_locale const *>(entry->loader.data());
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+			if (user)
+			{
+				// private copy: every process pays its own bytes for the
+				// user locale — the registry can differ per user and
+				// shared mappings cannot be patched, so there is no
+				// shared form of this
+				auto const *fb{reinterpret_cast<unsigned char const *>(loc)};
+				entry->img.resize(bv.size());
+				::fast_io::details::my_memcpy(entry->img.data(), fb, bv.size());
+				user_blob_builder b{entry->img};
+				intl_key ik{};
+				// patch each present section in its own charset. The
+				// slot offsets and codeset are read before any append —
+				// img can reallocate while strings are being added
+				::std::uint_least32_t slot_off[4], codeset;
+				{
+					auto const *L{reinterpret_cast<lcblob::lc_locale const *>(
+						entry->img.data())};
+					slot_off[0] = lcblob::lc_u32(L->all.off);
+					slot_off[1] = lcblob::lc_u32(L->u8all.off);
+					slot_off[2] = lcblob::lc_u32(L->u16all.off);
+					slot_off[3] = lcblob::lc_u32(L->u32all.off);
+					codeset = lcblob::lc_u32(L->codeset);
+				}
+				auto const at{[&](::std::uint_least32_t off) noexcept {
+					return reinterpret_cast<lcblob::basic_lc_all<char> *>(
+						entry->img.data() + off);
+				}};
+				if (slot_off[0] != 0)
+				{
+					switch (static_cast<lcblob::locale_charset>(codeset))
+					{
+					case lcblob::locale_charset::gb18030:
+						patch_user_section<user_enc::gb18030>(at(slot_off[0]), b, ik.hkey);
+						break;
+					case lcblob::locale_charset::utf_ebcdic:
+						patch_user_section<user_enc::ebcdic>(at(slot_off[0]), b, ik.hkey);
+						break;
+					default:
+						patch_user_section<user_enc::utf8>(at(slot_off[0]), b, ik.hkey);
+						break;
+					}
+				}
+				if (slot_off[1] != 0)
+				{
+					patch_user_section<user_enc::utf8>(at(slot_off[1]), b, ik.hkey);
+				}
+				if (slot_off[2] != 0)
+				{
+					patch_user_section<user_enc::utf16>(at(slot_off[2]), b, ik.hkey);
+				}
+				if (slot_off[3] != 0)
+				{
+					patch_user_section<user_enc::utf32>(at(slot_off[3]), b, ik.hkey);
+				}
+				// the appended overrides live past the file's own total —
+				// the private image's boundary is the vector's size
+				*reinterpret_cast<::std::uint_least32_t *>(
+					entry->img.data() + offsetof(lcblob::lc_locale, total)) =
+					lcblob::lc_u32(static_cast<::std::uint_least32_t>(entry->img.size()));
+				p = reinterpret_cast<lcblob::lc_locale const *>(entry->img.data());
+			}
+			else
+#endif
+			{
+				p = reinterpret_cast<lcblob::lc_locale const *>(entry->loader.data());
+			}
 			global_map.insert_key(key, p);
 		}
 	}
@@ -388,8 +838,15 @@ FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8str
 	bool const ignore_system_settings{
 		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
 	details::resolve_locale_name(name, lname, cs, nullptr, ignore_system_settings);
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()});
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+	bool const user{name.empty() && !ignore_system_settings};
+#else
+	bool const user{false};
+#endif
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()},
+								   user);
 }
+
 
 FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8string_view name,
 																   lcblob::locale_charset enc,
@@ -401,9 +858,17 @@ FAST_IO_I18N_EXPORT ::fast_io::l10n::lc_locale const *load_l10n(::fast_io::u8str
 	bool const ignore_system_settings{
 		(flags & l10n_load_flags::ignore_system_settings) != l10n_load_flags::none};
 	details::resolve_locale_name(name, lname, cs, __builtin_addressof(enc), ignore_system_settings);
-	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()});
+#if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
+	bool const user{name.empty() && !ignore_system_settings};
+#else
+	bool const user{false};
+#endif
+	return details::load_blob_impl(::fast_io::u8string_view{lname.data(), lname.size()},
+								   user);
 }
 
 } // namespace fast_io::l10n
+
+#endif
 
 #include <fast_io_dsal/impl/misc/pop_macros.h>

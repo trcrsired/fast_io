@@ -24,8 +24,8 @@ template <typename stm>
 struct lc_imbuer
 {
 	using handle_type = stm;
-	using char_type = typename handle_type::char_type;
-	using output_char_type = char_type;
+	using output_char_type = typename handle_type::output_char_type;
+	using char_type = output_char_type;
 	lc_ctx<char_type> ctx{};
 #ifndef __INTELLISENSE__
 #if __has_cpp_attribute(msvc::no_unique_address)
@@ -46,10 +46,11 @@ inline constexpr lc_imbuer<stm> output_stream_ref_define(lc_imbuer<stm> t) noexc
 template <typename stm>
 	requires(::std::is_lvalue_reference_v<stm> || ::std::is_trivially_copyable_v<stm>)
 inline constexpr auto imbue(::fast_io::l10n::lc_locale const *loc,
-							stm &&out) noexcept
+							stm &&out)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	using reftype = decltype(::fast_io::operations::output_stream_ref(out));
-	using char_type = typename reftype::char_type;
+	using char_type = typename reftype::output_char_type;
 	return lc_imbuer<reftype>{::fast_io::lc_load_ctx<char_type>(loc),
 							  ::fast_io::operations::output_stream_ref(out)};
 }

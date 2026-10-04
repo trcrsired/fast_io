@@ -296,12 +296,14 @@ inline constexpr char_type lc_case(char_type ch, ::std::uint_least32_t mode) noe
 template <::std::integral char_type>
 inline constexpr ::fast_io::l10n::basic_lc_time_era<char> const *
 lc_era_lookup(lc_ctx<char_type> const *ctx, ::std::int_least64_t y,
-			  ::std::uint_least32_t mo, ::std::uint_least32_t dy) noexcept
+			  ::std::uint_least32_t mo, ::std::uint_least32_t dy)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	namespace lc = ::fast_io::l10n;
 	auto const &eras{ctx->all->time.era};
-	auto const *tbl{ctx->pt(eras.ref)};
-	auto const n{lc::lc_u32(eras.len)};
+	auto const et{lc::lc_get_scatter(ctx->loc, eras)};
+	auto const *tbl{et.base};
+	auto const n{static_cast<::std::size_t>(et.len)};
 	if (tbl == nullptr)
 	{
 		return nullptr;
@@ -392,20 +394,20 @@ inline constexpr void lc_run_member(sink &sk, lc_ctx<char_type> const *ctx,
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	namespace lc = ::fast_io::l10n;
-	auto const off{lc::lc_u32(prog.ref.off)};
-	if (off == 0)
+	auto const b{lc::lc_get_scatter(ctx->loc, prog)};
+	if (b.base == nullptr)
 	{
 		return;
 	}
-	lc_prog_run<char_type>(ctx->pt(prog.ref), lc::lc_u32(prog.len), ctx, tm, sk,
-						   depth, in_era);
+	lc_prog_run<char_type>(b.base, b.len, ctx, tm, sk, depth, in_era);
 }
 
 // a name member with optional case fold
 template <::std::integral char_type, typename sink>
 inline constexpr void lc_put_name(sink &sk, lc_ctx<char_type> const *ctx,
 								  ::fast_io::l10n::lc_scatter<char> member,
-								  ::std::uint_least32_t casef) noexcept
+								  ::std::uint_least32_t casef)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const s{ctx->sc(member)};
 	if (s.base == nullptr)
@@ -446,7 +448,7 @@ inline constexpr void lc_pct_conv(sink &sk, lc_ctx<char_type> const *ctx,
 					: 1u};
 	// numeric emit honoring the O modifier's alt_digits
 	auto num{[&](::std::int_least64_t v, ::std::uint_least32_t w,
-				 ::std::uint_least32_t pk) noexcept {
+				 ::std::uint_least32_t pk) FAST_IO_HERBCEPTIONS_THROWS {
 		if (modifier == 2 && lc::lc_u32(t.alt_digits.ref.off) != 0 &&
 			v >= 0)
 		{
@@ -995,14 +997,14 @@ print_reserve_size(lc_ctx<char_type> const *ctx,
 		return 0;
 	}
 	auto const prog{::fast_io::details::lc_time_program<flags.time_flag>(ctx)};
-	if (lc::lc_u32(prog.ref.off) == 0)
+	auto const b{lc::lc_get_scatter(ctx->loc, prog)};
+	if (b.base == nullptr)
 	{
 		return 0;
 	}
 	::fast_io::details::lc_tm tm{::fast_io::details::lc_tm_from(t.reference)};
 	::fast_io::details::lc_count_sink<char_type> sk{};
-	::fast_io::details::lc_prog_run<char_type>(ctx->pt(prog.ref),
-											   lc::lc_u32(prog.len), ctx, tm,
+	::fast_io::details::lc_prog_run<char_type>(b.base, b.len, ctx, tm,
 											   sk, 0, false);
 	return sk.n;
 }
@@ -1023,7 +1025,8 @@ print_reserve_define(lc_ctx<char_type> const *ctx, char_type *iter,
 		return iter;
 	}
 	auto const prog{::fast_io::details::lc_time_program<flags.time_flag>(ctx)};
-	if (lc::lc_u32(prog.ref.off) == 0)
+	auto const b{lc::lc_get_scatter(ctx->loc, prog)};
+	if (b.base == nullptr)
 	{
 		return iter;
 	}
@@ -1033,8 +1036,7 @@ print_reserve_define(lc_ctx<char_type> const *ctx, char_type *iter,
 	// overflow
 	::fast_io::details::lc_write_sink<char_type> sk{
 		iter, iter + print_reserve_size(ctx, t)};
-	::fast_io::details::lc_prog_run<char_type>(ctx->pt(prog.ref),
-											   lc::lc_u32(prog.len), ctx, tm,
+	::fast_io::details::lc_prog_run<char_type>(b.base, b.len, ctx, tm,
 											   sk, 0, false);
 	return sk.it;
 }
@@ -1058,15 +1060,15 @@ print_define(lc_ctx<char_type> const *ctx, output out,
 		return;
 	}
 	auto const prog{::fast_io::details::lc_time_program<flags.time_flag>(ctx)};
-	if (lc::lc_u32(prog.ref.off) == 0)
+	auto const b{lc::lc_get_scatter(ctx->loc, prog)};
+	if (b.base == nullptr)
 	{
 		return;
 	}
 	::fast_io::details::lc_tm tm{::fast_io::details::lc_tm_from(t.reference)};
 	char_type buf[512];
 	::fast_io::details::lc_write_sink<char_type> sk{buf, buf + 512};
-	::fast_io::details::lc_prog_run<char_type>(ctx->pt(prog.ref),
-											   lc::lc_u32(prog.len), ctx, tm,
+	::fast_io::details::lc_prog_run<char_type>(b.base, b.len, ctx, tm,
 											   sk, 0, false);
 	::fast_io::operations::print_freestanding<false>(
 		out, ::fast_io::basic_io_scatter_t<char_type>{
