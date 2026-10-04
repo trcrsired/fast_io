@@ -45,7 +45,7 @@ struct nt_dirent_space_guard
 		this->ptr = nullptr;
 		return temp;
 	}
-	inline ~nt_dirent_space_guard()
+	inline ~nt_dirent_space_guard() noexcept
 	{
 		typed_generic_allocator_adapter<Allocator, T>::deallocate_n(ptr, 1);
 	}
@@ -314,7 +314,7 @@ struct basic_nt_family_directory_generator
 		other.entry = nullptr;
 		return *this;
 	}
-	inline constexpr ~basic_nt_family_directory_generator()
+	inline constexpr ~basic_nt_family_directory_generator() noexcept
 	{
 		::fast_io::win32::nt::details::delete_nt_dirent<Allocator>(entry);
 	}
@@ -406,7 +406,7 @@ struct basic_nt_family_recursive_directory_generator
 		other.entry = nullptr;
 		return *this;
 	}
-	inline constexpr ~basic_nt_family_recursive_directory_generator()
+	inline constexpr ~basic_nt_family_recursive_directory_generator() noexcept
 	{
 		::fast_io::win32::nt::details::delete_nt_dirent<Allocator>(this->entry);
 	}

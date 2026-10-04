@@ -208,7 +208,7 @@ public:
 		}
 	}
 
-	inline ~dos_directory_file()
+	inline ~dos_directory_file() noexcept
 	{
 		if (this->dirp.dirp) [[likely]]
 		{

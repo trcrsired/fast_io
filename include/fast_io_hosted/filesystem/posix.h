@@ -180,7 +180,7 @@ public:
 			}
 		}
 	}
-	inline ~posix_directory_file()
+	inline ~posix_directory_file() noexcept
 	{
 		if (this->dirp) [[likely]]
 		{
