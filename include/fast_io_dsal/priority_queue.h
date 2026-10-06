@@ -1,6 +1,10 @@
 ﻿#pragma once
+#include "impl/misc/push_macros.h"
+#include "impl/misc/push_warnings.h"
 #include "vector.h"
 #include "impl/priority_queue.h"
+#include "impl/misc/pop_warnings.h"
+#include "impl/misc/pop_macros.h"
 
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \

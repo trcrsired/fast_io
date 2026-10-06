@@ -213,7 +213,7 @@ inline constexpr bool str_ranked_btree_map_insert_key_cold(nodetype *node, ::std
 														   typename nodetype::char_type const *tempkeystrptr, ::std::size_t tempkeystrn,
 														   mappedarg &&mapped,
 														   ::fast_io::containers::details::btree_imp &imp)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
 {
 	using char_type = typename nodetype::char_type;
 	using mapped_type = typename nodetype::mapped_type;
@@ -451,7 +451,7 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype,
 inline constexpr bool str_ranked_btree_map_insert_key_with_root(::fast_io::containers::details::btree_imp &imp,
 																typename nodetype::char_type const *keystrptr, ::std::size_t keystrn,
 																mappedarg &&mapped)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
 {
 	using char_type = typename nodetype::char_type;
 	using mapped_type = typename nodetype::mapped_type;
@@ -520,7 +520,7 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype,
 inline constexpr bool str_ranked_btree_map_insert_key_or_assign_with_root(::fast_io::containers::details::btree_imp &imp,
 																		  typename nodetype::char_type const *keystrptr, ::std::size_t keystrn,
 																		  mappedarg &&mapped)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<typename nodetype::mapped_type, mappedarg &&>)
 {
 	using char_type = typename nodetype::char_type;
 	using mapped_type = typename nodetype::mapped_type;
@@ -1159,7 +1159,7 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype,
 		  ::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
 inline constexpr void str_ranked_btree_map_insert_range_bulk(
 	::fast_io::containers::details::btree_imp &imp, Iter first, Sen last)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<typename nodetype::mapped_type, decltype(::std::declval<Iter>()->mapped())>)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<typename nodetype::mapped_type, decltype(::std::declval<Iter>()->mapped())>)
 {
 	using char_type = typename nodetype::char_type;
 	for (; first != last; ++first)
@@ -1212,12 +1212,12 @@ public:
 
 	constexpr basic_str_ranked_btree_map() noexcept = default;
 
-	constexpr basic_str_ranked_btree_map(basic_str_ranked_btree_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr basic_str_ranked_btree_map(basic_str_ranked_btree_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::containers::details::str_ranked_btree_map_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, other.cbegin(), other.cend());
 	}
-	constexpr basic_str_ranked_btree_map &operator=(basic_str_ranked_btree_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr basic_str_ranked_btree_map &operator=(basic_str_ranked_btree_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		if (this != ::std::addressof(other))
 		{
@@ -1228,7 +1228,7 @@ public:
 		return *this;
 	}
 
-	explicit constexpr basic_str_ranked_btree_map(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_ranked_btree_map(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::containers::details::str_ranked_btree_map_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, ilist.begin(), ilist.end());
@@ -1236,7 +1236,7 @@ public:
 
 	template <::std::ranges::range R>
 		requires(::fast_io::containers::details::str_btree_map_range_has_key_mapped_val<chtype, mappedtype, R>)
-	explicit constexpr basic_str_ranked_btree_map(::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_ranked_btree_map(::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::containers::details::str_ranked_btree_map_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, ::std::ranges::begin(rg), ::std::ranges::end(rg));
@@ -1279,11 +1279,12 @@ public:
 	{
 		return {this->lower_bound(key), this->upper_bound(key)};
 	}
-	constexpr const_iterator nth_element(size_type n) const noexcept
+	constexpr const_iterator nth_element(size_type n) const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
 		if (this->size() <= n) [[unlikely]]
 		{
-			::fast_io::fast_terminate();
+			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
 		}
 		return this->nth_element_unchecked(n);
 	}
@@ -1306,48 +1307,48 @@ public:
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
-	constexpr bool insert_key(string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>)
+	constexpr bool insert_key(string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, mapval);
 	}
-	constexpr bool insert_key(string_view_type key, mapped_type &&mapval) noexcept
+	constexpr bool insert_key(string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, ::std::move(mapval));
 	}
-	constexpr bool insert_key_or_assign(string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>)
+	constexpr bool insert_key_or_assign(string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_or_assign_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, mapval);
 	}
-	constexpr bool insert_key_or_assign(string_view_type key, mapped_type &&mapval) noexcept
+	constexpr bool insert_key_or_assign(string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_or_assign_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, ::std::move(mapval));
 	}
 	template <typename... Args>
 		requires ::std::constructible_from<mapped_type, Args...>
-	constexpr bool emplace_key(string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
+	constexpr bool emplace_key(string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, mapped_type(::std::forward<Args>(args)...));
 	}
 	template <typename... Args>
 		requires ::std::constructible_from<mapped_type, Args...>
-	constexpr bool emplace_key_or_assign(string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
+	constexpr bool emplace_key_or_assign(string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
 	{
 		return ::fast_io::containers::details::str_ranked_btree_map_insert_key_or_assign_with_root<allocator_type, keys_number, node_type>(
 			this->imp, key.ptr, key.n, mapped_type(::std::forward<Args>(args)...));
 	}
 	template <::std::ranges::range R>
 		requires(::fast_io::containers::details::str_btree_map_range_has_key_mapped_val<chtype, mappedtype, R>)
-	constexpr void insert_range(R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr void insert_range(R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::containers::details::str_ranked_btree_map_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, ::std::ranges::begin(rg), ::std::ranges::end(rg));
 	}
-	constexpr void insert_range(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr void insert_range(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::containers::details::str_btree_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::containers::details::str_ranked_btree_map_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, ilist.begin(), ilist.end());
@@ -1498,19 +1499,21 @@ public:
 	{
 		return this->crend();
 	}
-	constexpr typename const_iterator::value_type front() const noexcept
+	constexpr typename const_iterator::value_type front() const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
 		if (this->imp.leftmost == nullptr) [[unlikely]]
 		{
-			::fast_io::fast_terminate();
+			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
 		}
 		return this->front_unchecked();
 	}
-	constexpr typename const_iterator::value_type back() const noexcept
+	constexpr typename const_iterator::value_type back() const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
 		if (this->imp.rightmost == nullptr) [[unlikely]]
 		{
-			::fast_io::fast_terminate();
+			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
 		}
 		return this->back_unchecked();
 	}

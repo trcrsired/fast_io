@@ -125,14 +125,22 @@ public:
 		return element;
 	}
 
-	inline constexpr void fill(const_reference u) noexcept
+	inline constexpr void fill(const_reference u)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_assignable_v<value_type>)
 	{
-		::std::fill_n(element, N, u);
+		for (auto &e : element)
+		{
+			e = u;
+		}
 	}
 
-	inline constexpr void swap(array &other) noexcept(::std::is_nothrow_swappable_v<value_type>)
+	inline constexpr void swap(array &other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<value_type>)
 	{
-		::std::swap_ranges(element, element + N, other.element);
+		for (size_type i{}; i != N; ++i)
+		{
+			::fast_io::freestanding::iter_swap(element + i, other.element + i);
+		}
 	}
 
 #if __has_cpp_attribute(__gnu__::__always_inline__)
@@ -482,7 +490,8 @@ public:
 };
 
 template <typename T, ::std::size_t N>
-inline constexpr void swap(::fast_io::containers::array<T, N> &a, ::fast_io::containers::array<T, N> &b) noexcept(noexcept(a.swap(b)))
+inline constexpr void swap(::fast_io::containers::array<T, N> &a, ::fast_io::containers::array<T, N> &b)
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<::fast_io::containers::array<T, N> &>().swap(::std::declval<::fast_io::containers::array<T, N> &>()))
 {
 	a.swap(b);
 }
@@ -490,6 +499,7 @@ inline constexpr void swap(::fast_io::containers::array<T, N> &a, ::fast_io::con
 template <typename T, ::std::size_t N1, ::std::size_t N2>
 	requires ::std::equality_comparable<T>
 inline constexpr bool operator==(::fast_io::containers::array<T, N1> const &a, ::fast_io::containers::array<T, N2> const &b)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<T const &>() == ::std::declval<T const &>()))
 {
 	if constexpr (N1 == N2)
 	{
@@ -499,7 +509,7 @@ inline constexpr bool operator==(::fast_io::containers::array<T, N1> const &a, :
 		}
 		else
 		{
-			return ::std::equal(a.data(), a.data() + N1, b.data());
+			return ::fast_io::freestanding::equal(a.data(), a.data() + N1, b.data(), b.data() + N2);
 		}
 	}
 	else
@@ -513,6 +523,7 @@ inline constexpr bool operator==(::fast_io::containers::array<T, N1> const &a, :
 template <typename T, ::std::size_t N1, ::std::size_t N2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(::fast_io::containers::array<T, N1> const &a, ::fast_io::containers::array<T, N2> const &b)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::compare_three_way{}(::std::declval<T const &>(), ::std::declval<T const &>())))
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(a.data(), a.data() + N1, b.data(), b.data() + N2, ::std::compare_three_way{});
 }

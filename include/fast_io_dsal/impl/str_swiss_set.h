@@ -65,7 +65,8 @@ inline constexpr bool operator==(::fast_io::details::str_swiss_set_iterator<chty
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_reserve_to_newcap(
-	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t newcap, hasher hash)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>)
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -76,8 +77,11 @@ inline constexpr void str_swiss_set_reserve_to_newcap(
 	auto oldslots{imp.slots};
 	auto const oldcap{imp.cap};
 
-	auto newcontrols{typed_ctrl_allocator_type::allocate(static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts))};
+	::std::size_t const newctrln{static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts)};
+	auto newcontrols{typed_ctrl_allocator_type::allocate(newctrln)};
+	::fast_io::details::swiss_table_ctrl_alloc_guard<allocator_type> ctrlguard{newcontrols, newctrln};
 	auto newslots{typed_slot_allocator_type::allocate(newcap)};
+	ctrlguard.controls = nullptr;
 
 	::fast_io::freestanding::my_memset(newcontrols,
 									   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
@@ -121,13 +125,14 @@ inline constexpr void str_swiss_set_reserve_to_newcap(
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
 inline constexpr void str_swiss_set_reserve(
-	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t n, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, ::std::size_t n, hasher hash)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	if (n <= imp.counts + imp.growth_left)
 	{
 		return;
 	}
-	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap(n)};
+	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(n)};
 	if (newcap <= imp.cap)
 	{
 		return;
@@ -140,26 +145,31 @@ template <typename allocator_type, typename hasher, ::std::integral chtype>
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void str_swiss_set_grow(
-	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, hasher hash) noexcept
+	::fast_io::details::str_swiss_set_imp_common<chtype> &imp, hasher hash)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	::fast_io::details::str_swiss_set_reserve_to_newcap<allocator_type, hasher, chtype>(imp,
-																						::fast_io::details::str_swiss_table_grow_compute_newcap(imp.cap), hash);
+																						::fast_io::details::str_swiss_table_grow_compute_newcap<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(imp.cap), hash);
 }
 
 template <typename allocator_type, ::std::integral chtype>
 inline constexpr void str_swiss_set_insert_key_internal(
 	::fast_io::details::str_swiss_set_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
-	::std::uint_least64_t hash) noexcept
+	::std::uint_least64_t hash)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = chtype;
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
+	// build the key before claiming the slot so a throwing allocation leaves
+	// the table untouched
+	auto newkey{::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen)};
 	if (::fast_io::details::swiss_table_ctrl_is_empty(imp.controls[pos]))
 	{
 		--imp.growth_left;
 	}
 	::fast_io::details::swiss_table_set_ctrl(imp.controls, imp.cap, pos, h2);
-	imp.slots[pos] = ::fast_io::details::create_associative_string<allocator_type, char_type>(keybase, keylen);
+	imp.slots[pos] = newkey;
 	if (pos < imp.leftmost)
 	{
 		imp.leftmost = pos;
@@ -361,8 +371,41 @@ inline constexpr bool str_swiss_set_erase_key(::fast_io::details::str_swiss_set_
 	return true;
 }
 
+// Destroys every key cloned so far plus the control/slot arrays when a key
+// allocation throws partway through str_swiss_set_clone. Disarmed by nulling
+// controls.
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr ::fast_io::details::str_swiss_set_imp_common<chtype> str_swiss_set_clone(::fast_io::details::str_swiss_set_imp_common<chtype> const &other) noexcept
+struct str_swiss_set_clone_guard
+{
+	::std::uint_least8_t *controls;
+	::fast_io::details::associative_string<chtype> *slots;
+	::std::size_t cap;
+	::std::size_t upto;
+
+	inline constexpr ~str_swiss_set_clone_guard() noexcept
+	{
+		if (controls == nullptr)
+		{
+			return;
+		}
+		for (::std::size_t i{}; i != upto; ++i)
+		{
+			if (::fast_io::details::swiss_table_ctrl_is_full(controls[i]))
+			{
+				auto si{slots[i]};
+				::fast_io::details::deallocate_associative_string<allocator_type, chtype>(si.ptr, si.n);
+			}
+		}
+		using typed_slot_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::fast_io::details::associative_string<chtype>>;
+		using typed_ctrl_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>;
+		typed_ctrl_allocator_type::deallocate_n(controls, static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts));
+		typed_slot_allocator_type::deallocate_n(slots, cap);
+	}
+};
+
+template <typename allocator_type, ::std::integral chtype>
+inline constexpr ::fast_io::details::str_swiss_set_imp_common<chtype> str_swiss_set_clone(::fast_io::details::str_swiss_set_imp_common<chtype> const &other)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::details::associative_string<char_type>;
@@ -378,17 +421,23 @@ inline constexpr ::fast_io::details::str_swiss_set_imp_common<chtype> str_swiss_
 	auto otherslots{other.slots};
 	::std::size_t const ctrlsz{static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts)};
 	auto controls{typed_ctrl_allocator_type::allocate(ctrlsz)};
+	::fast_io::details::swiss_table_ctrl_alloc_guard<allocator_type> ctrlguard{controls, ctrlsz};
 	auto slots{typed_slot_allocator_type::allocate(cap)};
+	ctrlguard.controls = nullptr;
 
 	::fast_io::freestanding::non_overlapped_copy_n(othercontrols, ctrlsz, controls);
+	::fast_io::details::str_swiss_set_clone_guard<allocator_type, char_type> guard{controls, slots, cap, {}};
 	for (::std::size_t i{}; i != cap; ++i)
 	{
+		guard.upto = i;
 		if (::fast_io::details::swiss_table_ctrl_is_full(othercontrols[i]))
 		{
 			auto si{otherslots[i]};
 			slots[i] = ::fast_io::details::create_associative_string<allocator_type, char_type>(si.ptr, si.n);
 		}
 	}
+	guard.upto = cap;
+	guard.controls = nullptr;
 	return {controls, cap, other.counts, other.leftmost, other.growth_left, slots};
 }
 
@@ -401,7 +450,8 @@ struct str_swiss_set_insert_key_result
 };
 
 template <typename allocator_type, typename hasher, ::std::integral char_type>
-constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::str_swiss_set_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash) noexcept
+constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::str_swiss_set_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
@@ -472,11 +522,18 @@ public:
 
 	constexpr basic_str_swiss_set() noexcept = default;
 
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher h) noexcept : hash(h)
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_hasher_t, hasher h)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<hasher>)
+		: hash(h)
 	{}
 
-	constexpr basic_str_swiss_set(basic_str_swiss_set const &other) noexcept : imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
-	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set const &other) noexcept
+	constexpr basic_str_swiss_set(basic_str_swiss_set const &other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_copy_constructible_v<hasher>)
+		: imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
+	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set const &other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_copy_constructible_v<hasher>)
 	{
 		if (this != ::std::addressof(other))
 		{
@@ -508,7 +565,9 @@ private:
 		}
 	};
 	template <::std::ranges::range R>
-	constexpr void construct_with_range_common(R &&rg) noexcept
+	constexpr void construct_with_range_common(R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_reference_t<R>>)
 	{
 		construct_range_destroyer des(this);
 		if constexpr (::std::ranges::sized_range<R>)
@@ -523,37 +582,47 @@ private:
 	}
 
 public:
-	explicit constexpr basic_str_swiss_set(::std::initializer_list<key_string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_set(::std::initializer_list<key_string_view_type> ilist)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		this->construct_with_range_common(ilist);
 	}
 
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
+	explicit constexpr basic_str_swiss_set(::fast_io::freestanding::from_range_t, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
 
-	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<key_string_view_type> ilist) noexcept
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<key_string_view_type> ilist)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_copy_constructible_v<hasher>)
 		: hash(h)
 	{
 		this->construct_with_range_common(ilist);
 	}
 
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
+	explicit constexpr basic_str_swiss_set(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_copy_constructible_v<hasher> ||
+									   !::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 		: hash(h)
 	{
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
 
-	constexpr basic_str_swiss_set(basic_str_swiss_set &&other) noexcept
+	constexpr basic_str_swiss_set(basic_str_swiss_set &&other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<hasher>)
 		: imp{other.imp}, hash(::std::move(other.hash))
 	{
 		other.imp = {};
 	}
 
-	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set &&other) noexcept
+	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set &&other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_assignable_v<hasher>)
 	{
 		if (this != ::std::addressof(other))
 		{
@@ -564,7 +633,8 @@ public:
 		}
 		return *this;
 	}
-	constexpr hasher hash_function() const noexcept
+	constexpr hasher hash_function() const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<hasher>)
 	{
 		return hash;
 	}
@@ -601,14 +671,17 @@ public:
 		return val;
 	}
 
-	constexpr insert_result_type insert_key(key_string_view_type key) noexcept
+	constexpr insert_result_type insert_key(key_string_view_type key)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		return ::fast_io::details::str_swiss_set_insert_key_with_hash<allocator_type, hasher, char_type>(
 			this->imp, key.ptr, key.n, hash);
 	}
 
 	template <::std::ranges::range R>
-	constexpr void insert_range(R &&rg) noexcept(::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
+	constexpr void insert_range(R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+									   !::std::is_nothrow_constructible_v<key_string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		for (auto const &e : rg)
 		{
@@ -692,11 +765,12 @@ public:
 		return this->crend();
 	}
 
-	constexpr void reserve(size_type n) noexcept
+	constexpr void reserve(size_type n)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		::fast_io::details::str_swiss_set_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
-	constexpr void swap(basic_str_swiss_set &other) noexcept
+	constexpr void swap(basic_str_swiss_set &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<hasher>)
 	{
 		::std::ranges::swap(this->imp, other.imp);
 		::std::ranges::swap(this->hash, other.hash);

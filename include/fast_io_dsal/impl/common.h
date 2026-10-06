@@ -161,6 +161,27 @@ inline constexpr auto operator==(handle_holder<handle> left, handle_holder<handl
 	return left.get() == right.get();
 }
 
+/*
+Re-wrapping an allocator through generic_allocator_adapter drops any
+caller-provided adapter_flags (the wrap defaults to none); this alias
+forwards the wrapped allocator's own adapter_flags (or none for a raw
+allocator) so the requested die/try behaviour survives rewrapping.
+*/
+template <typename allocator>
+using generic_allocator_adapter_preserving_flags =
+	::fast_io::generic_allocator_adapter<allocator, ::fast_io::details::adapter_flags_or_default<allocator>()>;
+
+template <typename allocator>
+inline constexpr bool allocator_throws_on_allocation_failure{
+	(::fast_io::details::adapter_flags_or_default<allocator>() & ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) != ::fast_io::allocator_adapter_flags::none};
+template <typename allocator>
+inline constexpr bool allocator_throws_on_violations{
+	(::fast_io::details::adapter_flags_or_default<allocator>() & ::fast_io::allocator_adapter_flags::throws_on_violations) != ::fast_io::allocator_adapter_flags::none};
+template <typename allocator>
+inline constexpr bool allocator_throws_any{
+	::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator> ||
+	::fast_io::containers::details::allocator_throws_on_violations<allocator>};
+
 template <typename sztype>
 inline constexpr sztype cal_grow_twice_size_size_based(sztype cap) noexcept
 {

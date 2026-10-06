@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include "../../../fast_io_dsal/impl/misc/push_macros.h"
-
 namespace fast_io
 {
 
@@ -96,4 +94,3 @@ scatter_pread_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observ
 
 } // namespace fast_io
 
-#include "../../../fast_io_dsal/impl/misc/pop_macros.h"

@@ -163,7 +163,8 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 #endif
 inline constexpr bool str_btree_insert_key_cold(nodetype *node, ::std::size_t pos,
 												typename nodetype::char_type const *tempkeystrptr, ::std::size_t tempkeystrn,
-												::fast_io::containers::details::btree_imp &imp) noexcept
+												::fast_io::containers::details::btree_imp &imp)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
@@ -341,7 +342,8 @@ inline constexpr bool str_btree_insert_key_cold(nodetype *node, ::std::size_t po
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::details::btree_imp &imp,
-													 typename nodetype::char_type const *keystrptr, ::std::size_t keystrn) noexcept
+													 typename nodetype::char_type const *keystrptr, ::std::size_t keystrn)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = typename nodetype::char_type;
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, nodetype>;
@@ -398,7 +400,8 @@ inline constexpr bool str_btree_insert_key_with_root(::fast_io::containers::deta
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 inline constexpr bool str_btree_insert_key_leaf_at(nodetype *node, ::std::size_t pos,
 												   typename nodetype::char_type const *keystrptr, ::std::size_t keystrn,
-												   ::fast_io::containers::details::btree_imp &imp) noexcept
+												   ::fast_io::containers::details::btree_imp &imp)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = typename nodetype::char_type;
 	auto tempkey{::fast_io::details::create_associative_string<allocator_type, char_type>(keystrptr, keystrn)};
@@ -1102,11 +1105,13 @@ public:
 
 	constexpr basic_str_btree_set() noexcept = default;
 
-	constexpr basic_str_btree_set(basic_str_btree_set const &other) noexcept
+	constexpr basic_str_btree_set(basic_str_btree_set const &other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		this->insert_range(other);
 	}
-	constexpr basic_str_btree_set &operator=(basic_str_btree_set const &other) noexcept
+	constexpr basic_str_btree_set &operator=(basic_str_btree_set const &other)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		if (this != ::std::addressof(other))
 		{
@@ -1116,13 +1121,15 @@ public:
 		return *this;
 	}
 
-	explicit constexpr basic_str_btree_set(::std::initializer_list<string_view_type> ilist) noexcept
+	explicit constexpr basic_str_btree_set(::std::initializer_list<string_view_type> ilist)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		this->insert_range(ilist);
 	}
 
 	template <::std::ranges::range R>
-	explicit constexpr basic_str_btree_set(::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	explicit constexpr basic_str_btree_set(::fast_io::freestanding::from_range_t, R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		this->insert_range(::std::forward<R>(rg));
 	}
@@ -1172,11 +1179,13 @@ public:
 	{
 		return ::fast_io::containers::details::str_btree_erase<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
-	constexpr bool insert_key(string_view_type key) noexcept
+	constexpr bool insert_key(string_view_type key)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		return ::fast_io::containers::details::str_btree_insert_key_with_root<allocator_type, keys_number, node_type>(this->imp, key.ptr, key.n);
 	}
-	constexpr bool insert_key_hint(const_iterator hint, string_view_type key) noexcept
+	constexpr bool insert_key_hint(const_iterator hint, string_view_type key)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
 		if (this->imp.root == nullptr)
 		{
@@ -1217,7 +1226,8 @@ public:
 		return ::fast_io::containers::details::str_btree_insert_key_leaf_at<allocator_type, keys_number>(node, pos, key.ptr, key.n, this->imp);
 	}
 	template <::std::ranges::range R>
-	constexpr void insert_range(R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
+	constexpr void insert_range(R &&rg)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<string_view_type, ::std::ranges::range_value_t<R>>)
 	{
 		for (auto const &e : rg)
 		{
@@ -1369,19 +1379,21 @@ public:
 	{
 		return this->crend();
 	}
-	constexpr cstring_view_type front() const noexcept
+	constexpr cstring_view_type front() const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
 		if (this->imp.leftmost == nullptr) [[unlikely]]
 		{
-			::fast_io::fast_terminate();
+			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
 		}
 		return this->front_unchecked();
 	}
-	constexpr cstring_view_type back() const noexcept
+	constexpr cstring_view_type back() const
+		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
 		if (this->imp.rightmost == nullptr) [[unlikely]]
 		{
-			::fast_io::fast_terminate();
+			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
 		}
 		return this->back_unchecked();
 	}

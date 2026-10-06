@@ -183,17 +183,17 @@ static inline void *allocate_conditional_zero_impl(::std::size_t n, bool zero)
 		}
 	}
 }
-static inline constexpr void * allocate_conditional_zero(::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate_conditional_zero(::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_conditional_zero_impl<throws_on_allocation_failure>(n, zero);
 }
-static inline constexpr void * allocate_conditional_zero_die(::std::size_t n, bool zero) noexcept
+static inline constexpr void *allocate_conditional_zero_die(::std::size_t n, bool zero) noexcept
 	requires(!has_status)
 {
 	return allocate_conditional_zero_impl<false>(n, zero);
 }
-static inline constexpr void * allocate_conditional_zero_try(::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_conditional_zero_try(::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_conditional_zero_impl<true>(n, zero);
@@ -230,17 +230,17 @@ allocate_impl(::std::size_t n)
 		}
 	}
 }
-static inline constexpr void * allocate(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_impl<throws_on_allocation_failure>(n);
 }
-static inline constexpr void * allocate_die(::std::size_t n) noexcept
+static inline constexpr void *allocate_die(::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return allocate_impl<false>(n);
 }
-static inline constexpr void * allocate_try(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_try(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_impl<true>(n);
@@ -277,17 +277,17 @@ static inline void *allocate_zero_impl(::std::size_t n)
 		}
 	}
 }
-static inline constexpr void * allocate_zero(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate_zero(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_zero_impl<throws_on_allocation_failure>(n);
 }
-static inline constexpr void * allocate_zero_die(::std::size_t n) noexcept
+static inline constexpr void *allocate_zero_die(::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return allocate_zero_impl<false>(n);
 }
-static inline constexpr void * allocate_zero_try(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_zero_try(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_zero_impl<true>(n);
@@ -307,17 +307,17 @@ static inline constexpr bool has_reallocate = (::fast_io::details::has_reallocat
 											   ::fast_io::details::has_reallocate_conditional_zero_at_least_impl<alloc> ||
 											   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_impl<alloc>);
 static inline constexpr bool has_reallocate_try = (::fast_io::details::has_reallocate_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_at_least_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_zero_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_conditional_zero_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_conditional_zero_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_conditional_zero_at_least_try_impl<alloc> ||
-											   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_try_impl<alloc>);
+												   ::fast_io::details::has_reallocate_at_least_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_zero_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_conditional_zero_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_conditional_zero_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_conditional_zero_at_least_try_impl<alloc> ||
+												   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_try_impl<alloc>);
 
 template <bool throwing>
 #if __has_cpp_attribute(__gnu__::__returns_nonnull__)
@@ -417,17 +417,17 @@ static inline void *reallocate_conditional_zero_impl(void *p, ::std::size_t n, b
 		}
 	}
 }
-static inline constexpr void * reallocate_conditional_zero(void *p, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_conditional_zero(void *p, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate)) || (throws_on_allocation_failure && (!has_status && has_reallocate_try)))
 {
 	return reallocate_conditional_zero_impl<throws_on_allocation_failure>(p, n, zero);
 }
-static inline constexpr void * reallocate_conditional_zero_die(void *p, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *reallocate_conditional_zero_die(void *p, ::std::size_t n, bool zero) noexcept
 	requires(!has_status && has_reallocate)
 {
 	return reallocate_conditional_zero_impl<false>(p, n, zero);
 }
-static inline constexpr void * reallocate_conditional_zero_try(void *p, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_conditional_zero_try(void *p, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_try)
 {
 	return reallocate_conditional_zero_impl<true>(p, n, zero);
@@ -455,17 +455,17 @@ static inline void *reallocate_impl(void *p, ::std::size_t n)
 		return reallocate_conditional_zero_impl<throwing>(p, n, false);
 	}
 }
-static inline constexpr void * reallocate(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate)) || (throws_on_allocation_failure && (!has_status && has_reallocate_try)))
 {
 	return reallocate_impl<throws_on_allocation_failure>(p, n);
 }
-static inline constexpr void * reallocate_die(void *p, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_die(void *p, ::std::size_t n) noexcept
 	requires(!has_status && has_reallocate)
 {
 	return reallocate_impl<false>(p, n);
 }
-static inline constexpr void * reallocate_try(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_try(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_try)
 {
 	return reallocate_impl<true>(p, n);
@@ -477,9 +477,9 @@ static inline constexpr bool has_reallocate_zero = (::fast_io::details::has_real
 													::fast_io::details::has_reallocate_aligned_zero_impl<alloc> ||
 													::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc>);
 static inline constexpr bool has_reallocate_zero_try = (::fast_io::details::has_reallocate_zero_try_impl<alloc> ||
-													::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
-													::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
-													::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
+														::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
+														::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
+														::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
 
 
 template <bool throwing>
@@ -503,17 +503,17 @@ static inline void *reallocate_zero_impl(void *p, ::std::size_t n)
 		return reallocate_conditional_zero_impl<throwing>(p, n, true);
 	}
 }
-static inline constexpr void * reallocate_zero(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_zero(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate_zero)) || (throws_on_allocation_failure && (!has_status && has_reallocate_zero_try)))
 {
 	return reallocate_zero_impl<throws_on_allocation_failure>(p, n);
 }
-static inline constexpr void * reallocate_zero_die(void *p, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_zero_die(void *p, ::std::size_t n) noexcept
 	requires(!has_status && has_reallocate_zero)
 {
 	return reallocate_zero_impl<false>(p, n);
 }
-static inline constexpr void * reallocate_zero_try(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_zero_try(void *p, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_zero_try)
 {
 	return reallocate_zero_impl<true>(p, n);
@@ -653,17 +653,17 @@ static inline void *reallocate_n_conditional_zero_impl(void *p, ::std::size_t ol
 		}
 	}
 }
-static inline constexpr void * reallocate_n_conditional_zero(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_n_conditional_zero(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_n_conditional_zero_impl<throws_on_allocation_failure>(p, oldn, n, zero);
 }
-static inline constexpr void * reallocate_n_conditional_zero_die(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *reallocate_n_conditional_zero_die(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) noexcept
 	requires(!has_status)
 {
 	return reallocate_n_conditional_zero_impl<false>(p, oldn, n, zero);
 }
-static inline constexpr void * reallocate_n_conditional_zero_try(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_n_conditional_zero_try(void *p, ::std::size_t oldn, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_n_conditional_zero_impl<true>(p, oldn, n, zero);
@@ -695,17 +695,17 @@ static inline void *reallocate_n_impl(void *p, ::std::size_t oldn, ::std::size_t
 		return reallocate_n_conditional_zero_impl<throwing>(p, oldn, n, false);
 	}
 }
-static inline constexpr void * reallocate_n(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_n(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_n_impl<throws_on_allocation_failure>(p, oldn, n);
 }
-static inline constexpr void * reallocate_n_die(void *p, ::std::size_t oldn, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_n_die(void *p, ::std::size_t oldn, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return reallocate_n_impl<false>(p, oldn, n);
 }
-static inline constexpr void * reallocate_n_try(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_n_try(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_n_impl<true>(p, oldn, n);
@@ -737,17 +737,17 @@ static inline void *reallocate_zero_n_impl(void *p, ::std::size_t oldn, ::std::s
 		return reallocate_n_conditional_zero_impl<throwing>(p, oldn, n, true);
 	}
 }
-static inline constexpr void * reallocate_zero_n(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_zero_n(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_zero_n_impl<throws_on_allocation_failure>(p, oldn, n);
 }
-static inline constexpr void * reallocate_zero_n_die(void *p, ::std::size_t oldn, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_zero_n_die(void *p, ::std::size_t oldn, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return reallocate_zero_n_impl<false>(p, oldn, n);
 }
-static inline constexpr void * reallocate_zero_n_try(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_zero_n_try(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_zero_n_impl<true>(p, oldn, n);
@@ -787,7 +787,7 @@ static inline constexpr void deallocate_n(void *p, ::std::size_t n) noexcept
 {
 	if constexpr (secure_clear)
 	{
-if !consteval
+		if !consteval
 		{
 			if (p != nullptr)
 			{
@@ -937,17 +937,17 @@ allocate_aligned_conditional_zero_impl(::std::size_t alignment, ::std::size_t n,
 		return ::fast_io::details::allocator_pointer_aligned_impl<alloc, throwing>(alignment, n, zero);
 	}
 }
-static inline constexpr void * allocate_aligned_conditional_zero(::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate_aligned_conditional_zero(::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(alignment, n, zero);
 }
-static inline constexpr void * allocate_aligned_conditional_zero_die(::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *allocate_aligned_conditional_zero_die(::std::size_t alignment, ::std::size_t n, bool zero) noexcept
 	requires(!has_status)
 {
 	return allocate_aligned_conditional_zero_impl<false>(alignment, n, zero);
 }
-static inline constexpr void * allocate_aligned_conditional_zero_try(::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_aligned_conditional_zero_try(::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_aligned_conditional_zero_impl<true>(alignment, n, zero);
@@ -988,17 +988,17 @@ allocate_aligned_impl(::std::size_t alignment, ::std::size_t n)
 		return allocate_aligned_conditional_zero_impl<throwing>(alignment, n, false);
 	}
 }
-static inline constexpr void * allocate_aligned(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate_aligned(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_aligned_impl<throws_on_allocation_failure>(alignment, n);
 }
-static inline constexpr void * allocate_aligned_die(::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *allocate_aligned_die(::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return allocate_aligned_impl<false>(alignment, n);
 }
-static inline constexpr void * allocate_aligned_try(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_aligned_try(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_aligned_impl<true>(alignment, n);
@@ -1039,17 +1039,17 @@ allocate_aligned_zero_impl(::std::size_t alignment, ::std::size_t n)
 		return allocate_aligned_conditional_zero_impl<throwing>(alignment, n, true);
 	}
 }
-static inline constexpr void * allocate_aligned_zero(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *allocate_aligned_zero(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return allocate_aligned_zero_impl<throws_on_allocation_failure>(alignment, n);
 }
-static inline constexpr void * allocate_aligned_zero_die(::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *allocate_aligned_zero_die(::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return allocate_aligned_zero_impl<false>(alignment, n);
 }
-static inline constexpr void * allocate_aligned_zero_try(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *allocate_aligned_zero_try(::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return allocate_aligned_zero_impl<true>(alignment, n);
@@ -1546,11 +1546,11 @@ static inline constexpr bool has_reallocate_aligned = (::fast_io::details::has_r
 													   ::fast_io::details::has_reallocate_aligned_conditional_zero_impl<alloc> ||
 													   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_impl<alloc>);
 static inline constexpr bool has_reallocate_aligned_try = (::fast_io::details::has_reallocate_aligned_try_impl<alloc> ||
-													   ::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
-													   ::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
-													   ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
-													   ::fast_io::details::has_reallocate_aligned_conditional_zero_try_impl<alloc> ||
-													   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_try_impl<alloc>);
+														   ::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
+														   ::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
+														   ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
+														   ::fast_io::details::has_reallocate_aligned_conditional_zero_try_impl<alloc> ||
+														   ::fast_io::details::has_reallocate_aligned_conditional_zero_at_least_try_impl<alloc>);
 
 template <bool throwing>
 #if __has_cpp_attribute(__gnu__::__returns_nonnull__)
@@ -1608,17 +1608,17 @@ reallocate_aligned_conditional_zero_impl(void *p, ::std::size_t alignment, ::std
 		}
 	}
 }
-static inline constexpr void * reallocate_aligned_conditional_zero(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned_conditional_zero(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate_aligned)) || (throws_on_allocation_failure && (!has_status && has_reallocate_aligned_try)))
 {
 	return reallocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(p, alignment, n, zero);
 }
-static inline constexpr void * reallocate_aligned_conditional_zero_die(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *reallocate_aligned_conditional_zero_die(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
 	requires(!has_status && has_reallocate_aligned)
 {
 	return reallocate_aligned_conditional_zero_impl<false>(p, alignment, n, zero);
 }
-static inline constexpr void * reallocate_aligned_conditional_zero_try(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_conditional_zero_try(void *p, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_aligned_try)
 {
 	return reallocate_aligned_conditional_zero_impl<true>(p, alignment, n, zero);
@@ -1647,17 +1647,17 @@ reallocate_aligned_impl(void *p, ::std::size_t alignment, ::std::size_t n)
 		return reallocate_aligned_conditional_zero_impl<throwing>(p, alignment, n, false);
 	}
 }
-static inline constexpr void * reallocate_aligned(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate_aligned)) || (throws_on_allocation_failure && (!has_status && has_reallocate_aligned_try)))
 {
 	return reallocate_aligned_impl<throws_on_allocation_failure>(p, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_die(void *p, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_aligned_die(void *p, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status && has_reallocate_aligned)
 {
 	return reallocate_aligned_impl<false>(p, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_try(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_try(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_aligned_try)
 {
 	return reallocate_aligned_impl<true>(p, alignment, n);
@@ -1667,7 +1667,7 @@ static inline constexpr void * reallocate_aligned_try(void *p, ::std::size_t ali
 static inline constexpr bool has_reallocate_aligned_zero = (::fast_io::details::has_reallocate_aligned_zero_impl<alloc> ||
 															::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc>);
 static inline constexpr bool has_reallocate_aligned_zero_try = (::fast_io::details::has_reallocate_aligned_zero_try_impl<alloc> ||
-															::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
+																::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
 template <bool throwing>
 #if __has_cpp_attribute(__gnu__::__returns_nonnull__)
 [[__gnu__::__returns_nonnull__]]
@@ -1690,17 +1690,17 @@ reallocate_aligned_zero_impl(void *p, ::std::size_t alignment, ::std::size_t n)
 		return reallocate_aligned_conditional_zero_impl<throwing>(p, alignment, n, true);
 	}
 }
-static inline constexpr void * reallocate_aligned_zero(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned_zero(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status && has_reallocate_aligned_zero)) || (throws_on_allocation_failure && (!has_status && has_reallocate_aligned_zero_try)))
 {
 	return reallocate_aligned_zero_impl<throws_on_allocation_failure>(p, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_zero_die(void *p, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_aligned_zero_die(void *p, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status && has_reallocate_aligned_zero)
 {
 	return reallocate_aligned_zero_impl<false>(p, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_zero_try(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_zero_try(void *p, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_reallocate_aligned_zero_try)
 {
 	return reallocate_aligned_zero_impl<true>(p, alignment, n);
@@ -1836,17 +1836,17 @@ reallocate_aligned_n_conditional_zero_impl(void *p, ::std::size_t oldn, ::std::s
 		}
 	}
 }
-static inline constexpr void * reallocate_aligned_n_conditional_zero(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned_n_conditional_zero(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_aligned_n_conditional_zero_impl<throws_on_allocation_failure>(p, oldn, alignment, n, zero);
 }
-static inline constexpr void * reallocate_aligned_n_conditional_zero_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *reallocate_aligned_n_conditional_zero_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
 	requires(!has_status)
 {
 	return reallocate_aligned_n_conditional_zero_impl<false>(p, oldn, alignment, n, zero);
 }
-static inline constexpr void * reallocate_aligned_n_conditional_zero_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_n_conditional_zero_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_aligned_n_conditional_zero_impl<true>(p, oldn, alignment, n, zero);
@@ -1879,17 +1879,17 @@ reallocate_aligned_n_impl(void *p, ::std::size_t oldn, ::std::size_t alignment, 
 		return reallocate_aligned_n_conditional_zero_impl<throwing>(p, oldn, alignment, n, false);
 	}
 }
-static inline constexpr void * reallocate_aligned_n(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned_n(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_aligned_n_impl<throws_on_allocation_failure>(p, oldn, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_n_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_aligned_n_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return reallocate_aligned_n_impl<false>(p, oldn, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_n_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_n_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_aligned_n_impl<true>(p, oldn, alignment, n);
@@ -1928,17 +1928,17 @@ reallocate_aligned_zero_n_impl(void *p, ::std::size_t oldn, ::std::size_t alignm
 		return newptr;
 	}
 }
-static inline constexpr void * reallocate_aligned_zero_n(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *reallocate_aligned_zero_n(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
 {
 	return reallocate_aligned_zero_n_impl<throws_on_allocation_failure>(p, oldn, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_zero_n_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *reallocate_aligned_zero_n_die(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(!has_status)
 {
 	return reallocate_aligned_zero_n_impl<false>(p, oldn, alignment, n);
 }
-static inline constexpr void * reallocate_aligned_zero_n_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *reallocate_aligned_zero_n_try(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(!has_status && has_native_allocate_try)
 {
 	return reallocate_aligned_zero_n_impl<true>(p, oldn, alignment, n);
@@ -1949,8 +1949,8 @@ static inline constexpr bool has_native_reallocate_at_least = (has_reallocate &&
 															   (::fast_io::details::has_reallocate_aligned_at_least_impl<alloc> ||
 																::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc>));
 static inline constexpr bool has_native_reallocate_at_least_try = (has_reallocate &&
-															   (::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
-																::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>));
+																   (::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc> ||
+																	::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>));
 template <bool throwing>
 static inline ::fast_io::allocation_least_result
 reallocate_at_least_impl(void *p, ::std::size_t n)
@@ -2011,8 +2011,8 @@ static inline constexpr bool has_native_reallocate_zero_at_least = (has_realloca
 																	(::fast_io::details::has_reallocate_zero_at_least_impl<alloc> ||
 																	 ::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc>));
 static inline constexpr bool has_native_reallocate_zero_at_least_try = (has_reallocate_zero &&
-																	(::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
-																	 ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>));
+																		(::fast_io::details::has_reallocate_zero_at_least_try_impl<alloc> ||
+																		 ::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>));
 
 template <bool throwing>
 static inline ::fast_io::allocation_least_result
@@ -2196,12 +2196,28 @@ reallocate_zero_n_at_least_impl(void *p, ::std::size_t oldn, ::std::size_t n)
 	}
 }
 
+static inline constexpr ::fast_io::allocation_least_result reallocate_zero_n_at_least(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+	requires((!throws_on_allocation_failure && (!has_status)) || (throws_on_allocation_failure && (!has_status && has_native_allocate_try)))
+{
+	return reallocate_zero_n_at_least_impl<throws_on_allocation_failure>(p, oldn, n);
+}
+static inline constexpr ::fast_io::allocation_least_result reallocate_zero_n_at_least_die(void *p, ::std::size_t oldn, ::std::size_t n) noexcept
+	requires(!has_status)
+{
+	return reallocate_zero_n_at_least_impl<false>(p, oldn, n);
+}
+static inline constexpr ::fast_io::allocation_least_result reallocate_zero_n_at_least_try(void *p, ::std::size_t oldn, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+	requires(!has_status && has_native_allocate_try)
+{
+	return reallocate_zero_n_at_least_impl<true>(p, oldn, n);
+}
+
 static inline constexpr bool has_native_reallocate_aligned_at_least = (has_reallocate_aligned &&
 																	   (::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc> ||
 																		::fast_io::details::has_reallocate_aligned_at_least_impl<alloc>));
 static inline constexpr bool has_native_reallocate_aligned_at_least_try = (has_reallocate_aligned &&
-																	   (::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
-																		::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc>));
+																		   (::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc> ||
+																			::fast_io::details::has_reallocate_aligned_at_least_try_impl<alloc>));
 
 template <bool throwing>
 static inline ::fast_io::allocation_least_result
@@ -2246,7 +2262,7 @@ static inline constexpr ::fast_io::allocation_least_result reallocate_aligned_at
 static inline constexpr bool has_native_reallocate_aligned_zero_at_least = (has_reallocate_aligned_zero &&
 																			::fast_io::details::has_reallocate_aligned_zero_at_least_impl<alloc>);
 static inline constexpr bool has_native_reallocate_aligned_zero_at_least_try = (has_reallocate_aligned_zero &&
-																			::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
+																				::fast_io::details::has_reallocate_aligned_zero_at_least_try_impl<alloc>);
 
 template <bool throwing>
 static inline ::fast_io::allocation_least_result
@@ -2284,8 +2300,8 @@ static inline constexpr bool has_native_reallocate_aligned_n_at_least = (has_rea
 																		 (::fast_io::details::has_reallocate_aligned_n_at_least_impl<alloc> ||
 																		  ::fast_io::details::has_reallocate_aligned_zero_n_at_least_impl<alloc>));
 static inline constexpr bool has_native_reallocate_aligned_n_at_least_try = (has_reallocate_aligned &&
-																		 (::fast_io::details::has_reallocate_aligned_n_at_least_try_impl<alloc> ||
-																		  ::fast_io::details::has_reallocate_aligned_zero_n_at_least_try_impl<alloc>));
+																			 (::fast_io::details::has_reallocate_aligned_n_at_least_try_impl<alloc> ||
+																			  ::fast_io::details::has_reallocate_aligned_zero_n_at_least_try_impl<alloc>));
 template <bool throwing>
 static inline ::fast_io::allocation_least_result
 reallocate_aligned_n_at_least_impl(void *p, ::std::size_t oldn, ::std::size_t alignment, ::std::size_t n)
@@ -2445,7 +2461,7 @@ static inline void deallocate_aligned_n(void *p, ::std::size_t alignment, ::std:
 {
 	if constexpr (secure_clear)
 	{
-if !consteval
+		if !consteval
 		{
 			if (p != nullptr)
 			{
@@ -2628,17 +2644,17 @@ static inline void *handle_allocate_conditional_zero_impl(handle_type handle, ::
 		}
 	}
 }
-static inline constexpr void * handle_allocate_conditional_zero(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *handle_allocate_conditional_zero(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
 {
 	return handle_allocate_conditional_zero_impl<throws_on_allocation_failure>(handle, n, zero);
 }
-static inline constexpr void * handle_allocate_conditional_zero_die(handle_type handle, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *handle_allocate_conditional_zero_die(handle_type handle, ::std::size_t n, bool zero) noexcept
 	requires(has_status && has_native_handle_allocate)
 {
 	return handle_allocate_conditional_zero_impl<false>(handle, n, zero);
 }
-static inline constexpr void * handle_allocate_conditional_zero_try(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *handle_allocate_conditional_zero_try(handle_type handle, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(has_status && has_native_handle_allocate_try)
 {
 	return handle_allocate_conditional_zero_impl<true>(handle, n, zero);
@@ -2701,49 +2717,49 @@ static inline void *handle_allocate_aligned_conditional_zero_impl(handle_type ha
 		}
 	}
 }
-static inline constexpr void * handle_allocate_aligned_conditional_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *handle_allocate_aligned_conditional_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
 {
 	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, zero);
 }
-static inline constexpr void * handle_allocate_aligned_conditional_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
+static inline constexpr void *handle_allocate_aligned_conditional_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) noexcept
 	requires(has_status && has_native_handle_allocate)
 {
 	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, zero);
 }
-static inline constexpr void * handle_allocate_aligned_conditional_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *handle_allocate_aligned_conditional_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n, bool zero) FAST_IO_HERBCEPTIONS_THROWS
 	requires(has_status && has_native_handle_allocate_try)
 {
 	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, zero);
 }
 
-static inline constexpr void * handle_allocate_aligned(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *handle_allocate_aligned(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
 {
 	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, false);
 }
-static inline constexpr void * handle_allocate_aligned_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *handle_allocate_aligned_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(has_status && has_native_handle_allocate)
 {
 	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, false);
 }
-static inline constexpr void * handle_allocate_aligned_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *handle_allocate_aligned_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(has_status && has_native_handle_allocate_try)
 {
 	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, false);
 }
 
-static inline constexpr void * handle_allocate_aligned_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
+static inline constexpr void *handle_allocate_aligned_zero(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throws_on_allocation_failure)
 	requires((!throws_on_allocation_failure && (has_status && has_native_handle_allocate)) || (throws_on_allocation_failure && (has_status && has_native_handle_allocate_try)))
 {
 	return handle_allocate_aligned_conditional_zero_impl<throws_on_allocation_failure>(handle, alignment, n, true);
 }
-static inline constexpr void * handle_allocate_aligned_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
+static inline constexpr void *handle_allocate_aligned_zero_die(handle_type handle, ::std::size_t alignment, ::std::size_t n) noexcept
 	requires(has_status && has_native_handle_allocate)
 {
 	return handle_allocate_aligned_conditional_zero_impl<false>(handle, alignment, n, true);
 }
-static inline constexpr void * handle_allocate_aligned_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+static inline constexpr void *handle_allocate_aligned_zero_try(handle_type handle, ::std::size_t alignment, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 	requires(has_status && has_native_handle_allocate_try)
 {
 	return handle_allocate_aligned_conditional_zero_impl<true>(handle, alignment, n, true);
@@ -2984,4 +3000,3 @@ static inline constexpr ::fast_io::allocation_least_result handle_allocate_align
 		return handle_allocate_aligned_conditional_zero_at_least_impl<true>(handle, alignment, n, true);
 	}
 }
-

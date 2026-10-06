@@ -179,7 +179,7 @@ struct str_swiss_map_insert_key_result_with_hval
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_reserve_to_newcap(
-	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t newcap, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t newcap, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	using char_type = chtype;
 	using slot_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<char_type, mappedtype>;
@@ -190,8 +190,11 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 	auto oldslots{imp.slots};
 	auto const oldcap{imp.cap};
 
-	auto newcontrols{typed_ctrl_allocator_type::allocate(static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts))};
+	::std::size_t const newctrln{static_cast<::std::size_t>(newcap + ::fast_io::details::swiss_table_ctrl_tail_counts)};
+	auto newcontrols{typed_ctrl_allocator_type::allocate(newctrln)};
+	::fast_io::details::swiss_table_ctrl_alloc_guard<allocator_type> ctrlguard{newcontrols, newctrln};
 	auto newslots{typed_slot_allocator_type::allocate(newcap)};
+	ctrlguard.controls = nullptr;
 
 	::fast_io::freestanding::my_memset(newcontrols,
 									   static_cast<int>(::fast_io::details::swiss_table_ctrl::empty),
@@ -239,13 +242,13 @@ inline constexpr void str_swiss_map_reserve_to_newcap(
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_reserve(
-	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t n, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, ::std::size_t n, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	if (n <= imp.counts + imp.growth_left)
 	{
 		return;
 	}
-	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap(n)};
+	::std::size_t newcap{::fast_io::details::str_swiss_table_reserve_compute_newcap<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(n)};
 	if (newcap <= imp.cap)
 	{
 		return;
@@ -258,11 +261,11 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void str_swiss_map_grow(
-	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	::fast_io::details::str_swiss_map_reserve_to_newcap<allocator_type, hasher, chtype>(
 		imp,
-		::fast_io::details::str_swiss_table_grow_compute_newcap(imp.cap), hash);
+		::fast_io::details::str_swiss_table_grow_compute_newcap<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(imp.cap), hash);
 }
 
 
@@ -304,7 +307,7 @@ template <typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash, ::std::uint_least8_t *pcontrol,
-	::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> *pslot) noexcept
+	::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype> *pslot) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	using char_type = chtype;
 	auto const h2{::fast_io::details::swiss_table_hash_h2(hash)};
@@ -325,7 +328,7 @@ inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
 inline constexpr void str_swiss_map_insert_key_internal(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
-	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
+	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	::fast_io::details::str_swiss_map_insert_key_internal_computed_slot_controls<allocator_type>(imp, pos, keybase, keylen, hash, imp.controls + pos, imp.slots + pos);
 }
@@ -337,7 +340,7 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 [[__gnu__::__cold__]]
 #endif
 inline constexpr void str_swiss_map_rehash_in_place(
-	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype> || !::std::is_nothrow_move_assignable_v<mappedtype>)
 {
 	using slot_type = ::fast_io::containers::basic_str_swiss_map_key_mapped_pair<chtype, mappedtype>;
 	auto const controls{imp.controls};
@@ -585,7 +588,7 @@ struct str_swiss_map_clone_guard
 };
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
-inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> str_swiss_map_clone(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mappedtype>)
+inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> str_swiss_map_clone(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mappedtype>)
 {
 	using char_type = chtype;
 	using mapped_type = mappedtype;
@@ -602,7 +605,9 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 	auto otherslots{other.slots};
 	::std::size_t const ctrlsz{static_cast<::std::size_t>(cap + ::fast_io::details::swiss_table_ctrl_tail_counts)};
 	auto controls{typed_ctrl_allocator_type::allocate(ctrlsz)};
+	::fast_io::details::swiss_table_ctrl_alloc_guard<allocator_type> ctrlguard{controls, ctrlsz};
 	auto slots{typed_slot_allocator_type::allocate(cap)};
+	ctrlguard.controls = nullptr;
 
 	::fast_io::freestanding::non_overlapped_copy_n(othercontrols, ctrlsz, controls);
 	::fast_io::details::str_swiss_map_clone_guard<allocator_type, char_type, mapped_type> guard{controls, slots, cap, {}, false};
@@ -624,7 +629,7 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
-constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename hasher::digest_type, char_type, mappedtype> str_swiss_map_insert_key_with_hash_no_insert(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename hasher::digest_type, char_type, mappedtype> str_swiss_map_insert_key_with_hash_no_insert(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
 	auto const result{::fast_io::details::swiss_table_find_common_with_str<char_type>(
@@ -658,7 +663,7 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
-constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mappedtype>)
+constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	auto [hval, pos, inserted] = ::fast_io::details::str_swiss_map_insert_key_with_hash_no_insert<allocator_type, hasher, char_type>(imp, key, keyn, hash);
 	if (inserted)
@@ -697,7 +702,7 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 	requires ::std::constructible_from<mappedtype, Args...>
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype> str_swiss_map_emplace_key_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
-	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
+	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
 {
 	using mapped_type = mappedtype;
 	if constexpr (::std::is_nothrow_constructible_v<mapped_type, Args...>)
@@ -733,7 +738,7 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 	requires ::std::constructible_from<mappedtype, Args...>
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype> str_swiss_map_emplace_key_or_assign_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
-	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
+	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
 {
 	using mapped_type = mappedtype;
 	if constexpr (::std::is_nothrow_constructible_v<mapped_type, Args...>)
@@ -789,7 +794,8 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 constexpr void str_swiss_map_insert_range_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+								   !(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
 									 ::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mappedtype>))
 {
 	for (; first != last; ++first)
@@ -829,7 +835,8 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 constexpr void str_swiss_map_construct_range_common_with_n(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last, ::std::size_t sz)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+								   !(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
 									 ::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mappedtype>))
 {
 	::fast_io::details::str_swiss_map_construct_range_destroyer<allocator_type, chtype, mappedtype> des(imp);
@@ -843,7 +850,8 @@ template <typename allocator_type, typename hasher, ::std::integral chtype, type
 constexpr void str_swiss_map_construct_range_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+								   !(::std::is_nothrow_constructible_v<mappedtype, decltype(::std::declval<Iter>()->mapped())> &&
 									 ::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mappedtype>))
 {
 	::fast_io::details::str_swiss_map_construct_range_destroyer<allocator_type, chtype, mappedtype> des(imp);
@@ -854,7 +862,8 @@ constexpr void str_swiss_map_construct_range_common(
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype, ::std::ranges::range R>
 constexpr void str_swiss_map_construct_with_range_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash, R &&rg)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!(::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> &&
+	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
+								   !(::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> &&
 									 ::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mappedtype>))
 {
 	if constexpr (::std::ranges::sized_range<R>)
@@ -908,10 +917,10 @@ public:
 
 	explicit constexpr basic_str_swiss_map() noexcept = default;
 
-	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_hasher_t, hasher h) noexcept : hash(h)
+	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_hasher_t, hasher h) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<hasher>) : hash(h)
 	{}
-	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>) : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype, mappedtype>(other.imp)), hash(other.hash) {};
-	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>)
+	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>) : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype, mappedtype>(other.imp)), hash(other.hash) {};
+	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		if (this != ::std::addressof(other))
 		{
@@ -924,35 +933,35 @@ public:
 	}
 
 public:
-	explicit constexpr basic_str_swiss_map(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_swiss_map(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::details::str_swiss_map_construct_with_range_common<allocator_type, hasher, chtype, mapped_type>(this->imp, hash, ilist);
 	}
 	template <::std::ranges::range R>
 		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
-	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::details::str_swiss_map_construct_with_range_common<allocator_type, hasher, chtype, mapped_type>(this->imp, hash, ::std::forward<R>(rg));
 	}
-	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type> || !::std::is_nothrow_copy_constructible_v<hasher>)
 		: hash(h)
 	{
 		::fast_io::details::str_swiss_map_construct_with_range_common<allocator_type, hasher, chtype, mapped_type>(this->imp, hash, ilist);
 	}
 	template <::std::ranges::range R>
 		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
-	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	explicit constexpr basic_str_swiss_map(::fast_io::from_hasher_t, hasher h, ::fast_io::freestanding::from_range_t, R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type> || !::std::is_nothrow_copy_constructible_v<hasher>)
 		: hash(h)
 	{
 		::fast_io::details::str_swiss_map_construct_with_range_common<allocator_type, hasher, chtype, mapped_type>(this->imp, hash, ::std::forward<R>(rg));
 	}
-	constexpr basic_str_swiss_map(basic_str_swiss_map &&other) noexcept
+	constexpr basic_str_swiss_map(basic_str_swiss_map &&other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<hasher>)
 		: imp{other.imp}, hash(::std::move(other.hash))
 	{
 		other.imp = {};
 	}
 
-	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map &&other) noexcept
+	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map &&other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_assignable_v<hasher>)
 	{
 		if (this == ::std::addressof(other))
 		{
@@ -964,7 +973,7 @@ public:
 		this->hash = ::std::move(other.hash);
 		return *this;
 	}
-	constexpr hasher hash_function() const noexcept
+	constexpr hasher hash_function() const FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<hasher>)
 	{
 		return hash;
 	}
@@ -1004,18 +1013,18 @@ public:
 public:
 	template <typename... Args>
 		requires ::std::constructible_from<mapped_type, Args...>
-	constexpr insert_result_type emplace_key(key_string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
+	constexpr insert_result_type emplace_key(key_string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, ::std::forward<Args>(args)...);
 	}
 
-	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>)
+	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, mapval);
 	}
-	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mapped_type>)
+	constexpr insert_result_type insert_key(key_string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mapped_type>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, ::std::move(mapval));
@@ -1023,18 +1032,18 @@ public:
 
 	template <typename... Args>
 		requires ::std::constructible_from<mapped_type, Args...>
-	constexpr insert_result_type emplace_key_or_assign(key_string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
+	constexpr insert_result_type emplace_key_or_assign(key_string_view_type key, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mapped_type, Args &&...>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_or_assign_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, ::std::forward<Args>(args)...);
 	}
 
-	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>)
+	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type const &mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_or_assign_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, mapval);
 	}
-	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mapped_type>)
+	constexpr insert_result_type insert_key_or_assign(key_string_view_type key, mapped_type &&mapval) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mapped_type>)
 	{
 		return ::fast_io::details::str_swiss_map_emplace_key_or_assign_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, key.ptr, key.n, ::std::move(mapval));
@@ -1042,13 +1051,13 @@ public:
 
 	template <::std::ranges::range R>
 		requires(::fast_io::details::str_swiss_map_range_has_key_mapped_val<chtype, mappedtype, R>)
-	constexpr void insert_range(R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr void insert_range(R &&rg) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_range_has_key_mapped_noexcept<chtype, mappedtype, R> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::details::str_swiss_map_insert_range_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, ::std::ranges::begin(rg), ::std::ranges::end(rg));
 	}
 
-	constexpr void insert_range(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
+	constexpr void insert_range(::std::initializer_list<initializer_list_pair_type> ilist) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::fast_io::details::str_swiss_map_mapped_nothrow_copy_move<mapped_type>)
 	{
 		::fast_io::details::str_swiss_map_insert_range_common<allocator_type, hasher, chtype, mapped_type>(
 			this->imp, hash, ilist.begin(), ilist.end());
@@ -1139,11 +1148,11 @@ public:
 	{
 		return this->crend();
 	}
-	constexpr void reserve(size_type n) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mapped_type>)
+	constexpr void reserve(size_type n) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mapped_type>)
 	{
 		::fast_io::details::str_swiss_map_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
-	constexpr void swap(basic_str_swiss_map &other) noexcept
+	constexpr void swap(basic_str_swiss_map &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<hasher>)
 	{
 		::std::ranges::swap(this->imp, other.imp);
 		::std::ranges::swap(this->hash, other.hash);

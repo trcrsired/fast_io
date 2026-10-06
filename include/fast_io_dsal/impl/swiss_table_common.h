@@ -424,9 +424,25 @@ inline constexpr ::std::size_t swiss_table_capacity_to_growth(::std::size_t cap)
 	}
 }
 
+// Releases the fresh control array if the paired slot allocation fails.
+template <typename allocator_type>
+struct swiss_table_ctrl_alloc_guard
+{
+	::std::uint_least8_t *controls;
+	::std::size_t n;
+	inline constexpr ~swiss_table_ctrl_alloc_guard() noexcept
+	{
+		if (controls != nullptr)
+		{
+			::fast_io::typed_generic_allocator_adapter<allocator_type, ::std::uint_least8_t>::deallocate_n(controls, n);
+		}
+	}
+};
+
 // Smallest valid capacity whose growth bound can hold `size` elements.
 // Ports abseil SizeToCapacity.
-inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) noexcept
+template <bool throwing = false>
+inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	if (!size)
 	{
@@ -440,7 +456,7 @@ inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) 
 			: 63u};
 	if (size >= (::std::numeric_limits<::std::size_t>::max() >> 3u))
 	{
-		::fast_io::fast_terminate();
+		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
 	}
 	auto leading_zeros{::std::countl_zero(size + (size >= ::fast_io::details::swiss_table_group_counts / 2u))};
 	::std::size_t cap;
@@ -458,7 +474,8 @@ inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) 
 	return cap < ::fast_io::details::swiss_table_min_capacity ? ::fast_io::details::swiss_table_min_capacity : cap;
 }
 
-inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t oldcap) noexcept
+template <bool throwing = false>
+inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t oldcap) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	if (oldcap == 0)
 	{
@@ -468,14 +485,15 @@ inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t
 	constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
 	if (mxdv2 < oldcap)
 	{
-		::fast_io::fast_terminate();
+		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
 	}
 	return (oldcap << 1u) | 1u;
 }
 
-inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::size_t n) noexcept
+template <bool throwing = false>
+inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
-	return ::fast_io::details::swiss_table_size_to_capacity(n);
+	return ::fast_io::details::swiss_table_size_to_capacity<throwing>(n);
 }
 
 template <bool isprev>
