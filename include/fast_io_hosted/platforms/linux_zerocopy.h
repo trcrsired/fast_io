@@ -10,23 +10,23 @@ struct basic_linux_zero_copy_entry
 };
 
 template <::std::integral ch_type>
-inline basic_linux_zero_copy_entry<ch_type> zero_copy_in_handle(basic_posix_io_observer<ch_type> h)
+inline basic_linux_zero_copy_entry<ch_type> zero_copy_in_handle(basic_posix_io_observer<ch_type> h) noexcept
 {
 	return {h.fd};
 }
 template <::std::integral ch_type>
-inline basic_linux_zero_copy_entry<ch_type> zero_copy_out_handle(basic_posix_io_observer<ch_type> h)
+inline basic_linux_zero_copy_entry<ch_type> zero_copy_out_handle(basic_posix_io_observer<ch_type> h) noexcept
 {
 	return {h.fd};
 }
 
 template <::std::integral ch_type>
-inline basic_linux_zero_copy_entry<ch_type> zero_copy_in_handle(basic_posix_pipe<ch_type> &h)
+inline basic_linux_zero_copy_entry<ch_type> zero_copy_in_handle(basic_posix_pipe<ch_type> &h) noexcept
 {
 	return {h.in().fd};
 }
 template <::std::integral ch_type>
-inline basic_linux_zero_copy_entry<ch_type> zero_copy_out_handle(basic_posix_pipe<ch_type> &h)
+inline basic_linux_zero_copy_entry<ch_type> zero_copy_out_handle(basic_posix_pipe<ch_type> &h) noexcept
 {
 	return {h.out().fd};
 }
@@ -34,12 +34,12 @@ inline basic_linux_zero_copy_entry<ch_type> zero_copy_out_handle(basic_posix_pip
 namespace details
 {
 
-inline ::std::uintmax_t linux_send_file_transmit_raw_impl(int out_fd, int in_fd)
+inline ::std::uintmax_t linux_send_file_transmit_raw_impl(int out_fd, int in_fd) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return raw_transmit_decay(posix_io_observer{out_fd}, posix_io_observer{in_fd});
 }
 
-inline ::std::uintmax_t zero_copy_transmit_define_impl(int out_fd, int in_fd)
+inline ::std::uintmax_t zero_copy_transmit_define_impl(int out_fd, int in_fd) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
 	constexpr ::std::size_t transmit_a_round{static_cast<::std::size_t>(::std::numeric_limits<posix_ssize_t>::max())};
@@ -66,7 +66,7 @@ inline ::std::uintmax_t zero_copy_transmit_define_impl(int out_fd, int in_fd)
 	return total_bytes;
 }
 
-inline ::std::uint_least64_t zero_copy_transmit_define64_impl(int out_fd, int in_fd, ::std::uint_least64_t count)
+inline ::std::uint_least64_t zero_copy_transmit_define64_impl(int out_fd, int in_fd, ::std::uint_least64_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
 	constexpr ::std::size_t transmit_a_round{static_cast<::std::size_t>(::std::numeric_limits<posix_ssize_t>::max())};
@@ -109,7 +109,7 @@ inline ::std::uint_least64_t zero_copy_transmit_define64_impl(int out_fd, int in
 
 template <::std::integral ch_type1, ::std::integral ch_type2>
 inline ::std::uintmax_t zero_copy_transmit_define(io_alias_t, basic_linux_zero_copy_entry<ch_type1> outs,
-												  basic_linux_zero_copy_entry<ch_type2> ins)
+												  basic_linux_zero_copy_entry<ch_type2> ins) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return details::zero_copy_transmit_define_impl(outs.fd, ins.fd) / sizeof(ch_type2);
 }
@@ -117,7 +117,7 @@ inline ::std::uintmax_t zero_copy_transmit_define(io_alias_t, basic_linux_zero_c
 template <::std::integral ch_type1, ::std::integral ch_type2>
 inline ::std::uint_least64_t zero_copy_transmit64_define(io_alias_t, basic_linux_zero_copy_entry<ch_type1> outs,
 														 basic_linux_zero_copy_entry<ch_type2> ins,
-														 ::std::uint_least64_t characters)
+														 ::std::uint_least64_t characters) FAST_IO_HERBCEPTIONS_THROWS
 {
 	constexpr ::std::size_t input_char_type_size{sizeof(ch_type2)};
 	if constexpr (input_char_type_size == 1)

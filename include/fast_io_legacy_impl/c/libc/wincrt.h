@@ -180,7 +180,7 @@ inline ::std::byte const *wincrt_fp_write_some_cold_malloc_case_impl(FILE *__res
 	if (diff >= allocated_buffer_size)
 	{
 		::fast_io::posix_io_observer piob{fp->_file};
-		return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+		return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), diff);
 	}
 
 	auto newbuffer{my_malloc_crt(allocated_buffer_size)};
@@ -216,7 +216,7 @@ inline ::std::byte const *wincrt_fp_write_some_cold_normal_case_impl(FILE *__res
 			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz);
 
 			// directly output
-			return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+			return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), diff);
 		}
 		else
 		{
@@ -252,7 +252,7 @@ inline void wincrt_fp_write_cold_malloc_case_impl(FILE *__restrict fpp, char con
 	if (diff >= allocated_buffer_size)
 	{
 		::fast_io::posix_io_observer piob{fp->_file};
-		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), diff);
 		return;
 	}
 
@@ -289,7 +289,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz);
 
 			// directly output
-			::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), reinterpret_cast<::std::byte const *>(first + diff));
+			::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), diff);
 		}
 		else
 		{
@@ -490,7 +490,7 @@ inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::
 	if (diff >= allocated_buffer_size)
 	{
 		return reinterpret_cast<char *>(::fast_io::details::posix_read_bytes_impl(
-			fp->_file, reinterpret_cast<::std::byte *>(first), reinterpret_cast<::std::byte *>(first + diff)));
+			fp->_file, reinterpret_cast<::std::byte *>(first), diff));
 	}
 	else
 	{
@@ -504,7 +504,7 @@ inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::
 		}
 
 		::std::size_t readed{static_cast<::std::size_t>(::fast_io::details::posix_read_bytes_impl(
-															fp->_file, reinterpret_cast<::std::byte *>(fp->_base), reinterpret_cast<::std::byte *>(fp->_base + fp->_bufsiz)) -
+															fp->_file, reinterpret_cast<::std::byte *>(fp->_base), static_cast<::std::size_t>(fp->_bufsiz)) -
 														reinterpret_cast<::std::byte *>(fp->_base))};
 
 		fp->_cnt = static_cast<::std::int_least32_t>(static_cast<::std::uint_least32_t>(readed));
@@ -537,7 +537,7 @@ inline bool wincrt_fp_underflow_impl(FILE *__restrict fpp) FAST_IO_HERBCEPTIONS_
 	}
 
 	::std::size_t size{static_cast<::std::size_t>(::fast_io::details::posix_read_bytes_impl(
-													  fp->_file, reinterpret_cast<::std::byte *>(fp->_base), reinterpret_cast<::std::byte *>(fp->_base + fp->_bufsiz)) -
+													  fp->_file, reinterpret_cast<::std::byte *>(fp->_base), static_cast<::std::size_t>(fp->_bufsiz)) -
 												  reinterpret_cast<::std::byte *>(fp->_base))};
 
 

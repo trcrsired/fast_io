@@ -217,7 +217,7 @@ public:
 
 	template <typename T>
 		requires ::fast_io::constructible_to_os_c_str<T>
-	inline explicit win32_9xa_dns_file(T const &t)
+	inline explicit win32_9xa_dns_file(T const &t) FAST_IO_HERBCEPTIONS_THROWS
 		: win32_9xa_dns_io_observer{::fast_io::details::win32_9xa_dns_open_impl(t)}
 	{
 	}

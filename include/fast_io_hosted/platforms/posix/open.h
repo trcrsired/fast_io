@@ -460,7 +460,7 @@ extern int my_cygwin_attach_handle_to_fd(char const *name, int fd, void *handle,
 #endif
 		;
 
-inline constexpr unsigned calculate_win32_cygwin_open_mode(open_mode value)
+inline constexpr unsigned calculate_win32_cygwin_open_mode(open_mode value) noexcept
 {
 	unsigned access{};
 	if ((value & open_mode::out) == open_mode::out)

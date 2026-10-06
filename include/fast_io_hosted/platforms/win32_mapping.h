@@ -94,7 +94,7 @@ inline void *create_file_mapping_impl(void *handle, file_map_attribute attr)
 {
 	if constexpr (family == win32_family::wide_nt)
 	{
-        void *addr{win32::CreateFileMappingW(handle, nullptr, to_win32_page_protect(attr), 0, 0, nullptr)};
+		void *addr{win32::CreateFileMappingW(handle, nullptr, to_win32_page_protect(attr), 0, 0, nullptr)};
 		if (addr == nullptr)
 		{
 			throw_win32_error();
@@ -103,7 +103,7 @@ inline void *create_file_mapping_impl(void *handle, file_map_attribute attr)
 	}
 	else
 	{
-        void *addr{win32::CreateFileMappingA(handle, nullptr, to_win32_page_protect(attr), 0, 0, nullptr)};
+		void *addr{win32::CreateFileMappingA(handle, nullptr, to_win32_page_protect(attr), 0, 0, nullptr)};
 		if (addr == nullptr)
 		{
 			throw_win32_error();

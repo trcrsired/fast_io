@@ -126,6 +126,7 @@ using wfilebuf_io_observer = basic_filebuf_io_observer<wchar_t>;
 template <::std::integral ch_type, typename traits_type>
 	requires requires(basic_c_io_observer<ch_type> piob) { status(piob); }
 inline constexpr auto status(basic_streambuf_io_observer<ch_type, traits_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return status(static_cast<basic_c_io_observer<ch_type>>(ciob));
 }
@@ -133,6 +134,7 @@ inline constexpr auto status(basic_streambuf_io_observer<ch_type, traits_type> c
 template <::std::integral ch_type, typename traits_type>
 	requires requires(basic_c_io_observer<ch_type> piob) { status(piob); }
 inline constexpr auto status(basic_filebuf_io_observer<ch_type, traits_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return status(static_cast<basic_c_io_observer<ch_type>>(ciob));
 }

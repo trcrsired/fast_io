@@ -15,7 +15,7 @@ public:
 } // namespace details::streambuf_hack
 
 template <typename T>
-inline bool ibuffer_underflow(::fast_io::basic_general_streambuf_io_observer<T> biob)
+inline bool ibuffer_underflow(::fast_io::basic_general_streambuf_io_observer<T> biob) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using char_type = typename ::fast_io::basic_general_streambuf_io_observer<T>::char_type;
 	using traits_type = typename ::fast_io::basic_general_streambuf_io_observer<T>::traits_type;

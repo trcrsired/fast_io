@@ -261,7 +261,7 @@ inline void *win32_family_create_file_internal_impl(
 	}
 }
 
-inline constexpr win32_open_mode calculate_win32_open_mode(open_mode_perms ompm)
+inline constexpr win32_open_mode calculate_win32_open_mode(open_mode_perms ompm) noexcept
 {
 	open_mode value{ompm.om};
 	perms pm{ompm.pm};

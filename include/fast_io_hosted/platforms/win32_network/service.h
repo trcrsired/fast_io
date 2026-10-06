@@ -11,7 +11,7 @@ struct win32_wsa_service
 		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		// The WSAStartup function directly returns the extended error code in its return value. Calling the WSAGetLastError function is unnecessary and should not be used.
-		
+
 		auto const res{::fast_io::win32::WSAStartup(version, __builtin_addressof(wsa_data))};
 
 		if (res) [[unlikely]]

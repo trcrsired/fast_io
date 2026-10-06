@@ -162,7 +162,7 @@ struct posix_dns_open_parameter
 
 template <typename T>
 	requires ::fast_io::constructible_to_os_c_str<T>
-inline constexpr auto posix_dns_open_impl(T const &t)
+inline constexpr auto posix_dns_open_impl(T const &t) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::posix_api_common(t, posix_dns_open_parameter{});
 }
@@ -201,7 +201,7 @@ public:
 	}
 	template <typename T>
 		requires ::fast_io::constructible_to_os_c_str<T>
-	inline explicit posix_dns_file(T const &t)
+	inline explicit posix_dns_file(T const &t) FAST_IO_HERBCEPTIONS_THROWS
 		: posix_dns_io_observer{::fast_io::details::posix_dns_open_impl(t)}
 	{
 	}

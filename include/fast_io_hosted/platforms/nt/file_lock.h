@@ -8,7 +8,7 @@ namespace win32::nt::details
 
 template <bool zw>
 inline ::std::uint_least32_t nt_family_file_lock_common_impl(void *__restrict handle, flock_request_l64 &req,
-															 bool failedimmediately)
+															 bool failedimmediately) noexcept
 {
 	auto [status, file_position] = nt_get_file_position_impl<zw>(handle, req.start, req.whence);
 	if (status)
@@ -88,7 +88,7 @@ inline void nt_family_file_lock_impl(void *__restrict handle, basic_flock_reques
 }
 
 template <bool zw, ::std::integral int_type>
-inline void nt_family_file_unlock_impl(void *__restrict handle, basic_flock_request<int_type> &__restrict t)
+inline void nt_family_file_unlock_impl(void *__restrict handle, basic_flock_request<int_type> &__restrict t) noexcept
 {
 	if constexpr (sizeof(int_type) >= sizeof(::std::int_least64_t))
 	{

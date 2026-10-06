@@ -148,7 +148,7 @@ win32_getaddrinfo_impl(::std::conditional_t<fam == win32_family::wide_nt, char16
 }
 
 template <::fast_io::win32_family fam>
-inline void win32_family_freeaddrinfo_impl(::fast_io::win32::win32_family_addrinfo<fam> *paddrinfo)
+inline void win32_family_freeaddrinfo_impl(::fast_io::win32::win32_family_addrinfo<fam> *paddrinfo) noexcept
 {
 	if constexpr (fam == ::fast_io::win32_family::ansi_9x)
 	{
@@ -180,7 +180,7 @@ struct win32_family_dns_open_parameter
 
 template <win32_family fam, typename T>
 	requires ::fast_io::constructible_to_os_c_str<T>
-inline constexpr auto win32_family_dns_open_impl(T const &t)
+inline constexpr auto win32_family_dns_open_impl(T const &t) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return ::fast_io::win32_family_api_common<fam>(t, win32_family_dns_open_parameter<fam>{});
 }
@@ -205,13 +205,13 @@ public:
 	}
 	inline explicit constexpr win32_family_dns_file(decltype(nullptr)) noexcept = delete;
 	inline win32_family_dns_file(char_type const *node, char_type const *service,
-						  ::fast_io::win32::win32_family_addrinfo<fam> const *hints)
+								 ::fast_io::win32::win32_family_addrinfo<fam> const *hints) FAST_IO_HERBCEPTIONS_THROWS
 		: win32_family_dns_io_observer<fam>{::fast_io::details::win32_getaddrinfo_impl<fam>(node, service, hints)}
 	{
 	}
 	template <typename T>
 		requires ::fast_io::constructible_to_os_c_str<T>
-	inline explicit win32_family_dns_file(T const &t)
+	inline explicit win32_family_dns_file(T const &t) FAST_IO_HERBCEPTIONS_THROWS
 		: win32_family_dns_io_observer<fam>{::fast_io::details::win32_family_dns_open_impl<fam>(t)}
 	{
 	}

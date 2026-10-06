@@ -13,45 +13,45 @@ inline ::std::byte *sys_mmap(void *addr, ::std::size_t len, int prot, int flags,
 {
 #if defined(__linux__) && defined(__NR_mmap) && !defined(__NR_mmap2)
 #if defined(__s390__) || defined(__s390x__)
-    // s390 __NR_mmap is the old single-argument entry; pass the kernel's mmap argument block.
-    struct s390_mmap_arg_struct
+	// s390 __NR_mmap is the old single-argument entry; pass the kernel's mmap argument block.
+	struct s390_mmap_arg_struct
 	{
 		unsigned long addr;
-        unsigned long len;
-        unsigned long prot;
-        unsigned long flags;
-        unsigned long fd;
-        unsigned long offset;
+		unsigned long len;
+		unsigned long prot;
+		unsigned long flags;
+		unsigned long fd;
+		unsigned long offset;
 	};
 
 	if constexpr (sizeof(::std::uintmax_t) > sizeof(unsigned long))
-    {
-        if (offset > static_cast<::std::uintmax_t>(::std::numeric_limits<unsigned long>::max()))
-        {
-            throw_posix_error(EINVAL);
-        }
-    }
-    s390_mmap_arg_struct args{
-        reinterpret_cast<unsigned long>(addr),
-        static_cast<unsigned long>(len),
-        static_cast<unsigned long>(prot),
-        static_cast<unsigned long>(flags),
-        static_cast<unsigned long>(fd),
-        static_cast<unsigned long>(offset)};
-    ::std::ptrdiff_t ret{system_call<__NR_mmap, ::std::ptrdiff_t>(__builtin_addressof(args))};
-    system_call_throw_error(ret);
-    return reinterpret_cast<::std::byte *>(static_cast<::std::uintptr_t>(ret));
+	{
+		if (offset > static_cast<::std::uintmax_t>(::std::numeric_limits<unsigned long>::max()))
+		{
+			throw_posix_error(EINVAL);
+		}
+	}
+	s390_mmap_arg_struct args{
+		reinterpret_cast<unsigned long>(addr),
+		static_cast<unsigned long>(len),
+		static_cast<unsigned long>(prot),
+		static_cast<unsigned long>(flags),
+		static_cast<unsigned long>(fd),
+		static_cast<unsigned long>(offset)};
+	::std::ptrdiff_t ret{system_call<__NR_mmap, ::std::ptrdiff_t>(__builtin_addressof(args))};
+	system_call_throw_error(ret);
+	return reinterpret_cast<::std::byte *>(static_cast<::std::uintptr_t>(ret));
 #else
-    if constexpr (sizeof(::std::uintmax_t) > sizeof(off_t))
-    {
-        if (offset > static_cast<::std::uintmax_t>(::std::numeric_limits<off_t>::max()))
-        {
-            throw_posix_error(EINVAL);
-        }
-    }
-    ::std::ptrdiff_t ret{system_call<__NR_mmap, ::std::ptrdiff_t>(addr, len, prot, flags, fd, offset)};
-    system_call_throw_error(ret);
-    return reinterpret_cast<::std::byte *>(static_cast<::std::uintptr_t>(ret));
+	if constexpr (sizeof(::std::uintmax_t) > sizeof(off_t))
+	{
+		if (offset > static_cast<::std::uintmax_t>(::std::numeric_limits<off_t>::max()))
+		{
+			throw_posix_error(EINVAL);
+		}
+	}
+	::std::ptrdiff_t ret{system_call<__NR_mmap, ::std::ptrdiff_t>(addr, len, prot, flags, fd, offset)};
+	system_call_throw_error(ret);
+	return reinterpret_cast<::std::byte *>(static_cast<::std::uintptr_t>(ret));
 #endif
 #elif defined(HAVE_MMAP64)
 	if constexpr (sizeof(::std::uintmax_t) > sizeof(off64_t))
@@ -95,7 +95,7 @@ inline int sys_mprotect(void *start, ::std::size_t len, int prot)
 		::fast_io::noexcept_call(::mprotect, start, len, prot)
 #endif
 	};
-	
+
 #if defined(__linux__) && defined(__NR_mprotect)
 	system_call_throw_error(result);
 #else
@@ -108,7 +108,7 @@ inline int sys_mprotect(void *start, ::std::size_t len, int prot)
 	return result;
 }
 
-inline int sys_munmap_nothrow(void *addr, ::std::size_t len)
+inline int sys_munmap_nothrow(void *addr, ::std::size_t len) noexcept
 {
 	return
 #if defined(__linux__) && defined(__NR_munmap)
@@ -218,7 +218,7 @@ public:
 	using reverse_iterator = ::std::reverse_iterator<iterator>;
 	pointer address_begin{}, address_end{};
 	inline constexpr posix_memory_map_file() = default;
-	inline constexpr posix_memory_map_file(::std::byte *addbg, ::std::byte *added)
+	inline constexpr posix_memory_map_file(::std::byte *addbg, ::std::byte *added) noexcept
 		: address_begin{addbg}, address_end{added}
 	{
 	}

@@ -109,7 +109,7 @@ inline FILE *fp_hack(T *fb) noexcept
 
 template <typename CharT, typename Traits>
 inline void open_libstdcxx_basic_filebuf_ios_base_open_mode_common(::std::basic_filebuf<CharT, Traits> *ptr_fbf,
-																   ::std::ios_base::openmode mode)
+																   ::std::ios_base::openmode mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	using hack_filebuf_type = hack_libstdcxx_basic_filebuf<CharT, Traits>;
 	constexpr auto libstdcxx_filebuf_M_set_buffer{&hack_filebuf_type::_M_set_buffer};
@@ -165,7 +165,7 @@ template <typename CharT, typename Traits>
 [[nodiscard]]
 #endif
 inline ::std::basic_filebuf<CharT, Traits> *open_hacked_basic_filebuf(::std::__c_file *fp,
-																	 ::fast_io::open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
+																	  ::fast_io::open_mode mode) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return open_libstdcxx_basic_filebuf_ios_base_open_mode<CharT, Traits>(
 		fp, ::fast_io::details::calculate_fstream_file_open_mode(mode));

@@ -52,7 +52,7 @@ template <::fast_io::win32_family family, ::std::integral char_type>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline void win32_box_converter_path_impl(char_type const *first, char_type const *last)
+inline void win32_box_converter_path_impl(char_type const *first, char_type const *last) FAST_IO_HERBCEPTIONS_THROWS
 {
 	win32_family_api_encoding_converter<family> converter(first, static_cast<::std::size_t>(last - first));
 	win32_box_write_impl<family>(converter.buffer_data, converter.buffer_data_end);
@@ -179,6 +179,7 @@ output_stream_ref_define(basic_win32_family_box_t<family, ch_type> other) noexce
 template <::fast_io::win32_family family, ::std::integral ch_type>
 inline void scatter_write_all_overflow_define(basic_win32_family_box_t<family, ch_type> bx,
 											  basic_io_scatter_t<ch_type> const *scatters, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::details::win32_box_converter_scatter_path_impl<family>(bx, scatters, n);
 }

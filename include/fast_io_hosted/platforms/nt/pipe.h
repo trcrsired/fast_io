@@ -106,7 +106,7 @@ public:
 };
 
 template <nt_family family, ::std::integral ch_type>
-inline constexpr win32_io_redirection redirect(basic_nt_family_pipe<family, ch_type> &hd)
+inline constexpr win32_io_redirection redirect(basic_nt_family_pipe<family, ch_type> &hd) noexcept
 {
 	return {.win32_pipe_in_handle = hd.in().handle, .win32_pipe_out_handle = hd.out().handle};
 }

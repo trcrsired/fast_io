@@ -115,7 +115,7 @@ public:
 	using reverse_iterator = ::std::reverse_iterator<iterator>;
 	pointer address_begin{}, address_end{};
 	inline constexpr nt_family_memory_map_file() = default;
-	inline constexpr nt_family_memory_map_file(::std::byte *addressbegin, ::std::byte *addressend)
+	inline constexpr nt_family_memory_map_file(::std::byte *addressbegin, ::std::byte *addressend) noexcept
 		: address_begin{addressbegin}, address_end{addressend}
 	{
 	}

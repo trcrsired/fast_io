@@ -41,6 +41,7 @@ inline void ibuffer_set_curr(basic_c_io_observer_unlocked<char_type> ciob, char_
 
 template <c_family family, ::std::integral char_type>
 inline bool ibuffer_underflow(basic_c_io_observer_unlocked<char_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 	requires requires(FILE *fp) {
 		{ ::std::posix::__libc_stdio_fp_ibuffer_underflow<char_type>(fp) } -> bool;
 	}
@@ -87,6 +88,7 @@ inline void obuffer_set_curr(basic_c_io_observer_unlocked<char_type> ciob, char_
 template <::std::integral char_type>
 	requires requires(FILE *fp, char_type ch) { ::std::posix::__libc_stdio_fp_obuffer_overflow<char_type>(fp, ch); }
 inline void obuffer_overflow(basic_c_io_observer_unlocked<char_type> ciob, char_type ch)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::posix::__libc_stdio_fp_obuffer_overflow<char_type>(ciob.fp, ch);
 }

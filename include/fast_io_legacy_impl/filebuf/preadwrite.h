@@ -30,17 +30,17 @@ inline ::fast_io::io_scatter_status_t filebuf_scatter_pread_bytes_impl(::std::ba
 																	   ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::c_pwrite_bytes_impl<::fast_io::c_family::native_unlocked>(
+	return ::fast_io::details::c_scatter_pread_bytes_impl<::fast_io::c_family::native_unlocked>(
 		::fast_io::details::streambuf_hack::fp_hack(fb), pscatter, n, off);
 }
 
 template <::std::integral char_type, typename traits_type>
-inline ::std::byte const *filebuf_scatter_pwrite_bytes_impl(::std::basic_filebuf<char_type, traits_type> *fb,
-															::fast_io::io_scatter_t const *pscatter, ::std::size_t n,
-															::fast_io::intfpos_t off)
+inline ::fast_io::io_scatter_status_t filebuf_scatter_pwrite_bytes_impl(::std::basic_filebuf<char_type, traits_type> *fb,
+																		::fast_io::io_scatter_t const *pscatter, ::std::size_t n,
+																		::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::c_pwrite_bytes_impl<::fast_io::c_family::native_unlocked>(
+	return ::fast_io::details::c_scatter_pwrite_bytes_impl<::fast_io::c_family::native_unlocked>(
 		::fast_io::details::streambuf_hack::fp_hack(fb), pscatter, n, off);
 }
 

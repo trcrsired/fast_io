@@ -155,6 +155,7 @@ io_stream_unlocked_ref_define(basic_c_family_io_observer<family, ch_type> other)
 #if defined(__AVR__)
 template <c_family family, ::std::integral ch_type>
 inline constexpr posix_file_status status(basic_c_family_io_observer<family, ch_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::avr_libc_nosup_impl();
 }
@@ -170,6 +171,7 @@ inline constexpr posix_at_entry at(basic_c_family_io_observer<family, ch_type> o
 template <c_family family, ::std::integral ch_type>
 	requires requires(basic_posix_io_observer<ch_type> piob) { status(piob); }
 inline constexpr posix_file_status status(basic_c_family_io_observer<family, ch_type> ciob)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	return status(static_cast<basic_posix_io_observer<ch_type>>(ciob));
 }

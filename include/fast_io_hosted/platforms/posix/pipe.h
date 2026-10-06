@@ -87,7 +87,7 @@ inline constexpr basic_posix_family_io_observer<family, char> output_bytes_strea
 
 #if (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__)) && !defined(__CYGWIN__)
 template <::fast_io::posix_family family, ::std::integral ch_type>
-inline constexpr win32_io_redirection redirect_handle(basic_posix_family_pipe<family, ch_type> &h)
+inline constexpr win32_io_redirection redirect_handle(basic_posix_family_pipe<family, ch_type> &h) noexcept
 {
 	return {__builtin_addressof(h.in().fd),
 			__builtin_addressof(h.out().fd)};

@@ -29,7 +29,7 @@ struct posix_fs_dirent
 	int fd{-1};
 	char const *filename{};
 	inline explicit constexpr posix_fs_dirent() = default;
-	inline explicit constexpr posix_fs_dirent(int fdd, char const *fnm)
+	inline explicit constexpr posix_fs_dirent(int fdd, char const *fnm) noexcept
 		: fd(fdd), filename(fnm)
 	{}
 };
@@ -41,7 +41,7 @@ struct posix_io_redirection
 	bool dev_null{};
 
 	// return true when a redirection is needed
-	inline operator bool() const
+	inline constexpr operator bool() const noexcept
 	{
 		return pipe_fds || fd != -1 || dev_null;
 	}

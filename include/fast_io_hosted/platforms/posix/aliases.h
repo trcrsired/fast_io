@@ -35,17 +35,17 @@ inline constexpr int posix_stdout_number{1};
 inline constexpr int posix_stderr_number{2};
 
 template <::std::integral char_type = char>
-inline constexpr basic_posix_io_observer<char_type> posix_stdin()
+inline constexpr basic_posix_io_observer<char_type> posix_stdin() noexcept
 {
 	return {posix_stdin_number};
 }
 template <::std::integral char_type = char>
-inline constexpr basic_posix_io_observer<char_type> posix_stdout()
+inline constexpr basic_posix_io_observer<char_type> posix_stdout() noexcept
 {
 	return basic_posix_io_observer<char_type>{posix_stdout_number};
 }
 template <::std::integral char_type = char>
-inline constexpr basic_posix_io_observer<char_type> posix_stderr()
+inline constexpr basic_posix_io_observer<char_type> posix_stderr() noexcept
 {
 	return basic_posix_io_observer<char_type>{posix_stderr_number};
 }
@@ -80,17 +80,17 @@ using u32dos_file = basic_dos_file<char32_t>;
 using u32dos_pipe = basic_dos_pipe<char32_t>;
 
 template <::std::integral char_type = char>
-inline constexpr basic_dos_io_observer<char_type> dos_stdin()
+inline constexpr basic_dos_io_observer<char_type> dos_stdin() noexcept
 {
 	return {posix_stdin_number};
 }
 template <::std::integral char_type = char>
-inline constexpr basic_dos_io_observer<char_type> dos_stdout()
+inline constexpr basic_dos_io_observer<char_type> dos_stdout() noexcept
 {
 	return basic_dos_io_observer<char_type>{posix_stdout_number};
 }
 template <::std::integral char_type = char>
-inline constexpr basic_dos_io_observer<char_type> dos_stderr()
+inline constexpr basic_dos_io_observer<char_type> dos_stderr() noexcept
 {
 	return basic_dos_io_observer<char_type>{posix_stderr_number};
 }

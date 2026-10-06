@@ -200,7 +200,7 @@ inline posix_file_status nt_status_impl(void *__restrict handle)
 } // namespace win32::nt::details
 
 template <nt_family family, ::std::integral ch_type>
-inline posix_file_status status(basic_nt_family_io_observer<family, ch_type> wiob)
+inline posix_file_status status(basic_nt_family_io_observer<family, ch_type> wiob) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return win32::nt::details::nt_status_impl<family>(wiob.handle);
 }
