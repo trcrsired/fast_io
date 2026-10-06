@@ -38,12 +38,9 @@ template <::std::unsigned_integral uinttype, typename T, typename Alloc = ::fast
 using sized_vector = ::fast_io::containers::sized_vector<uinttype, T, Alloc>;
 
 template <typename T, typename Alloc = ::fast_io::native_global_allocator>
-using zu32_sized_vector = ::fast_io::containers::sized_vector<size32_t, T, Alloc>;
+using sized_vector_zu32 = ::fast_io::containers::sized_vector<::fast_io::size32_t, T, Alloc>;
 
-template <typename T, typename Alloc = ::fast_io::native_global_allocator>
-using sized_vector_zu32 = ::fast_io::containers::sized_vector<size32_t, T, Alloc>;
-
-using zu32_sized_vector_zu32 = ::fast_io::containers::sized_vector<size32_t, size32_t, ::fast_io::native_global_allocator>;
+using zu32_sized_vector_zu32 = ::fast_io::containers::sized_vector<::fast_io::size32_t, ::fast_io::size32_t, ::fast_io::native_global_allocator>;
 
 namespace containers
 {
@@ -65,9 +62,6 @@ namespace tlc
 {
 template <::std::unsigned_integral uinttype, typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
 using sized_vector = ::fast_io::containers::sized_vector<uinttype, T, Alloc>;
-
-template <typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
-using zu32_sized_vector = ::fast_io::containers::sized_vector<::fast_io::size32_t, T, Alloc>;
 
 template <typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
 using sized_vector_zu32 = ::fast_io::containers::sized_vector<::fast_io::size32_t, T, Alloc>;

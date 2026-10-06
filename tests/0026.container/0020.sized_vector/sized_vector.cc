@@ -30,7 +30,7 @@ struct nontrivial
 
 int main()
 {
-	using V = ::fast_io::zu32_sized_vector<int>;
+	using V = ::fast_io::sized_vector_zu32<int>;
 	// 1 pointer + 2 32-bit sizes: 16 bytes instead of 24
 	static_assert(sizeof(V) == 16);
 	static_assert(::std::same_as<V::size_type, ::fast_io::size32_t>);
@@ -93,7 +93,7 @@ int main()
 		::fast_io::fast_terminate();
 	}
 
-	::fast_io::zu32_sized_vector<nontrivial> nt;
+	::fast_io::sized_vector_zu32<nontrivial> nt;
 	nt.emplace_back(1);
 	nt.emplace_back(2);
 	nt.insert(nt.begin(), nontrivial{0});

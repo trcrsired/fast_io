@@ -14,14 +14,12 @@ using ::fast_io::containers::erase_if;
 
 #ifndef FAST_IO_FREESTANDING
 using ::fast_io::sized_vector;
-using ::fast_io::zu32_sized_vector;
 using ::fast_io::sized_vector_zu32;
 using ::fast_io::zu32_sized_vector_zu32;
 
 namespace tlc
 {
 using ::fast_io::tlc::sized_vector;
-using ::fast_io::tlc::zu32_sized_vector;
 using ::fast_io::tlc::sized_vector_zu32;
 using ::fast_io::tlc::zu32_sized_vector_zu32;
 } // namespace tlc

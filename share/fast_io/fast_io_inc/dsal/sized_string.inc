@@ -22,27 +22,22 @@ using ::fast_io::containers::basic_sized_ostring_ref_fast_io;
 
 #ifndef FAST_IO_FREESTANDING
 using ::fast_io::basic_sized_string;
-using ::fast_io::sized_string;
-using ::fast_io::sized_wstring;
-using ::fast_io::sized_u8string;
-using ::fast_io::sized_u16string;
-using ::fast_io::sized_u32string;
-using ::fast_io::zu32_sized_string;
-using ::fast_io::zu32_sized_wstring;
-using ::fast_io::zu32_sized_u8string;
-using ::fast_io::zu32_sized_u16string;
-using ::fast_io::zu32_sized_u32string;
+using ::fast_io::basic_sized_string_zu32;
 using ::fast_io::sized_string_zu32;
-using ::fast_io::zu32_sized_string_zu32;
+using ::fast_io::wsized_string_zu32;
+using ::fast_io::u8sized_string_zu32;
+using ::fast_io::u16sized_string_zu32;
+using ::fast_io::u32sized_string_zu32;
 
 namespace tlc
 {
 using ::fast_io::tlc::basic_sized_string;
-using ::fast_io::tlc::sized_string;
-using ::fast_io::tlc::sized_wstring;
-using ::fast_io::tlc::sized_u8string;
-using ::fast_io::tlc::sized_u16string;
-using ::fast_io::tlc::sized_u32string;
+using ::fast_io::tlc::basic_sized_string_zu32;
+using ::fast_io::tlc::sized_string_zu32;
+using ::fast_io::tlc::wsized_string_zu32;
+using ::fast_io::tlc::u8sized_string_zu32;
+using ::fast_io::tlc::u16sized_string_zu32;
+using ::fast_io::tlc::u32sized_string_zu32;
 } // namespace tlc
 #endif
 } // namespace fast_io

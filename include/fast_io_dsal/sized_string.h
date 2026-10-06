@@ -35,22 +35,14 @@ namespace fast_io
 template <::std::unsigned_integral uinttype, ::std::integral chartype, typename allocator = ::fast_io::native_global_allocator>
 using basic_sized_string = ::fast_io::containers::basic_sized_string<uinttype, chartype, allocator>;
 
-using sized_string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char, ::fast_io::native_global_allocator>;
-using sized_wstring = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, wchar_t, ::fast_io::native_global_allocator>;
-using sized_u8string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char8_t, ::fast_io::native_global_allocator>;
-using sized_u16string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char16_t, ::fast_io::native_global_allocator>;
-using sized_u32string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char32_t, ::fast_io::native_global_allocator>;
-
-using zu32_sized_string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char, ::fast_io::native_global_allocator>;
-using zu32_sized_wstring = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, wchar_t, ::fast_io::native_global_allocator>;
-using zu32_sized_u8string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char8_t, ::fast_io::native_global_allocator>;
-using zu32_sized_u16string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char16_t, ::fast_io::native_global_allocator>;
-using zu32_sized_u32string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char32_t, ::fast_io::native_global_allocator>;
-
 template <::std::integral chartype, typename allocator = ::fast_io::native_global_allocator>
-using sized_string_zu32 = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, chartype, allocator>;
+using basic_sized_string_zu32 = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, chartype, allocator>;
 
-using zu32_sized_string_zu32 = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, ::fast_io::size32_t, ::fast_io::native_global_allocator>;
+using sized_string_zu32 = ::fast_io::basic_sized_string_zu32<char>;
+using wsized_string_zu32 = ::fast_io::basic_sized_string_zu32<wchar_t>;
+using u8sized_string_zu32 = ::fast_io::basic_sized_string_zu32<char8_t>;
+using u16sized_string_zu32 = ::fast_io::basic_sized_string_zu32<char16_t>;
+using u32sized_string_zu32 = ::fast_io::basic_sized_string_zu32<char32_t>;
 
 namespace tlc
 {
@@ -58,11 +50,14 @@ namespace tlc
 template <::std::unsigned_integral uinttype, ::std::integral chartype, typename allocator = ::fast_io::native_thread_local_allocator>
 using basic_sized_string = ::fast_io::containers::basic_sized_string<uinttype, chartype, allocator>;
 
-using sized_string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char, ::fast_io::native_thread_local_allocator>;
-using sized_wstring = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, wchar_t, ::fast_io::native_thread_local_allocator>;
-using sized_u8string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char8_t, ::fast_io::native_thread_local_allocator>;
-using sized_u16string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char16_t, ::fast_io::native_thread_local_allocator>;
-using sized_u32string = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, char32_t, ::fast_io::native_thread_local_allocator>;
+template <::std::integral chartype, typename allocator = ::fast_io::native_thread_local_allocator>
+using basic_sized_string_zu32 = ::fast_io::containers::basic_sized_string<::fast_io::size32_t, chartype, allocator>;
+
+using sized_string_zu32 = ::fast_io::tlc::basic_sized_string_zu32<char>;
+using wsized_string_zu32 = ::fast_io::tlc::basic_sized_string_zu32<wchar_t>;
+using u8sized_string_zu32 = ::fast_io::tlc::basic_sized_string_zu32<char8_t>;
+using u16sized_string_zu32 = ::fast_io::tlc::basic_sized_string_zu32<char16_t>;
+using u32sized_string_zu32 = ::fast_io::tlc::basic_sized_string_zu32<char32_t>;
 
 } // namespace tlc
 

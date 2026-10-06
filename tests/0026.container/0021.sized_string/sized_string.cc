@@ -3,7 +3,7 @@
 
 int main()
 {
-	using S = ::fast_io::zu32_sized_string;
+	using S = ::fast_io::sized_string_zu32;
 	static_assert(sizeof(S) == 16);
 	static_assert(::std::same_as<S::iterator, char *>);
 	static_assert(::std::same_as<S::const_iterator, char const *>);
@@ -55,22 +55,22 @@ int main()
 		::fast_io::fast_terminate();
 	}
 
-	::fast_io::zu32_sized_u8string u8{u8"abc"};
+	::fast_io::u8sized_string_zu32 u8{u8"abc"};
 	if (u8.size() != 3)
 	{
 		::fast_io::fast_terminate();
 	}
-	::fast_io::zu32_sized_wstring ws{L"xy"};
+	::fast_io::wsized_string_zu32 ws{L"xy"};
 	if (ws.size() != 2)
 	{
 		::fast_io::fast_terminate();
 	}
-	::fast_io::sized_string_zu32<char32_t> u32{U"p"};
+	::fast_io::u32sized_string_zu32 u32{U"p"};
 	if (u32.size() != 1)
 	{
 		::fast_io::fast_terminate();
 	}
-	::fast_io::sized_string ss{"hello world"};
+	::fast_io::sized_string_zu32 ss{"hello world"};
 	if (ss.find_character('o') != 4)
 	{
 		::fast_io::fast_terminate();
@@ -79,7 +79,7 @@ int main()
 	{
 		::fast_io::fast_terminate();
 	}
-	::fast_io::sized_string big;
+	::fast_io::sized_string_zu32 big;
 	big.reserve(1000);
 	for (int i = 0; i != 500; ++i)
 	{
@@ -91,7 +91,7 @@ int main()
 	}
 	big.shrink_to_fit();
 	// sized_string works as a strlike target for concat
-	::fast_io::sized_string cs = ::fast_io::basic_general_concat<false, char, ::fast_io::sized_string>(1, "x");
+	::fast_io::sized_string_zu32 cs = ::fast_io::basic_general_concat<false, char, ::fast_io::sized_string_zu32>(1, "x");
 	if (cs != "1x")
 	{
 		::fast_io::fast_terminate();

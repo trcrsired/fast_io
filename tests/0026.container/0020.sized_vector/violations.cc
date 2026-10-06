@@ -16,7 +16,7 @@ using throwing_alloc = ::fast_io::generic_allocator_adapter<::fast_io::c_malloc_
 
 int main()
 {
-	using V = ::fast_io::zu32_sized_vector<int>;
+	using V = ::fast_io::sized_vector_zu32<int>;
 	using TV = ::fast_io::sized_vector<::fast_io::size32_t, int, throwing_alloc>;
 	static_assert(!noexcept(::std::declval<TV &>().operator[](0u)));
 	static_assert(!noexcept(::std::declval<TV &>().push_back(1)));
