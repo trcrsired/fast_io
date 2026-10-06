@@ -115,6 +115,11 @@ using intfpos_t = ::std::make_signed_t<uintfpos_t>;
 using uint32_size_based_t = ::std::conditional_t<(sizeof(::std::size_t) < sizeof(::std::uint_fast32_t)), ::std::size_t, ::std::uint_fast32_t>;
 using int32_size_based_t = ::std::make_signed_t<uint32_size_based_t>;
 
+// the smaller of uint_least32_t and size_t: 32-bit on hosted targets, size_t on
+// platforms where size_t is already no wider than uint_least32_t
+using size32_t = ::std::conditional_t<(sizeof(::std::uint_least32_t) < sizeof(::std::size_t)),
+									  ::std::uint_least32_t, ::std::size_t>;
+
 struct io_construct_t
 {
 	inline explicit constexpr io_construct_t() noexcept = default;

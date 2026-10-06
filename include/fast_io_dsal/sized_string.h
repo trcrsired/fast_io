@@ -28,7 +28,6 @@
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \
 	 defined(FAST_IO_ENABLE_HOSTED_FEATURES))
 
-#include "sized_vector.h"
 
 namespace fast_io
 {

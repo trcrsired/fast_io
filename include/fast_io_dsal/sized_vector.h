@@ -34,11 +34,6 @@
 namespace fast_io
 {
 
-// the smaller of uint_least32_t and size_t: 32-bit on hosted targets, size_t on
-// platforms where size_t is already no wider than uint_least32_t
-using size32_t = ::std::conditional_t<(sizeof(::std::uint_least32_t) < sizeof(::std::size_t)),
-									  ::std::uint_least32_t, ::std::size_t>;
-
 template <::std::unsigned_integral uinttype, typename T, typename Alloc = ::fast_io::native_global_allocator>
 using sized_vector = ::fast_io::containers::sized_vector<uinttype, T, Alloc>;
 
