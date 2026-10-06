@@ -663,7 +663,7 @@ inline pid_t pipefork_execveat_common_impl(int dirfd, char const *cstr, char con
 		// execve only return on error, so t_errno always contains an error code
 		// send error code back to parent process
 		auto err_buffer = reinterpret_cast<char const *>(&t_errno);
-		::fast_io::operations::write_all(error_pipe.out(), err_buffer, err_buffer + sizeof(t_errno));
+		::fast_io::operations::write_all(error_pipe.out(), err_buffer, sizeof(t_errno));
 		// _Exit() won't destruct c++ objects, we must close it manually
 		error_pipe.out().close();
 		// special exit code 127 indicates error of exec
@@ -689,8 +689,7 @@ inline pid_t pipefork_execveat_common_impl(int dirfd, char const *cstr, char con
 	error_pipe.out().close();
 	int errno_from_subproc{};
 	auto err_buffer = reinterpret_cast<char *>(&errno_from_subproc);
-	auto err_buffer_end = err_buffer + sizeof(errno_from_subproc);
-	auto n = ::fast_io::operations::read_some(error_pipe.in(), err_buffer, err_buffer_end);
+	auto n = ::fast_io::operations::read_some(error_pipe.in(), err_buffer, sizeof(errno_from_subproc));
 	if (n == err_buffer)
 	{
 		return pid;
@@ -698,7 +697,7 @@ inline pid_t pipefork_execveat_common_impl(int dirfd, char const *cstr, char con
 	else
 	{
 		::fast_io::details::posix_waitpid_noexcept(pid);
-		if (n == err_buffer_end)
+		if (n == err_buffer + sizeof(errno_from_subproc))
 		{
 			throw_posix_error(errno_from_subproc);
 		}

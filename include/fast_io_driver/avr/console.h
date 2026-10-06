@@ -42,9 +42,9 @@ struct basic_avr_console
 	using char_type = ch_type;
 };
 
-inline void avr_usart_console_write(char const *first, char const *last) noexcept
+inline void avr_usart_console_write(char const *first, ::std::size_t count) noexcept
 {
-	for (; first != last; ++first)
+	for (auto const e{first + count}; first != e; ++first)
 	{
 		avr_usart_send_byte(static_cast<char unsigned>(*first));
 	}
@@ -55,7 +55,7 @@ inline void avr_usart_console_writev(fast_io::io_scatter_t const *scatter, ::std
 	for (::std::size_t i{}; i != n; ++i)
 	{
 		auto b{reinterpret_cast<char const *>(scatter[i].base)};
-		avr_usart_console_write(b, b + scatter[i].len);
+		avr_usart_console_write(b, scatter[i].len);
 	}
 }
 
@@ -66,10 +66,9 @@ inline constexpr basic_avr_console<char_type> io_value_handle(basic_avr_console<
 }
 
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline void write(basic_avr_console<char_type>, Iter first, Iter last) noexcept
+inline void write(basic_avr_console<char_type>, Iter first, ::std::size_t count) noexcept
 {
-	avr_usart_console_write(reinterpret_cast<char const *>(::std::to_address(first)),
-							reinterpret_cast<char const *>(::std::to_address(last)));
+	avr_usart_console_write(reinterpret_cast<char const *>(::std::to_address(first)), count * sizeof(*first));
 }
 
 template <::std::integral char_type>

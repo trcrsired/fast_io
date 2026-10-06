@@ -205,10 +205,9 @@ inline void android_logger_writev_impl(android_logmessage_meta_v30 const &meta, 
 } // namespace details
 
 template <android_logger_family_tag fam, ::std::integral char_type, ::std::contiguous_iterator Iter>
-inline void write(basic_android_family_logger<fam, char_type> const &b, Iter first, Iter last) noexcept
+inline void write(basic_android_family_logger<fam, char_type> const &b, Iter first, ::std::size_t count) noexcept
 {
-	::fast_io::details::android_logger_write_impl(b.meta, ::std::to_address(first),
-												  static_cast<::std::size_t>(last - first) * sizeof(*first));
+	::fast_io::details::android_logger_write_impl(b.meta, ::std::to_address(first), count * sizeof(*first));
 }
 
 template <android_logger_family_tag fam, ::std::integral char_type>

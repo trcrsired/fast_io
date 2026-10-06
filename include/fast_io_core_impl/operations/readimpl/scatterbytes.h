@@ -151,7 +151,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 		{
 			auto [basep, len] = *i;
 			::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basep))};
-			::fast_io::details::read_all_bytes_impl(insm, base, base + len);
+			::fast_io::details::read_all_bytes_impl(insm, base, len);
 		}
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_read_all_bytes_underflow_define<instmtype>)
@@ -160,7 +160,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 		{
 			auto [basep, len] = *i;
 			::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basep))};
-			::fast_io::details::read_all_bytes_impl(insm, base, base + len);
+			::fast_io::details::read_all_bytes_impl(insm, base, len);
 		}
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_scatter_read_some_bytes_underflow_define<instmtype>)
@@ -182,7 +182,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 			{
 				auto pi = pscatters[ret.position];
 				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(pi.base))};
-				::fast_io::details::read_all_bytes_impl(insm, base + pisc, base + pi.len);
+				::fast_io::details::read_all_bytes_impl(insm, base + pisc, pi.len - pisc);
 				++retpos;
 			}
 			pscatters += retpos;
@@ -195,7 +195,7 @@ inline constexpr void scatter_read_all_bytes_cold_impl(instmtype insm, io_scatte
 		{
 			auto [basep, len] = *i;
 			::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basep))};
-			::fast_io::details::read_all_bytes_impl(insm, base, base + len);
+			::fast_io::details::read_all_bytes_impl(insm, base, len);
 		}
 	}
 	else if constexpr (sizeof(char_type) == 1 &&

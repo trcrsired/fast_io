@@ -16,9 +16,9 @@ struct win32_scatter_write_pwrite_chunk_impl
 {
 	::std::int_least64_t *pbyteoffset{};
 	inline ::std::byte const *operator()(void *__restrict handle, ::std::byte const *first,
-										 ::std::byte const *last) const FAST_IO_HERBCEPTIONS_THROWS
+										 ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		return ::fast_io::win32::details::win32_write_pwrite_some_thunk(handle, first, last, pbyteoffset);
+		return ::fast_io::win32::details::win32_write_pwrite_some_thunk(handle, first, count, pbyteoffset);
 	}
 };
 
@@ -28,9 +28,9 @@ struct win32_scatter_write_all_pwrite_chunk_impl
 {
 	::std::int_least64_t *pbyteoffset{};
 	inline void operator()(void *__restrict handle, ::std::byte const *first,
-						   ::std::byte const *last) const FAST_IO_HERBCEPTIONS_THROWS
+						   ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		::fast_io::win32::details::win32_write_pwrite_all_thunk(handle, first, last, pbyteoffset);
+		::fast_io::win32::details::win32_write_pwrite_all_thunk(handle, first, count, pbyteoffset);
 	}
 };
 
@@ -82,9 +82,9 @@ struct win32_scatter_read_pread_chunk_impl
 {
 	::std::int_least64_t *pbyteoffset{};
 	inline ::std::byte *operator()(void *__restrict handle, ::std::byte *first,
-								   ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+								   ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		return ::fast_io::win32::details::win32_read_pread_some_thunk(handle, first, last, pbyteoffset);
+		return ::fast_io::win32::details::win32_read_pread_some_thunk(handle, first, count, pbyteoffset);
 	}
 };
 
@@ -92,9 +92,9 @@ struct win32_scatter_read_all_pread_chunk_impl
 {
 	::std::int_least64_t *pbyteoffset{};
 	inline void operator()(void *__restrict handle, ::std::byte *first,
-						   ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+						   ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		::fast_io::win32::details::win32_read_pread_all_thunk(handle, first, last, pbyteoffset);
+		::fast_io::win32::details::win32_read_pread_all_thunk(handle, first, count, pbyteoffset);
 	}
 };
 

@@ -139,7 +139,7 @@ inline constexpr void scatter_pwrite_all_bytes_cold_impl(outstmtype outsm, io_sc
 		{
 			auto [basep, len] = *i;
 			::std::byte const *base{reinterpret_cast<::std::byte const *>(basep)};
-			::fast_io::details::pwrite_all_bytes_impl(outsm, base, base + len, off);
+			::fast_io::details::pwrite_all_bytes_impl(outsm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}
@@ -159,7 +159,7 @@ inline constexpr void scatter_pwrite_all_bytes_cold_impl(outstmtype outsm, io_sc
 			{
 				auto pi = pscatters[ret.position];
 				::std::byte const *pibase{reinterpret_cast<::std::byte const *>(pi.base) + pisc};
-				::fast_io::details::pwrite_all_bytes_impl(outsm, pibase, pibase + (pi.len - pisc), off);
+				::fast_io::details::pwrite_all_bytes_impl(outsm, pibase, pi.len - pisc, off);
 				off = ::fast_io::fposoffadd_nonegative(off, pi.len - pisc);
 				++retpos;
 			}
@@ -173,7 +173,7 @@ inline constexpr void scatter_pwrite_all_bytes_cold_impl(outstmtype outsm, io_sc
 		{
 			auto [basep, len] = *i;
 			::std::byte const *base{reinterpret_cast<::std::byte const *>(basep)};
-			::fast_io::details::pwrite_all_bytes_impl(outsm, base, base + len, off);
+			::fast_io::details::pwrite_all_bytes_impl(outsm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}

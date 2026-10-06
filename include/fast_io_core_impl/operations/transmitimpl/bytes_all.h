@@ -24,8 +24,8 @@ inline constexpr void transmit_bytes_all_main_impl(optstmtype optstm, instmtype 
 			this_round = static_cast<::std::size_t>(totransmit);
 		}
 		auto iter{buffer_start + this_round};
-		::fast_io::operations::decay::read_all_bytes_decay(instm, buffer_start, iter);
-		::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, iter);
+		::fast_io::operations::decay::read_all_bytes_decay(instm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
+		::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
 		totransmit -= this_round;
 	}
 }

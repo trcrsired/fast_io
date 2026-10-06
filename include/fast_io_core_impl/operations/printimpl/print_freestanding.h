@@ -815,7 +815,7 @@ print_freestanding_decay(outputstmtype optstm,
 					{
 						itend = it;
 					}
-					::fast_io::operations::decay::write_all_decay(optstm, bufferbase, itend);
+					::fast_io::operations::decay::write_all_decay(optstm, bufferbase, static_cast<::std::size_t>(itend - bufferbase));
 				}
 				else
 				{

@@ -5,21 +5,20 @@ namespace fast_io
 
 template <::fast_io::wine_family family, ::std::integral char_type>
 inline ::std::byte const *write_some_bytes_overflow_define(::fast_io::basic_wine_family_io_observer<family, char_type> wiob,
-														   ::std::byte const *first,
-														   ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+														   ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const done{::fast_io::wine::wine_unix_write(wiob.host_fd, first,
-													 static_cast<::std::size_t>(last - first))
+													 count)
 						.total};
 	return first + done;
 }
 
 template <::fast_io::wine_family family, ::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observer<family, char_type> wiob,
-													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
+													 ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto const done{::fast_io::wine::wine_unix_read(wiob.host_fd, first,
-													static_cast<::std::size_t>(last - first))
+													count)
 						.total};
 	return first + done;
 }
@@ -48,24 +47,24 @@ scatter_read_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observe
 
 template <::fast_io::wine_family family, ::std::integral char_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(::fast_io::basic_wine_family_io_observer<family, char_type> wiob,
-															::std::byte const *first, ::std::byte const *last,
+															::std::byte const *first, ::std::size_t count,
 															::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::wine_unix::iovec_t iov{first, static_cast<::std::size_t>(last - first)};
+	::fast_io::wine_unix::iovec_t iov{first, count};
 	auto ret{::fast_io::wine::wine_unix_pwritev(wiob.host_fd, __builtin_addressof(iov), 1,
 												static_cast<::fast_io::wine_unix::off_t>(off))};
-	return first + (ret.baseindex ? last - first : ret.index);
+	return first + (ret.baseindex ? count : ret.index);
 }
 
 template <::fast_io::wine_family family, ::std::integral char_type>
 inline ::std::byte *pread_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observer<family, char_type> wiob,
-													  ::std::byte *first, ::std::byte *last,
+													  ::std::byte *first, ::std::size_t count,
 													  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::wine_unix::iovec_t iov{first, static_cast<::std::size_t>(last - first)};
+	::fast_io::wine_unix::iovec_t iov{first, count};
 	auto ret{::fast_io::wine::wine_unix_preadv(wiob.host_fd, __builtin_addressof(iov), 1,
 											   static_cast<::fast_io::wine_unix::off_t>(off))};
-	return first + (ret.baseindex ? last - first : ret.index);
+	return first + (ret.baseindex ? count : ret.index);
 }
 
 template <::fast_io::wine_family family, ::std::integral char_type>
@@ -93,4 +92,3 @@ scatter_pread_some_bytes_underflow_define(::fast_io::basic_wine_family_io_observ
 }
 
 } // namespace fast_io
-

@@ -103,13 +103,12 @@ inline constexpr void ibuffer_set_curr(basic_ibuffer_view_ref<ch_type> view, ch_
 }
 
 template <::std::integral ch_type>
-[[nodiscard]] inline constexpr ch_type *read_some_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first,
-																  ch_type *last) noexcept
+[[nodiscard]] inline constexpr ch_type *read_some_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first, ::std::size_t count) noexcept
 {
 	auto *curr{view.ptr->curr_ptr};
 	auto *ed{view.ptr->end_ptr};
 	::std::ptrdiff_t diff{ed - curr};
-	::std::ptrdiff_t itdiff{last - first};
+	::std::ptrdiff_t itdiff{static_cast<::std::ptrdiff_t>(count)};
 	if (itdiff < diff)
 	{
 		diff = itdiff;
@@ -120,13 +119,13 @@ template <::std::integral ch_type>
 }
 
 template <::std::integral ch_type>
-inline constexpr void read_all_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first, ch_type *last)
+inline constexpr void read_all_underflow_define(basic_ibuffer_view_ref<ch_type> view, ch_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto *curr{view.ptr->curr_ptr};
 	auto *ed{view.ptr->end_ptr};
 	::std::ptrdiff_t diff{ed - curr};
-	::std::ptrdiff_t itdiff{last - first};
+	::std::ptrdiff_t itdiff{static_cast<::std::ptrdiff_t>(count)};
 	if (diff < itdiff) [[unlikely]]
 	{
 		::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first);
@@ -139,10 +138,10 @@ inline constexpr void read_all_underflow_define(basic_ibuffer_view_ref<ch_type> 
 
 template <::std::integral ch_type>
 	requires(sizeof(ch_type) == 1)
-inline constexpr void read_all_bytes_underflow_define(basic_ibuffer_view_ref<ch_type> view, ::std::byte *first, ::std::byte *last)
+inline constexpr void read_all_bytes_underflow_define(basic_ibuffer_view_ref<ch_type> view, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	read_all_underflow_define(view, reinterpret_cast<ch_type *>(first), reinterpret_cast<ch_type *>(last));
+	read_all_underflow_define(view, reinterpret_cast<ch_type *>(first), count);
 }
 
 template <::std::integral ch_type>
@@ -301,8 +300,7 @@ inline constexpr void obuffer_set_curr(basic_obuffer_view_ref<ch_type> view, ch_
 }
 
 template <::std::integral ch_type>
-inline constexpr ch_type const *write_some_overflow_define(basic_obuffer_view_ref<ch_type>, ch_type const *first,
-														   ch_type const *) noexcept
+inline constexpr ch_type const *write_some_overflow_define(basic_obuffer_view_ref<ch_type>, ch_type const *first, ::std::size_t) noexcept
 {
 	::fast_io::fast_terminate();
 	return first;

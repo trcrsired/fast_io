@@ -90,7 +90,7 @@ template <typename outstmtype>
 inline constexpr io_scatter_status_t scatter_write_some_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters,
 																   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -177,7 +177,7 @@ inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_sca
 		{
 			auto [basep, len] = *i;
 			::std::byte const *base{reinterpret_cast<::std::byte const *>(basep)};
-			::fast_io::details::write_all_bytes_impl(outsm, base, base + len);
+			::fast_io::details::write_all_bytes_impl(outsm, base, len);
 		}
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_scatter_write_some_bytes_overflow_define<outstmtype>)
@@ -195,7 +195,7 @@ inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_sca
 			{
 				auto pi = pscatters[ret.position];
 				::std::byte const *base{reinterpret_cast<::std::byte const *>(pi.base)};
-				::fast_io::details::write_all_bytes_impl(outsm, base + pisc, base + pi.len);
+				::fast_io::details::write_all_bytes_impl(outsm, base + pisc, pi.len - pisc);
 				++retpos;
 			}
 			pscatters += retpos;
@@ -208,7 +208,7 @@ inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_sca
 		{
 			auto [basep, len] = *i;
 			::std::byte const *base{reinterpret_cast<::std::byte const *>(basep)};
-			::fast_io::details::write_all_bytes_impl(outsm, base, base + len);
+			::fast_io::details::write_all_bytes_impl(outsm, base, len);
 		}
 	}
 	else if constexpr (sizeof(char_type) == 1 &&
@@ -257,7 +257,7 @@ inline constexpr void scatter_write_all_bytes_cold_impl(outstmtype outsm, io_sca
 template <typename outstmtype>
 inline constexpr void scatter_write_all_bytes_impl(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{

@@ -163,7 +163,7 @@ inline constexpr void write_all_iterator_decay_impl(outstmtype outsm, Iter first
 				{
 					auto [fromiter, toiter] =
 						::fast_io::details::bytes_copy_punning_impl(first, last, buffer, buffer + bfsz);
-					::fast_io::operations::decay::write_all_decay(outsm, buffer, toiter);
+					::fast_io::operations::decay::write_all_decay(outsm, buffer, static_cast<::std::size_t>(toiter - buffer));
 					first = fromiter;
 				}
 			}
@@ -225,7 +225,7 @@ inline constexpr void write_all_range_decay(outstmtype outsm, rg &&r)
 		{
 			if constexpr (::std::same_as<rgvlt, output_char_type>)
 			{
-				::fast_io::operations::decay::write_all_decay(outsm, firstptr, lastptr);
+				::fast_io::operations::decay::write_all_decay(outsm, firstptr, static_cast<::std::size_t>(lastptr - firstptr));
 			}
 			else
 			{

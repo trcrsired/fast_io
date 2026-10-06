@@ -114,7 +114,7 @@ inline void run(T const &filename) throws
 	{
 		filetype in(filename, ::fast_io::open_mode::in);
 		::fast_io::vector<::std::byte> got(expected.size());
-		::fast_io::operations::read_all_bytes(in, got.data(), got.data() + got.size());
+		::fast_io::operations::read_all_bytes(in, got.data(), got.size());
 		if (got.size() != expected.size() || ::std::memcmp(got.data(), expected.data(), expected.size()) != 0)
 		{
 			::fast_io::fast_terminate();

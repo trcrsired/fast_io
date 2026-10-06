@@ -31,7 +31,7 @@ inline constexpr ::fast_io::uintfpos_t transmit_bytes_some_main_impl(optstmtype 
 		{
 			break;
 		}
-		::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, iter);
+		::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
 		totransmit -= static_cast<::std::size_t>(iter - buffer_start);
 	}
 	return needtransmit - totransmit;

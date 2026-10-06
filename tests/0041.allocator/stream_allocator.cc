@@ -117,7 +117,7 @@ inline constexpr null_sink output_stream_ref_define(null_sink s) noexcept
 	return s;
 }
 
-inline void write_all_bytes_overflow_define(null_sink, ::std::byte const *, ::std::byte const *) noexcept
+inline void write_all_bytes_overflow_define(null_sink, ::std::byte const *, ::std::size_t) noexcept
 {
 }
 
@@ -135,7 +135,7 @@ inline constexpr plain_stream output_stream_ref_define(plain_stream s) noexcept
 	return s;
 }
 
-inline void write_all_bytes_overflow_define(plain_stream, ::std::byte const *, ::std::byte const *) noexcept
+inline void write_all_bytes_overflow_define(plain_stream, ::std::byte const *, ::std::size_t) noexcept
 {
 }
 
@@ -154,7 +154,7 @@ inline constexpr handle_stream output_stream_ref_define(handle_stream s) noexcep
 	return s;
 }
 
-inline void write_all_bytes_overflow_define(handle_stream, ::std::byte const *, ::std::byte const *) noexcept
+inline void write_all_bytes_overflow_define(handle_stream, ::std::byte const *, ::std::size_t) noexcept
 {
 }
 
@@ -178,8 +178,7 @@ inline constexpr failing_handle_stream output_stream_ref_define(failing_handle_s
 	return s;
 }
 
-inline void write_all_bytes_overflow_define(failing_handle_stream, ::std::byte const *,
-											::std::byte const *) noexcept
+inline void write_all_bytes_overflow_define(failing_handle_stream, ::std::byte const *, ::std::size_t) noexcept
 {
 }
 

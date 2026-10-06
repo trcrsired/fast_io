@@ -339,56 +339,54 @@ inline ::std::size_t c_fread_impl(void *__restrict begin, ::std::size_t type_siz
 	return read_count;
 }
 
-inline ::std::byte *c_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::byte *c_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return c_fread_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
+	return c_fread_impl(first, 1, count, fp) + first;
 }
 
-inline ::std::byte *c_unlocked_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::byte *c_unlocked_read_some_bytes_impl(FILE *__restrict fp, ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return c_fread_unlocked_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
+	return c_fread_unlocked_impl(first, 1, count, fp) + first;
 }
 
-inline ::std::byte const *c_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first,
-												  ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::byte const *c_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return c_fwrite_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
+	return c_fwrite_impl(first, 1, count, fp) + first;
 }
 
-inline ::std::byte const *c_unlocked_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first,
-														   ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::byte const *c_unlocked_write_some_bytes_impl(FILE *__restrict fp, ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return c_fwrite_unlocked_impl(first, 1, static_cast<::std::size_t>(last - first), fp) + first;
+	return c_fwrite_unlocked_impl(first, 1, count, fp) + first;
 }
 
 } // namespace details
 
 template <::fast_io::c_family family, ::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_family_io_observer<family, char_type> ciob,
-													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
+													 ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == ::fast_io::c_family::unlocked || family == ::fast_io::c_family::emulated_unlocked)
 	{
-		return ::fast_io::details::c_unlocked_read_some_bytes_impl(ciob.fp, first, last);
+		return ::fast_io::details::c_unlocked_read_some_bytes_impl(ciob.fp, first, count);
 	}
 	else
 	{
-		return ::fast_io::details::c_read_some_bytes_impl(ciob.fp, first, last);
+		return ::fast_io::details::c_read_some_bytes_impl(ciob.fp, first, count);
 	}
 }
 
 template <::fast_io::c_family family, ::std::integral char_type>
 inline ::std::byte const *
 write_some_bytes_overflow_define(::fast_io::basic_c_family_io_observer<family, char_type> ciob,
-								 ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+								 ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if constexpr (family == ::fast_io::c_family::unlocked || family == ::fast_io::c_family::emulated_unlocked)
 	{
-		return ::fast_io::details::c_unlocked_write_some_bytes_impl(ciob.fp, first, last);
+		return ::fast_io::details::c_unlocked_write_some_bytes_impl(ciob.fp, first, count);
 	}
 	else
 	{
-		return ::fast_io::details::c_write_some_bytes_impl(ciob.fp, first, last);
+		return ::fast_io::details::c_write_some_bytes_impl(ciob.fp, first, count);
 	}
 }
 

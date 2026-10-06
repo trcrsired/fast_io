@@ -22,9 +22,9 @@ using kernel_console = basic_kernel_console<char>;
 using u8kernel_console = basic_kernel_console<char8_t>;
 
 template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline void write(basic_kernel_console<char_type> console, Iter first, Iter last) noexcept
+inline void write(basic_kernel_console<char_type> console, Iter first, ::std::size_t count) noexcept
 {
-	(console.func_ptr)(::std::to_address(first), static_cast<::std::size_t>(last - first) * sizeof(*first));
+	(console.func_ptr)(::std::to_address(first), count * sizeof(*first));
 }
 
 namespace details

@@ -7,16 +7,16 @@ namespace fast_io
 namespace operations::decay
 {
 template <typename instmtype>
-inline constexpr ::std::byte *read_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last)
+inline constexpr ::std::byte *read_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 ;
 
 template <typename instmtype>
-inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::byte *last,
+inline constexpr ::std::byte *pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count,
 													 ::fast_io::intfpos_t)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::bytes_preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::bytes_preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 ;
 
 } // namespace operations::decay
@@ -157,7 +157,7 @@ inline constexpr io_scatter_status_t
 scatter_read_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 					   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -225,7 +225,7 @@ scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::read_all_impl(insm, base, base + len);
+			::fast_io::details::read_all_impl(insm, base, len);
 		}
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_scatter_read_some_underflow_define<instmtype>)
@@ -246,7 +246,7 @@ scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::fast_io::details::read_all_impl(insm, pi.base + pisc, pi.len);
+				::fast_io::details::read_all_impl(insm, pi.base + pisc, pi.len - pisc);
 				++retpos;
 			}
 			pscatters += retpos;
@@ -258,7 +258,7 @@ scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::read_all_impl(insm, base, base + len);
+			::fast_io::details::read_all_impl(insm, base, len);
 		}
 	}
 	else if constexpr ((::fast_io::operations::decay::defines::has_any_of_read_bytes_operations<instmtype>))
@@ -307,7 +307,7 @@ inline constexpr void scatter_read_all_impl(instmtype insm,
 											basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

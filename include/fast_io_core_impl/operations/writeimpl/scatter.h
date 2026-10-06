@@ -145,7 +145,7 @@ inline constexpr io_scatter_status_t
 scatter_write_some_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -226,7 +226,7 @@ scatter_write_all_cold_impl(outstmtype outsm,
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::write_all_impl(outsm, base, base + len);
+			::fast_io::details::write_all_impl(outsm, base, len);
 		}
 	}
 	else if constexpr (::fast_io::operations::decay::defines::has_scatter_write_some_overflow_define<outstmtype>)
@@ -243,7 +243,7 @@ scatter_write_all_cold_impl(outstmtype outsm,
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::fast_io::details::write_all_impl(outsm, pi.base + pisc, pi.base + pi.len);
+				::fast_io::details::write_all_impl(outsm, pi.base + pisc, pi.len - pisc);
 				++retpos;
 			}
 			pscatters += retpos;
@@ -255,7 +255,7 @@ scatter_write_all_cold_impl(outstmtype outsm,
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::write_all_impl(outsm, base, base + len);
+			::fast_io::details::write_all_impl(outsm, base, len);
 		}
 	}
 	else if constexpr ((::fast_io::operations::decay::defines::has_write_all_bytes_overflow_define<outstmtype> ||
@@ -318,7 +318,7 @@ inline constexpr void scatter_write_all_impl(outstmtype outsm,
 											 basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 											 ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{

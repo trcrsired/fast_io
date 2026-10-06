@@ -304,18 +304,16 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline ::std::byte const *wincrt_fp_write_some_cold_impl(FILE *__restrict fp, char const *first, char const *last) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::byte const *wincrt_fp_write_some_cold_impl(FILE *__restrict fp, char const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::std::size_t diff{static_cast<::std::size_t>(last - first)};
+	::std::size_t diff{count};
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
 	if (fpp->_base == nullptr)
 	{
 		if (::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file))
 		{
 			::fast_io::posix_io_observer piob{fpp->_file};
-			return ::fast_io::operations::write_some_bytes(piob,
-														   reinterpret_cast<::std::byte const *>(first),
-														   reinterpret_cast<::std::byte const *>(last));
+			return ::fast_io::operations::write_some_bytes(piob, reinterpret_cast<::std::byte const *>(first), count);
 		}
 		return wincrt_fp_write_some_cold_malloc_case_impl(fp, first, diff);
 	}
@@ -344,18 +342,16 @@ inline ::std::byte const *wincrt_fp_write_some_cold_for_scatter_impl(FILE *__res
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, char const *last) FAST_IO_HERBCEPTIONS_THROWS
+inline void wincrt_fp_write_cold_impl(FILE *__restrict fp, char const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::std::size_t diff{static_cast<::std::size_t>(last - first)};
+	::std::size_t diff{count};
 	::fast_io::details::crt_iobuf *fpp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fp)};
 	if (fpp->_base == nullptr)
 	{
 		if (::fast_io::details::wincrt_fp_is_unbuffered_fd_impl(fpp->_file))
 		{
 			::fast_io::posix_io_observer piob{fpp->_file};
-			::fast_io::operations::write_all_bytes(piob,
-												   reinterpret_cast<::std::byte const *>(first),
-												   reinterpret_cast<::std::byte const *>(last));
+			::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(first), count);
 			return;
 		}
 		wincrt_fp_write_cold_malloc_case_impl(fp, first, diff);
@@ -687,27 +683,24 @@ inline void obuffer_overflow(basic_c_io_observer_unlocked<char_type> ciob, char_
 
 template <::std::integral char_type>
 inline ::std::byte *read_some_bytes_underflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
-													 ::std::byte *first, ::std::byte *last) FAST_IO_HERBCEPTIONS_THROWS
+													 ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	return reinterpret_cast<::std::byte *>(::fast_io::details::wincrt_fp_read_cold_impl(
-		ciob.fp, reinterpret_cast<char *>(first),
-		static_cast<::std::size_t>(reinterpret_cast<char *>(last) - reinterpret_cast<char *>(first))));
+		ciob.fp, reinterpret_cast<char *>(first), count));
 }
 
 template <::std::integral char_type>
 inline void write_all_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
-											::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+											::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::wincrt_fp_write_cold_impl(ciob.fp, reinterpret_cast<char const *>(first),
-												  reinterpret_cast<char const *>(last));
+	::fast_io::details::wincrt_fp_write_cold_impl(ciob.fp, reinterpret_cast<char const *>(first), count);
 }
 
 template <::std::integral char_type>
 inline ::std::byte const *write_some_bytes_overflow_define(::fast_io::basic_c_io_observer_unlocked<char_type> ciob,
-														   ::std::byte const *first, ::std::byte const *last) FAST_IO_HERBCEPTIONS_THROWS
+														   ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::wincrt_fp_write_some_cold_impl(ciob.fp, reinterpret_cast<char const *>(first),
-															  reinterpret_cast<char const *>(last));
+	return ::fast_io::details::wincrt_fp_write_some_cold_impl(ciob.fp, reinterpret_cast<char const *>(first), count);
 }
 
 template <::std::integral char_type>

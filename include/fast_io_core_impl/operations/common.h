@@ -55,7 +55,7 @@ struct basic_scatter_total_size_overflow_result
 };
 
 // Emulates scatter-write on platforms without a vectored-write syscall.
-// buftype is a buffer_alloc_arr_ptr-like type; op(handle, first, last) performs one
+// buftype is a buffer_alloc_arr_ptr-like type; op(handle, first, count) performs one
 // chunk transfer and returns the end of the written range (carrying offset state itself).
 template <typename buftype, typename func>
 inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restrict handle,
@@ -93,7 +93,7 @@ inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restri
 		}
 		if (buf_currptr != buffer.ptr)
 		{
-			auto written{op(handle, buffer.ptr, buf_currptr)};
+			auto written{op(handle, buffer.ptr, static_cast<::std::size_t>(buf_currptr - buffer.ptr))};
 			if (written != buf_currptr)
 			{
 				return scatter_locate_backward(pscatters, static_cast<::std::size_t>(psci - pscatters + 1), to_copied,
@@ -112,7 +112,7 @@ inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restri
 		::std::size_t after_to_copied{len - to_copied};
 		if (directsz <= after_to_copied || islast)
 		{
-			auto written{op(handle, newbase, pied)};
+			auto written{op(handle, newbase, static_cast<::std::size_t>(pied - newbase))};
 			if (written != pied)
 			{
 				return {static_cast<::std::size_t>(psci - pscatters), static_cast<::std::size_t>(written - base)};
@@ -131,7 +131,7 @@ inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restri
 	}
 	if (buffer.ptr != buf_currptr)
 	{
-		auto written{op(handle, buffer.ptr, buf_currptr)};
+		auto written{op(handle, buffer.ptr, static_cast<::std::size_t>(buf_currptr - buffer.ptr))};
 		if (written != buf_currptr)
 		{
 			return scatter_locate_backward(pscatters, n, psce[-1].len,
@@ -142,7 +142,7 @@ inline io_scatter_status_t scatter_write_pwrite_some_bytes_common(void *__restri
 	return {n, 0zu};
 }
 
-// write-all variant of scatter_write_pwrite_some_bytes_common: op(handle, first, last) must
+// write-all variant of scatter_write_pwrite_some_bytes_common: op(handle, first, count) must
 // transfer the whole chunk or throw, so no partial-write location tracking is needed.
 template <typename buftype, typename func>
 inline void scatter_write_pwrite_all_bytes_common(void *__restrict handle,
@@ -179,7 +179,7 @@ inline void scatter_write_pwrite_all_bytes_common(void *__restrict handle,
 		}
 		if (buf_currptr != buffer.ptr)
 		{
-			op(handle, buffer.ptr, buf_currptr);
+			op(handle, buffer.ptr, static_cast<::std::size_t>(buf_currptr - buffer.ptr));
 			buf_currptr = buffer.ptr;
 		}
 		auto newbase{base + to_copied};
@@ -192,7 +192,7 @@ inline void scatter_write_pwrite_all_bytes_common(void *__restrict handle,
 		::std::size_t after_to_copied{len - to_copied};
 		if (directsz <= after_to_copied || islast)
 		{
-			op(handle, newbase, pied);
+			op(handle, newbase, static_cast<::std::size_t>(pied - newbase));
 			if (islast)
 			{
 				return;
@@ -207,7 +207,7 @@ inline void scatter_write_pwrite_all_bytes_common(void *__restrict handle,
 	}
 	if (buffer.ptr != buf_currptr)
 	{
-		op(handle, buffer.ptr, buf_currptr);
+		op(handle, buffer.ptr, static_cast<::std::size_t>(buf_currptr - buffer.ptr));
 	}
 }
 } // namespace details
@@ -423,7 +423,7 @@ inline constexpr ::fast_io::intfpos_t adjust_instm_offset(::std::ptrdiff_t remai
 	return requested - remainspace;
 }
 
-// read counterpart of scatter_write_pwrite_some_bytes_common: op(handle, first, last)
+// read counterpart of scatter_write_pwrite_some_bytes_common: op(handle, first, count)
 // fills [first, last) and returns the end of the filled range; a short or empty return
 // is EOF, not an error. [buf_currptr, buf_endptr) holds fetched-but-undistributed data.
 // Buffered fills are demand-bounded: fetching past the scatters' total size would
@@ -470,7 +470,7 @@ inline io_scatter_status_t scatter_read_pread_some_bytes_common(void *__restrict
 		bool islast{psci == psce - 1};
 		if (directsz <= after_to_copied || islast)
 		{
-			auto written{op(handle, newbase, pied)};
+			auto written{op(handle, newbase, static_cast<::std::size_t>(pied - newbase))};
 			remained -= static_cast<::std::size_t>(written - newbase);
 			if (written != pied)
 			{
@@ -488,7 +488,7 @@ inline io_scatter_status_t scatter_read_pread_some_bytes_common(void *__restrict
 			static_cast<void>(buffer.allocate_new(buffersz));
 		}
 		::std::size_t request{remained < buffersz ? remained : buffersz};
-		auto written{op(handle, buffer.ptr, buffer.ptr + request)};
+		auto written{op(handle, buffer.ptr, request)};
 		remained -= static_cast<::std::size_t>(written - buffer.ptr);
 		buf_currptr = buffer.ptr;
 		buf_endptr = written;
@@ -508,7 +508,7 @@ inline io_scatter_status_t scatter_read_pread_some_bytes_common(void *__restrict
 	return {n, 0zu};
 }
 
-// read-all variant of scatter_read_pread_some_bytes_common: op(handle, first, last)
+// read-all variant of scatter_read_pread_some_bytes_common: op(handle, first, count)
 // fills the whole range or throws, so no partial-read location tracking is needed.
 // Fills stay demand-bounded for the same reason as the some variant.
 template <typename buftype, typename func>
@@ -552,7 +552,7 @@ inline void scatter_read_pread_all_bytes_common(void *__restrict handle,
 		bool islast{psci == psce - 1};
 		if (directsz <= after_to_copied || islast)
 		{
-			op(handle, newbase, pied);
+			op(handle, newbase, static_cast<::std::size_t>(pied - newbase));
 			remained -= after_to_copied;
 			if (islast)
 			{
@@ -565,7 +565,7 @@ inline void scatter_read_pread_all_bytes_common(void *__restrict handle,
 			static_cast<void>(buffer.allocate_new(buffersz));
 		}
 		::std::size_t request{remained < buffersz ? remained : buffersz};
-		op(handle, buffer.ptr, buffer.ptr + request);
+		op(handle, buffer.ptr, request);
 		remained -= request;
 		buf_currptr = buffer.ptr;
 		buf_endptr = buffer.ptr + request;

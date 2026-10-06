@@ -20,7 +20,6 @@ inline constexpr ::fast_io::uintfpos_t transmit_some_main_impl(optstmtype optstm
 	constexpr ::std::size_t bfsz{::fast_io::details::transmit_buffer_size_cache<sizeof(input_char_type)>};
 	::fast_io::details::local_operator_new_array_ptr<input_char_type> newptr(bfsz);
 	input_char_type *buffer_start{newptr.ptr};
-	input_char_type *buffer_end{newptr.ptr + newptr.size};
 	::fast_io::uintfpos_t totransmit{needtransmit};
 	while (totransmit)
 	{
@@ -37,7 +36,7 @@ inline constexpr ::fast_io::uintfpos_t transmit_some_main_impl(optstmtype optstm
 		}
 		if constexpr (::std::same_as<output_char_type, input_char_type>)
 		{
-			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, iter);
+			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
 		}
 		else
 		{

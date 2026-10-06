@@ -6,34 +6,34 @@ namespace fast_io
 namespace details
 {
 
-inline ::std::byte *posix_pread_bytes_impl(int fd, ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
+inline ::std::byte *posix_pread_bytes_impl(int fd, ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// Here, functions from the operations module must be selected because Windows 9x may not provide the p-series functions.
-	return ::fast_io::operations::pread_some_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, last, off);
+	return ::fast_io::operations::pread_some_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, count, off);
 }
 
-inline void posix_pread_all_bytes_impl(int fd, ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
+inline void posix_pread_all_bytes_impl(int fd, ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// Here, functions from the operations module must be selected because Windows 9x may not provide the p-series functions.
-	::fast_io::operations::pread_all_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, last, off);
+	::fast_io::operations::pread_all_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, count, off);
 }
 
-inline ::std::byte const *posix_pwrite_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last,
+inline ::std::byte const *posix_pwrite_bytes_impl(int fd, ::std::byte const *first, ::std::size_t count,
 												  ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// Here, functions from the operations module must be selected because Windows 9x may not provide the p-series functions.
-	return ::fast_io::operations::pwrite_some_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, last, off);
+	return ::fast_io::operations::pwrite_some_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, count, off);
 }
 
-inline void posix_pwrite_all_bytes_impl(int fd, ::std::byte const *first, ::std::byte const *last,
+inline void posix_pwrite_all_bytes_impl(int fd, ::std::byte const *first, ::std::size_t count,
 										::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	// Here, functions from the operations module must be selected because Windows 9x may not provide the p-series functions.
-	::fast_io::operations::pwrite_all_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, last, off);
+	::fast_io::operations::pwrite_all_bytes(::fast_io::win32_io_observer{::fast_io::details::my_get_osfile_handle(fd)}, first, count, off);
 }
 
 // Scatter I/O emulation buffers allocate through the throwing flavour of the thread
@@ -51,20 +51,21 @@ using posix_scatter_buffer_alloc_ptr = ::fast_io::details::buffer_alloc_arr_ptr<
 struct posix_scatter_read_chunk_impl
 {
 	int fd;
-	inline ::std::byte *operator()(void *, ::std::byte *first, ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+	inline ::std::byte *operator()(void *, ::std::byte *first, ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		return posix_read_bytes_impl(fd, first, last);
+		return posix_read_bytes_impl(fd, first, count);
 	}
 };
 
 struct posix_scatter_read_all_chunk_impl
 {
 	int fd;
-	inline void operator()(void *, ::std::byte *first, ::std::byte *last) const FAST_IO_HERBCEPTIONS_THROWS
+	inline void operator()(void *, ::std::byte *first, ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		while (first != last)
+		auto const e{first + count};
+		while (first != e)
 		{
-			auto got{posix_read_bytes_impl(fd, first, last)};
+			auto got{posix_read_bytes_impl(fd, first, static_cast<::std::size_t>(e - first))};
 			if (got == first) [[unlikely]]
 			{
 				::fast_io::throw_posix_error(EIO);
@@ -77,21 +78,22 @@ struct posix_scatter_read_all_chunk_impl
 struct posix_scatter_write_chunk_impl
 {
 	int fd;
-	inline ::std::byte const *operator()(void *, ::std::byte const *first, ::std::byte const *last) const
+	inline ::std::byte const *operator()(void *, ::std::byte const *first, ::std::size_t count) const
 		FAST_IO_HERBCEPTIONS_THROWS
 	{
-		return posix_write_bytes_impl(fd, first, last);
+		return posix_write_bytes_impl(fd, first, count);
 	}
 };
 
 struct posix_scatter_write_all_chunk_impl
 {
 	int fd;
-	inline void operator()(void *, ::std::byte const *first, ::std::byte const *last) const FAST_IO_HERBCEPTIONS_THROWS
+	inline void operator()(void *, ::std::byte const *first, ::std::size_t count) const FAST_IO_HERBCEPTIONS_THROWS
 	{
-		while (first != last)
+		auto const e{first + count};
+		while (first != e)
 		{
-			auto written{posix_write_bytes_impl(fd, first, last)};
+			auto written{posix_write_bytes_impl(fd, first, static_cast<::std::size_t>(e - first))};
 			if (written == first) [[unlikely]]
 			{
 				::fast_io::throw_posix_error(EIO);
@@ -163,34 +165,33 @@ inline void posix_scatter_pwrite_all_bytes_impl(int fd, ::fast_io::io_scatter_t 
 
 template <::std::integral char_type>
 inline ::std::byte *pread_some_bytes_underflow_define(::fast_io::basic_posix_io_observer<char_type> piob,
-													  ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t off)
+													  ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::posix_pread_bytes_impl(piob.fd, first, last, off);
+	return ::fast_io::details::posix_pread_bytes_impl(piob.fd, first, count, off);
 }
 
 template <::std::integral char_type>
-inline void pread_all_bytes_underflow_define(::fast_io::basic_posix_io_observer<char_type> piob, ::std::byte *first,
-											 ::std::byte *last, ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
+inline void pread_all_bytes_underflow_define(::fast_io::basic_posix_io_observer<char_type> piob, ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::posix_pread_all_bytes_impl(piob.fd, first, last, off);
+	::fast_io::details::posix_pread_all_bytes_impl(piob.fd, first, count, off);
 }
 
 template <::std::integral char_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(::fast_io::basic_posix_io_observer<char_type> piob,
-															::std::byte const *first, ::std::byte const *last,
+															::std::byte const *first, ::std::size_t count,
 															::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::posix_pwrite_bytes_impl(piob.fd, first, last, off);
+	return ::fast_io::details::posix_pwrite_bytes_impl(piob.fd, first, count, off);
 }
 
 template <::std::integral char_type>
 inline void pwrite_all_bytes_overflow_define(::fast_io::basic_posix_io_observer<char_type> piob,
-											 ::std::byte const *first, ::std::byte const *last,
+											 ::std::byte const *first, ::std::size_t count,
 											 ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::posix_pwrite_all_bytes_impl(piob.fd, first, last, off);
+	::fast_io::details::posix_pwrite_all_bytes_impl(piob.fd, first, count, off);
 }
 
 template <::std::integral char_type>

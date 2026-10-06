@@ -59,6 +59,8 @@ using u16str_swiss_map = ::fast_io::basic_str_swiss_map<char16_t, mappedtype>;
 template <::std::movable mappedtype>
 using u32str_swiss_map = ::fast_io::basic_str_swiss_map<char32_t, mappedtype>;
 
+using zu_str_swiss_map = ::fast_io::basic_str_swiss_map<char, ::std::size_t>;
+
 namespace tlc
 {
 template <::std::integral chtype, ::std::movable mappedtype, typename Hash = ::fast_io::native_swiss_hasher, typename Alloc = ::fast_io::native_thread_local_allocator>
@@ -74,6 +76,7 @@ template <::std::movable mappedtype>
 using u16str_swiss_map = ::fast_io::basic_str_swiss_map<char16_t, mappedtype>;
 template <::std::movable mappedtype>
 using u32str_swiss_map = ::fast_io::basic_str_swiss_map<char32_t, mappedtype>;
+using zu_str_swiss_map = ::fast_io::tlc::basic_str_swiss_map<char, ::std::size_t>;
 } // namespace tlc
 #endif
 #endif

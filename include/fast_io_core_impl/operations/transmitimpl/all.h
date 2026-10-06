@@ -19,7 +19,6 @@ inline constexpr void transmit_all_main_impl(optstmtype optstm, instmtype instm,
 	constexpr ::std::size_t bfsz{::fast_io::details::transmit_buffer_size_cache<sizeof(input_char_type)>};
 	::fast_io::details::local_operator_new_array_ptr<input_char_type> newptr(bfsz);
 	input_char_type *buffer_start{newptr.ptr};
-	input_char_type *buffer_end{newptr.ptr + newptr.size};
 	while (totransmit)
 	{
 		::std::size_t this_round{bfsz};
@@ -28,10 +27,10 @@ inline constexpr void transmit_all_main_impl(optstmtype optstm, instmtype instm,
 			this_round = static_cast<::std::size_t>(totransmit);
 		}
 		auto iter{buffer_start + this_round};
-		::fast_io::operations::decay::read_all_decay(instm, buffer_start, iter);
+		::fast_io::operations::decay::read_all_decay(instm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
 		if constexpr (::std::same_as<output_char_type, input_char_type>)
 		{
-			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, iter);
+			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, static_cast<::std::size_t>(iter - buffer_start));
 		}
 		else
 		{

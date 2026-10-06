@@ -16,23 +16,32 @@ using ::std::parse_errc;
 
 #else
 #if defined(_WIN32) || defined(__CYGWIN__)
-//placeholders
-enum class win32_errc : ::std::uint_least32_t{};
-enum class nt_errc : ::std::uint_least32_t{};
-enum class wine_errc : ::std::uint_least32_t{};
-enum class com_errc : ::std::uint_least32_t{};
+// placeholders
+enum class win32_errc : ::std::uint_least32_t
+{
+};
+enum class nt_errc : ::std::uint_least32_t
+{
+};
+enum class wine_errc : ::std::uint_least32_t
+{
+};
+enum class com_errc : ::std::uint_least32_t
+{
+};
 #endif
 
-enum class cmath_errc : ::std::uint_least32_t{};
+enum class cmath_errc : ::std::uint_least32_t
+{
+};
 enum class parse_errc : ::std::uint_least32_t
 {
-ok = 0,
-end_of_file = 1,
-partial = 2,
-invalid = 3,
-overflow = 4
+	ok = 0,
+	end_of_file = 1,
+	partial = 2,
+	invalid = 3,
+	overflow = 4
 };
 
 #endif
-}
-
+} // namespace fast_io::freestanding

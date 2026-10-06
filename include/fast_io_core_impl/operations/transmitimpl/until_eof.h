@@ -19,14 +19,13 @@ inline constexpr void transmit_until_eof_generic_main_impl(optstmtype optstm, in
 	::fast_io::details::local_operator_new_array_ptr<input_char_type> newptr(
 		::fast_io::details::transmit_buffer_size_cache<sizeof(input_char_type)>);
 	input_char_type *buffer_start{newptr.ptr};
-	input_char_type *buffer_end{newptr.ptr + newptr.size};
 	for (input_char_type *iter;
-		 (iter = ::fast_io::operations::decay::read_some_decay(instm, buffer_start, buffer_end)) != buffer_start;)
+		 (iter = ::fast_io::operations::decay::read_some_decay(instm, buffer_start, newptr.size)) != buffer_start;)
 	{
 		::std::size_t off{static_cast<::std::size_t>(iter - buffer_start)};
 		if constexpr (::std::same_as<output_char_type, input_char_type>)
 		{
-			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, iter);
+			::fast_io::operations::decay::write_all_decay(optstm, buffer_start, off);
 		}
 		else
 		{
@@ -36,8 +35,7 @@ inline constexpr void transmit_until_eof_generic_main_impl(optstmtype optstm, in
 #endif
 				= output_char_type const *;
 			::fast_io::operations::decay::write_all_decay(
-				optstm, reinterpret_cast<output_char_type_may_alias_const_ptrtp>(buffer_start),
-				reinterpret_cast<output_char_type_may_alias_const_ptrtp>(iter));
+				optstm, reinterpret_cast<output_char_type_may_alias_const_ptrtp>(buffer_start), off);
 		}
 		transmit_integer_add_define(resultint, off);
 	}

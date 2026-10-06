@@ -41,7 +41,7 @@ inline void run(T const &filename) throws
 
 	{
 		filetype file(filename, ::fast_io::open_mode::out);
-		::fast_io::operations::write_all_bytes(file, data.data(), data.data() + data.size());
+		::fast_io::operations::write_all_bytes(file, data.data(), data.size());
 	}
 
 	// pieces straddle the direct-read threshold: tiny/buffered, 3071 edge, 4000 direct, 1114 tail

@@ -47,7 +47,7 @@ inline void run(T const &filename) throws
 	{
 		filetype in(filename, ::fast_io::open_mode::in);
 		::fast_io::vector<::std::byte> got(total + 100);
-		::fast_io::operations::read_all_bytes(in, got.data(), got.data() + got.size());
+		::fast_io::operations::read_all_bytes(in, got.data(), got.size());
 		check_seq(got.data(), 100, 0);           // [0,100): leftover of the first write
 		check_seq(got.data() + 100, 8092, 0);    // [100,8192): pwrite seq
 		check_seq(got.data() + 8192, 100, 8092); // [8192,8292): pwrite tail

@@ -19,19 +19,19 @@ concept has_status_scan_some_define = requires(T optstm) { status_scan_some_defi
 
 template <typename T>
 concept has_read_some_underflow_define =
-	requires(T instm, typename decltype(instm)::input_char_type *ptr) { read_some_underflow_define(instm, ptr, ptr); };
+	requires(T instm, typename decltype(instm)::input_char_type *ptr) { read_some_underflow_define(instm, ptr, ::std::size_t{0}); };
 
 template <typename T>
 concept has_read_all_underflow_define =
-	requires(T instm, typename decltype(instm)::input_char_type *ptr) { read_all_underflow_define(instm, ptr, ptr); };
+	requires(T instm, typename decltype(instm)::input_char_type *ptr) { read_all_underflow_define(instm, ptr, ::std::size_t{0}); };
 
 template <typename T>
 concept has_read_some_bytes_underflow_define =
-	requires(T instm, ::std::byte *ptr) { read_some_bytes_underflow_define(instm, ptr, ptr); };
+	requires(T instm, ::std::byte *ptr) { read_some_bytes_underflow_define(instm, ptr, ::std::size_t{0}); };
 
 template <typename T>
 concept has_read_all_bytes_underflow_define =
-	requires(T instm, ::std::byte *ptr) { read_all_bytes_underflow_define(instm, ptr, ptr); };
+	requires(T instm, ::std::byte *ptr) { read_all_bytes_underflow_define(instm, ptr, ::std::size_t{0}); };
 
 template <typename T>
 concept has_scatter_read_some_bytes_underflow_define =
@@ -61,11 +61,11 @@ concept has_ibuffer_underflow_never_define =
 
 template <typename T>
 concept has_pread_some_bytes_underflow_define =
-	requires(T instm, ::std::byte *ptr) { pread_some_bytes_underflow_define(instm, ptr, ptr, 0); };
+	requires(T instm, ::std::byte *ptr) { pread_some_bytes_underflow_define(instm, ptr, ::std::size_t{0}, 0); };
 
 template <typename T>
 concept has_pread_all_bytes_underflow_define =
-	requires(T instm, ::std::byte *ptr) { pread_all_bytes_underflow_define(instm, ptr, ptr, 0); };
+	requires(T instm, ::std::byte *ptr) { pread_all_bytes_underflow_define(instm, ptr, ::std::size_t{0}, 0); };
 
 template <typename T>
 concept has_scatter_pread_some_bytes_underflow_define =
@@ -81,12 +81,12 @@ concept has_scatter_pread_all_bytes_underflow_define =
 
 template <typename T>
 concept has_pread_some_underflow_define = requires(T instm, typename decltype(instm)::input_char_type *ptr) {
-	pread_some_underflow_define(instm, ptr, ptr, 0);
+	pread_some_underflow_define(instm, ptr, ::std::size_t{0}, 0);
 };
 
 template <typename T>
 concept has_pread_all_underflow_define = requires(T instm, typename decltype(instm)::input_char_type *ptr) {
-	pread_all_underflow_define(instm, ptr, ptr, 0);
+	pread_all_underflow_define(instm, ptr, ::std::size_t{0}, 0);
 };
 
 template <typename T>

@@ -31,29 +31,29 @@ public:
 };
 
 template <::std::integral char_type>
-inline void write(basic_avio_context_io_observer<char_type> baciob, char_type const *first, char_type const *last)
+inline void write(basic_avio_context_io_observer<char_type> baciob, char_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
 	if constexpr (INT_MAX < SIZE_MAX)
 	{
-		for (; first != last;)
+		for (auto const e{first + count}; first != e;)
 		{
 			constexpr ::std::size_t mx{INT_MAX};
 			int this_round{INT_MAX};
-			::std::size_t diff{static_cast<::std::size_t>(last - first)};
+			::std::size_t diff{static_cast<::std::size_t>(e - first)};
 			if (diff < mx)
 				[[likely]]
 			{
 				this_round = diff;
 			}
-			::fast_io::noexcept_call(::avio_write, baciob.avios, first, last);
+			::fast_io::noexcept_call(::avio_write, baciob.avios, first, this_round);
 			first += this_round;
 		}
 	}
 	else
 	{
-		::fast_io::noexcept_call(::avio_write, baciob.avios, first, static_cast<int>(last - first));
+		::fast_io::noexcept_call(::avio_write, baciob.avios, first, static_cast<int>(count));
 	}
 	if (baciob.avios->error)
 	{
@@ -62,7 +62,7 @@ inline void write(basic_avio_context_io_observer<char_type> baciob, char_type co
 }
 
 template <::std::integral char_type>
-inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_type *first, char_type *last)
+inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
@@ -71,7 +71,7 @@ inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_ty
 	{
 		constexpr ::std::size_t mx{INT_MAX};
 		int this_round{INT_MAX};
-		::std::size_t diff{static_cast<::std::size_t>(last - first)};
+		::std::size_t diff{count};
 		if (diff < mx)
 			[[likely]]
 		{
@@ -81,7 +81,7 @@ inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_ty
 	}
 	else
 	{
-		ret = ::fast_io::noexcept_call(::avio_read, baciob.avios, first, static_cast<int>(last - first));
+		ret = ::fast_io::noexcept_call(::avio_read, baciob.avios, first, static_cast<int>(count));
 	}
 	if (baciob.avios->error)
 	{

@@ -4,10 +4,10 @@ namespace fast_io
 {
 namespace details
 {
-inline void avr_libc_write_common_impl(FILE *fp, char const *first, char const *last)
+inline void avr_libc_write_common_impl(FILE *fp, char const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	for (; first != last; ++first)
+	for (auto const e{first + count}; first != e; ++first)
 	{
 		if (noexcept_call(fp->put, *first, fp)) [[unlikely]]
 		{
@@ -30,7 +30,7 @@ inline void avr_libc_scatter_write_impl_with_normal_write(FILE *fp, io_scatter_t
 		avr_libc_write_common_impl(fp, bs, bs + scatters[i].len);
 	}
 }
-inline void avr_libc_write_internal_impl(FILE *fp, char const *first, char const *last)
+inline void avr_libc_write_internal_impl(FILE *fp, char const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto put_func{fp->put};
@@ -38,10 +38,10 @@ inline void avr_libc_write_internal_impl(FILE *fp, char const *first, char const
 	{
 		throw_posix_error(EINVAL);
 	}
-	avr_libc_write_common_impl(fp, first, last);
+	avr_libc_write_common_impl(fp, first, count);
 }
 
-inline char *avr_libc_read_internal_impl(FILE *fp, char *first, char *last)
+inline char *avr_libc_read_internal_impl(FILE *fp, char *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto get_func{fp->get};
@@ -49,7 +49,7 @@ inline char *avr_libc_read_internal_impl(FILE *fp, char *first, char *last)
 	{
 		throw_posix_error(EINVAL);
 	}
-	for (; first != last; ++first)
+	for (auto const e{first + count}; first != e; ++first)
 	{
 		int ret{noexcept_call(getc, fp)};
 		if (ret == EOF)
@@ -58,7 +58,7 @@ inline char *avr_libc_read_internal_impl(FILE *fp, char *first, char *last)
 		}
 		*first = static_cast<char>(static_cast<char unsigned>(ret));
 	}
-	return last;
+	return first + count;
 }
 
 } // namespace details

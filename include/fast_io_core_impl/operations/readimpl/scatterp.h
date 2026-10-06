@@ -134,7 +134,7 @@ inline constexpr io_scatter_status_t
 scatter_pread_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 						::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{
@@ -168,7 +168,7 @@ scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::pread_all_impl(insm, base, base + len, off);
+			::fast_io::details::pread_all_impl(insm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}
@@ -191,7 +191,7 @@ scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::fast_io::details::pread_all_impl(insm, pi.base + pisc, pi.base + pi.len, off);
+				::fast_io::details::pread_all_impl(insm, pi.base + pisc, pi.len - pisc, off);
 				off = ::fast_io::fposoffadd_nonegative(off, pi.len - pisc);
 				++retpos;
 			}
@@ -204,7 +204,7 @@ scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::pread_all_impl(insm, base, base + len, off);
+			::fast_io::details::pread_all_impl(insm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}
@@ -257,7 +257,7 @@ inline constexpr void scatter_pread_all_impl(instmtype insm,
 											 basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											 ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
-	requires (::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
+	requires(::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
 	{

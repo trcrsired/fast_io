@@ -21,7 +21,7 @@ using u16black_hole = basic_black_hole<char16_t>;
 using u32black_hole = basic_black_hole<char32_t>;
 
 template <::std::integral ch_type>
-inline constexpr ch_type *read_some_underflow_define(basic_black_hole<ch_type>, ch_type *first, ch_type *) noexcept
+inline constexpr ch_type *read_some_underflow_define(basic_black_hole<ch_type>, ch_type *first, ::std::size_t) noexcept
 {
 	return first;
 }

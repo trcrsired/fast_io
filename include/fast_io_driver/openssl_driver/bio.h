@@ -438,10 +438,10 @@ using u32bio_file = basic_bio_file<char32_t>;
 
 namespace details
 {
-inline ::std::byte *bio_read_impl(BIO *bio, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *bio_read_impl(BIO *bio, ::std::byte *first, ::std::size_t count)
 {
 	::std::size_t read_bytes{};
-	if (::fast_io::noexcept_call(BIO_read_ex, bio, first, static_cast<::std::size_t>(last - first),
+	if (::fast_io::noexcept_call(BIO_read_ex, bio, first, count,
 								 __builtin_addressof(read_bytes)) == -1)
 	{
 		throw_openssl_error();
@@ -449,10 +449,10 @@ inline ::std::byte *bio_read_impl(BIO *bio, ::std::byte *first, ::std::byte *las
 	return read_bytes + first;
 }
 
-inline ::std::byte const *bio_write_impl(BIO *bio, ::std::byte const *first, ::std::byte const *last)
+inline ::std::byte const *bio_write_impl(BIO *bio, ::std::byte const *first, ::std::size_t count)
 {
 	::std::size_t written_bytes{};
-	if (::fast_io::noexcept_call(BIO_write_ex, bio, first, static_cast<::std::size_t>(last - first),
+	if (::fast_io::noexcept_call(BIO_write_ex, bio, first, count,
 								 __builtin_addressof(written_bytes)) == -1)
 	{
 		throw_openssl_error();
@@ -468,17 +468,15 @@ inline posix_file_status bio_status_impl(BIO* bio)
 } // namespace details
 
 template <::std::integral ch_type>
-inline ::std::byte *read_some_bytes_underflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte *first,
-													 ::std::byte *last)
+inline ::std::byte *read_some_bytes_underflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte *first, ::std::size_t count)
 {
-	return ::fast_io::details::bio_read_impl(iob.bio, first, last);
+	return ::fast_io::details::bio_read_impl(iob.bio, first, count);
 }
 
 template <::std::integral ch_type>
-inline ::std::byte const *write_some_bytes_overflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte const *first,
-														   ::std::byte const *last)
+inline ::std::byte const *write_some_bytes_overflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte const *first, ::std::size_t count)
 {
-	return ::fast_io::details::bio_write_impl(iob.bio, first, last);
+	return ::fast_io::details::bio_write_impl(iob.bio, first, count);
 }
 
 template <::std::integral ch_type>
@@ -527,7 +525,7 @@ inline ::fast_io::intfpos_t bio_io_seekbytes_impl(BIO *bio, ::fast_io::intfpos_t
 	return ::fast_io::operations::decay::io_stream_seek_bytes_decay(::fast_io::posix_io_observer{fd}, offset, s);
 }
 
-inline ::std::byte *bio_pread_impl(BIO *bio, ::std::byte *first, ::std::byte *last, ::fast_io::intfpos_t offset)
+inline ::std::byte *bio_pread_impl(BIO *bio, ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t offset)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto fd{bio_to_fd(bio)};
@@ -536,10 +534,10 @@ inline ::std::byte *bio_pread_impl(BIO *bio, ::std::byte *first, ::std::byte *la
 		throw_posix_error(EINVAL);
 	}
 	::fast_io::posix_io_observer piob{fd};
-	return ::fast_io::operations::decay::pread_some_bytes_decay(piob, first, last, offset);
+	return ::fast_io::operations::decay::pread_some_bytes_decay(piob, first, count, offset);
 }
 
-inline ::std::byte const *bio_pwrite_impl(BIO *bio, ::std::byte const *first, ::std::byte const *last,
+inline ::std::byte const *bio_pwrite_impl(BIO *bio, ::std::byte const *first, ::std::size_t count,
 										  ::fast_io::intfpos_t offset)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -549,7 +547,7 @@ inline ::std::byte const *bio_pwrite_impl(BIO *bio, ::std::byte const *first, ::
 		throw_posix_error(EINVAL);
 	}
 	::fast_io::posix_io_observer piob{fd};
-	return ::fast_io::operations::decay::pwrite_some_bytes_decay(piob, first, last, offset);
+	return ::fast_io::operations::decay::pwrite_some_bytes_decay(piob, first, count, offset);
 }
 
 } // namespace details
@@ -563,20 +561,19 @@ inline ::fast_io::intfpos_t io_stream_seek_bytes_define(basic_bio_io_observer<ch
 }
 
 template <::std::integral ch_type>
-inline ::std::byte *pread_some_bytes_underflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte *first,
-													  ::std::byte *last, ::fast_io::intfpos_t offset)
+inline ::std::byte *pread_some_bytes_underflow_define(basic_bio_io_observer<ch_type> iob, ::std::byte *first, ::std::size_t count, ::fast_io::intfpos_t offset)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::bio_pread_impl(iob.bio, first, last, offset);
+	return ::fast_io::details::bio_pread_impl(iob.bio, first, count, offset);
 }
 
 template <::std::integral ch_type>
 inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_bio_io_observer<ch_type> iob,
-															::std::byte const *first, ::std::byte const *last,
+															::std::byte const *first, ::std::size_t count,
 															::fast_io::intfpos_t offset)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::fast_io::details::bio_pwrite_impl(iob.bio, first, last, offset);
+	return ::fast_io::details::bio_pwrite_impl(iob.bio, first, count, offset);
 }
 
 #if 0

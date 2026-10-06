@@ -17,14 +17,13 @@ inline constexpr void transmit_bytes_until_eof_generic_main_impl(optstmtype opts
 	::fast_io::details::local_operator_new_array_ptr<input_char_type> newptr(
 		::fast_io::details::transmit_buffer_size_cache<sizeof(input_char_type)>);
 	input_char_type *buffer_start{newptr.ptr};
-	input_char_type *buffer_end{newptr.ptr + newptr.size};
 	for (input_char_type *iter;
-		 (iter = ::fast_io::operations::decay::read_some_decay(instm, buffer_start, buffer_end)) != buffer_start;)
+		 (iter = ::fast_io::operations::decay::read_some_decay(instm, buffer_start, newptr.size)) != buffer_start;)
 	{
 		auto bufferstartpbyte{reinterpret_cast<::std::byte const *>(buffer_start)};
 		auto iterpbyte{reinterpret_cast<::std::byte const *>(iter)};
 		::std::size_t off{static_cast<::std::size_t>(iterpbyte - bufferstartpbyte)};
-		::fast_io::operations::decay::write_all_bytes_decay(optstm, bufferstartpbyte, iterpbyte);
+		::fast_io::operations::decay::write_all_bytes_decay(optstm, bufferstartpbyte, static_cast<::std::size_t>(iterpbyte - bufferstartpbyte));
 		transmit_integer_add_define(resultint, off);
 	}
 }

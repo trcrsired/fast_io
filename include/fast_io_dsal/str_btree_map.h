@@ -50,6 +50,8 @@ using u16str_btree_map = ::fast_io::basic_str_btree_map<char16_t, M>;
 template <typename M>
 using u32str_btree_map = ::fast_io::basic_str_btree_map<char32_t, M>;
 
+using zu_str_btree_map = ::fast_io::basic_str_btree_map<char, ::std::size_t>;
+
 namespace containers
 {
 } // namespace containers
@@ -69,6 +71,8 @@ template <typename M>
 using u16str_btree_map = ::fast_io::tlc::basic_str_btree_map<char16_t, M>;
 template <typename M>
 using u32str_btree_map = ::fast_io::tlc::basic_str_btree_map<char32_t, M>;
+
+using zu_str_btree_map = ::fast_io::tlc::basic_str_btree_map<char, ::std::size_t>;
 } // namespace tlc
 
 } // namespace fast_io

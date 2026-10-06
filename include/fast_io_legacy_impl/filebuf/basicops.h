@@ -128,17 +128,16 @@ inline ::fast_io::intfpos_t output_stream_seek_define(::fast_io::basic_general_s
 
 template <typename T>
 inline typename T::char_type const *write_some_overflow_define(::fast_io::basic_general_streambuf_io_observer<T> fb,
-															   typename T::char_type const *first,
-															   typename T::char_type const *last)
+															   typename T::char_type const *first, ::std::size_t count)
 {
-	return ::fast_io::details::streambuf_write_report_eh_impl(fb.fb, first, last);
+	return ::fast_io::details::streambuf_write_report_eh_impl(fb.fb, first, count);
 }
 
 template <typename T>
 inline typename T::char_type *read_some_underflow_define(::fast_io::basic_general_streambuf_io_observer<T> fb,
-														 typename T::char_type *first, typename T::char_type *last)
+														 typename T::char_type *first, ::std::size_t count)
 {
-	return ::fast_io::details::streambuf_read_report_eh_impl(fb.fb, first, last);
+	return ::fast_io::details::streambuf_read_report_eh_impl(fb.fb, first, count);
 }
 
 template <typename T>

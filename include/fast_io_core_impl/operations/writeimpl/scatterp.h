@@ -116,7 +116,7 @@ inline constexpr io_scatter_status_t
 scatter_pwrite_some_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{
@@ -155,7 +155,7 @@ scatter_pwrite_all_cold_impl(outstmtype outsm,
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::pwrite_all_impl(outsm, base, base + len, off);
+			::fast_io::details::pwrite_all_impl(outsm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}
@@ -174,7 +174,7 @@ scatter_pwrite_all_cold_impl(outstmtype outsm,
 			if (pisc)
 			{
 				auto pi = pscatters[ret.position];
-				::fast_io::details::pwrite_all_impl(outsm, pi.base + pisc, pi.base + pi.len, off);
+				::fast_io::details::pwrite_all_impl(outsm, pi.base + pisc, pi.len - pisc, off);
 				off = ::fast_io::fposoffadd_nonegative(off, pi.len - pisc);
 				++retpos;
 			}
@@ -187,7 +187,7 @@ scatter_pwrite_all_cold_impl(outstmtype outsm,
 		for (auto i{pscatters}, e{pscatters + n}; i != e; ++i)
 		{
 			auto [base, len] = *i;
-			::fast_io::details::pwrite_all_impl(outsm, base, base + len, off);
+			::fast_io::details::pwrite_all_impl(outsm, base, len, off);
 			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 	}
@@ -235,7 +235,7 @@ inline constexpr void
 scatter_pwrite_all_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
-	requires (::fast_io::operations::decay::defines::pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
+	requires(::fast_io::operations::decay::defines::pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 {
 	if constexpr (::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
 	{

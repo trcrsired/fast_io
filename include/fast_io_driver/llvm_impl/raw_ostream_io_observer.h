@@ -58,12 +58,11 @@ io_value_handle(basic_general_raw_ostream_io_observer<char_type, T> osiob) noexc
 namespace details
 {
 
-inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_vptr, void const *last_vptr)
+inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_vptr, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	char const *first{reinterpret_cast<char const *>(first_vptr)};
-	char const *last{reinterpret_cast<char const *>(last_vptr)};
-	::std::size_t const n{static_cast<::std::size_t>(last - first)};
+	::std::size_t const n{count};
 	auto os_obuffer_curr_ptr{llvm_raw_ostream_obuffer_ptr<1, char>(os)};
 	auto os_obuffer_end_ptr{llvm_raw_ostream_obuffer_ptr<2, char>(os)};
 	::std::size_t const remain_size{static_cast<::std::size_t>(os_obuffer_end_ptr - os_obuffer_curr_ptr)};
@@ -79,10 +78,10 @@ inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_v
 } // namespace details
 
 template <::std::integral char_type, typename T, ::std::contiguous_iterator Iter>
-inline constexpr void write(basic_general_raw_ostream_io_observer<char_type, T> osiob, Iter first, Iter last)
+inline constexpr void write(basic_general_raw_ostream_io_observer<char_type, T> osiob, Iter first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::llvm::details::llvm_ostream_write_impl(osiob.os, ::std::to_address(first), ::std::to_address(last));
+	::fast_io::llvm::details::llvm_ostream_write_impl(osiob.os, ::std::to_address(first), count * sizeof(*first));
 }
 
 template <::std::integral char_type, typename T>

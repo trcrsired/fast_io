@@ -18,9 +18,9 @@ inline constexpr foo io_stream_ref_define(foo f) noexcept
 	return f;
 }
 
-inline ::std::byte const *write_some_bytes_overflow_define(foo f, ::std::byte const *first, ::std::byte const *last)
+inline ::std::byte const *write_some_bytes_overflow_define(foo f, ::std::byte const *first, ::std::size_t count)
 {
-	auto res{::fast_io::noexcept_call(::write, f.fd, first, static_cast<::std::size_t>(last - first))};
+	auto res{::fast_io::noexcept_call(::write, f.fd, first, count)};
 	if (res < 0)
 	{
 		::std::abort();
@@ -28,9 +28,9 @@ inline ::std::byte const *write_some_bytes_overflow_define(foo f, ::std::byte co
 	return first + res;
 }
 
-inline ::std::byte *read_some_bytes_underflow_define(foo f, ::std::byte *first, ::std::byte *last)
+inline ::std::byte *read_some_bytes_underflow_define(foo f, ::std::byte *first, ::std::size_t count)
 {
-	auto res{::fast_io::noexcept_call(::read, f.fd, first, static_cast<::std::size_t>(last - first))};
+	auto res{::fast_io::noexcept_call(::read, f.fd, first, count)};
 	if (res < 0)
 	{
 		::std::abort();

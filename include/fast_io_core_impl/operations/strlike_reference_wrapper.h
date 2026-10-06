@@ -142,8 +142,7 @@ template <::std::integral ch_type, typename T>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
-inline constexpr void write_all_overflow_define(io_strlike_reference_wrapper<ch_type, T> bref, ch_type const *first,
-												ch_type const *last)
+inline constexpr void write_all_overflow_define(io_strlike_reference_wrapper<ch_type, T> bref, ch_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
 		(::fast_io::auxiliary_strlike<ch_type, T> && ::fast_io::details::strlike_append_may_throw<ch_type, T>) ||
 		(!::fast_io::auxiliary_strlike<ch_type, T> && ::fast_io::details::strlike_reserve_may_throw<ch_type, T>))
@@ -151,7 +150,7 @@ inline constexpr void write_all_overflow_define(io_strlike_reference_wrapper<ch_
 	auto &strref{*bref.ptr};
 	if constexpr (auxiliary_strlike<ch_type, T>)
 	{
-		strlike_append(::fast_io::io_strlike_type<ch_type, T>, strref, first, last);
+		strlike_append(::fast_io::io_strlike_type<ch_type, T>, strref, first, count);
 	}
 	else
 	{
@@ -166,14 +165,14 @@ inline constexpr void write_all_overflow_define(io_strlike_reference_wrapper<ch_
 		auto cap{static_cast<::std::size_t>(eptr - bptr)};
 		::std::size_t new_cap{::fast_io::details::cal_new_cap_io_strlike<sizeof(ch_type)>(cap)};
 		::std::size_t const size_minimum{
-			::fast_io::details::intrinsics::add_or_overflow_die(static_cast<::std::size_t>(last - first), cap)};
+			::fast_io::details::intrinsics::add_or_overflow_die(count, cap)};
 		if (new_cap < size_minimum)
 		{
 			new_cap = size_minimum;
 		}
 		strlike_reserve(::fast_io::io_strlike_type<ch_type, T>, strref, new_cap);
 		auto curr_ptr{strlike_curr(::fast_io::io_strlike_type<ch_type, T>, strref)};
-		curr_ptr = ::fast_io::freestanding::non_overlapped_copy(first, last, curr_ptr);
+		curr_ptr = ::fast_io::freestanding::non_overlapped_copy(first, count, curr_ptr);
 		strlike_set_curr(::fast_io::io_strlike_type<ch_type, T>, strref, curr_ptr);
 	}
 }

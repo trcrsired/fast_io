@@ -61,12 +61,12 @@ namespace details
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
 inline constexpr void
 write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize, allocatortype> &bob,
-							   char_type const *first, char_type const *last)
+							   char_type const *first, ::std::size_t count)
 {
 	using typed_allocator = typed_generic_allocator_adapter<allocatortype, char_type>;
 	::std::size_t bfsz{static_cast<::std::size_t>(bob.end_ptr - bob.begin_ptr)};
 	::std::size_t rlsz{static_cast<::std::size_t>(bob.curr_ptr - bob.begin_ptr)};
-	::std::size_t diff{static_cast<::std::size_t>(last - first)};
+	::std::size_t diff{count};
 	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
 	::std::size_t to_allocate;
 	if (bfsz > mx - diff)
@@ -106,7 +106,7 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	bob.begin_ptr = pbuffer;
 	bob.end_ptr = pbuffer + to_allocate;
 	auto curit{pbuffer + rlsz};
-	bob.curr_ptr = ::fast_io::details::non_overlapped_copy(first, last, curit);
+	bob.curr_ptr = ::fast_io::details::non_overlapped_copy(first, count, curit);
 }
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
@@ -153,9 +153,9 @@ grow_twice_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
 inline constexpr void write_all_overflow_define(
 	basic_dynamic_output_buffer_ref<basic_generic_dynamic_output_buffer<char_type, buffersize, allocatortype>> bdobr,
-	char_type const *first, char_type const *last)
+	char_type const *first, ::std::size_t count)
 {
-	::fast_io::details::write_all_overflow_define_impl(*bdobr.dob_ptr, first, last);
+	::fast_io::details::write_all_overflow_define_impl(*bdobr.dob_ptr, first, count);
 }
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
