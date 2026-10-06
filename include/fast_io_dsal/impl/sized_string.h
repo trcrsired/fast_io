@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -8,27 +8,28 @@ namespace containers
 namespace details
 {
 
+template <typename uinttype>
 struct
 #if __has_cpp_attribute(__gnu__::__may_alias__)
 	[[__gnu__::__may_alias__]]
 #endif
-	string_model
+	sized_string_model
 {
 	void *begin_ptr;
-	void *curr_ptr;
-	void *end_ptr;
+	uinttype size;
+	uinttype capacity;
 };
 
-template <typename T>
-struct string_internal
+template <typename T, typename uinttype>
+struct sized_string_internal
 {
-	T *begin_ptr;
-	T *curr_ptr;
-	T *end_ptr;
+	T *begin_ptr{};
+	uinttype size{};
+	uinttype capacity{};
 };
 
 template <typename allocator_type, ::std::integral chtype>
-inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_allocate_init(chtype const *first, ::std::size_t n)
+inline constexpr ::fast_io::basic_allocation_least_result<chtype *> sized_string_allocate_init(chtype const *first, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>)
 {
 	using typed_allocator_type = typed_generic_allocator_adapter<allocator_type, chtype>;
@@ -39,15 +40,15 @@ inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_alloc
 	return {ptr, static_cast<::std::size_t>(allocn - 1u)};
 }
 
-template <typename allocator_type, ::std::integral chtype>
-inline constexpr void string_heap_dilate_uncheck(::fast_io::containers::details::string_internal<chtype> &imp, ::std::size_t rsize)
+template <typename allocator_type, typename uinttype, ::std::integral chtype>
+inline constexpr void sized_string_heap_dilate_uncheck(::fast_io::containers::details::sized_string_internal<chtype, uinttype> &imp, ::std::size_t rsize)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>)
 {
 	using untyped_allocator_type = ::fast_io::containers::details::generic_allocator_adapter_preserving_flags<allocator_type>;
 	using typed_allocator_type = typed_generic_allocator_adapter<untyped_allocator_type, chtype>;
 
-	::std::size_t const bfsize{static_cast<::std::size_t>(imp.end_ptr - imp.begin_ptr)};
-	::std::size_t const strsize{static_cast<::std::size_t>(imp.curr_ptr - imp.begin_ptr)};
+	::std::size_t const bfsize{imp.capacity};
+	::std::size_t const strsize{imp.size};
 
 	chtype *ptr;
 	auto beginptr{imp.begin_ptr};
@@ -91,17 +92,18 @@ inline constexpr void string_heap_dilate_uncheck(::fast_io::containers::details:
 			rsize = newcap - 1u;
 		}
 	}
+	constexpr ::std::size_t uintmx{static_cast<::std::size_t>(::std::numeric_limits<uinttype>::max())};
 	imp.begin_ptr = ptr;
-	imp.curr_ptr = ptr + strsize;
-	imp.end_ptr = ptr + rsize;
+	imp.size = static_cast<uinttype>(strsize);
+	imp.capacity = static_cast<uinttype>(rsize < uintmx ? rsize : uintmx);
 }
 
-template <typename allocator_type, ::std::integral chtype>
-inline constexpr void string_push_back_heap_grow_twice(::fast_io::containers::details::string_internal<chtype> &imp)
+template <typename allocator_type, typename uinttype, ::std::integral chtype>
+inline constexpr void sized_string_push_back_heap_grow_twice(::fast_io::containers::details::sized_string_internal<chtype, uinttype> &imp)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 
-	::std::size_t const bfsize{static_cast<::std::size_t>(imp.end_ptr - imp.begin_ptr)};
+	::std::size_t const bfsize{imp.capacity};
 	::std::size_t const bfsizep1{bfsize + 1u};
 
 	constexpr ::std::size_t mxsz{SIZE_MAX / sizeof(chtype) / 2u};
@@ -110,19 +112,24 @@ inline constexpr void string_push_back_heap_grow_twice(::fast_io::containers::de
 		::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::value_too_large);
 	}
 	::std::size_t const bfsizep1mul2{bfsizep1 << 1u};
-	return ::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(imp, bfsizep1mul2);
+	if (static_cast<::std::size_t>(::std::numeric_limits<uinttype>::max()) < bfsizep1mul2) [[unlikely]]
+	{
+		::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::value_too_large);
+	}
+	return ::fast_io::containers::details::sized_string_heap_dilate_uncheck<allocator_type>(imp, bfsizep1mul2);
 }
 
 } // namespace details
 
-template <::std::integral chtype, typename alloctype>
-class basic_string FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+	requires(::std::unsigned_integral<uinttype>)
+class basic_sized_string FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 {
 public:
 	using allocator_type = alloctype;
 	using char_type = chtype;
 	using value_type = char_type;
-	using size_type = ::std::size_t;
+	using size_type = uinttype;
 	using difference_type = ::std::ptrdiff_t;
 	using pointer = char_type *;
 	using const_pointer = char_type const *;
@@ -135,7 +142,7 @@ public:
 	using string_view_type = ::fast_io::containers::basic_string_view<char_type>;
 	using cstring_view_type = ::fast_io::containers::basic_cstring_view<char_type>;
 
-	::fast_io::containers::details::string_internal<char_type> imp;
+	::fast_io::containers::details::sized_string_internal<char_type, uinttype> imp;
 
 private:
 	static inline constexpr bool throwing_allocation{::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>};
@@ -153,27 +160,27 @@ private:
 			auto [ptr, cap]{typed_allocator_type::allocate_at_least(2)};
 			::std::construct_at(ptr, char_type{});
 			this->imp.begin_ptr = ptr;
-			this->imp.curr_ptr = ptr;
-			this->imp.end_ptr = ptr + static_cast<size_type>(cap - 1u);
+			this->imp.size = 0;
+			this->imp.capacity = static_cast<size_type>(cap - 1u);
 		}
 		else
 #endif
 		{
 			char_type *const ncstr{const_cast<char_type *>(null_terminated_c_str_v<char_type>)};
 			this->imp.begin_ptr = ncstr;
-			this->imp.curr_ptr = ncstr;
-			this->imp.end_ptr = ncstr;
+			this->imp.size = 0;
+			this->imp.capacity = 0;
 		}
 	}
 
 public:
-	inline constexpr basic_string()
+	inline constexpr basic_sized_string()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
 		this->reset_imp();
 	}
 
-	inline explicit constexpr basic_string(size_type n)
+	inline explicit constexpr basic_sized_string(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (!n)
@@ -190,11 +197,11 @@ public:
 				::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 			}
 			auto [ptr, newcap]{typed_allocator_type::allocate_zero_at_least(n + 1u)};
-			this->imp = {ptr, ptr + n, ptr + static_cast<size_type>(newcap - 1u)};
+			this->imp = {ptr, n, static_cast<uinttype>(newcap - 1u)};
 		}
 	}
 
-	inline explicit constexpr basic_string(size_type n, char_type ch)
+	inline explicit constexpr basic_sized_string(size_type n, char_type ch)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (!n)
@@ -212,7 +219,7 @@ public:
 				::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 			}
 			auto [ptr, cap]{typed_allocator_type::allocate_at_least(n + 1u)};
-			this->imp = {ptr, ptr + n, ptr + static_cast<size_type>(cap - 1u)};
+			this->imp = {ptr, n, static_cast<uinttype>(cap - 1u)};
 			*::fast_io::freestanding::uninitialized_fill(ptr, ptr + n, ch) = 0;
 		}
 	}
@@ -227,20 +234,20 @@ private:
 		}
 		else
 		{
-			auto newres{::fast_io::containers::details::string_allocate_init<allocator_type>(otherptr, othern)};
+			auto newres{::fast_io::containers::details::sized_string_allocate_init<allocator_type>(otherptr, othern)};
 			auto ptrn{newres.ptr + othern};
-			this->imp = {newres.ptr, ptrn, newres.ptr + newres.count};
+			this->imp = {newres.ptr, static_cast<uinttype>(ptrn - newres.ptr), static_cast<uinttype>(newres.count)};
 		}
 	}
 
 public:
-	inline explicit constexpr basic_string(char_type const *f, char_type const *e)
+	inline explicit constexpr basic_sized_string(char_type const *f, char_type const *e)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->construct_impl(f, static_cast<size_type>(e - f));
 	}
 
-	inline explicit constexpr basic_string(string_view_type othervw)
+	inline explicit constexpr basic_sized_string(string_view_type othervw)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->construct_impl(othervw.data(), othervw.size());
@@ -263,42 +270,42 @@ public:
 
 	inline constexpr bool is_empty() const noexcept
 	{
-		return imp.begin_ptr == imp.curr_ptr;
+		return imp.size == 0;
 	}
 
 	inline constexpr bool empty() const noexcept
 	{
-		return imp.begin_ptr == imp.curr_ptr;
+		return imp.size == 0;
 	}
 
 	inline constexpr size_type size() const noexcept
 	{
-		return static_cast<size_type>(imp.curr_ptr - imp.begin_ptr);
+		return static_cast<size_type>(imp.size);
 	}
-	inline constexpr size_type size_bytes() const noexcept
+	inline constexpr ::std::size_t size_bytes() const noexcept
 	{
-		return static_cast<size_type>(imp.curr_ptr - imp.begin_ptr) * sizeof(value_type);
+		return static_cast<::std::size_t>(imp.size) * sizeof(value_type);
 	}
 
 	inline constexpr size_type capacity() const noexcept
 	{
-		return static_cast<size_type>(imp.end_ptr - imp.begin_ptr);
+		return static_cast<size_type>(imp.capacity);
 	}
 
-	inline constexpr size_type capacity_bytes() const noexcept
+	inline constexpr ::std::size_t capacity_bytes() const noexcept
 	{
-		return static_cast<size_type>(imp.end_ptr - imp.begin_ptr) * sizeof(value_type);
+		return static_cast<::std::size_t>(imp.capacity) * sizeof(value_type);
 	}
 
 	static inline constexpr size_type max_size() noexcept
 	{
-		constexpr size_type n{SIZE_MAX / sizeof(value_type)};
-		return n;
+		constexpr ::std::size_t n{SIZE_MAX / sizeof(value_type)};
+		constexpr size_type umx{::std::numeric_limits<size_type>::max()};
+		return n < static_cast<::std::size_t>(umx) ? static_cast<size_type>(n) : umx;
 	}
-	static inline constexpr size_type max_size_bytes() noexcept
+	static inline constexpr ::std::size_t max_size_bytes() noexcept
 	{
-		constexpr size_type n{SIZE_MAX / sizeof(value_type) * sizeof(value_type)};
-		return n;
+		return static_cast<::std::size_t>(max_size()) * sizeof(value_type);
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -309,7 +316,7 @@ public:
 	inline constexpr reference back()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -326,7 +333,7 @@ public:
 	inline constexpr const_reference back() const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -343,7 +350,7 @@ public:
 	inline constexpr reference front()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -360,7 +367,7 @@ public:
 	inline constexpr const_reference front() const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -376,7 +383,7 @@ public:
 	[[nodiscard]]
 	inline constexpr reference back_unchecked() noexcept
 	{
-		return imp.curr_ptr[-1];
+		return (imp.begin_ptr + imp.size)[-1];
 	}
 
 #if __has_cpp_attribute(__gnu__::__always_inline__)
@@ -387,7 +394,7 @@ public:
 	[[nodiscard]]
 	inline constexpr const_reference back_unchecked() const noexcept
 	{
-		return imp.curr_ptr[-1];
+		return (imp.begin_ptr + imp.size)[-1];
 	}
 
 #if __has_cpp_attribute(__gnu__::__always_inline__)
@@ -421,7 +428,7 @@ public:
 	inline constexpr const_reference operator[](size_type pos) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (static_cast<size_type>(curr_ptr - begin_ptr) <= pos) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -438,7 +445,7 @@ public:
 	inline constexpr reference operator[](size_type pos)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
+		auto begin_ptr{imp.begin_ptr}, curr_ptr{(imp.begin_ptr + imp.size)};
 		if (static_cast<size_type>(curr_ptr - begin_ptr) <= pos) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -469,7 +476,7 @@ public:
 	}
 
 private:
-	inline constexpr void moveconstructorcommon(basic_string &&other)
+	inline constexpr void moveconstructorcommon(basic_sized_string &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
 		this->imp = other.imp;
@@ -477,13 +484,13 @@ private:
 	}
 
 public:
-	inline constexpr basic_string(basic_string &&other)
+	inline constexpr basic_sized_string(basic_sized_string &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
 		this->moveconstructorcommon(::std::move(other));
 	}
 
-	inline constexpr basic_string &operator=(basic_string &&other)
+	inline constexpr basic_sized_string &operator=(basic_sized_string &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
@@ -495,19 +502,19 @@ public:
 		return *this;
 	}
 
-	inline constexpr basic_string(basic_string const &other)
+	inline constexpr basic_sized_string(basic_sized_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		auto otherbegin{other.imp.begin_ptr};
-		auto othercurr{other.imp.curr_ptr};
+		auto othercurr{(other.imp.begin_ptr + other.imp.size)};
 		if (otherbegin == othercurr)
 		{
 			this->reset_imp();
 			return;
 		}
 		::std::size_t const stringlength{static_cast<::std::size_t>(othercurr - otherbegin)};
-		auto [ptr, allocn] = ::fast_io::containers::details::string_allocate_init<allocator_type>(otherbegin, stringlength);
-		this->imp = {ptr, ptr + stringlength, ptr + allocn};
+		auto [ptr, allocn] = ::fast_io::containers::details::sized_string_allocate_init<allocator_type>(otherbegin, stringlength);
+		this->imp = {ptr, static_cast<uinttype>(stringlength), static_cast<uinttype>(allocn)};
 	}
 
 private:
@@ -515,19 +522,23 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		auto thisbegin{this->imp.begin_ptr};
-		auto thisend{this->imp.end_ptr};
+		auto thisend{(this->imp.begin_ptr + this->imp.capacity)};
 		::std::size_t const thiscap{static_cast<::std::size_t>(thisend - thisbegin)};
 		if (thiscap < othern)
 		{
 			this->destroy();
-			auto [ptr, allocn] = ::fast_io::containers::details::string_allocate_init<allocator_type>(otherptr, othern);
-			this->imp.end_ptr = thisend = ((this->imp.curr_ptr = this->imp.begin_ptr = thisbegin = ptr) + allocn);
+			auto [ptr, allocn] = ::fast_io::containers::details::sized_string_allocate_init<allocator_type>(otherptr, othern);
+			this->imp.begin_ptr = thisbegin = ptr;
+			this->imp.size = 0;
+			this->imp.capacity = static_cast<uinttype>(allocn);
+			thisend = ptr + allocn;
 		}
 		if (thisbegin == thisend) [[unlikely]]
 		{
 			return;
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::overlapped_copy_n(otherptr, othern, thisbegin)) = 0;
+		this->imp.size = static_cast<uinttype>(::fast_io::freestanding::overlapped_copy_n(otherptr, othern, thisbegin) - this->imp.begin_ptr);
+		this->imp.begin_ptr[this->imp.size] = 0;
 	}
 
 public:
@@ -540,7 +551,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto endptr{this->imp.end_ptr};
+		auto endptr{(this->imp.begin_ptr + this->imp.capacity)};
 		size_type const thiscap{static_cast<size_type>(endptr - beginptr)};
 		if (thiscap < n)
 		{
@@ -554,14 +565,18 @@ public:
 			using untyped_allocator_type = ::fast_io::containers::details::generic_allocator_adapter_preserving_flags<allocator_type>;
 			using typed_allocator_type = typed_generic_allocator_adapter<untyped_allocator_type, chtype>;
 			auto [ptr, allocn]{typed_allocator_type::allocate_at_least(np1)};
-			this->imp.end_ptr = endptr = ((this->imp.curr_ptr = this->imp.begin_ptr = beginptr = ptr) + static_cast<size_type>(allocn - 1u));
+			this->imp.begin_ptr = beginptr = ptr;
+			this->imp.size = 0;
+			this->imp.capacity = static_cast<uinttype>(allocn - 1u);
+			endptr = beginptr + this->imp.capacity;
 		}
 		if (beginptr == endptr) [[unlikely]]
 		{
 			return;
 		}
 		::fast_io::freestanding::uninitialized_fill_n(beginptr, n, ch);
-		*(this->imp.curr_ptr = beginptr + n) = 0;
+		this->imp.size = n;
+		this->imp.begin_ptr[n] = 0;
 	}
 	inline constexpr void assign_characters(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
@@ -573,17 +588,17 @@ public:
 	{
 		this->assign_characters(1u, ch);
 	}
-	inline constexpr basic_string &operator=(basic_string const &other)
+	inline constexpr basic_sized_string &operator=(basic_sized_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_addressof(other) == this) [[unlikely]]
 		{
 			return *this;
 		}
-		this->assign_impl(other.imp.begin_ptr, static_cast<::std::size_t>(other.imp.curr_ptr - other.imp.begin_ptr));
+		this->assign_impl(other.imp.begin_ptr, static_cast<::std::size_t>(other.imp.size));
 		return *this;
 	}
-	inline constexpr basic_string &operator=(string_view_type const &other)
+	inline constexpr basic_sized_string &operator=(string_view_type const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->assign(other);
@@ -603,8 +618,8 @@ private:
 		constexpr size_type mxdiv2{::std::numeric_limits<size_type>::max() / 2u};
 		constexpr size_type mxm1{static_cast<size_type>(mx - 1u)};
 
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr}, endptr{this->imp.end_ptr};
-		bool const is_sso{this->imp.begin_ptr == this->imp.end_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)}, endptr{(this->imp.begin_ptr + this->imp.capacity)};
+		bool const is_sso{this->imp.capacity == 0};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		size_type thiscap{static_cast<size_type>(endptr - beginptr)};
 		size_type newsize{thissize + othern};
@@ -639,7 +654,7 @@ private:
 		// Allocate memory with the new capacity
 		auto [ptr, allocn]{typed_allocator_type::allocate_at_least(newcapp1)};
 		this->imp.begin_ptr = ptr;
-		this->imp.end_ptr = ptr + static_cast<size_type>(allocn - 1u);
+		this->imp.capacity = static_cast<size_type>(allocn - 1u);
 
 		// Perform the insertion
 		auto it{ptr};
@@ -648,7 +663,7 @@ private:
 		it = ::fast_io::freestanding::non_overlapped_copy_n(otherptr, othern, it);
 		it = ::fast_io::freestanding::non_overlapped_copy(insertpos, currptr, it);
 		*it = 0;
-		this->imp.curr_ptr = it;
+		this->imp.size = static_cast<uinttype>(it - this->imp.begin_ptr);
 
 		// Deallocate the old memory if it was not small string optimization (SSO)
 		if (!is_sso)
@@ -663,7 +678,7 @@ private:
 	inline constexpr void append_cold_impl(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		this->insert_cold_impl(this->imp.curr_ptr, otherptr, othern);
+		this->insert_cold_impl((this->imp.begin_ptr + this->imp.size), otherptr, othern);
 	}
 	inline constexpr void append_impl(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
@@ -672,7 +687,7 @@ private:
 		{
 			return;
 		}
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr}, endptr{this->imp.end_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)}, endptr{(this->imp.begin_ptr + this->imp.capacity)};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		size_type thiscap{static_cast<size_type>(endptr - beginptr)};
 		size_type newsize{thissize + othern};
@@ -682,7 +697,8 @@ private:
 			this->append_cold_impl(otherptr, othern);
 			return;
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::overlapped_copy_n(otherptr, othern, currptr)) = 0;
+		this->imp.size = static_cast<uinttype>(::fast_io::freestanding::overlapped_copy_n(otherptr, othern, currptr) - this->imp.begin_ptr);
+		this->imp.begin_ptr[this->imp.size] = 0;
 	}
 
 public:
@@ -691,7 +707,7 @@ public:
 	{
 		this->append_impl(vw.data(), vw.size());
 	}
-	inline constexpr void append(basic_string const &other)
+	inline constexpr void append(basic_sized_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->append_impl(other.data(), other.size());
@@ -709,11 +725,12 @@ public:
 
 	inline constexpr void clear() noexcept
 	{
-		if (this->imp.begin_ptr == this->imp.end_ptr) [[unlikely]]
+		if (this->imp.capacity == 0) [[unlikely]]
 		{
 			return;
 		}
-		*(this->imp.curr_ptr = this->imp.begin_ptr) = 0;
+		this->imp.size = 0;
+		*this->imp.begin_ptr = 0;
 	}
 
 	inline constexpr void clear_destroy()
@@ -725,8 +742,8 @@ public:
 
 	inline constexpr void push_back_unchecked(char_type ch) noexcept
 	{
-		*this->imp.curr_ptr = ch;
-		*++this->imp.curr_ptr = 0;
+		this->imp.begin_ptr[this->imp.size] = ch;
+		this->imp.begin_ptr[++this->imp.size] = 0;
 	}
 
 private:
@@ -736,7 +753,7 @@ private:
 	inline constexpr void grow_twice()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		::fast_io::containers::details::string_push_back_heap_grow_twice<allocator_type>(this->imp);
+		::fast_io::containers::details::sized_string_push_back_heap_grow_twice<allocator_type>(this->imp);
 	}
 
 public:
@@ -747,7 +764,7 @@ public:
 
 	inline constexpr const_iterator cend() const noexcept
 	{
-		return this->imp.curr_ptr;
+		return (this->imp.begin_ptr + this->imp.size);
 	}
 
 	inline constexpr const_iterator begin() const noexcept
@@ -757,7 +774,7 @@ public:
 
 	inline constexpr const_iterator end() const noexcept
 	{
-		return this->imp.curr_ptr;
+		return (this->imp.begin_ptr + this->imp.size);
 	}
 
 	inline constexpr iterator begin() noexcept
@@ -767,12 +784,12 @@ public:
 
 	inline constexpr iterator end() noexcept
 	{
-		return this->imp.curr_ptr;
+		return (this->imp.begin_ptr + this->imp.size);
 	}
 
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
-		return const_reverse_iterator(this->imp.curr_ptr);
+		return const_reverse_iterator((this->imp.begin_ptr + this->imp.size));
 	}
 
 	inline constexpr const_iterator crend() const noexcept
@@ -782,7 +799,7 @@ public:
 
 	inline constexpr const_iterator rbegin() const noexcept
 	{
-		return const_reverse_iterator(this->imp.curr_ptr);
+		return const_reverse_iterator((this->imp.begin_ptr + this->imp.size));
 	}
 
 	inline constexpr const_iterator rend() const noexcept
@@ -792,7 +809,7 @@ public:
 
 	inline constexpr reverse_iterator rbegin() noexcept
 	{
-		return reverse_iterator(this->imp.curr_ptr);
+		return reverse_iterator((this->imp.begin_ptr + this->imp.size));
 	}
 
 	inline constexpr reverse_iterator rend() noexcept
@@ -808,12 +825,12 @@ public:
 	inline constexpr void push_back(char_type ch)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		if (this->imp.curr_ptr == this->imp.end_ptr) [[unlikely]]
+		if (this->imp.size == this->imp.capacity) [[unlikely]]
 		{
 			this->grow_twice();
 		}
-		*this->imp.curr_ptr = ch;
-		*++this->imp.curr_ptr = 0;
+		this->imp.begin_ptr[this->imp.size] = ch;
+		this->imp.begin_ptr[++this->imp.size] = 0;
 	}
 
 #if __has_cpp_attribute(__gnu__::__always_inline__)
@@ -824,16 +841,16 @@ public:
 	inline constexpr void pop_back()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		if (this->imp.curr_ptr == this->imp.begin_ptr) [[unlikely]]
+		if (this->imp.size == 0) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
 		}
-		*--this->imp.curr_ptr = 0;
+		this->imp.begin_ptr[--this->imp.size] = 0;
 	}
 
 	inline constexpr void pop_back_unchecked() noexcept
 	{
-		*--this->imp.curr_ptr = 0;
+		this->imp.begin_ptr[--this->imp.size] = 0;
 	}
 
 	inline constexpr void reserve(size_type new_cap)
@@ -844,28 +861,28 @@ public:
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::value_too_large);
 		}
 		auto begin_ptr{this->imp.begin_ptr};
-		if (new_cap <= static_cast<size_type>(imp.end_ptr - begin_ptr))
+		if (new_cap <= static_cast<size_type>((imp.begin_ptr + imp.capacity) - begin_ptr))
 		{
 			return;
 		}
-		::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(this->imp, new_cap);
+		::fast_io::containers::details::sized_string_heap_dilate_uncheck<allocator_type>(this->imp, new_cap);
 	}
 
 	inline constexpr void shrink_to_fit()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
-		if (this->imp.curr_ptr == this->imp.end_ptr)
+		if (this->imp.size == this->imp.capacity)
 		{
 			return;
 		}
-		::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(this->imp, static_cast<size_type>(this->imp.curr_ptr - this->imp.begin_ptr));
+		::fast_io::containers::details::sized_string_heap_dilate_uncheck<allocator_type>(this->imp, static_cast<size_type>(this->imp.size));
 	}
 
 private:
 	inline constexpr void destroy() noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto endptr{this->imp.end_ptr};
+		auto endptr{(this->imp.begin_ptr + this->imp.capacity)};
 
 		if (beginptr == endptr)
 		{
@@ -877,7 +894,7 @@ private:
 	}
 
 public:
-	inline constexpr ~basic_string()
+	inline constexpr ~basic_sized_string()
 	{
 		this->destroy();
 	}
@@ -886,7 +903,7 @@ private:
 	inline constexpr pointer insert_impl(pointer ptr, char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr}, endptr{this->imp.end_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)}, endptr{(this->imp.begin_ptr + this->imp.capacity)};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		size_type thiscap{static_cast<size_type>(endptr - beginptr)};
 		size_type newsize{thissize + othern};
@@ -903,14 +920,14 @@ private:
 		*newcurrptr = 0;
 		auto lastptr{::fast_io::freestanding::copy_backward(ptr, currptr, newcurrptr)};
 		auto retptr{::fast_io::freestanding::copy_backward(otherptr, otherptr + othern, lastptr)};
-		this->imp.curr_ptr = newcurrptr;
+		this->imp.size = static_cast<uinttype>(newcurrptr - this->imp.begin_ptr);
 		return retptr;
 	}
 	inline constexpr void insert_index_impl(size_type idx, char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		size_type sz{static_cast<size_type>(this->imp.curr_ptr - beginptr)};
+		size_type sz{static_cast<size_type>((this->imp.begin_ptr + this->imp.size) - beginptr)};
 		if (sz < idx)
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
@@ -936,7 +953,7 @@ public:
 			return this->insert_impl(const_cast<pointer>(ptr), vw.data(), vw.size());
 		}
 	}
-	inline constexpr void insert_index(size_type idx, basic_string const &other)
+	inline constexpr void insert_index(size_type idx, basic_sized_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		return this->insert_index_impl(idx, other.data(), other.size());
@@ -945,9 +962,10 @@ public:
 private:
 	inline constexpr pointer erase_impl(pointer first, pointer last) noexcept
 	{
-		if (this->imp.begin_ptr != this->imp.end_ptr) [[likely]]
+		if (this->imp.capacity != 0) [[likely]]
 		{
-			*(this->imp.curr_ptr = ::fast_io::freestanding::my_copy(last, this->imp.curr_ptr, first)) = 0;
+			this->imp.size = static_cast<uinttype>(::fast_io::freestanding::my_copy(last, (this->imp.begin_ptr + this->imp.size), first) - this->imp.begin_ptr);
+			this->imp.begin_ptr[this->imp.size] = 0;
 		}
 		return first;
 	}
@@ -974,7 +992,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const sz{static_cast<size_type>(currptr - beginptr)};
 		if (lastidx < firstidx || sz < lastidx) [[unlikely]]
 		{
@@ -999,7 +1017,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const sz{static_cast<size_type>(currptr - beginptr)};
 		if (sz <= idx) [[unlikely]]
 		{
@@ -1008,11 +1026,11 @@ public:
 		this->erase_impl(beginptr + idx);
 		return idx;
 	}
-	inline constexpr void swap(basic_string &other) noexcept
+	inline constexpr void swap(basic_sized_string &other) noexcept
 	{
 		::std::swap(other.imp, this->imp);
 	}
-	inline constexpr iterator insert(const_iterator ptr, basic_string const &other)
+	inline constexpr iterator insert(const_iterator ptr, basic_sized_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_is_constant_evaluated())
@@ -1038,7 +1056,7 @@ private:
 		constexpr size_type mxdiv2{mx >> 1u};
 		constexpr size_type mxm1{static_cast<size_type>(mx - 1u)};
 
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr}, endptr{this->imp.end_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)}, endptr{(this->imp.begin_ptr + this->imp.capacity)};
 		bool const is_sso{beginptr == endptr};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		size_type thiscap{static_cast<size_type>(endptr - beginptr)};
@@ -1066,14 +1084,14 @@ private:
 		size_type const newcapp1{static_cast<size_type>(newcap + 1u)};
 		auto [ptr, allocn]{typed_allocator_type::allocate_at_least(newcapp1)};
 		this->imp.begin_ptr = ptr;
-		this->imp.end_ptr = ptr + static_cast<size_type>(allocn - 1u);
+		this->imp.capacity = static_cast<size_type>(allocn - 1u);
 		auto it{ptr};
 		it = ::fast_io::freestanding::non_overlapped_copy(beginptr, first, it);
 		auto retit{it};
 		it = ::fast_io::freestanding::non_overlapped_copy_n(otherptr, othern, it);
 		it = ::fast_io::freestanding::non_overlapped_copy(last, currptr, it);
 		*it = 0;
-		this->imp.curr_ptr = it;
+		this->imp.size = static_cast<uinttype>(it - this->imp.begin_ptr);
 		if (!is_sso)
 		{
 			typed_allocator_type::deallocate_n(beginptr, static_cast<size_type>(static_cast<size_type>(endptr - beginptr) + 1u));
@@ -1084,13 +1102,14 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		size_type const toremoven{static_cast<size_type>(last - first)};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		if (othersize < toremoven) [[likely]]
 		{
 			auto itr{::fast_io::freestanding::overlapped_copy_n(otherdata, othersize, first)};
 			if (itr != last)
 			{
-				*(this->imp.curr_ptr = ::fast_io::freestanding::copy_backward(itr, last, currptr)) = 0;
+				this->imp.size = static_cast<uinttype>(::fast_io::freestanding::copy_backward(itr, last, currptr) - this->imp.begin_ptr);
+				this->imp.begin_ptr[this->imp.size] = 0;
 			}
 			return first;
 		}
@@ -1101,7 +1120,7 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const sz{static_cast<size_type>(currptr - beginptr)};
 		if (lastidx < firstidx || sz < lastidx) [[unlikely]]
 		{
@@ -1134,7 +1153,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr iterator replace(const_iterator first, const_iterator last, basic_string const &view)
+	inline constexpr iterator replace(const_iterator first, const_iterator last, basic_sized_string const &view)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		if (__builtin_is_constant_evaluated())
@@ -1163,7 +1182,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr void replace_index(size_type firstidx, size_type lastidx, basic_string const &view)
+	inline constexpr void replace_index(size_type firstidx, size_type lastidx, basic_sized_string const &view)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		return this->replace_index_impl(firstidx, lastidx, view.data(), view.size());
@@ -1178,7 +1197,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 		if (thisn < count) [[unlikely]]
 		{
@@ -1195,7 +1214,7 @@ public:
 	inline constexpr cstring_view_type subview_back_unchecked(size_type count) const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 		return cstring_view_type(::fast_io::containers::null_terminated, beginptr + (thisn - count), count);
 	}
@@ -1209,7 +1228,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 		if (thisn < count) [[unlikely]]
 		{
@@ -1233,11 +1252,11 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr string_view_type subview(size_type pos, size_type count = ::fast_io::containers::npos) const
+	inline constexpr string_view_type subview(size_type pos, size_type count = ::std::numeric_limits<size_type>::max()) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 		if (thisn < pos) [[unlikely]]
 		{
@@ -1246,7 +1265,7 @@ public:
 		size_type const val{thisn - pos};
 		if (val < count)
 		{
-			if (count != ::fast_io::containers::npos) [[unlikely]]
+			if (count != ::std::numeric_limits<size_type>::max()) [[unlikely]]
 			{
 				::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
 			}
@@ -1260,12 +1279,12 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr string_view_type subview_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
+	inline constexpr string_view_type subview_unchecked(size_type pos, size_type count = ::std::numeric_limits<size_type>::max()) const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		if (count == ::fast_io::containers::npos)
+		if (count == ::std::numeric_limits<size_type>::max())
 		{
-			auto currptr{this->imp.curr_ptr};
+			auto currptr{(this->imp.begin_ptr + this->imp.size)};
 			size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 			size_type const val{thisn - pos};
 			count = val;
@@ -1277,7 +1296,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).starts_with(sv);
 	}
-	inline constexpr bool starts_with(basic_string const &other) const noexcept
+	inline constexpr bool starts_with(basic_sized_string const &other) const noexcept
 	{
 		return this->starts_with(string_view_type(other));
 	}
@@ -1290,7 +1309,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).ends_with(sv);
 	}
-	inline constexpr bool ends_with(basic_string const &other) const noexcept
+	inline constexpr bool ends_with(basic_sized_string const &other) const noexcept
 	{
 		return this->ends_with(string_view_type(other));
 	}
@@ -1304,34 +1323,36 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type const thisn{static_cast<size_type>(currptr - beginptr)};
 		if (thisn < svn) [[unlikely]]
 		{
 			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
 		}
 		currptr -= svn;
-		*(this->imp.curr_ptr = currptr) = 0;
+		this->imp.size = static_cast<uinttype>(currptr - this->imp.begin_ptr);
+		this->imp.begin_ptr[this->imp.size] = 0;
 	}
 
 	inline constexpr void remove_suffix_unchecked(size_type svn) noexcept
 	{
-		*(this->imp.curr_ptr -= svn) = 0;
+		this->imp.size -= svn;
+		this->imp.begin_ptr[this->imp.size] = 0;
 	}
 
 	inline constexpr bool contains(string_view_type vw) const noexcept
 	{
-		auto ed{this->imp.curr_ptr};
+		auto ed{(this->imp.begin_ptr + this->imp.size)};
 		return ::std::search(this->imp.begin_ptr, ed, vw.ptr, vw.ptr + vw.n) != ed;
 	}
-	inline constexpr bool contains(basic_string const &other) const noexcept
+	inline constexpr bool contains(basic_sized_string const &other) const noexcept
 	{
-		auto ed{this->imp.curr_ptr};
+		auto ed{(this->imp.begin_ptr + this->imp.size)};
 		return ::std::search(this->imp.begin_ptr, ed, other.cbegin(), other.cend()) != ed;
 	}
 	inline constexpr bool contains_character(char_type ch) const noexcept
 	{
-		auto ed{this->imp.curr_ptr};
+		auto ed{(this->imp.begin_ptr + this->imp.size)};
 		return ::std::find(this->imp.begin_ptr, ed, ch) != ed;
 	}
 
@@ -1354,22 +1375,22 @@ public:
 		return string_view_type(this->data(), this->size()).copy_unchecked(dest, count, pos);
 	}
 
-	inline constexpr basic_string substr_back(size_type count) const
+	inline constexpr basic_sized_string substr_back(size_type count) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		return basic_string(this->subview_back(count));
+		return basic_sized_string(this->subview_back(count));
 	}
 
-	inline constexpr basic_string substr_front(size_type count) const
+	inline constexpr basic_sized_string substr_front(size_type count) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		return basic_string(this->subview_front(count));
+		return basic_sized_string(this->subview_front(count));
 	}
 
-	inline constexpr basic_string substr(size_type idx, size_type count = ::fast_io::containers::npos) const
+	inline constexpr basic_sized_string substr(size_type idx, size_type count = ::std::numeric_limits<size_type>::max()) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		return basic_string(this->subview(idx, count));
+		return basic_sized_string(this->subview(idx, count));
 	}
 
 	inline constexpr size_type find_character(char_type ch, size_type pos = 0) const noexcept
@@ -1404,7 +1425,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).rfind(v.data(), v.size(), pos);
 	}
-	inline constexpr size_type rfind(basic_string const &v, size_type pos = 0) const noexcept
+	inline constexpr size_type rfind(basic_sized_string const &v, size_type pos = 0) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).rfind(v.data(), v.size(), pos);
 	}
@@ -1425,7 +1446,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_first_not_of(s, pos);
 	}
-	inline constexpr size_type find_first_not_of(basic_string const &s, size_type pos) const noexcept
+	inline constexpr size_type find_first_not_of(basic_sized_string const &s, size_type pos) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_first_not_of(s.data(), s.size(), pos);
 	}
@@ -1437,7 +1458,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_last_of(s, pos);
 	}
-	inline constexpr size_type find_last_of(basic_string const &s, size_type pos) const noexcept
+	inline constexpr size_type find_last_of(basic_sized_string const &s, size_type pos) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_last_of(s.data(), pos, s.size());
 	}
@@ -1449,7 +1470,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_last_not_of(s.ptr, pos, s.n);
 	}
-	inline constexpr size_type find_last_not_of(basic_string const &s, size_type pos) const noexcept
+	inline constexpr size_type find_last_not_of(basic_sized_string const &s, size_type pos) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_last_not_of(s.data(), pos, s.size());
 	}
@@ -1471,12 +1492,12 @@ public:
 	{
 		return this->subview_unchecked(pos1, count1) <=> other.subview_unchecked(pos2, count2);
 	}
-	inline constexpr auto compare_three_way(size_type pos1, size_type count1, basic_string const &other, size_type pos2, size_type count2) const
+	inline constexpr auto compare_three_way(size_type pos1, size_type count1, basic_sized_string const &other, size_type pos2, size_type count2) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		return this->subview(pos1, count1) <=> other.subview(pos2, count2);
 	}
-	inline constexpr auto compare_three_way_unchecked(size_type pos1, size_type count1, basic_string const &other, size_type pos2, size_type count2) const noexcept
+	inline constexpr auto compare_three_way_unchecked(size_type pos1, size_type count1, basic_sized_string const &other, size_type pos2, size_type count2) const noexcept
 	{
 		return this->subview_unchecked(pos1, count1) <=> other.subview_unchecked(pos2, count2);
 	}
@@ -1484,47 +1505,49 @@ public:
 	template <typename Operation>
 	inline constexpr void resize_and_overwrite(size_type count, Operation op) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || !noexcept(op(this->imp.begin_ptr, count)))
 	{
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		if (thissize < count)
 		{
-			auto endptr{this->imp.end_ptr};
+			auto endptr{(this->imp.begin_ptr + this->imp.capacity)};
 			size_type thiscap{static_cast<size_type>(endptr - beginptr)};
 			if (thiscap < count)
 			{
-				::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(this->imp, count);
+				::fast_io::containers::details::sized_string_heap_dilate_uncheck<allocator_type>(this->imp, count);
 				beginptr = this->imp.begin_ptr;
 			}
 		}
-		this->imp.curr_ptr = (beginptr + op(beginptr, count));
-		if (this->imp.end_ptr == this->imp.begin_ptr) [[unlikely]]
+		this->imp.size = static_cast<uinttype>(op(beginptr, count));
+		if (this->imp.capacity == 0) [[unlikely]]
 		{
 			return;
 		}
-		*(this->imp.curr_ptr) = 0;
+		*((this->imp.begin_ptr + this->imp.size)) = 0;
 	}
 
 	inline constexpr void resize(size_type count, char_type ch)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
-		auto beginptr{this->imp.begin_ptr}, currptr{this->imp.curr_ptr};
-		auto endptr{this->imp.end_ptr};
+		auto beginptr{this->imp.begin_ptr}, currptr{(this->imp.begin_ptr + this->imp.size)};
+		auto endptr{(this->imp.begin_ptr + this->imp.capacity)};
 		size_type thissize{static_cast<size_type>(currptr - beginptr)};
 		if (count <= thissize)
 		{
 			if (beginptr != endptr && count != thissize)
 			{
-				*(this->imp.curr_ptr -= static_cast<size_type>(thissize - count)) = 0;
+				this->imp.size -= static_cast<size_type>(thissize - count);
+				this->imp.begin_ptr[this->imp.size] = 0;
 			}
 			return;
 		}
 		size_type thiscap{static_cast<size_type>(endptr - beginptr)};
 		if (thiscap < count)
 		{
-			::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(this->imp, count);
-			currptr = this->imp.curr_ptr;
+			::fast_io::containers::details::sized_string_heap_dilate_uncheck<allocator_type>(this->imp, count);
+			currptr = (this->imp.begin_ptr + this->imp.size);
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::uninitialized_fill_n(currptr, static_cast<size_type>(count - thissize), ch)) = 0;
+		this->imp.size = static_cast<uinttype>(::fast_io::freestanding::uninitialized_fill_n(currptr, static_cast<size_type>(count - thissize), ch) - this->imp.begin_ptr);
+		this->imp.begin_ptr[this->imp.size] = 0;
 	}
 	inline constexpr void resize(size_type count)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
@@ -1540,11 +1563,11 @@ public:
 			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string &trim(charcate traits)
+	inline constexpr basic_sized_string &trim(charcate traits)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())) || !noexcept(::std::declval<charcate &>().find_last_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 
 		if (beginptr == currptr) [[unlikely]]
 		{
@@ -1562,12 +1585,12 @@ public:
 		if (backit != beginptr) // Safety check before modifying memory
 		{
 			*backit = 0;
-			this->imp.curr_ptr = backit;
+			this->imp.size = static_cast<uinttype>(backit - this->imp.begin_ptr);
 		}
 		return *this;
 	}
 
-	inline constexpr basic_string &trim_c_space() noexcept
+	inline constexpr basic_sized_string &trim_c_space() noexcept
 	{
 		return this->trim(::fast_io::char_category::c_space{});
 	}
@@ -1576,11 +1599,11 @@ public:
 		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
 			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string &trim_prefix(charcate traits)
+	inline constexpr basic_sized_string &trim_prefix(charcate traits)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 
 		auto frontit{traits.find_not(beginptr, currptr)};
 		if (frontit != beginptr)
@@ -1592,13 +1615,13 @@ public:
 
 			// Ensure safe null termination
 			*currptr = 0;
-			this->imp.curr_ptr = currptr;
+			this->imp.size = static_cast<uinttype>(currptr - this->imp.begin_ptr);
 		}
 
 		return *this;
 	}
 
-	inline constexpr basic_string &trim_prefix_c_space() noexcept
+	inline constexpr basic_sized_string &trim_prefix_c_space() noexcept
 	{
 		return this->trim_prefix(::fast_io::char_category::c_space{});
 	}
@@ -1606,11 +1629,11 @@ public:
 		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
 			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string &trim_suffix(charcate traits)
+	inline constexpr basic_sized_string &trim_suffix(charcate traits)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_last_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 
 		if (beginptr == currptr) [[unlikely]]
 		{
@@ -1624,12 +1647,12 @@ public:
 		if (backit != currptr)
 		{
 			*backit = 0;
-			this->imp.curr_ptr = backit;
+			this->imp.size = static_cast<uinttype>(backit - this->imp.begin_ptr);
 		}
 
 		return *this;
 	}
-	inline constexpr basic_string &trim_suffix_c_space() noexcept
+	inline constexpr basic_sized_string &trim_suffix_c_space() noexcept
 	{
 		return this->trim_suffix(::fast_io::char_category::c_space{});
 	}
@@ -1643,13 +1666,13 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())) || !noexcept(::std::declval<charcate &>().find_last_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_subview(traits);
 	}
 	inline constexpr string_view_type trim_subview_c_space() const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_subview_c_space();
 	}
 
@@ -1661,13 +1684,13 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return cstring_view_type(::fast_io::containers::null_terminated, beginptr, static_cast<size_type>(currptr - beginptr)).trim_prefix_subview(traits);
 	}
 	inline constexpr cstring_view_type trim_prefix_subview_c_space() const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return cstring_view_type(::fast_io::containers::null_terminated, beginptr, static_cast<size_type>(currptr - beginptr)).trim_prefix_subview_c_space();
 	}
 
@@ -1679,62 +1702,62 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<charcate &>().find_last_not(::std::declval<const_pointer>(), ::std::declval<const_pointer>())))
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_suffix_subview(traits);
 	}
 	inline constexpr string_view_type trim_suffix_subview_c_space() const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
-		auto currptr{this->imp.curr_ptr};
+		auto currptr{(this->imp.begin_ptr + this->imp.size)};
 		return string_view_type(beginptr, static_cast<size_type>(currptr - beginptr)).trim_suffix_subview_c_space();
 	}
 };
 
-template <::std::integral chtype, typename allocator1, typename U>
-inline constexpr ::fast_io::containers::basic_string<chtype, allocator1>::size_type erase(::fast_io::containers::basic_string<chtype, allocator1> &c, U const &value)
+template <typename uinttype, ::std::integral chtype, typename allocator1, typename U>
+inline constexpr ::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1>::size_type erase(::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> &c, U const &value)
 {
 	auto it = ::std::remove(c.begin(), c.end(), value);
 	auto r = c.end() - it;
 	c.erase(it, c.end());
-	return static_cast<::fast_io::containers::basic_string<chtype, allocator1>::size_type>(r);
+	return static_cast<::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1>::size_type>(r);
 }
 
-template <::std::integral chtype, typename allocator1, typename Pred>
-inline constexpr ::fast_io::containers::basic_string<chtype, allocator1>::size_type erase_if(::fast_io::containers::basic_string<chtype, allocator1> &c, Pred pred)
+template <typename uinttype, ::std::integral chtype, typename allocator1, typename Pred>
+inline constexpr ::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1>::size_type erase_if(::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> &c, Pred pred)
 {
 	auto it = ::std::remove_if(c.begin(), c.end(), pred);
 	auto r = c.end() - it;
 	c.erase(it, c.end());
-	return static_cast<::fast_io::containers::basic_string<chtype, allocator1>::size_type>(r);
+	return static_cast<::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1>::size_type>(r);
 }
 
-template <::std::integral chtype, typename allocator1, typename allocator2>
-inline constexpr bool operator==(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string<chtype, allocator2> const &rhs) noexcept
+template <typename uinttype1, typename uinttype2, ::std::integral chtype, typename allocator1, typename allocator2>
+inline constexpr bool operator==(::fast_io::containers::basic_sized_string<uinttype1, chtype, allocator1> const &lhs, ::fast_io::containers::basic_sized_string<uinttype2, chtype, allocator2> const &rhs) noexcept
 {
 	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
-template <::std::integral chtype, typename allocator1>
-inline constexpr bool operator==(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
+template <typename uinttype, ::std::integral chtype, typename allocator1>
+inline constexpr bool operator==(::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
 {
 	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
-template <::std::integral chtype, typename allocator1>
-inline constexpr bool operator==(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_string<chtype, allocator1> const &rhs) noexcept
+template <typename uinttype, ::std::integral chtype, typename allocator1>
+inline constexpr bool operator==(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> const &rhs) noexcept
 {
 	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
-template <::std::integral char_type, typename allocator1, ::std::size_t n>
-inline constexpr bool operator==(::fast_io::containers::basic_string<char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator1, ::std::size_t n>
+inline constexpr bool operator==(::fast_io::containers::basic_sized_string<uinttype, char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
 	return ::std::equal(a.cbegin(), a.cend(), buffer, buffer + nm1);
 }
 
-template <::std::integral char_type, typename allocator1, ::std::size_t n>
-inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::containers::basic_string<char_type, allocator1> a) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator1, ::std::size_t n>
+inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::containers::basic_sized_string<uinttype, char_type, allocator1> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
 	return ::std::equal(buffer, buffer + nm1, a.cbegin(), a.cend());
@@ -1742,33 +1765,33 @@ inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::contai
 
 #if __cpp_lib_three_way_comparison >= 201907L
 
-template <::std::integral chtype, typename allocator1, typename allocator2>
-inline constexpr auto operator<=>(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string<chtype, allocator2> const &rhs) noexcept
+template <typename uinttype1, typename uinttype2, ::std::integral chtype, typename allocator1, typename allocator2>
+inline constexpr auto operator<=>(::fast_io::containers::basic_sized_string<uinttype1, chtype, allocator1> const &lhs, ::fast_io::containers::basic_sized_string<uinttype2, chtype, allocator2> const &rhs) noexcept
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
 }
 
-template <::std::integral chtype, typename allocator1>
-inline constexpr auto operator<=>(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
+template <typename uinttype, ::std::integral chtype, typename allocator1>
+inline constexpr auto operator<=>(::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
 }
 
-template <::std::integral chtype, typename allocator1>
-inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_string<chtype, allocator1> const &rhs) noexcept
+template <typename uinttype, ::std::integral chtype, typename allocator1>
+inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_sized_string<uinttype, chtype, allocator1> const &rhs) noexcept
 {
 	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
 }
 
-template <::std::integral char_type, typename allocator1, ::std::size_t n>
-inline constexpr auto operator<=>(::fast_io::containers::basic_string<char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator1, ::std::size_t n>
+inline constexpr auto operator<=>(::fast_io::containers::basic_sized_string<uinttype, char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
 	return ::fast_io::freestanding::lexicographical_compare_three_way(a.cbegin(), a.cend(), buffer, buffer + nm1, ::std::compare_three_way{});
 }
 
-template <::std::integral char_type, typename allocator1, ::std::size_t n>
-inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::containers::basic_string<char_type, allocator1> a) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator1, ::std::size_t n>
+inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::containers::basic_sized_string<uinttype, char_type, allocator1> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
 	return ::fast_io::freestanding::lexicographical_compare_three_way(buffer, buffer + nm1, a.cbegin(), a.cend(), ::std::compare_three_way{});
@@ -1776,82 +1799,83 @@ inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::conta
 
 #endif
 
-template <::std::integral chtype, typename alloctype>
+template <typename uinttype, ::std::integral chtype, typename alloctype>
 inline constexpr ::fast_io::basic_io_scatter_t<chtype>
-print_alias_define(io_alias_t, basic_string<chtype, alloctype> const &str) noexcept
+print_alias_define(io_alias_t, basic_sized_string<uinttype, chtype, alloctype> const &str) noexcept
 {
-	return {str.imp.begin_ptr, static_cast<::std::size_t>(str.imp.curr_ptr - str.imp.begin_ptr)};
+	return {str.imp.begin_ptr, static_cast<::std::size_t>(str.imp.size)};
 }
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr auto
-strlike_construct_define(io_strlike_type_t<char_type, basic_string<char_type, allocator_type>>,
+strlike_construct_define(io_strlike_type_t<char_type, basic_sized_string<uinttype, char_type, allocator_type>>,
 						 char_type const *first, char_type const *last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
-	return basic_string<char_type, allocator_type>(::fast_io::containers::basic_string_view<char_type>(first, static_cast<::std::size_t>(last - first)));
+	return basic_sized_string<uinttype, char_type, allocator_type>(::fast_io::containers::basic_string_view<char_type>(first, static_cast<::std::size_t>(last - first)));
 }
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr auto strlike_construct_single_character_define(
-	io_strlike_type_t<char_type, basic_string<char_type, allocator_type>>, char_type ch)
+	io_strlike_type_t<char_type, basic_sized_string<uinttype, char_type, allocator_type>>, char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
-	return basic_string<char_type, allocator_type>(1, ch);
+	return basic_sized_string<uinttype, char_type, allocator_type>(1, ch);
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr chtype *strlike_begin(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr chtype *strlike_begin(::fast_io::io_strlike_type_t<chtype, basic_sized_string<uinttype, chtype, alloctype>>, basic_sized_string<uinttype, chtype, alloctype> &str) noexcept
 {
 	return str.imp.begin_ptr;
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr chtype *strlike_curr(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr chtype *strlike_curr(::fast_io::io_strlike_type_t<chtype, basic_sized_string<uinttype, chtype, alloctype>>, basic_sized_string<uinttype, chtype, alloctype> &str) noexcept
 {
-	return str.imp.curr_ptr;
+	return (str.imp.begin_ptr + str.imp.size);
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr chtype *strlike_end(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr chtype *strlike_end(::fast_io::io_strlike_type_t<chtype, basic_sized_string<uinttype, chtype, alloctype>>, basic_sized_string<uinttype, chtype, alloctype> &str) noexcept
 {
-	return str.imp.end_ptr;
+	return (str.imp.begin_ptr + str.imp.capacity);
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr void strlike_set_curr(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str, chtype *p) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr void strlike_set_curr(::fast_io::io_strlike_type_t<chtype, basic_sized_string<uinttype, chtype, alloctype>>, basic_sized_string<uinttype, chtype, alloctype> &str, chtype *p) noexcept
 {
-	if (str.imp.begin_ptr == str.imp.end_ptr) [[unlikely]]
+	if (str.imp.capacity == 0) [[unlikely]]
 	{
 		return;
 	}
-	*(str.imp.curr_ptr = p) = 0;
+	str.imp.size = static_cast<uinttype>(p - str.imp.begin_ptr);
+	str.imp.begin_ptr[str.imp.size] = 0;
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr void strlike_reserve(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str, ::std::size_t n)
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr void strlike_reserve(::fast_io::io_strlike_type_t<chtype, basic_sized_string<uinttype, chtype, alloctype>>, basic_sized_string<uinttype, chtype, alloctype> &str, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<alloctype>)
 {
 	str.reserve(n);
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr ::fast_io::io_strlike_reference_wrapper<chtype, basic_string<chtype, alloctype>> io_strlike_ref(::fast_io::io_alias_t, basic_string<chtype, alloctype> &str) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr ::fast_io::io_strlike_reference_wrapper<chtype, basic_sized_string<uinttype, chtype, alloctype>> io_strlike_ref(::fast_io::io_alias_t, basic_sized_string<uinttype, chtype, alloctype> &str) noexcept
 {
 	return {__builtin_addressof(str)};
 }
 
-template <::std::integral chtype, typename alloctype>
-inline constexpr void swap(::fast_io::containers::basic_string<chtype, alloctype> &a, ::fast_io::containers::basic_string<chtype, alloctype> &b) noexcept
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+inline constexpr void swap(::fast_io::containers::basic_sized_string<uinttype, chtype, alloctype> &a, ::fast_io::containers::basic_sized_string<uinttype, chtype, alloctype> &b) noexcept
 {
 	a.swap(b);
 }
 
-template <::std::integral chtype, typename alloctype>
-using basic_ostring_ref_fast_io = ::fast_io::io_strlike_reference_wrapper<chtype, ::fast_io::containers::basic_string<chtype, alloctype>>;
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+using basic_sized_ostring_ref_fast_io = ::fast_io::io_strlike_reference_wrapper<chtype, ::fast_io::containers::basic_sized_string<uinttype, chtype, alloctype>>;
 // context scan
 
-struct scan_fast_io_string_context
+struct scan_fast_io_sized_string_context
 {
 	bool copying{};
 };
@@ -1859,9 +1883,9 @@ struct scan_fast_io_string_context
 namespace details
 {
 
-template <bool noskipws, bool line, ::std::integral char_type, typename allocator_type>
+template <typename uinttype, bool noskipws, bool line, ::std::integral char_type, typename allocator_type>
 inline constexpr ::fast_io::parse_result<char_type const *>
-scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *first, char_type const *last, basic_string<char_type, allocator_type> &ref)
+scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *first, char_type const *last, basic_sized_string<uinttype, char_type, allocator_type> &ref)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	auto it{first};
@@ -1914,7 +1938,7 @@ scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *
 	return {it_space, ::fast_io::freestanding::parse_errc::ok};
 }
 
-inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_fast_io_string_define_impl(bool skip_space_done) noexcept
+inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_fast_io_sized_string_define_impl(bool skip_space_done) noexcept
 {
 	if (skip_space_done)
 	{
@@ -1927,11 +1951,11 @@ inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_fast_io_st
 }
 
 template <bool noskipws, bool line>
-inline constexpr ::fast_io::manipulators::scalar_flags fast_io_string_default_scalar_flags{.noskipws = noskipws, .line = line};
+inline constexpr ::fast_io::manipulators::scalar_flags fast_io_sized_string_default_scalar_flags{.noskipws = noskipws, .line = line};
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr ::fast_io::parse_result<char_type const *>
-scan_context_define_whole_fast_io_string_impl(bool &notfirstround, char_type const *first, char_type const *last, basic_string<char_type, allocator_type> &ref)
+scan_context_define_whole_fast_io_string_impl(bool &notfirstround, char_type const *first, char_type const *last, basic_sized_string<uinttype, char_type, allocator_type> &ref)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	if (!notfirstround) [[unlikely]]
@@ -1946,9 +1970,9 @@ scan_context_define_whole_fast_io_string_impl(bool &notfirstround, char_type con
 	return {last, ::fast_io::freestanding::parse_errc::partial};
 }
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr ::fast_io::freestanding::parse_errc
-scan_context_define_whole_fast_io_string_eof_impl(bool notfirstround, basic_string<char_type, allocator_type> &ref)
+scan_context_define_whole_fast_io_string_eof_impl(bool notfirstround, basic_sized_string<uinttype, char_type, allocator_type> &ref)
 {
 	if (!notfirstround)
 	{
@@ -1959,28 +1983,28 @@ scan_context_define_whole_fast_io_string_eof_impl(bool notfirstround, basic_stri
 
 } // namespace details
 
-template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename allocator_type>
-inline constexpr io_type_t<scan_fast_io_string_context> scan_context_type(
-	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &>>) noexcept
+template <typename uinttype, ::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename allocator_type>
+inline constexpr io_type_t<scan_fast_io_sized_string_context> scan_context_type(
+	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_sized_string<uinttype, char_type, allocator_type> &>>) noexcept
 {
 	return {};
 }
 
-template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename allocator_type>
 inline constexpr parse_result<char_type const *> scan_context_define(
-	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &>>,
-	scan_fast_io_string_context &skip_space_done, char_type const *first, char_type const *last,
-	::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &> str)
+	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_sized_string<uinttype, char_type, allocator_type> &>>,
+	scan_fast_io_sized_string_context &skip_space_done, char_type const *first, char_type const *last,
+	::fast_io::manipulators::scalar_manip_t<flags, basic_sized_string<uinttype, char_type, allocator_type> &> str)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	return details::scan_context_define_fast_io_string_impl<flags.noskipws, flags.line>(skip_space_done.copying, first, last, str.reference);
 }
 
-template <::fast_io::manipulators::scalar_flags flags, ::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::fast_io::manipulators::scalar_flags flags, ::std::integral char_type, typename allocator_type>
 inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
-	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &>>,
-	scan_fast_io_string_context skip_space_done,
-	::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &> str) noexcept
+	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_sized_string<uinttype, char_type, allocator_type> &>>,
+	scan_fast_io_sized_string_context skip_space_done,
+	::fast_io::manipulators::scalar_manip_t<flags, basic_sized_string<uinttype, char_type, allocator_type> &> str) noexcept
 {
 	if constexpr (flags.line || flags.noskipws)
 	{
@@ -1995,40 +2019,40 @@ inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 	}
 	else
 	{
-		return details::scan_context_eof_fast_io_string_define_impl(skip_space_done.copying);
+		return details::scan_context_eof_fast_io_sized_string_define_impl(skip_space_done.copying);
 	}
 }
 
-template <::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::manipulators::scalar_manip_t<details::fast_io_string_default_scalar_flags<false, false>,
-														 basic_string<char_type, allocator_type> &>
-scan_alias_define(io_alias_t, basic_string<char_type, allocator_type> &t) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
+inline constexpr ::fast_io::manipulators::scalar_manip_t<details::fast_io_sized_string_default_scalar_flags<false, false>,
+														 basic_sized_string<uinttype, char_type, allocator_type> &>
+scan_alias_define(io_alias_t, basic_sized_string<uinttype, char_type, allocator_type> &t) noexcept
 {
 	return {t};
 }
 
-template <::std::integral char_type, typename allocator_type>
-inline constexpr io_type_t<scan_fast_io_string_context>
-scan_context_type(io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &>>) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
+inline constexpr io_type_t<scan_fast_io_sized_string_context>
+scan_context_type(io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_sized_string<uinttype, char_type, allocator_type> &>>) noexcept
 {
 	return {};
 }
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr parse_result<char_type const *> scan_context_define(
-	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &>>,
-	scan_fast_io_string_context &ctx, char_type const *first, char_type const *last,
-	::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &> str)
+	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_sized_string<uinttype, char_type, allocator_type> &>>,
+	scan_fast_io_sized_string_context &ctx, char_type const *first, char_type const *last,
+	::fast_io::manipulators::whole_get_t<basic_sized_string<uinttype, char_type, allocator_type> &> str)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
 	return details::scan_context_define_whole_fast_io_string_impl(ctx.copying, first, last, str.reference);
 }
 
-template <::std::integral char_type, typename allocator_type>
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
 inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
-	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &>>,
-	scan_fast_io_string_context ctx,
-	::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &> str) noexcept
+	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_sized_string<uinttype, char_type, allocator_type> &>>,
+	scan_fast_io_sized_string_context ctx,
+	::fast_io::manipulators::whole_get_t<basic_sized_string<uinttype, char_type, allocator_type> &> str) noexcept
 {
 	return details::scan_context_define_whole_fast_io_string_eof_impl(ctx.copying, str.reference);
 }
@@ -2037,17 +2061,17 @@ inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_define(
 
 namespace manipulators
 {
-template <::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::manipulators::scalar_manip_t<::fast_io::containers::details::fast_io_string_default_scalar_flags<false, true>,
-														 ::fast_io::containers::basic_string<char_type, allocator_type> &>
-line_get(::fast_io::containers::basic_string<char_type, allocator_type> &line_str) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
+inline constexpr ::fast_io::manipulators::scalar_manip_t<::fast_io::containers::details::fast_io_sized_string_default_scalar_flags<false, true>,
+														 ::fast_io::containers::basic_sized_string<uinttype, char_type, allocator_type> &>
+line_get(::fast_io::containers::basic_sized_string<uinttype, char_type, allocator_type> &line_str) noexcept
 {
 	return {line_str};
 }
 
-template <::std::integral char_type, typename allocator_type>
-inline constexpr ::fast_io::manipulators::whole_get_t<::fast_io::containers::basic_string<char_type, allocator_type> &>
-whole_get(::fast_io::containers::basic_string<char_type, allocator_type> &whole_str) noexcept
+template <typename uinttype, ::std::integral char_type, typename allocator_type>
+inline constexpr ::fast_io::manipulators::whole_get_t<::fast_io::containers::basic_sized_string<uinttype, char_type, allocator_type> &>
+whole_get(::fast_io::containers::basic_sized_string<uinttype, char_type, allocator_type> &whole_str) noexcept
 {
 	return {whole_str};
 }
@@ -2056,8 +2080,8 @@ whole_get(::fast_io::containers::basic_string<char_type, allocator_type> &whole_
 namespace freestanding
 {
 
-template <::std::integral chtype, typename alloctype>
-struct is_trivially_copyable_or_relocatable<::fast_io::containers::basic_string<chtype, alloctype>>
+template <typename uinttype, ::std::integral chtype, typename alloctype>
+struct is_trivially_copyable_or_relocatable<::fast_io::containers::basic_sized_string<uinttype, chtype, alloctype>>
 {
 	inline static constexpr bool value = true;
 };

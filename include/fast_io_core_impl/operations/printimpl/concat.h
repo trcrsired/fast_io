@@ -10,6 +10,7 @@ template <typename ch_type, typename T, typename... Args>
 concept concat_may_throw =
 	::std::integral<ch_type> &&
 	(!::fast_io::nothrow_strlike<ch_type, T> ||
+	 (::fast_io::buffer_strlike<ch_type, T> && ::fast_io::details::strlike_output_ops_may_throw<ch_type, T>) ||
 	 (::fast_io::details::has_any_print_define_operations_may_throw<ch_type, Args> || ...));
 
 template <bool line, ::std::integral output_char_type, typename T, typename... Args>

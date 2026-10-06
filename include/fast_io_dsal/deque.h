@@ -34,6 +34,8 @@ namespace fast_io
 template <typename T, typename Alloc = ::fast_io::native_global_allocator>
 using deque = ::fast_io::containers::deque<T, Alloc>;
 
+using zu_deque = ::fast_io::containers::deque<::std::size_t, ::fast_io::native_global_allocator>;
+
 namespace containers
 {
 
@@ -52,7 +54,9 @@ namespace tlc
 {
 template <typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
 using deque = ::fast_io::containers::deque<T, Alloc>;
-}
+
+using zu_deque = ::fast_io::containers::deque<::std::size_t, ::fast_io::native_thread_local_allocator>;
+} // namespace tlc
 
 } // namespace fast_io
 

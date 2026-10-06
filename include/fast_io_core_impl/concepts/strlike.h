@@ -74,4 +74,32 @@ concept sso_buffer_strlike = buffer_strlike<char_type, T> &&
 								 } -> ::std::same_as<::std::size_t>;
 							 };
 
+namespace details
+{
+
+// whether mutating a strlike (reserve/push_back/append) can report failure
+template <typename char_type, typename T>
+concept strlike_reserve_may_throw = !requires(T &t, ::std::size_t n) {
+	{ strlike_reserve(::fast_io::io_strlike_type<char_type, T>, t, n) } noexcept;
+};
+
+template <typename char_type, typename T>
+concept strlike_push_back_may_throw = !requires(T &t, char_type ch) {
+	{ strlike_push_back(::fast_io::io_strlike_type<char_type, T>, t, ch) } noexcept;
+};
+
+template <typename char_type, typename T>
+concept strlike_append_may_throw = !requires(T &t, char_type const *ptr) {
+	{ strlike_append(::fast_io::io_strlike_type<char_type, T>, t, ptr, ptr) } noexcept;
+};
+
+// whether writing through a strlike used as an output buffer can report failure
+template <typename char_type, typename T>
+concept strlike_output_ops_may_throw =
+	strlike_reserve_may_throw<char_type, T> ||
+	(::fast_io::auxiliary_strlike<char_type, T> &&
+	 (strlike_push_back_may_throw<char_type, T> || strlike_append_may_throw<char_type, T>));
+
+} // namespace details
+
 } // namespace fast_io

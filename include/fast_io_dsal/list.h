@@ -33,6 +33,8 @@ namespace fast_io
 template <typename T, typename Alloc = ::fast_io::native_global_allocator>
 using list = ::fast_io::containers::list<T, Alloc>;
 
+using zu_list = ::fast_io::containers::list<::std::size_t, ::fast_io::native_global_allocator>;
+
 namespace containers
 {
 
@@ -51,7 +53,9 @@ namespace tlc
 {
 template <typename T, typename Alloc = ::fast_io::native_thread_local_allocator>
 using list = ::fast_io::containers::list<T, Alloc>;
-}
+
+using zu_list = ::fast_io::containers::list<::std::size_t, ::fast_io::native_thread_local_allocator>;
+} // namespace tlc
 
 } // namespace fast_io
 
