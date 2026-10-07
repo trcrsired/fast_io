@@ -87,7 +87,7 @@ template <typename input, typename... Args>
 				if constexpr (::fast_io::details::asan_state::current == ::fast_io::details::asan_state::activate)
 				{
 					char_type const *p{buffer};
-					::fast_io::operations::decay::read_all_decay(instm, buffer, buffer + n);
+					::fast_io::operations::decay::read_all_decay(instm, buffer, n);
 					if constexpr (::fast_io::precise_reserve_scannable_no_error<char_type, argtype>)
 					{
 						scan_precise_reserve_define(::fast_io::io_reserve_type<char_type, argtype>, p, args...[i]);
@@ -115,7 +115,7 @@ template <typename input, typename... Args>
 					bool const inbuffer{diff < n};
 					if (inbuffer) [[unlikely]]
 					{
-						::fast_io::operations::decay::read_all_decay(instm, buffer, buffer + n);
+						::fast_io::operations::decay::read_all_decay(instm, buffer, n);
 						p = buffer;
 					}
 					if constexpr (::fast_io::precise_reserve_scannable_no_error<char_type, argtype>)

@@ -34,8 +34,7 @@ scatter_pwrite_some_bytes_cold_impl(outstmtype outsm, io_scatter_t const *pscatt
 		{
 			auto [baseb, len] = pscatters[i];
 			::std::byte const *base{reinterpret_cast<::std::byte const *>(baseb)};
-			auto ed{base + len};
-			auto written{::fast_io::details::pwrite_some_bytes_impl(outsm, base, ed, off)};
+			auto written{::fast_io::details::pwrite_some_bytes_impl(outsm, base, len, off)};
 			::std::ptrdiff_t dfsz{written - base};
 			::std::size_t sz{static_cast<::std::size_t>(written - base)};
 			if (sz != len)

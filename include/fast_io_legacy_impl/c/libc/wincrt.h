@@ -208,7 +208,7 @@ inline ::std::byte const *wincrt_fp_write_some_cold_normal_case_impl(FILE *__res
 	{
 		::fast_io::posix_io_observer piob{fp->_file};
 		// flush must use write all for sure
-		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), static_cast<::std::size_t>(fp->_ptr - fp->_base));
 		if (::std::size_t const bufsiz{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz))}; diff >= bufsiz)
 		{
 			// set to begin
@@ -281,7 +281,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 		::fast_io::posix_io_observer piob{fp->_file};
 		// flush
 
-		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), static_cast<::std::size_t>(fp->_ptr - fp->_base));
 		if (::std::size_t const bufsiz{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz))}; diff >= bufsiz)
 		{
 			// set to begin
@@ -435,7 +435,7 @@ inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch) FAST_IO_
 			::fast_io::posix_io_observer piob{fp->_file};
 			::fast_io::operations::write_all_bytes(piob,
 												   reinterpret_cast<::std::byte const *>(__builtin_addressof(ch)),
-												   reinterpret_cast<::std::byte const *>(__builtin_addressof(ch)) + sizeof(ch));
+												   sizeof(ch));
 			return;
 		}
 		wincrt_fp_allocate_buffer_impl(fpp);
@@ -444,7 +444,7 @@ inline void wincrt_fp_overflow_impl(FILE *__restrict fpp, char_type ch) FAST_IO_
 	{
 		// output all content
 		::fast_io::posix_io_observer piob{fp->_file};
-		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_base + fp->_bufsiz));
+		::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz)));
 	}
 	fp->_ptr = fp->_base;
 	::fast_io::freestanding::my_memcpy(fp->_ptr, __builtin_addressof(ch), sizeof(ch));
@@ -465,7 +465,7 @@ inline void wincrt_fp_flush_stdout_impl()
 		return;
 	}
 	::fast_io::posix_io_observer piob{fp->_file};
-	::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), reinterpret_cast<::std::byte const *>(fp->_ptr));
+	::fast_io::operations::write_all_bytes(piob, reinterpret_cast<::std::byte const *>(fp->_base), static_cast<::std::size_t>(fp->_ptr - fp->_base));
 
 	fp->_ptr = fp->_base;
 }

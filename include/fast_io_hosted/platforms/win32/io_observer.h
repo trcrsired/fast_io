@@ -154,7 +154,7 @@ template <win32_family family, ::std::integral char_type>
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 [[__gnu__::__always_inline__]]
 #endif
-inline void flush(basic_win32_family_io_observer<family, char_type> wiob)
+inline void io_stream_buffer_flush_define(basic_win32_family_io_observer<family, char_type> wiob)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::details::win32_flush_impl(wiob.handle);

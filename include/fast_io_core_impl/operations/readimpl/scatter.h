@@ -74,8 +74,7 @@ scatter_read_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 		{
 			auto [basec, len] = pscatters[i];
 			char_type *base{const_cast<char_type *>(basec)};
-			auto ed{base + len};
-			auto written{::fast_io::details::read_some_impl(insm, base, ed)};
+			auto written{::fast_io::details::read_some_impl(insm, base, len)};
 			::std::size_t sz{static_cast<::std::size_t>(written - base)};
 			if (sz != len)
 			{
@@ -111,7 +110,7 @@ scatter_read_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 				auto edf{basef + len};
 				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basef))};
 				::std::byte *ed{reinterpret_cast<::std::byte *>(edf)};
-				auto readed{::fast_io::details::read_some_bytes_impl(insm, base, ed)};
+				auto readed{::fast_io::details::read_some_bytes_impl(insm, base, static_cast<::std::size_t>(ed - base))};
 				::std::size_t diff{static_cast<::std::size_t>(readed - base)};
 				::std::size_t md{diff % sizeof(char_type)};
 				::std::size_t sz{diff / sizeof(char_type)};
@@ -119,7 +118,7 @@ scatter_read_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 				{
 					::std::size_t dfd{sizeof(char_type) - md};
 					auto readedend{readed + dfd};
-					auto it{::fast_io::operations::decay::read_some_bytes_decay(insm, readed, readedend)};
+					auto it{::fast_io::operations::decay::read_some_bytes_decay(insm, readed, dfd)};
 					if (it == readedend)
 					{
 						++sz;
@@ -281,7 +280,7 @@ scatter_read_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtype
 				auto edf{basef + len};
 				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basef))};
 				::std::byte *ed{reinterpret_cast<::std::byte *>(edf)};
-				::fast_io::details::read_all_bytes_impl(insm, base, ed);
+				::fast_io::details::read_all_bytes_impl(insm, base, static_cast<::std::size_t>(ed - base));
 			}
 		}
 	}

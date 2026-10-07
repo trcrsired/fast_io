@@ -9,6 +9,7 @@ class basic_general_raw_ostream_io_observer
 {
 public:
 	using char_type = ch_type;
+	using output_char_type = char_type;
 	using native_handle_type = T *;
 	native_handle_type os{};
 	inline constexpr native_handle_type release() noexcept
@@ -77,15 +78,16 @@ inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_v
 
 } // namespace details
 
-template <::std::integral char_type, typename T, ::std::contiguous_iterator Iter>
-inline constexpr void write(basic_general_raw_ostream_io_observer<char_type, T> osiob, Iter first, ::std::size_t count)
+template <::std::integral char_type, typename T>
+inline constexpr void write_all_bytes_overflow_define(basic_general_raw_ostream_io_observer<char_type, T> osiob,
+													  ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::llvm::details::llvm_ostream_write_impl(osiob.os, ::std::to_address(first), count * sizeof(*first));
+	::fast_io::llvm::details::llvm_ostream_write_impl(osiob.os, first, count);
 }
 
 template <::std::integral char_type, typename T>
-inline constexpr void flush(basic_general_raw_ostream_io_observer<char_type, T> osiob)
+inline constexpr void io_stream_buffer_flush_define(basic_general_raw_ostream_io_observer<char_type, T> osiob)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	osiob.os->flush();

@@ -63,7 +63,7 @@ pread_some_cold_impl(instmtype insm, typename instmtype::input_char_type *first,
 			{
 				off = ::fast_io::fposoffadd_nonegative(off, ptdf);
 				auto ptred{ptr + remain};
-				auto ptrit{::fast_io::operations::decay::pread_some_bytes_decay(insm, ptr, ptred, off)};
+				auto ptrit{::fast_io::operations::decay::pread_some_bytes_decay(insm, ptr, remain, off)};
 				if (ptrit == ptred)
 				{
 					++v;

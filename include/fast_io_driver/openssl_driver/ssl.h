@@ -8,6 +8,8 @@ class basic_ssl_io_observer
 {
 public:
 	using char_type = ch_type;
+	using input_char_type = char_type;
+	using output_char_type = char_type;
 	using native_handle_type = SSL *;
 	native_handle_type ssl{};
 	constexpr native_handle_type const &native_handle() const noexcept
@@ -179,12 +181,12 @@ public:
 	}
 };
 
-template <::std::integral ch_type, ::std::contiguous_iterator Iter>
-inline Iter read(basic_ssl_io_observer<ch_type> iob, Iter begin, Iter end)
+template <::std::integral ch_type>
+inline ::std::byte *read_some_bytes_underflow_define(basic_ssl_io_observer<ch_type> iob, ::std::byte *first,
+													 ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t read_bytes{};
-	auto ret(SSL_read_ex(iob.native_handle(), ::std::to_address(begin), sizeof(*begin) * (end - begin),
-						 __builtin_addressof(read_bytes)));
+	auto ret(SSL_read_ex(iob.native_handle(), first, count, __builtin_addressof(read_bytes)));
 	if (ret <= 0)
 	{
 		int error{SSL_get_error(iob.native_handle(), ret)};
@@ -194,14 +196,16 @@ inline Iter read(basic_ssl_io_observer<ch_type> iob, Iter begin, Iter end)
 		}
 		read_bytes = 0;
 	}
-	return begin + read_bytes / sizeof(*begin);
+	return first + read_bytes;
 }
 
-template <::std::integral ch_type, ::std::contiguous_iterator Iter>
-inline Iter write(basic_ssl_io_observer<ch_type> iob, Iter begin, Iter end)
+template <::std::integral ch_type>
+inline ::std::byte const *write_some_bytes_overflow_define(basic_ssl_io_observer<ch_type> iob,
+														   ::std::byte const *first, ::std::size_t count)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t written_bytes{};
-	auto ret(SSL_write_ex(iob.native_handle(), ::std::to_address(begin), sizeof(*begin) * (end - begin),
+	auto ret(SSL_write_ex(iob.native_handle(), first, count,
 						  __builtin_addressof(written_bytes)));
 	if (ret <= 0)
 	{
@@ -212,7 +216,7 @@ inline Iter write(basic_ssl_io_observer<ch_type> iob, Iter begin, Iter end)
 		}
 		written_bytes = 0;
 	}
-	return begin + written_bytes / sizeof(*begin);
+	return first + written_bytes;
 }
 
 using ssl_io_observer = basic_ssl_io_observer<char>;

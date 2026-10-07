@@ -96,7 +96,7 @@ inline constexpr edp_blinding_context &ed25519_blinding_init_to_ptr(edp_blinding
 	add_point(T, T, default_blinding.bp);
 	edp_ext_point_2e(ctx.bp, T);
 
-// Clear sensitive data. Not needed (nor possible) during constant evaluation.
+	// Clear sensitive data. Not needed (nor possible) during constant evaluation.
 	if !consteval
 	{
 		::fast_io::secure_clear(__builtin_addressof(t), sizeof(t));
@@ -120,7 +120,7 @@ inline edp_blinding_context &ed25519_blinding_init_from_input_stream(edp_blindin
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 {
 	::fast_io::containers::array<std::byte, 64> seed FAST_IO_INDETERMINATE;
-	::fast_io::operations::read_all_bytes(instm, seed.data(), seed.data() + seed.size());
+	::fast_io::operations::read_all_bytes(instm, seed.data(), seed.size());
 	ed25519_blinding_init_to_ptr(ctx, seed.data(), seed.size());
 	::fast_io::secure_clear(seed.data(), seed.size_bytes());
 	return ctx;

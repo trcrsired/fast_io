@@ -216,7 +216,8 @@ inline constexpr void output_stream_buffer_flush_impl(optstmtype optstm, basic_i
 	}
 	else
 	{
-		::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+		::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin,
+													  static_cast<::std::size_t>(pointers.buffer_curr - pointers.buffer_begin));
 	}
 	pointers.buffer_curr = pointers.buffer_begin;
 }
@@ -250,7 +251,8 @@ inline constexpr void obuffer_minimum_size_flush_prepare_impl(::fast_io::details
 		}
 		else
 		{
-			::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin, pointers.buffer_curr);
+			::fast_io::operations::decay::write_all_decay(optstm, pointers.buffer_begin,
+														  static_cast<::std::size_t>(pointers.buffer_curr - pointers.buffer_begin));
 		}
 		pointers.buffer_curr = pointers.buffer_begin;
 	}

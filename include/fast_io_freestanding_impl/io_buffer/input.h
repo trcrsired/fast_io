@@ -19,7 +19,7 @@ inline constexpr bool ibuffer_underflow_rl_size_impl(::fast_io::details::io_buff
 			::fast_io::details::io_buffer::iobuffer_allocate<char_type, allocator_type>(allochdl, bfsz);
 	}
 	ibuffer.buffer_end =
-		::fast_io::operations::decay::read_some_decay(insm, ibuffer.buffer_begin, ibuffer.buffer_begin + bfsz);
+		::fast_io::operations::decay::read_some_decay(insm, ibuffer.buffer_begin, bfsz);
 	ibuffer.buffer_curr = ibuffer.buffer_begin;
 	return ibuffer.buffer_begin != ibuffer.buffer_end;
 }
@@ -48,7 +48,7 @@ ibuffer_minimum_size_underflow_all_prepare_rl_size_impl(::fast_io::details::io_b
 	}
 	auto bg{ibuffer.buffer_begin};
 	auto ed{bg + bfsz};
-	::fast_io::operations::decay::read_all_decay(insm, bg, ed);
+	::fast_io::operations::decay::read_all_decay(insm, bg, bfsz);
 	ibuffer.buffer_curr = bg;
 	ibuffer.buffer_end = ed;
 }

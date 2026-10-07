@@ -231,6 +231,8 @@ public:
 	using native_handle_type = void *;
 	using base_address_type = ::std::size_t;
 	using char_type = ch_type;
+	using input_char_type = char_type;
+	using output_char_type = char_type;
 	native_handle_type handle{};
 	base_address_type base_addr{};
 	constexpr native_handle_type release() noexcept
@@ -446,18 +448,19 @@ public:
 	}
 };
 
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-[[nodiscard]] inline Iter read(basic_win32_memory_io_observer<char_type> &iob, Iter begin, Iter end)
+template <::std::integral char_type>
+[[nodiscard]] inline ::std::byte *read_some_bytes_underflow_define(basic_win32_memory_io_observer<char_type> &iob,
+																   ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t readed{};
-	if (!win32::ReadProcessMemory(iob.handle, bit_cast<void const *>(iob.base_addr), ::std::to_address(begin),
-								  (end - begin) * sizeof(*begin), __builtin_addressof(readed)))
+	if (!win32::ReadProcessMemory(iob.handle, bit_cast<void const *>(iob.base_addr), first,
+								  count, __builtin_addressof(readed)))
 	{
 		throw_win32_error();
 	}
 	iob.base_addr += readed;
-	return begin + readed / sizeof(*begin);
+	return first + readed;
 }
 template <::std::integral char_type>
 [[nodiscard]] inline auto find_read_start(basic_win32_memory_io_observer<char_type> iob)
@@ -469,18 +472,19 @@ template <::std::integral char_type>
 		;
 	return iob;
 }
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline Iter write(basic_win32_memory_io_observer<char_type> &iob, Iter begin, Iter end)
+template <::std::integral char_type>
+inline ::std::byte const *write_some_bytes_overflow_define(basic_win32_memory_io_observer<char_type> &iob,
+														   ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t written{};
-	if (!win32::WriteProcessMemory(iob.handle, bit_cast<void *>(iob.base_addr), ::std::to_address(begin),
-								   (end - begin) * sizeof(*begin), __builtin_addressof(written)))
+	if (!win32::WriteProcessMemory(iob.handle, bit_cast<void *>(iob.base_addr), first,
+								   count, __builtin_addressof(written)))
 	{
 		throw_win32_error();
 	}
 	iob.base_addr += written;
-	return begin + written / sizeof(*begin);
+	return first + written;
 }
 using win32_memory_io_observer = basic_win32_memory_io_observer<char>;
 using win32_memory_io_handle = basic_win32_memory_io_handle<char>;

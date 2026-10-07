@@ -99,7 +99,7 @@ write_some_cold_impl(outstmtype outsm, typename outstmtype::output_char_type con
 			::std::size_t remain{diff % sizeof(char_type)};
 			if (remain != 0)
 			{
-				write_all_bytes_cold_impl(outsm, ptr, ptr + remain);
+				write_all_bytes_cold_impl(outsm, ptr, remain);
 			}
 			return first + v;
 		}

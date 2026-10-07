@@ -196,7 +196,7 @@ inline void nt_data_sync_impl(void *handle, data_sync_flags flags [[maybe_unused
 } // namespace win32::nt::details
 
 template <nt_family family, ::std::integral ch_type>
-inline void flush(basic_nt_family_io_observer<family, ch_type> ntiob)
+inline void io_stream_buffer_flush_define(basic_nt_family_io_observer<family, ch_type> ntiob)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	::fast_io::win32::nt::details::nt_flush_impl<family == nt_family::zw>(ntiob.handle);

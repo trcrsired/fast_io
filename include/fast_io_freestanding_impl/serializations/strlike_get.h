@@ -95,12 +95,12 @@ scan_context_define_strlike_impl(::std::conditional_t<ctxread, bool, bool &> ski
 		{
 			obuffer_set_curr(ref, obuffer_begin(ref));
 		}
-		::fast_io::operations::decay::write_all_decay(ref, it, it_space);
+		::fast_io::operations::decay::write_all_decay(ref, it, static_cast<::std::size_t>(it_space - it));
 		skip_space_done = true;
 	}
 	else
 	{
-		::fast_io::operations::decay::write_all_decay(ref, it, it_space);
+		::fast_io::operations::decay::write_all_decay(ref, it, static_cast<::std::size_t>(it_space - it));
 	}
 	if (it_space == last)
 	{
@@ -124,7 +124,7 @@ scan_context_define_strlike_getall_impl(::std::conditional_t<ctxread, bool, bool
 		obuffer_set_curr(ref, obuffer_begin(ref));
 		skip_space_done = true;
 	}
-	::fast_io::operations::decay::write_all_decay(ref, first, last);
+	::fast_io::operations::decay::write_all_decay(ref, first, static_cast<::std::size_t>(last - first));
 	return {last, ::fast_io::freestanding::parse_errc::partial};
 }
 

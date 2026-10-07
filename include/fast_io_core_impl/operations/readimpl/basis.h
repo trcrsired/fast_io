@@ -98,7 +98,7 @@ typename instmtype::input_char_type *read_some_cold_impl(instmtype insm, typenam
 			::std::size_t remain{diff % sizeof(char_type)};
 			if (remain != 0)
 			{
-				read_all_bytes_cold_impl(insm, ptr, ptr + remain);
+				read_all_bytes_cold_impl(insm, ptr, remain);
 			}
 			return first + v;
 		}

@@ -13,7 +13,7 @@ template <::std::integral char_type, typename state, typename T, typename Arg1, 
 [[msvc::forceinline]]
 #endif
 inline constexpr void
-inplace_to_decay_context_impl(basic_dynamic_output_buffer_ref<basic_dynamic_output_buffer<char_type>> buffer, state &s,
+inplace_to_decay_context_impl(::fast_io::details::basic_dynamic_output_buffer_ref<::fast_io::details::basic_dynamic_output_buffer<char_type>> buffer, state &s,
 							  T t, Arg1 arg, Args... args)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
@@ -355,7 +355,7 @@ inline constexpr void basic_inplace_to_decay(T t, Args... args)
 		}
 		else
 		{
-			basic_dynamic_output_buffer<char_type> buffer;
+			::fast_io::details::basic_dynamic_output_buffer<char_type> buffer;
 			auto ref{::fast_io::operations::output_stream_ref(buffer)};
 			if constexpr (context_scannable<char_type, T> &&
 						  (!(contiguous_scannable<char_type, T> && sizeof...(args) == 1)))

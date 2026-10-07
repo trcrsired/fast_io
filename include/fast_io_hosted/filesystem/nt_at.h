@@ -671,7 +671,7 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 													 ::fast_io::mnp::code_cvt(::fast_io::mnp::strvw(oldpath_c_str, oldpath_c_str + oldpath_size)),
 													 u8"\nThis is just a text to force symlink file to be 510 bytes long. Do not delete it nor spaces following it.");
 
-	::fast_io::operations::write_all(new_file, buffer, buffer + 510);
+	::fast_io::operations::write_all(new_file, buffer, 510);
 #else
 	::fast_io::herbceptions::throws_nt_errc_with_value(0xC0000002);
 #endif

@@ -40,6 +40,7 @@ template <::std::integral ch_type>
 struct basic_avr_console
 {
 	using char_type = ch_type;
+	using output_char_type = char_type;
 };
 
 inline void avr_usart_console_write(char const *first, ::std::size_t count) noexcept
@@ -65,16 +66,21 @@ inline constexpr basic_avr_console<char_type> io_value_handle(basic_avr_console<
 	return {};
 }
 
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline void write(basic_avr_console<char_type>, Iter first, ::std::size_t count) noexcept
+template <::std::integral char_type>
+inline void write_all_overflow_define(basic_avr_console<char_type>, char_type const *first, ::std::size_t count) noexcept
 {
-	avr_usart_console_write(reinterpret_cast<char const *>(::std::to_address(first)), count * sizeof(*first));
+	avr_usart_console_write(reinterpret_cast<char const *>(first), count * sizeof(char_type));
 }
 
 template <::std::integral char_type>
-inline void scatter_write(basic_avr_console<char_type>, io_scatters_t scatters) noexcept
+inline void scatter_write_all_overflow_define(basic_avr_console<char_type>,
+											  ::fast_io::basic_io_scatter_t<char_type> const *pscatters,
+											  ::std::size_t n) noexcept
 {
-	avr_usart_console_writev(scatters.base, scatters.len);
+	for (auto const e{pscatters + n}; pscatters != e; ++pscatters)
+	{
+		avr_usart_console_write(reinterpret_cast<char const *>(pscatters->base), pscatters->len * sizeof(char_type));
+	}
 }
 
 using avr_console = basic_avr_console<char>;

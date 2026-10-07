@@ -16,7 +16,7 @@ read_all_impl_decay_cold(input in, typename input::char_type *first, ::std::size
 	auto const e{first + count};
 	while (first != e)
 	{
-		auto it{read(in, first, static_cast<::std::size_t>(e - first))};
+		auto it{::fast_io::details::read_some_impl(in, first, static_cast<::std::size_t>(e - first))};
 		if (it == first) [[unlikely]]
 		{
 			if constexpr (throweh)
@@ -111,14 +111,15 @@ template <typename input, ::std::forward_iterator Iter>
 inline constexpr void read_all(input &&in, Iter first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::read_all_impl(io_ref(in), first, count);
+	::fast_io::details::read_all_impl(::fast_io::operations::input_stream_ref(in), first, count);
 }
 
 template <typename input, ::std::ranges::forward_range rg>
 inline constexpr void read_all(input &&in, rg &&r)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::read_all_impl(io_ref(in), ::std::ranges::begin(r), ::std::ranges::end(r));
+	::fast_io::details::read_all_impl(::fast_io::operations::input_stream_ref(in), ::std::ranges::begin(r),
+									  static_cast<::std::size_t>(::std::ranges::distance(r)));
 }
 
 } // namespace fast_io

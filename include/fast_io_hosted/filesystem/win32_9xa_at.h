@@ -325,7 +325,7 @@ inline void win32_9xa_symlinkat_impl([[maybe_unused]] char8_t const *oldpath_c_s
 
 	::fast_io::operations::print_freestanding<false>(u8obv, u8"!<symlink>", path, u8"\nThis is just a text to force symlink file to be 510 bytes long. Do not delete it nor spaces following it.");
 
-	::fast_io::operations::write_all(f, buffer, buffer + 510);
+	::fast_io::operations::write_all(f, buffer, 510);
 
 #else
 	throw_win32_error(0x1);

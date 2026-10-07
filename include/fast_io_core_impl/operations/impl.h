@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "refs/impl.h"
+#include "refs/stream.h"
 #include "lockguard.h"
 #include "common.h"
 #include "writeimpl/throws_if.h"

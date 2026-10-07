@@ -78,7 +78,7 @@ template <typename allocator_type = typename posix_api_encoding_converter::alloc
 		  typename Func>
 	requires(sizeof(char_type) != sizeof(char))
 inline auto posix_api_common_codecvt_impl(char_type const *filename_c_str, ::std::size_t filename_c_str_len,
-										  Func callback)
+										  Func callback) FAST_IO_HERBCEPTIONS_THROWS
 {
 	basic_posix_api_encoding_converter<allocator_type> converter(filename_c_str, filename_c_str_len);
 	if constexpr (::fast_io::details::api_common_has_size_overload<char, Func>)

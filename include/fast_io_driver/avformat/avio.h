@@ -15,6 +15,8 @@ class basic_avio_context_io_observer
 {
 public:
 	using char_type = ch_type;
+	using input_char_type = char_type;
+	using output_char_type = char_type;
 	using native_handle_type = ::AVIOContext *;
 	native_handle_type avios{};
 
@@ -31,8 +33,8 @@ public:
 };
 
 template <::std::integral char_type>
-inline void write(basic_avio_context_io_observer<char_type> baciob, char_type const *first, ::std::size_t count)
-	FAST_IO_HERBCEPTIONS_THROWS
+inline void write_all_bytes_overflow_define(basic_avio_context_io_observer<char_type> baciob, ::std::byte const *first,
+											::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
 	if constexpr (INT_MAX < SIZE_MAX)
@@ -47,13 +49,15 @@ inline void write(basic_avio_context_io_observer<char_type> baciob, char_type co
 			{
 				this_round = diff;
 			}
-			::fast_io::noexcept_call(::avio_write, baciob.avios, first, this_round);
+			::fast_io::noexcept_call(::avio_write, baciob.avios, reinterpret_cast<unsigned char const *>(first),
+									 this_round);
 			first += this_round;
 		}
 	}
 	else
 	{
-		::fast_io::noexcept_call(::avio_write, baciob.avios, first, static_cast<int>(count));
+		::fast_io::noexcept_call(::avio_write, baciob.avios, reinterpret_cast<unsigned char const *>(first),
+								 static_cast<int>(count));
 	}
 	if (baciob.avios->error)
 	{
@@ -62,7 +66,8 @@ inline void write(basic_avio_context_io_observer<char_type> baciob, char_type co
 }
 
 template <::std::integral char_type>
-inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_type *first, ::std::size_t count)
+inline ::std::byte *read_some_bytes_underflow_define(basic_avio_context_io_observer<char_type> baciob,
+													 ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	baciob.avios->error = 0;
@@ -83,11 +88,11 @@ inline char_type *read(basic_avio_context_io_observer<char_type> baciob, char_ty
 	{
 		ret = ::fast_io::noexcept_call(::avio_read, baciob.avios, first, static_cast<int>(count));
 	}
-	if (baciob.avios->error)
+	if (baciob.avios->error || ret < 0)
 	{
 		throw_posix_error(EINVAL);
 	}
-	return ret;
+	return first + ret;
 }
 
 template <::std::integral ch_type>
@@ -255,16 +260,6 @@ inline basic_avio_buffer_context<typename rftype::char_type> create_avio_context
 	}
 	avio_buffer bufferwrap(bfptr);
 	::AVIOContext *ctx;
-	using char_type_ptr
-#if __has_cpp_attribute(__gnu__::__may_alias__)
-		[[__gnu__::__may_alias__]]
-#endif
-		= char_type *;
-	using char_type_const_ptr
-#if __has_cpp_attribute(__gnu__::__may_alias__)
-		[[__gnu__::__may_alias__]]
-#endif
-		= char_type const *;
 	static_assert(sizeof(rftype) <= sizeof(void *));
 	void *ptr{};
 	::memcpy(__builtin_addressof(ptr), __builtin_addressof(rf), sizeof(rftype));
@@ -275,9 +270,9 @@ inline basic_avio_buffer_context<typename rftype::char_type> create_avio_context
 			::memcpy(__builtin_addressof(rft), __builtin_addressof(opaque), sizeof(rftype));
 			try
 			{
-				auto ret{
-					read(rft, reinterpret_cast<char_type_ptr>(ptr), reinterpret_cast<char_type_ptr>(ptr) + bufsize) -
-					reinterpret_cast<char_type_ptr>(ptr)};
+				auto ret{::fast_io::operations::decay::read_some_bytes_decay(
+							 rft, reinterpret_cast<::std::byte *>(ptr), static_cast<::std::size_t>(bufsize)) -
+						 reinterpret_cast<::std::byte *>(ptr)};
 				if (ret == 0)
 				{
 					return AVERROR_EOF;
@@ -294,8 +289,8 @@ inline basic_avio_buffer_context<typename rftype::char_type> create_avio_context
 			::memcpy(__builtin_addressof(rft), __builtin_addressof(opaque), sizeof(rftype));
 			try
 			{
-				write(rft, reinterpret_cast<char_type_const_ptr>(ptr),
-					  reinterpret_cast<char_type_const_ptr>(ptr) + bufsize);
+				::fast_io::operations::decay::write_all_bytes_decay(rft, reinterpret_cast<::std::byte const *>(ptr),
+																	static_cast<::std::size_t>(bufsize));
 			}
 			catch (...)
 			{
@@ -327,7 +322,8 @@ inline basic_avio_buffer_context<typename rftype::char_type> create_avio_context
 						return -1;
 					}
 				}
-				return seek(rft, offset, static_cast<::fast_io::seekdir>(whence));
+				return static_cast<::std::int64_t>(::fast_io::operations::decay::io_stream_seek_bytes_decay(
+					rft, offset, static_cast<::fast_io::seekdir>(whence)));
 			}
 			catch (...)
 			{

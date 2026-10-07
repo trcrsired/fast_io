@@ -61,7 +61,16 @@ inline constexpr void write_all_iterator_decay_multiblock_common_impl(outstmtype
 	{
 		if (controller_first == controller_last)
 		{
-			::fast_io::operations::decay::write_all_decay(outsm, firstblock_curr, lastblock_curr);
+			if constexpr (::std::same_as<nocref, ::std::byte>)
+			{
+				::fast_io::operations::decay::write_all_bytes_decay(
+					outsm, firstblock_curr, static_cast<::std::size_t>(lastblock_curr - firstblock_curr));
+			}
+			else
+			{
+				::fast_io::operations::decay::write_all_decay(outsm, firstblock_curr,
+															  static_cast<::std::size_t>(lastblock_curr - firstblock_curr));
+			}
 			return;
 		}
 		using scattertype = ::std::conditional_t<hasbytesop, io_scatter_t, basic_io_scatter_t<output_char_type>>;
@@ -182,7 +191,7 @@ inline constexpr void write_all_iterator_decay_impl(outstmtype outsm, Iter first
 					}
 					if constexpr (::std::same_as<output_char_type, itvt>)
 					{
-						::fast_io::operations::decay::write_all_decay(outsm, firstaddr, firstaddr + 1);
+						::fast_io::operations::decay::write_all_decay(outsm, firstaddr, 1);
 					}
 					else
 					{
@@ -193,7 +202,7 @@ inline constexpr void write_all_iterator_decay_impl(outstmtype outsm, Iter first
 							= output_char_type const *;
 						::fast_io::operations::decay::write_all_decay(outsm,
 																	  reinterpret_cast<type_const_ptr>(firstaddr),
-																	  reinterpret_cast<type_const_ptr>(firstaddr + 1));
+																	  sizeof(itvt) / sizeof(output_char_type));
 					}
 				}
 			}
@@ -236,14 +245,16 @@ inline constexpr void write_all_range_decay(outstmtype outsm, rg &&r)
 					= output_char_type const *;
 				auto firstptrbt{reinterpret_cast<type_const_ptr>(firstptr)};
 				auto lastptrbt{reinterpret_cast<type_const_ptr>(lastptr)};
-				::fast_io::operations::decay::write_all_decay(outsm, firstptrbt, lastptrbt);
+				::fast_io::operations::decay::write_all_decay(outsm, firstptrbt,
+															  static_cast<::std::size_t>(lastptrbt - firstptrbt));
 			}
 		}
 		else
 		{
 			auto firstptrbt{reinterpret_cast<::std::byte const *>(firstptr)};
 			auto lastptrbt{reinterpret_cast<::std::byte const *>(lastptr)};
-			::fast_io::operations::decay::write_all_bytes_decay(outsm, firstptrbt, lastptrbt);
+			::fast_io::operations::decay::write_all_bytes_decay(outsm, firstptrbt,
+																static_cast<::std::size_t>(lastptrbt - firstptrbt));
 		}
 	}
 	else

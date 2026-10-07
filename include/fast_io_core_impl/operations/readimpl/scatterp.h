@@ -46,7 +46,7 @@ scatter_pread_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmty
 		{
 			auto [base, len] = pscatters[i];
 			auto ed{base + len};
-			char_type *it{::fast_io::details::pread_some_impl(insm, base, ed, off)};
+			char_type *it{::fast_io::details::pread_some_impl(insm, base, len, off)};
 			if (it != ed)
 			{
 				return {static_cast<::std::size_t>(i - pscatters), static_cast<::std::size_t>(it - base)};
@@ -81,7 +81,7 @@ scatter_pread_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmty
 				auto edf{basef + len};
 				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basef))};
 				::std::byte *ed{reinterpret_cast<::std::byte *>(edf)};
-				auto written{::fast_io::details::pread_some_bytes_impl(insm, base, ed, off)};
+				auto written{::fast_io::details::pread_some_bytes_impl(insm, base, static_cast<::std::size_t>(ed - base), off)};
 				::std::size_t diff{static_cast<::std::size_t>(written - base)};
 				off = ::fast_io::fposoffadd_nonegative(off, diff);
 				::std::size_t md{diff % sizeof(char_type)};
@@ -90,8 +90,8 @@ scatter_pread_some_cold_impl(instmtype insm, basic_io_scatter_t<typename instmty
 				{
 					::std::size_t dfd{sizeof(char_type) - md};
 					auto writtened{written + dfd};
-					auto writtenit{::fast_io::details::pread_all_bytes_impl(insm, written, writtened, off)};
-					if (writtenit == written)
+					auto writtenit{::fast_io::details::pread_some_bytes_impl(insm, written, dfd, off)};
+					if (writtenit == writtened)
 					{
 						++sz;
 					}
@@ -141,7 +141,7 @@ scatter_pread_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::i
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
 			::fast_io::operations::decay::input_stream_mutex_ref_decay(insm)};
 		return ::fast_io::details::scatter_pread_some_impl(
-			::fast_io::operations::decay::input_stream_unlocked_ref_decay(insm), pscatters, n);
+			::fast_io::operations::decay::input_stream_unlocked_ref_decay(insm), pscatters, n, off);
 	}
 	else
 	{
@@ -226,10 +226,8 @@ scatter_pread_all_cold_impl(instmtype insm, basic_io_scatter_t<typename instmtyp
 			for (::std::size_t i{}; i != n; ++i)
 			{
 				auto [basef, len] = pscatters[i];
-				auto edf{basef + len};
 				::std::byte *base{reinterpret_cast<::std::byte *>(const_cast<void *>(basef))};
-				::std::byte *ed{reinterpret_cast<::std::byte *>(edf)};
-				::fast_io::details::pread_all_bytes_impl(insm, base, ed, off);
+				::fast_io::details::pread_all_bytes_impl(insm, base, len, off);
 				off = ::fast_io::fposoffadd_nonegative(off, len);
 			}
 		}
@@ -264,7 +262,7 @@ inline constexpr void scatter_pread_all_impl(instmtype insm,
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
 			::fast_io::operations::decay::input_stream_mutex_ref_decay(insm)};
 		return ::fast_io::details::scatter_pread_all_impl(
-			::fast_io::operations::decay::input_stream_unlocked_ref_decay(insm), pscatters, n);
+			::fast_io::operations::decay::input_stream_unlocked_ref_decay(insm), pscatters, n, off);
 	}
 	else
 	{

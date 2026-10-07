@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace fast_io
+namespace fast_io::details
 {
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
@@ -21,7 +21,7 @@ public:
 	{
 		if (begin_ptr != buffer)
 		{
-			using typed_allocator = typed_generic_allocator_adapter<allocator_type, char_type>;
+			using typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 			if constexpr (typed_allocator::has_deallocate)
 			{
 				typed_allocator::deallocate(begin_ptr);
@@ -55,15 +55,12 @@ output_stream_ref_define(basic_generic_dynamic_output_buffer<char_type, buffersi
 	return {__builtin_addressof(diob)};
 }
 
-namespace details
-{
-
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
 inline constexpr void
 write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize, allocatortype> &bob,
 							   char_type const *first, ::std::size_t count)
 {
-	using typed_allocator = typed_generic_allocator_adapter<allocatortype, char_type>;
+	using typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocatortype, char_type>;
 	::std::size_t bfsz{static_cast<::std::size_t>(bob.end_ptr - bob.begin_ptr)};
 	::std::size_t rlsz{static_cast<::std::size_t>(bob.curr_ptr - bob.begin_ptr)};
 	::std::size_t diff{count};
@@ -106,7 +103,7 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	bob.begin_ptr = pbuffer;
 	bob.end_ptr = pbuffer + to_allocate;
 	auto curit{pbuffer + rlsz};
-	bob.curr_ptr = ::fast_io::details::non_overlapped_copy(first, count, curit);
+	bob.curr_ptr = ::fast_io::details::non_overlapped_copy_n(first, count, curit);
 }
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
@@ -116,7 +113,7 @@ template <::std::integral char_type, ::std::size_t buffersize, typename allocato
 inline constexpr void
 grow_twice_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize, allocatortype> &bob)
 {
-	using typed_allocator = typed_generic_allocator_adapter<allocatortype, char_type>;
+	using typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocatortype, char_type>;
 	::std::size_t bfsz{static_cast<::std::size_t>(bob.end_ptr - bob.begin_ptr)};
 	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
 	constexpr ::std::size_t mxdv2{mx >> 1u};
@@ -147,8 +144,6 @@ grow_twice_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize
 	bob.curr_ptr = pbuffer + bfsz;
 	bob.end_ptr = pbuffer + twicebfsz;
 }
-
-} // namespace details
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
 inline constexpr void write_all_overflow_define(
@@ -200,4 +195,4 @@ inline constexpr void obuffer_overflow(
 	++bdobr.dob_ptr->curr_ptr;
 }
 
-} // namespace fast_io
+} // namespace fast_io::details

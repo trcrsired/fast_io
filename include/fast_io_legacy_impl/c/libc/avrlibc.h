@@ -27,7 +27,7 @@ inline void avr_libc_scatter_write_impl_with_normal_write(FILE *fp, io_scatter_t
 	for (::std::size_t i{}; i != n; ++i)
 	{
 		char const *bs{reinterpret_cast<char const *>(scatters[i].base)};
-		avr_libc_write_common_impl(fp, bs, bs + scatters[i].len);
+		avr_libc_write_common_impl(fp, bs, scatters[i].len);
 	}
 }
 inline void avr_libc_write_internal_impl(FILE *fp, char const *first, ::std::size_t count)
@@ -58,38 +58,34 @@ inline char *avr_libc_read_internal_impl(FILE *fp, char *first, ::std::size_t co
 		}
 		*first = static_cast<char>(static_cast<char unsigned>(ret));
 	}
-	return first + count;
+	return first;
 }
 
 } // namespace details
 
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline constexpr void write(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob, Iter first,
-							Iter last)
+template <::std::integral char_type>
+inline void write_all_bytes_overflow_define(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob,
+											::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::avr_libc_write_internal_impl(ciob.fp, reinterpret_cast<char const *>(::std::to_address(first)),
-													 reinterpret_cast<char const *>(::std::to_address(last)));
+	::fast_io::details::avr_libc_write_internal_impl(ciob.fp, reinterpret_cast<char const *>(first), count);
 }
 
 template <::std::integral char_type>
-inline constexpr void scatter_write(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob,
-									io_scatters_t scatters)
+inline void scatter_write_all_bytes_overflow_define(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob,
+													io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	::fast_io::details::avr_libc_scatter_write_impl_with_normal_write(ciob.fp, scatters.base, scatters.len);
+	::fast_io::details::avr_libc_scatter_write_impl_with_normal_write(ciob.fp, pscatters, n);
 }
 
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-inline constexpr Iter read(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob, Iter first,
-						   Iter last)
+template <::std::integral char_type>
+inline ::std::byte *read_some_bytes_underflow_define(basic_c_family_io_observer<c_family::emulated_unlocked, char_type> ciob,
+													 ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	auto first_addr{reinterpret_cast<char *>(::std::to_address(first))};
-	return (::fast_io::details::avr_libc_read_internal_impl(ciob.fp, first_addr,
-															reinterpret_cast<char *>(::std::to_address(last))) -
-			first_addr) +
-		   first;
+	return reinterpret_cast<::std::byte *>(
+		::fast_io::details::avr_libc_read_internal_impl(ciob.fp, reinterpret_cast<char *>(first), count));
 }
 
 template <::std::integral char_type>

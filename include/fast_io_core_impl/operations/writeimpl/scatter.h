@@ -54,8 +54,7 @@ inline constexpr io_scatter_status_t scatter_write_some_cold_impl(
 		for (::std::size_t i{}; i != n; ++i)
 		{
 			auto [base, len] = pscatters[i];
-			auto ed{base + len};
-			auto written{::fast_io::details::write_some_impl(outsm, base, ed)};
+			auto written{::fast_io::details::write_some_impl(outsm, base, len)};
 			::std::size_t sz{static_cast<::std::size_t>(written - base)};
 			if (sz != len)
 			{
@@ -95,14 +94,14 @@ inline constexpr io_scatter_status_t scatter_write_some_cold_impl(
 				auto edf{basef + len};
 				::std::byte const *base{reinterpret_cast<::std::byte const *>(basef)};
 				::std::byte const *ed{reinterpret_cast<::std::byte const *>(edf)};
-				auto written{::fast_io::details::write_some_bytes_impl(outsm, base, ed)};
+				auto written{::fast_io::details::write_some_bytes_impl(outsm, base, static_cast<::std::size_t>(ed - base))};
 				::std::size_t diff{static_cast<::std::size_t>(written - base)};
 				::std::size_t md{diff % sizeof(char_type)};
 				::std::size_t sz{diff / sizeof(char_type)};
 				if (md)
 				{
 					::std::size_t dfd{sizeof(char_type) - md};
-					::fast_io::details::write_all_bytes_impl(outsm, written, written + dfd);
+					::fast_io::details::write_all_bytes_impl(outsm, written, dfd);
 					++sz;
 				}
 				if (sz != len)
@@ -283,7 +282,7 @@ scatter_write_all_cold_impl(outstmtype outsm,
 				auto edf{basef + len};
 				::std::byte const *base{reinterpret_cast<::std::byte const *>(basef)};
 				::std::byte const *ed{reinterpret_cast<::std::byte const *>(edf)};
-				::fast_io::details::write_all_bytes_impl(outsm, base, ed);
+				::fast_io::details::write_all_bytes_impl(outsm, base, static_cast<::std::size_t>(ed - base));
 			}
 		}
 	}

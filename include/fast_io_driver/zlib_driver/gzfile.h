@@ -70,6 +70,8 @@ class basic_gz_io_observer
 public:
 	using native_handle_type = gzFile;
 	using char_type = ch_type;
+	using input_char_type = char_type;
+	using output_char_type = char_type;
 	native_handle_type gzfile{};
 	constexpr auto &native_handle() noexcept
 	{
@@ -182,70 +184,49 @@ public:
 using gz_io_observer = basic_gz_io_observer<char>;
 using gz_file = basic_gz_file<char>;
 
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-	requires(::std::same_as<char_type, ::std::iter_value_t<Iter>> || ::std::same_as<char, char_type>)
-inline Iter read(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
-	FAST_IO_HERBCEPTIONS_THROWS
+template <::std::integral char_type>
+inline ::std::byte *read_some_bytes_underflow_define(basic_gz_io_observer<char_type> giob, ::std::byte *first,
+													 ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	if constexpr (::std::same_as<char_type, ::std::iter_value_t<Iter>>)
+	::std::size_t to_read{count};
+	if constexpr (sizeof(unsigned) < sizeof(::std::size_t))
 	{
-		::std::size_t to_read((e - b) * sizeof(*b));
-		if constexpr (sizeof(unsigned) < sizeof(::std::size_t))
+		if (static_cast<::std::size_t>(::std::numeric_limits<unsigned>::max()) < to_read)
 		{
-			if (static_cast<::std::size_t>(::std::numeric_limits<unsigned>::max()) < to_read)
-			{
-				to_read = ::std::numeric_limits<unsigned>::max();
-			}
+			to_read = ::std::numeric_limits<unsigned>::max();
 		}
-		int readed{gzread(giob.gzfile, ::std::to_address(b), static_cast<unsigned>(to_read))};
-		if (readed == -1)
-		{
-			throw_posix_error();
-		}
-		return b + static_cast<::std::size_t>(readed) / sizeof(*b);
 	}
-	else
+	int readed{gzread(giob.gzfile, first, static_cast<unsigned>(to_read))};
+	if (readed == -1)
 	{
-		return b + (read(giob, reinterpret_cast<char *>(::std::to_address(b)),
-						 reinterpret_cast<char *>(::std::to_address(e))) -
-					reinterpret_cast<char *>(::std::to_address(b))) /
-					   sizeof(*b);
+		throw_posix_error();
 	}
-}
-
-template <::std::integral char_type, ::std::contiguous_iterator Iter>
-	requires(::std::same_as<char_type, ::std::iter_value_t<Iter>> || ::std::same_as<char, char_type>)
-inline Iter write(basic_gz_io_observer<char_type> giob, Iter b, Iter e)
-	FAST_IO_HERBCEPTIONS_THROWS
-{
-	if constexpr (::std::same_as<char_type, ::std::iter_value_t<Iter>>)
-	{
-		::std::size_t to_write((e - b) * sizeof(*b));
-		if constexpr (sizeof(unsigned) < sizeof(::std::size_t))
-		{
-			if (static_cast<::std::size_t>(::std::numeric_limits<unsigned>::max()) < to_write)
-			{
-				to_write = ::std::numeric_limits<unsigned>::max();
-			}
-		}
-		int written{gzwrite(giob.gzfile, ::std::to_address(b), static_cast<unsigned>(to_write))};
-		if (written < 0)
-		{
-			throw_posix_error();
-		}
-		return b + static_cast<::std::size_t>(written) / sizeof(*b);
-	}
-	else
-	{
-		return b + (write(giob, reinterpret_cast<char const *>(::std::to_address(b)),
-						  reinterpret_cast<char const *>(::std::to_address(e))) -
-					reinterpret_cast<char const *>(::std::to_address(b))) /
-					   sizeof(*b);
-	}
+	return first + static_cast<unsigned>(readed);
 }
 
 template <::std::integral char_type>
-inline void flush(basic_gz_io_observer<char_type> giob)
+inline ::std::byte const *write_some_bytes_overflow_define(basic_gz_io_observer<char_type> giob,
+														   ::std::byte const *first, ::std::size_t count)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::size_t to_write{count};
+	if constexpr (sizeof(unsigned) < sizeof(::std::size_t))
+	{
+		if (static_cast<::std::size_t>(::std::numeric_limits<unsigned>::max()) < to_write)
+		{
+			to_write = ::std::numeric_limits<unsigned>::max();
+		}
+	}
+	int written{gzwrite(giob.gzfile, first, static_cast<unsigned>(to_write))};
+	if (written < 0)
+	{
+		throw_posix_error();
+	}
+	return first + static_cast<unsigned>(written);
+}
+
+template <::std::integral char_type>
+inline void io_stream_buffer_flush_define(basic_gz_io_observer<char_type> giob)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (gzflush(giob.gzfile))

@@ -47,13 +47,13 @@ scatter_pwrite_some_cold_impl(outstmtype outsm,
 		for (::std::size_t i{}; i != n; ++i)
 		{
 			auto [base, len] = pscatters[i];
-			auto ed{base + len};
-			auto written{::fast_io::details::pwrite_some_impl(outsm, base, ed)};
+			auto written{::fast_io::details::pwrite_some_impl(outsm, base, len, off)};
 			::std::size_t sz{static_cast<::std::size_t>(written - base)};
 			if (sz != len)
 			{
 				return {i, sz};
 			}
+			off = ::fast_io::fposoffadd_nonegative(off, len);
 		}
 		return {n, 0};
 	}
@@ -89,7 +89,7 @@ scatter_pwrite_some_cold_impl(outstmtype outsm,
 				auto edf{basef + len};
 				::std::byte const *base{reinterpret_cast<::std::byte const *>(basef)};
 				::std::byte const *ed{reinterpret_cast<::std::byte const *>(edf)};
-				auto written{::fast_io::details::pwrite_some_bytes_impl(outsm, base, ed, off)};
+				auto written{::fast_io::details::pwrite_some_bytes_impl(outsm, base, static_cast<::std::size_t>(ed - base), off)};
 				::std::size_t diff{static_cast<::std::size_t>(written - base)};
 				off = ::fast_io::fposoffadd_nonegative(off, diff);
 				::std::size_t md{diff % sizeof(char_type)};
@@ -97,7 +97,7 @@ scatter_pwrite_some_cold_impl(outstmtype outsm,
 				if (md)
 				{
 					::std::size_t dfd{sizeof(char_type) - md};
-					::fast_io::details::pwrite_all_bytes_impl(outsm, written, written + dfd, off);
+					::fast_io::details::pwrite_all_bytes_impl(outsm, written, dfd, off);
 					off = ::fast_io::fposoffadd_nonegative(off, dfd);
 					++sz;
 				}
@@ -123,7 +123,7 @@ scatter_pwrite_some_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
 			::fast_io::operations::decay::output_stream_mutex_ref_decay(outsm)};
 		return ::fast_io::details::scatter_pwrite_some_impl(
-			::fast_io::operations::decay::output_stream_unlocked_ref_decay(outsm), pscatters, n);
+			::fast_io::operations::decay::output_stream_unlocked_ref_decay(outsm), pscatters, n, off);
 	}
 	else
 	{
@@ -223,7 +223,7 @@ if constexpr ((::fast_io::operations::decay::defines::has_pwrite_all_bytes_overf
 				auto edf{basef + len};
 				::std::byte const *base{reinterpret_cast<::std::byte const *>(basef)};
 				::std::byte const *ed{reinterpret_cast<::std::byte const *>(edf)};
-				::fast_io::details::pwrite_all_bytes_impl(outsm, base, ed, off);
+				::fast_io::details::pwrite_all_bytes_impl(outsm, base, static_cast<::std::size_t>(ed - base), off);
 				off = ::fast_io::fposoffadd_nonegative(off, len);
 			}
 		}
@@ -242,7 +242,7 @@ scatter_pwrite_all_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtype
 		::fast_io::operations::decay::stream_ref_decay_lock_guard lg{
 			::fast_io::operations::decay::output_stream_mutex_ref_decay(outsm)};
 		return ::fast_io::details::scatter_pwrite_all_impl(
-			::fast_io::operations::decay::output_stream_unlocked_ref_decay(outsm), pscatters, n);
+			::fast_io::operations::decay::output_stream_unlocked_ref_decay(outsm), pscatters, n, off);
 	}
 	else
 	{

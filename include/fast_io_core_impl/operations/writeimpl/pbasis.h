@@ -65,7 +65,7 @@ pwrite_some_cold_impl(outstmtype outsm, typename outstmtype::output_char_type co
 			if (remain != 0)
 			{
 				off = ::fast_io::fposoffadd_nonegative(off, ptdf);
-				pwrite_all_bytes_cold_impl(outsm, ptr, ptr + remain, off);
+				pwrite_all_bytes_cold_impl(outsm, ptr, remain, off);
 			}
 			return first + v;
 		}
