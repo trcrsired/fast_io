@@ -56,10 +56,13 @@ inline void connect(basic_ssl_io_observer<ch_type> siob)
 	}
 }
 
-template <::std::integral ch_type, zero_copy_io_stream stm>
+template <::std::integral ch_type, typename stm>
+	requires ::fast_io::operations::decay::defines::has_input_transmit_handle_define<
+		decltype(::fast_io::operations::input_stream_ref(::std::declval<stm &>()))>
 inline void attach(basic_ssl_io_observer<ch_type> siob, stm &sm)
 {
-	if (!SSL_set_fd(siob.native_handle(), zero_copy_in_handle(sm)))
+	if (!SSL_set_fd(siob.native_handle(),
+					input_transmit_handle_define(::fast_io::operations::input_stream_ref(sm)).fd))
 	{
 		throw_openssl_error();
 	}

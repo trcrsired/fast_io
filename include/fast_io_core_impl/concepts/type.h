@@ -120,6 +120,44 @@ using int32_size_based_t = ::std::make_signed_t<uint32_size_based_t>;
 using size32_t = ::std::conditional_t<(sizeof(::std::uint_least32_t) < sizeof(::std::size_t)),
 									  ::std::uint_least32_t, ::std::size_t>;
 
+/*
+A nullable file-position pointer. It carries the same semantics as the
+`off_t *_Nullable` parameters of copy_file_range(2)/splice(2):
+- a null pointer means "use and advance the object's own file position";
+- a non-null pointer means "start at *ptr"; *ptr is updated to point just past
+  the last byte transferred, while the object's own position stays untouched.
+*/
+struct fpos_nullable_ptr
+{
+	::fast_io::intfpos_t *ptr{};
+	inline constexpr fpos_nullable_ptr() noexcept = default;
+	inline constexpr fpos_nullable_ptr(::std::nullptr_t) noexcept {}
+	inline constexpr fpos_nullable_ptr(::fast_io::intfpos_t *fposptr) noexcept
+		: ptr{fposptr}
+	{}
+	inline constexpr fpos_nullable_ptr(::fast_io::intfpos_t &fposref) noexcept
+		: ptr{__builtin_addressof(fposref)}
+	{}
+	inline constexpr explicit operator bool() const noexcept
+	{
+		return ptr != nullptr;
+	}
+};
+
+/*
+An optional byte count for transmit_all_bytes: has_opt == false means
+"transmit until EOF"; has_opt == true means "transmit up to opt bytes".
+*/
+struct size_t_opt
+{
+	::std::size_t opt{};
+	bool has_opt{false};
+	inline constexpr size_t_opt() noexcept = default;
+	inline constexpr size_t_opt(::std::size_t optsize) noexcept
+		: opt{optsize}, has_opt{true}
+	{}
+};
+
 struct io_construct_t
 {
 	inline explicit constexpr io_construct_t() noexcept = default;

@@ -321,4 +321,12 @@ inline constexpr void ibuffer_minimum_size_underflow_all_prepare_define(basic_io
 		iobref.iobptr->input_buffer);
 }
 
+template <typename io_buffer_type>
+	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::in) == ::fast_io::buffer_mode::in)
+inline constexpr decltype(auto) input_transmit_handle_define(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
+{
+	return input_transmit_handle_define(
+		::fast_io::operations::input_stream_ref(iobref.iobptr->handle));
+}
+
 } // namespace fast_io

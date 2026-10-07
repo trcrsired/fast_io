@@ -123,7 +123,9 @@ inline constexpr ::std::byte *pread_some_bytes_cold_impl(instmtype insm, ::std::
 			[[__gnu__::__may_alias__]]
 #endif
 			= char_type *;
-		return ::fast_io::details::pread_some_cold_impl(insm, reinterpret_cast<char_type_ptr>(first), count, off);
+		return first + (::fast_io::details::pread_some_cold_impl(insm, reinterpret_cast<char_type_ptr>(first), count,
+															   off) -
+						reinterpret_cast<char_type_ptr>(first));
 	}
 	else if constexpr (sizeof(char_type) == 1 &&
 					   ::fast_io::operations::decay::defines::has_scatter_pread_some_underflow_define<instmtype>)

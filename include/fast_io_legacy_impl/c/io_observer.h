@@ -224,20 +224,30 @@ inline decltype(auto) redirect_handle(basic_c_family_io_observer<family, ch_type
 {
 	return redirect_handle(static_cast<basic_posix_io_observer<ch_type>>(h));
 }
-#if 0
-template<c_family family,::std::integral ch_type>
-requires zero_copy_input_stream<basic_posix_io_observer<ch_type>>
-inline decltype(auto) zero_copy_in_handle(basic_c_family_io_observer<family,ch_type> h)
+
+/*
+A FILE*-based stream can only expose its fd for zero-copy transmit when its
+buffered read-ahead is inspectable (input) or flushable (output) — otherwise
+fd-level transfers would skip data still sitting in the libc buffer.
+*/
+template <c_family family, ::std::integral ch_type>
+	requires(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<
+				 basic_c_family_io_observer<family, ch_type>> &&
+			 ::fast_io::operations::decay::defines::has_input_transmit_handle_define<
+				 basic_posix_io_observer<ch_type>>)
+inline constexpr decltype(auto) input_transmit_handle_define(basic_c_family_io_observer<family, ch_type> h) noexcept
 {
-	return zero_copy_in_handle(static_cast<basic_posix_io_observer<ch_type>>(h));
+	return input_transmit_handle_define(static_cast<basic_posix_io_observer<ch_type>>(h));
 }
 
-template<c_family family,::std::integral ch_type>
-requires zero_copy_output_stream<basic_posix_io_observer<ch_type>>
-inline decltype(auto) zero_copy_out_handle(basic_c_family_io_observer<family,ch_type> h)
+template <c_family family, ::std::integral ch_type>
+	requires(::fast_io::operations::decay::defines::has_output_or_io_stream_buffer_flush_define<
+				 basic_c_family_io_observer<family, ch_type>> &&
+			 ::fast_io::operations::decay::defines::has_output_transmit_handle_define<
+				 basic_posix_io_observer<ch_type>>)
+inline constexpr decltype(auto) output_transmit_handle_define(basic_c_family_io_observer<family, ch_type> h) noexcept
 {
-	return zero_copy_out_handle(static_cast<basic_posix_io_observer<ch_type>>(h));
+	return output_transmit_handle_define(static_cast<basic_posix_io_observer<ch_type>>(h));
 }
-#endif
 #endif
 } // namespace fast_io

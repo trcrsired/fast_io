@@ -65,10 +65,6 @@
 #include "pipe.h"
 #include "aliases.h"
 
-#if defined(__linux__) && (defined(__NR_sendfile) || defined(__NR_sendfile64)) && 0
-#include "../linux_zerocopy.h"
-#endif
-
 #if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__WINE__) && !defined(__BIONIC__)
 #include "common.h"
 #include "win32.h"
@@ -86,3 +82,4 @@
 
 #endif
 #include "seek.h"
+#include "transmit.h"

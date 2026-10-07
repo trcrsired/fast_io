@@ -69,5 +69,11 @@ int main()
 {
 	foo f0{0};
 	foo f1{1};
-	::fast_io::operations::println_freestanding(f1, ::fast_io::operations::transmit_until_eof(f1, f0));
+	::std::size_t transmitted{};
+	for (::std::size_t n{}; (n = ::fast_io::operations::transmit_some_bytes(
+								   f1, {}, f0, {}, ::std::numeric_limits<::std::size_t>::max())) != 0;)
+	{
+		transmitted += n;
+	}
+	::fast_io::operations::print_freestanding<true>(f1, transmitted);
 }

@@ -3,5 +3,5 @@
 
 int main()
 {
-	transmit(fast_io::c_stdout(), fast_io::c_stdin());
+	::fast_io::operations::transmit_all_bytes(fast_io::c_stdout(), {}, fast_io::c_stdin(), {}, {});
 }

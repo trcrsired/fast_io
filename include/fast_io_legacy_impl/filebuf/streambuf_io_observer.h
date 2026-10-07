@@ -99,20 +99,29 @@ using wstreambuf_io_observer = basic_streambuf_io_observer<wchar_t>;
 
 #if defined(_LIBCPP_VERSION) || defined(__GLIBCXX__) || defined(_MSVC_STL_UPDATE)
 
-#if 0
-template<::std::integral ch_type,typename Traits>
-requires zero_copy_input_stream<basic_c_io_observer<ch_type>>
-inline constexpr decltype(auto) zero_copy_in_handle(basic_filebuf_io_observer<ch_type,Traits> h)
+template <::std::integral ch_type, typename Traits>
+	requires(::fast_io::operations::decay::defines::has_ibuffer_basic_operations<
+				 basic_general_streambuf_io_observer<::std::basic_filebuf<ch_type, Traits>>> &&
+			 ::fast_io::operations::decay::defines::has_input_transmit_handle_define<
+				 basic_c_family_io_observer<::fast_io::c_family::native_unlocked, ch_type>>)
+inline constexpr decltype(auto) input_transmit_handle_define(
+	basic_general_streambuf_io_observer<::std::basic_filebuf<ch_type, Traits>> h) noexcept
 {
-	return zero_copy_in_handle(static_cast<basic_c_io_observer<ch_type>>(h));
+	return input_transmit_handle_define(
+		static_cast<basic_c_family_io_observer<::fast_io::c_family::native_unlocked, ch_type>>(h));
 }
-template<::std::integral ch_type,typename Traits>
-requires zero_copy_output_stream<basic_c_io_observer<ch_type>>
-inline constexpr decltype(auto) zero_copy_out_handle(basic_filebuf_io_observer<ch_type,Traits> h)
+
+template <::std::integral ch_type, typename Traits>
+	requires(::fast_io::operations::decay::defines::has_output_or_io_stream_buffer_flush_define<
+				 basic_general_streambuf_io_observer<::std::basic_filebuf<ch_type, Traits>>> &&
+			 ::fast_io::operations::decay::defines::has_output_transmit_handle_define<
+				 basic_c_family_io_observer<::fast_io::c_family::native_unlocked, ch_type>>)
+inline constexpr decltype(auto) output_transmit_handle_define(
+	basic_general_streambuf_io_observer<::std::basic_filebuf<ch_type, Traits>> h) noexcept
 {
-	return zero_copy_out_handle(static_cast<basic_c_io_observer<ch_type>>(h));
+	return output_transmit_handle_define(
+		static_cast<basic_c_family_io_observer<::fast_io::c_family::native_unlocked, ch_type>>(h));
 }
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM) || defined(_LIBCPP_HAS_FSTREAM)
 

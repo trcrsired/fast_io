@@ -376,4 +376,12 @@ inline constexpr void obuffer_minimum_size_flush_prepare_define(basic_io_buffer_
 		iobref.iobptr->output_buffer);
 }
 
+template <typename io_buffer_type>
+	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out)
+inline constexpr decltype(auto) output_transmit_handle_define(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
+{
+	return output_transmit_handle_define(
+		::fast_io::operations::output_stream_ref(iobref.iobptr->handle));
+}
+
 } // namespace fast_io
