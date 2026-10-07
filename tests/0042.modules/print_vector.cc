@@ -8,13 +8,13 @@ int main()
 {
 	try
 	{
-		::fast_io::io::println("Hello World");
+		::fast_io::io::print("Hello World\n");
 		::fast_io::vector<int> v{1, 2, 3};
 		for (auto i : v)
 		{
 			::fast_io::io::print(i, " ");
 		}
-		::fast_io::io::println("done");
+		::fast_io::io::print("done\n");
 	}
 	catch throws(::std::error e)
 	{

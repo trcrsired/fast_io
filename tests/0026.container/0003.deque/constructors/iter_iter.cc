@@ -31,7 +31,7 @@ inline void test_from_range_with_vector()
 		{
 			if (dq[i] != vec[i])
 			{
-				::fast_io::io::panicln("value mismatch at ", i, " with from_range vector");
+				::fast_io::io::panic("value mismatch at ", i, " with from_range vector\n");
 			}
 		}
 	}

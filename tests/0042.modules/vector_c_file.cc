@@ -9,7 +9,7 @@ int main()
 		::fast_io::vector<::fast_io::c_file> v;
 		v.emplace_back("/tmp/fast_io_module_test_tmp.txt", ::fast_io::open_mode::out);
 		v.emplace_back("/definitely/not/existing/dir/f", ::fast_io::open_mode::in);
-		::fast_io::io::perrln("unreachable");
+		::fast_io::io::perr("unreachable\n");
 		return 2;
 	}
 	catch throws(::std::error e)

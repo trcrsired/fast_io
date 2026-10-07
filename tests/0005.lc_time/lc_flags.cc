@@ -5,12 +5,13 @@
 
 using namespace fast_io::io;
 
-int main() try
+int main()
+try
 {
 	auto const *a{::fast_io::l10n::load_l10n(u8"de_DE.UTF-8")};
 	auto const *b{::fast_io::l10n::load_l10n(
 		u8"de_DE", ::fast_io::l10n::l10n_load_flags::ignore_system_settings)};
-	::fast_io::println(a == b ? "same" : "diff");
+	::fast_io::print(a == b ? "same\n" : "diff\n");
 }
 catch throws(::std::error e)
 {

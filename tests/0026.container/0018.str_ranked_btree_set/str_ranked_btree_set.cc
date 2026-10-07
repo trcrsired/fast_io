@@ -14,7 +14,7 @@ int main()
 
 	// 2. Initializer list construction
 	::fast_io::str_ranked_btree_set s2{"hello", "world", "foo"};
-	::fast_io::io::println("initializer_list construction:");
+	::fast_io::io::print("initializer_list construction:\n");
 	for (auto e : s2)
 	{
 		::fast_io::io::println("  ", e);
@@ -25,7 +25,7 @@ int main()
 	}
 
 	// 3. Ordered iteration (keys must come out sorted)
-	::fast_io::io::println("\n--- ordered iteration ---");
+	::fast_io::io::print("\n--- ordered iteration ---\n");
 	::fast_io::str_ranked_btree_set s3{"z", "a", "m", "d", "s"};
 	::fast_io::cstring_view prev{};
 	bool sorted{true};
@@ -63,7 +63,7 @@ int main()
 	::fast_io::io::println("move assigned, is_empty source=", s5.is_empty());
 
 	// 5. insert_key + nth_element: the order statistic must match sorted order
-	::fast_io::io::println("\n--- insert_key + nth_element ---");
+	::fast_io::io::print("\n--- insert_key + nth_element ---\n");
 	::fast_io::str_ranked_btree_set s8;
 	char buf[32];
 	constexpr ::std::size_t N{5000};
@@ -89,7 +89,7 @@ int main()
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("nth_element 0..N matches sorted order");
+	::fast_io::io::print("nth_element 0..N matches sorted order\n");
 
 	// 6. duplicate insert returns false and keeps size
 	if (s8.insert_key("k00000042"))
@@ -102,7 +102,7 @@ int main()
 	}
 
 	// 7. erase half (evens) then nth_element on survivors
-	::fast_io::io::println("\n--- erase + nth_element ---");
+	::fast_io::io::print("\n--- erase + nth_element ---\n");
 	for (::std::size_t i{}; i != N; i += 2)
 	{
 		auto len{static_cast<::std::size_t>(::std::snprintf(buf, sizeof(buf), "k%08zu", i))};
@@ -124,12 +124,12 @@ int main()
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("nth_element after erasing evens matches");
+	::fast_io::io::print("nth_element after erasing evens matches\n");
 
 	// 8. lookup
-	::fast_io::io::println("\n--- lookup ---");
+	::fast_io::io::print("\n--- lookup ---\n");
 	::fast_io::io::println("contains \"k00001001\": ", s8.contains("k00001001"));
-	::fast_io::io::println("contains \"k00001000\": ", s8.contains("k00001000"), " (erased, should be false)");
+	::fast_io::io::print("contains \"k00001000\": ", s8.contains("k00001000"), " (erased, should be false)\n");
 	if (s8.contains("k00001000") || !s8.contains("k00001001"))
 	{
 		::fast_io::fast_terminate();
@@ -166,7 +166,7 @@ int main()
 	}
 
 	// 11. random churn: insert/erase mix with nth_element cross-checks
-	::fast_io::io::println("\n--- churn ---");
+	::fast_io::io::print("\n--- churn ---\n");
 	{
 		::fast_io::str_ranked_btree_set cs;
 		::std::size_t expected{};
@@ -216,7 +216,7 @@ int main()
 	}
 
 	// 12. swap / comparison
-	::fast_io::io::println("\n--- swap/compare ---");
+	::fast_io::io::print("\n--- swap/compare ---\n");
 	::fast_io::str_ranked_btree_set sa{"x", "y"};
 	swap(s3, sa);
 	::fast_io::io::println("after swap, s3 front=", s3.front(), " sa front=", sa.front());
@@ -241,5 +241,5 @@ int main()
 	}
 	::fast_io::io::println("after clear_destroy, is_empty=", s8.is_empty());
 
-	::fast_io::io::println("\nAll tests passed.");
+	::fast_io::io::print("\nAll tests passed.\n");
 }

@@ -56,7 +56,7 @@ int main()
 
 	// 2. Initializer list construction
 	::fast_io::str_ranked_btree_map<::std::size_t> mp2{{"hello", 10}, {"world", 20}, {"foo", 30}};
-	::fast_io::io::println("initializer_list construction:");
+	::fast_io::io::print("initializer_list construction:\n");
 	for (auto e : mp2)
 	{
 		::fast_io::io::println("  ", e.key(), " -> ", e.mapped());
@@ -67,7 +67,7 @@ int main()
 	}
 
 	// 3. Ordered iteration (keys must come out sorted)
-	::fast_io::io::println("\n--- ordered iteration ---");
+	::fast_io::io::print("\n--- ordered iteration ---\n");
 	::fast_io::str_ranked_btree_map<::std::size_t> mp3{{"z", 26}, {"a", 1}, {"m", 13}, {"d", 4}, {"s", 19}};
 	::fast_io::cstring_view prev{};
 	bool sorted{true};
@@ -107,7 +107,7 @@ int main()
 	::fast_io::io::println("move assigned, is_empty source=", mp5.is_empty());
 
 	// 6. insert_key + nth_element: nth smallest must match sorted order
-	::fast_io::io::println("\n--- insert_key + nth_element ---");
+	::fast_io::io::print("\n--- insert_key + nth_element ---\n");
 	char buf[32];
 	constexpr ::std::size_t N{5000};
 	for (::std::size_t i{}; i != N; ++i)
@@ -131,7 +131,7 @@ int main()
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("nth_element 0..N matches sorted order");
+	::fast_io::io::print("nth_element 0..N matches sorted order\n");
 
 	// 7. insert_key (existing key - should not overwrite)
 	mp1.insert_key("k00000042", 424242);
@@ -176,7 +176,7 @@ int main()
 	}
 
 	// 12. contains / find / count
-	::fast_io::io::println("\n--- lookup ---");
+	::fast_io::io::print("\n--- lookup ---\n");
 	if (!mp1.contains("fig") || mp1.contains("notfound"))
 	{
 		::fast_io::fast_terminate();
@@ -218,7 +218,7 @@ int main()
 	::fast_io::io::println("back: ", mp1.back().key(), " -> ", mp1.back().mapped());
 
 	// 15. erase + nth_element on survivors
-	::fast_io::io::println("\n--- erase + nth_element ---");
+	::fast_io::io::print("\n--- erase + nth_element ---\n");
 	mp1.erase_key("fig");
 	mp1.erase_key("grape");
 	mp1.erase_key("honeydew");
@@ -249,7 +249,7 @@ int main()
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("nth_element after erasing evens matches");
+	::fast_io::io::print("nth_element after erasing evens matches\n");
 
 	// 16. erase (iterator) and erase (range)
 	{
@@ -272,7 +272,7 @@ int main()
 	}
 
 	// 17. reverse iteration
-	::fast_io::io::println("\n--- reverse iteration ---");
+	::fast_io::io::print("\n--- reverse iteration ---\n");
 	for (auto i{mp3.crbegin()}, ed{mp3.crend()}; i != ed; ++i)
 	{
 		::fast_io::io::println("  ", i->key(), " -> ", i->mapped());
@@ -303,7 +303,7 @@ int main()
 	}
 
 	// === RAII tests: every placement-new must pair with a destroy ===
-	::fast_io::io::println("\n========== RAII tests ==========");
+	::fast_io::io::print("\n========== RAII tests ==========\n");
 
 	// 20. bulk insert + erase half + copy: alive count must track exactly
 	{
@@ -355,7 +355,7 @@ int main()
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("after scope end, alive=", raii_mapped::alive, " (should be 0)");
+	::fast_io::io::print("after scope end, alive=", raii_mapped::alive, " (should be 0)\n");
 	if (raii_mapped::alive != 0)
 	{
 		::fast_io::fast_terminate();
@@ -418,5 +418,5 @@ int main()
 		::fast_io::fast_terminate();
 	}
 
-	::fast_io::io::println("\nAll tests passed.");
+	::fast_io::io::print("\nAll tests passed.\n");
 }

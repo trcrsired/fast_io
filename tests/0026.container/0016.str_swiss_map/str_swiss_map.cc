@@ -77,7 +77,7 @@ int main()
 	::fast_io::io::println("move assigned, size=", mp6.size(), " moved-from size=", mp4.size());
 
 	// 7. insert_key (new keys)
-	::fast_io::io::println("\n--- insert_key ---");
+	::fast_io::io::print("\n--- insert_key ---\n");
 	mp1.insert_key("apple", 1);
 	mp1.insert_key("banana", 2);
 	mp1.insert_key("cherry", 3);
@@ -91,18 +91,18 @@ int main()
 
 	// 8. insert_key (existing key - should not overwrite)
 	mp1.insert_key("apple", 100);
-	::fast_io::io::println("after insert_key existing, apple -> ", mp1.find_key("apple")->mapped(), " (should be 1)");
+	::fast_io::io::print("after insert_key existing, apple -> ", mp1.find_key("apple")->mapped(), " (should be 1)\n");
 
 	// 9. insert_key_or_assign (existing key - should overwrite)
 	mp1.insert_key_or_assign("apple", 1000);
-	::fast_io::io::println("after insert_key_or_assign existing, apple -> ", mp1.find_key("apple")->mapped(), " (should be 1000)");
+	::fast_io::io::print("after insert_key_or_assign existing, apple -> ", mp1.find_key("apple")->mapped(), " (should be 1000)\n");
 
 	// 10. insert_key_or_assign (new key)
 	mp1.insert_key_or_assign("fig", 6);
 	::fast_io::io::println("after insert_key_or_assign new, size=", mp1.size());
 
 	// 11. insert_range
-	::fast_io::io::println("\n--- insert_range ---");
+	::fast_io::io::print("\n--- insert_range ---\n");
 	mp1.insert_range({{"grape", 7}, {"honeydew", 8}});
 	::fast_io::io::println("after insert_range, size=", mp1.size());
 	for (auto &e : mp1)
@@ -111,7 +111,7 @@ int main()
 	}
 
 	// 12. emplace_key
-	::fast_io::io::println("\n--- emplace_key ---");
+	::fast_io::io::print("\n--- emplace_key ---\n");
 	mp1.emplace_key("kiwi", 9);
 	::fast_io::io::println("after emplace_key, kiwi -> ", mp1.find_key("kiwi")->mapped());
 
@@ -121,10 +121,10 @@ int main()
 
 	// 14. emplace_key_or_assign (existing key)
 	mp1.emplace_key_or_assign("kiwi", 99);
-	::fast_io::io::println("after emplace_key_or_assign existing, kiwi -> ", mp1.find_key("kiwi")->mapped(), " (should be 99)");
+	::fast_io::io::print("after emplace_key_or_assign existing, kiwi -> ", mp1.find_key("kiwi")->mapped(), " (should be 99)\n");
 
 	// 15. contains / find_key / count
-	::fast_io::io::println("\n--- lookup ---");
+	::fast_io::io::print("\n--- lookup ---\n");
 	::fast_io::io::println("contains \"apple\": ", mp1.contains("apple"));
 	::fast_io::io::println("contains \"notfound\": ", mp1.contains("notfound"));
 	::fast_io::io::println("count \"banana\": ", mp1.count("banana"));
@@ -142,7 +142,7 @@ int main()
 	}
 
 	// 16. erase_key (existing key)
-	::fast_io::io::println("\n--- erase_key ---");
+	::fast_io::io::print("\n--- erase_key ---\n");
 	auto erased = mp1.erase_key("banana");
 	::fast_io::io::println("erase_key \"banana\": ", erased, ", size=", mp1.size(), ", contains=", mp1.contains("banana"));
 
@@ -151,7 +151,7 @@ int main()
 	::fast_io::io::println("erase_key \"notfound\": ", erased, ", size=", mp1.size());
 
 	// 18. erase (iterator)
-	::fast_io::io::println("\n--- erase(iterator) ---");
+	::fast_io::io::print("\n--- erase(iterator) ---\n");
 	{
 		auto it = mp1.find_key("cherry");
 		if (it != mp1.end())
@@ -163,7 +163,7 @@ int main()
 	}
 
 	// 19. erase (range)
-	::fast_io::io::println("\n--- erase(range) ---");
+	::fast_io::io::print("\n--- erase(range) ---\n");
 	if (mp1.size() >= 2)
 	{
 		auto first = mp1.begin();
@@ -174,7 +174,7 @@ int main()
 	}
 
 	// 20. clear and reuse
-	::fast_io::io::println("\n--- clear ---");
+	::fast_io::io::print("\n--- clear ---\n");
 	mp1.insert_key("reuse", 1);
 	::fast_io::io::println("before clear, size=", mp1.size());
 	mp1.clear();
@@ -189,7 +189,7 @@ int main()
 	::fast_io::io::println("after clear_destroy, size=", mp1.size(), " capacity=", mp1.capacity(), " is_empty=", mp1.is_empty());
 
 	// 22. reserve / capacity / max_size / is_empty
-	::fast_io::io::println("\n--- capacity ---");
+	::fast_io::io::print("\n--- capacity ---\n");
 	::fast_io::str_swiss_map<::std::size_t> mp7;
 	::fast_io::io::println("default max_size: ", mp7.max_size());
 	mp7.reserve(100);
@@ -199,7 +199,7 @@ int main()
 	::fast_io::io::println("after 2 inserts, capacity=", mp7.capacity(), " size=", mp7.size());
 
 	// 23. Forward iteration
-	::fast_io::io::println("\n--- forward iteration ---");
+	::fast_io::io::print("\n--- forward iteration ---\n");
 	::fast_io::str_swiss_map<::std::size_t> mp8{{"z", 26}, {"a", 1}, {"m", 13}, {"d", 4}, {"s", 19}};
 	for (auto &e : mp8)
 	{
@@ -207,21 +207,21 @@ int main()
 	}
 
 	// 24. Reverse iteration
-	::fast_io::io::println("\n--- reverse iteration ---");
+	::fast_io::io::print("\n--- reverse iteration ---\n");
 	for (auto i{mp8.crbegin()}, ed{mp8.crend()}; i != ed; ++i)
 	{
 		::fast_io::io::println("  ", i->key(), " -> ", i->mapped());
 	}
 
 	// 25. swap
-	::fast_io::io::println("\n--- swap ---");
+	::fast_io::io::print("\n--- swap ---\n");
 	::fast_io::str_swiss_map<::std::size_t> mp9{{"x", 24}, {"y", 25}};
 	::fast_io::io::println("before swap: mp8 size=", mp8.size(), " mp9 size=", mp9.size());
 	swap(mp8, mp9);
 	::fast_io::io::println("after swap: mp8 size=", mp8.size(), " mp9 size=", mp9.size());
 
 	// 26. operator==
-	::fast_io::io::println("\n--- operator== ---");
+	::fast_io::io::print("\n--- operator== ---\n");
 	::fast_io::str_swiss_map<::std::size_t> mp10{{"a", 1}, {"b", 2}};
 	::fast_io::str_swiss_map<::std::size_t> mp11{{"a", 1}, {"b", 2}};
 	::fast_io::str_swiss_map<::std::size_t> mp12{{"a", 1}, {"c", 3}};
@@ -229,12 +229,12 @@ int main()
 	::fast_io::io::println("different maps: ", (mp10 == mp12));
 
 	// 27. hash_function
-	::fast_io::io::println("\n--- hash_function ---");
+	::fast_io::io::print("\n--- hash_function ---\n");
 	auto h = mp10.hash_function();
 	::fast_io::io::println("hash_function valid: ", true);
 
 	// 28. Reuse after move
-	::fast_io::io::println("\n--- reuse after move ---");
+	::fast_io::io::print("\n--- reuse after move ---\n");
 	::fast_io::str_swiss_map<::std::size_t> mp13{{"original", 1}};
 	auto mp14(::std::move(mp13));
 	::fast_io::io::println("moved-from size: ", mp13.size());
@@ -242,23 +242,23 @@ int main()
 	::fast_io::io::println("reused moved-from size: ", mp13.size(), " contains: ", mp13.contains("new_life"));
 
 	// === RAII class tests ===
-	::fast_io::io::println("\n========== RAII tests ==========");
+	::fast_io::io::print("\n========== RAII tests ==========\n");
 
 	// 29. RAII: basic insert and destroy via clear_destroy
-	::fast_io::io::println("\n--- RAII: clear_destroy ---");
+	::fast_io::io::print("\n--- RAII: clear_destroy ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
 		raii_map.insert_key("a", raii_mapped(1));
 		raii_map.insert_key("b", raii_mapped(2));
 		raii_map.insert_key("c", raii_mapped(3));
-		::fast_io::io::println("after 3 inserts, raii_mapped::alive=", raii_mapped::alive, " (should be 3)");
+		::fast_io::io::print("after 3 inserts, raii_mapped::alive=", raii_mapped::alive, " (should be 3)\n");
 		if (raii_mapped::alive != 3)
 		{
 			::fast_io::fast_terminate();
 		}
 		raii_map.clear_destroy();
-		::fast_io::io::println("after clear_destroy, raii_mapped::alive=", raii_mapped::alive, " (should be 0)");
+		::fast_io::io::print("after clear_destroy, raii_mapped::alive=", raii_mapped::alive, " (should be 0)\n");
 		if (raii_mapped::alive != 0)
 		{
 			::fast_io::fast_terminate();
@@ -266,7 +266,7 @@ int main()
 	}
 
 	// 30. RAII: erase_key destroys one element
-	::fast_io::io::println("\n--- RAII: erase_key ---");
+	::fast_io::io::print("\n--- RAII: erase_key ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
@@ -275,7 +275,7 @@ int main()
 		raii_map.insert_key("c", raii_mapped(3));
 		::fast_io::io::println("before erase, alive=", raii_mapped::alive);
 		raii_map.erase_key("b");
-		::fast_io::io::println("after erase_key \"b\", alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("after erase_key \"b\", alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
@@ -288,7 +288,7 @@ int main()
 	}
 
 	// 31. RAII: erase(iterator) destroys one element
-	::fast_io::io::println("\n--- RAII: erase(iterator) ---");
+	::fast_io::io::print("\n--- RAII: erase(iterator) ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
@@ -302,7 +302,7 @@ int main()
 				raii_map.erase(it);
 			}
 		}
-		::fast_io::io::println("after erase(iterator \"b\"), alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("after erase(iterator \"b\"), alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
@@ -315,89 +315,89 @@ int main()
 	}
 
 	// 32. RAII: clear() should not destroy (keeps memory), then insert and destroy
-	::fast_io::io::println("\n--- RAII: clear() then destroy ---");
+	::fast_io::io::print("\n--- RAII: clear() then destroy ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
 		raii_map.insert_key("a", raii_mapped(1));
 		raii_map.insert_key("b", raii_mapped(2));
-		::fast_io::io::println("before clear, alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("before clear, alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
 		}
 		raii_map.clear();
-		::fast_io::io::println("after clear, alive=", raii_mapped::alive, " (should be 0)");
+		::fast_io::io::print("after clear, alive=", raii_mapped::alive, " (should be 0)\n");
 		if (raii_mapped::alive != 0)
 		{
 			::fast_io::fast_terminate();
 		}
 		raii_map.insert_key("c", raii_mapped(3));
-		::fast_io::io::println("after insert after clear, alive=", raii_mapped::alive, " (should be 1)");
+		::fast_io::io::print("after insert after clear, alive=", raii_mapped::alive, " (should be 1)\n");
 		if (raii_mapped::alive != 1)
 		{
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("after scope end, alive=", raii_mapped::alive, " (should be 0)");
+	::fast_io::io::print("after scope end, alive=", raii_mapped::alive, " (should be 0)\n");
 	if (raii_mapped::alive != 0)
 	{
 		::fast_io::fast_terminate();
 	}
 
 	// 33. RAII: copy construction
-	::fast_io::io::println("\n--- RAII: copy construction ---");
+	::fast_io::io::print("\n--- RAII: copy construction ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
 		raii_map.insert_key("a", raii_mapped(1));
 		raii_map.insert_key("b", raii_mapped(2));
-		::fast_io::io::println("original alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("original alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
 		}
 		{
 			auto raii_copy(raii_map);
-			::fast_io::io::println("after copy, alive=", raii_mapped::alive, " (should be 4)");
+			::fast_io::io::print("after copy, alive=", raii_mapped::alive, " (should be 4)\n");
 			if (raii_mapped::alive != 4)
 			{
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::io::println("after copy destroyed, alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("after copy destroyed, alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
 		}
 	}
-	::fast_io::io::println("after scope end, alive=", raii_mapped::alive, " (should be 0)");
+	::fast_io::io::print("after scope end, alive=", raii_mapped::alive, " (should be 0)\n");
 	if (raii_mapped::alive != 0)
 	{
 		::fast_io::fast_terminate();
 	}
 
 	// 34. RAII: move construction
-	::fast_io::io::println("\n--- RAII: move construction ---");
+	::fast_io::io::print("\n--- RAII: move construction ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
 		raii_map.insert_key("a", raii_mapped(1));
 		raii_map.insert_key("b", raii_mapped(2));
-		::fast_io::io::println("original alive=", raii_mapped::alive, " (should be 2)");
+		::fast_io::io::print("original alive=", raii_mapped::alive, " (should be 2)\n");
 		if (raii_mapped::alive != 2)
 		{
 			::fast_io::fast_terminate();
 		}
 		{
 			auto raii_moved(::std::move(raii_map));
-			::fast_io::io::println("after move, alive=", raii_mapped::alive, " (should be 2)");
+			::fast_io::io::print("after move, alive=", raii_mapped::alive, " (should be 2)\n");
 			if (raii_mapped::alive != 2)
 			{
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::io::println("after moved destroyed, alive=", raii_mapped::alive, " (should be 0)");
+		::fast_io::io::print("after moved destroyed, alive=", raii_mapped::alive, " (should be 0)\n");
 		if (raii_mapped::alive != 0)
 		{
 			::fast_io::fast_terminate();
@@ -405,7 +405,7 @@ int main()
 	}
 
 	// 35. RAII: pre-reserved large insert (no rehash, tests bulk RAII safety)
-	::fast_io::io::println("\n--- RAII: bulk insert with reserve ---");
+	::fast_io::io::print("\n--- RAII: bulk insert with reserve ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(50);
@@ -434,14 +434,14 @@ int main()
 			}
 		}
 	}
-	::fast_io::io::println("after scope end, alive=", raii_mapped::alive, " (should be 0)");
+	::fast_io::io::print("after scope end, alive=", raii_mapped::alive, " (should be 0)\n");
 	if (raii_mapped::alive != 0)
 	{
 		::fast_io::fast_terminate();
 	}
 
 	// 36. RAII: operation sequence (insert, erase interleaved with reserve)
-	::fast_io::io::println("\n--- RAII: operation sequence ---");
+	::fast_io::io::print("\n--- RAII: operation sequence ---\n");
 	{
 		::fast_io::str_swiss_map<raii_mapped> raii_map;
 		raii_map.reserve(20);
@@ -484,5 +484,5 @@ int main()
 		::fast_io::fast_terminate();
 	}
 
-	::fast_io::io::println("\nAll tests passed.");
+	::fast_io::io::print("\nAll tests passed.\n");
 }

@@ -99,12 +99,12 @@ int main()
 			}
 			round_base = next;
 		}
-		::fast_io::io::println("move_assigns=", tracked_mapped::move_assigns, " after ", next, " inserts");
+		::fast_io::io::print("move_assigns=", tracked_mapped::move_assigns, " after ", next, " inserts\n");
 		if (!tracked_mapped::move_assigns)
 		{
 			::fast_io::fast_terminate();
 		}
 	}
 
-	::fast_io::io::println("nothrow movable mapped type survived grow and rehash.");
+	::fast_io::io::print("nothrow movable mapped type survived grow and rehash.\n");
 }
