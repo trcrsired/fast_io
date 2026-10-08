@@ -83,3 +83,9 @@
 #endif
 #include "seek.h"
 #include "transmit.h"
+
+#if defined(__linux__) && defined(__HERBCEPTIONS__)
+#include "../posix_mapping.h"
+#include "async/linux_liburing.h"
+#include "async/linux_io_uring.h"
+#endif
