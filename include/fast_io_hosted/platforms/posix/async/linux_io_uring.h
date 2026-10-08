@@ -106,9 +106,19 @@ public:
 	}
 };
 
+/*
+ * async_scheduler_ref_define: the owning ring decays to its
+ * trivially-copyable observer for the decay layer. The observer itself
+ * needs no define — async_scheduler_ref copies it straight through.
+ */
+inline constexpr linux_io_uring_observer async_scheduler_ref_define(linux_io_uring &ring) noexcept
+{
+	return {ring.native_handle()};
+}
+
 template <::std::integral char_type>
 inline constexpr ::fast_io::io_type_t<linux_io_uring_observer>
-async_scheduler_type(::fast_io::basic_posix_family_io_observer<::fast_io::posix_family::api, char_type>) noexcept
+	async_scheduler_type(::fast_io::basic_posix_family_io_observer<::fast_io::posix_family::api, char_type>) noexcept
 {
 	return {};
 }
@@ -378,7 +388,7 @@ struct io_uring_rw_cookie
 	::fast_io::liburing::io_uring_timespec ts{};
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -457,7 +467,7 @@ struct io_uring_scatter_cookie
 	::std::size_t n{};
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -561,7 +571,7 @@ struct io_uring_transmit_cookie
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -595,7 +605,7 @@ inline void io_uring_transmit_deliver(void *self) noexcept
 	auto callback{::std::move(cookie->callback)};
 	using state_type =
 		::fast_io::details::async_transmit_bytes_state<false, sched_type, outstmtype, instmtype,
-													 alloc_type, T>;
+													   alloc_type, T>;
 	sched_type const sched{cookie->sched};
 	outstmtype const outstm{cookie->outstm};
 	instmtype const instm{cookie->instm};
@@ -657,8 +667,8 @@ inline void async_pread_some_bytes_underflow_callback_define(
 	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_rw_submit(sched, *sched.ring, ::fast_io::liburing::io_uring_op_read,
-												   piob.fd, first, count, off, timeout,
-												   ::std::move(callback));
+													 piob.fd, first, count, off, timeout,
+													 ::std::move(callback));
 }
 
 template <::fast_io::posix_family family, ::std::integral char_type, typename func>
@@ -671,8 +681,8 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_rw_submit(sched, *sched.ring, ::fast_io::liburing::io_uring_op_write,
-												   piob.fd, first, count, off, timeout,
-												   ::std::move(callback));
+													 piob.fd, first, count, off, timeout,
+													 ::std::move(callback));
 }
 
 /*
@@ -689,9 +699,9 @@ inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_scatter_submit(sched, *sched.ring,
-														::fast_io::liburing::io_uring_op_readv, piob.fd,
-														scatters, n, off, timeout,
-														::std::move(callback));
+														  ::fast_io::liburing::io_uring_op_readv, piob.fd,
+														  scatters, n, off, timeout,
+														  ::std::move(callback));
 }
 
 template <::fast_io::posix_family family, ::std::integral char_type, typename func>
@@ -704,9 +714,9 @@ inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_scatter_submit(sched, *sched.ring,
-														::fast_io::liburing::io_uring_op_writev, piob.fd,
-														scatters, n, off, timeout,
-														::std::move(callback));
+														  ::fast_io::liburing::io_uring_op_writev, piob.fd,
+														  scatters, n, off, timeout,
+														  ::std::move(callback));
 }
 
 /*
@@ -734,8 +744,8 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<::fast_io::linux_io_uring_observer>;
 	using cookie_type =
 		::fast_io::liburing::details::io_uring_transmit_cookie<::fast_io::linux_io_uring_observer,
-															 outstmtype, instmtype, alloc_type,
-															 ::std::remove_cvref_t<func>>;
+															   outstmtype, instmtype, alloc_type,
+															   ::std::remove_cvref_t<func>>;
 	if (bound.has_opt && bound.opt == 0)
 	{
 		callback(::std::cxx_std_error{}, 0zu);
@@ -753,7 +763,7 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 			::fast_io::linux_io_uring_observer, outstmtype, instmtype, alloc_type,
 			::std::remove_cvref_t<func>>;
 		::std::size_t want{bound.has_opt ? bound.opt
-									   : ::std::numeric_limits<::std::size_t>::max()};
+										 : ::std::numeric_limits<::std::size_t>::max()};
 		::fast_io::liburing::details::io_uring_reserve_sqes(*sched.ring, timeout.has_opt ? 2 : 1);
 		::fast_io::liburing::io_uring_sqe *sqe{
 			::fast_io::liburing::io_uring_get_sqe(*sched.ring)};
@@ -781,5 +791,3 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 }
 
 } // namespace fast_io
-
-

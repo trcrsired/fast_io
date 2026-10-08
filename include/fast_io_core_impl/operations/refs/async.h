@@ -162,3 +162,36 @@ concept async_pwritable =
 		decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>;
 
 } // namespace fast_io::operations::decay::defines
+
+namespace fast_io::operations
+{
+
+/*
+ * Scheduler-to-observer reduction — the scheduler's analog of
+ * input_stream_ref/output_stream_ref. Public async entry points take the
+ * scheduler by forwarding reference and reduce it here: an owning
+ * scheduler (e.g. linux_io_uring) decays through its
+ * async_scheduler_ref_define to the trivially-copyable observer
+ * (linux_io_uring_observer) the decay layer passes by value; a type that
+ * is already an observer just copies through.
+ */
+template <typename T>
+	requires(requires(T &&t) {
+		async_scheduler_ref_define(::fast_io::freestanding::forward<T>(t));
+	} ||
+			 (::fast_io::operations::decay::defines::async_scheduler_observer<
+				  ::std::remove_cvref_t<T>> &&
+			  ::std::is_trivially_copyable_v<::std::remove_cvref_t<T>>))
+inline constexpr decltype(auto) async_scheduler_ref(T &&t) noexcept
+{
+	if constexpr (requires { async_scheduler_ref_define(::fast_io::freestanding::forward<T>(t)); })
+	{
+		return async_scheduler_ref_define(::fast_io::freestanding::forward<T>(t));
+	}
+	else
+	{
+		return ::std::remove_cvref_t<T>(t);
+	}
+}
+
+} // namespace fast_io::operations

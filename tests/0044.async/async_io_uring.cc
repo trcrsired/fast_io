@@ -8,14 +8,14 @@
 
 static int failures{};
 
-#define CHECK(cond)                                                          \
-	do                                                                       \
-	{                                                                        \
-		if (!(cond))                                                         \
-		{                                                                    \
-			++failures;                                                      \
-			::std::fprintf(stderr, "FAIL %s line %d\n", #cond, __LINE__);    \
-		}                                                                    \
+#define CHECK(cond)                                                       \
+	do                                                                    \
+	{                                                                     \
+		if (!(cond))                                                      \
+		{                                                                 \
+			++failures;                                                   \
+			::std::fprintf(stderr, "FAIL %s line %d\n", #cond, __LINE__); \
+		}                                                                 \
 	} while (0)
 
 /* minimal lazy task for the coroutine forms */
@@ -44,7 +44,8 @@ struct test_task
 				auto c{h.promise().continuation};
 				return c ? c : ::std::noop_coroutine();
 			}
-			static constexpr void await_resume() noexcept {}
+			static constexpr void await_resume() noexcept
+			{}
 		};
 		static constexpr final_awaiter final_suspend() noexcept
 		{
@@ -54,24 +55,25 @@ struct test_task
 		{
 			error = e;
 		}
-		static constexpr void return_void() noexcept {}
+		static constexpr void return_void() noexcept
+		{}
 	};
 	::std::coroutine_handle<promise_type> handle{};
 };
 
-namespace fad = ::fast_io::operations::decay;
+namespace fad = ::fast_io::operations;
 
 static test_task coro_main(::fast_io::linux_io_uring_observer sched, int fd_in, int fd_out) throws
 {
 	::std::byte buf[128]{};
 	/* positioned read */
-	auto n{co_await fad::async_pread_some_bytes_decay(sched, ::fast_io::posix_io_observer{fd_in}, buf,
-													 sizeof(buf), ::fast_io::intfpos_opt{0}, {})};
+	auto n{co_await fad::async_pread_some_bytes(sched, ::fast_io::posix_io_observer{fd_in}, buf,
+												sizeof(buf), ::fast_io::intfpos_opt{0}, {})};
 	CHECK(n == 128);
 	CHECK(buf[0] == ::std::byte{'A'});
 	/* positioned write_all through the coroutine form */
-	co_await fad::async_pwrite_all_bytes_decay(sched, ::fast_io::posix_io_observer{fd_out}, buf, 64,
-											   ::fast_io::intfpos_opt{0}, {});
+	co_await fad::async_pwrite_all_bytes(sched, ::fast_io::posix_io_observer{fd_out}, buf, 64,
+										 ::fast_io::intfpos_opt{0}, {});
 }
 
 int main()
@@ -113,7 +115,7 @@ int main()
 		bool fired{};
 		::std::cxx_std_error err{};
 		::std::byte buf[128]{};
-		fad::async_pread_all_bytes_decay_callback(
+		fad::async_pread_all_bytes_callback(
 			sched, fi::posix_io_observer{fin.native_handle()}, buf, sizeof(buf), {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				fired = true;
@@ -137,7 +139,7 @@ int main()
 		}
 		fi::io_scatter_t wv[2]{{a, 16}, {b, 16}};
 		bool fired{};
-		fad::async_scatter_pwrite_all_bytes_decay_callback(
+		fad::async_scatter_pwrite_all_bytes_callback(
 			sched, fi::posix_io_observer{fout.native_handle()}, wv, 2, ::fast_io::intfpos_opt{64}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				fired = true;
@@ -156,7 +158,7 @@ int main()
 		::std::memset(b, 0, 16);
 		fired = false;
 		fi::io_scatter_status_t st{};
-		fad::async_scatter_pread_some_bytes_decay_callback(
+		fad::async_scatter_pread_some_bytes_callback(
 			sched, fi::posix_io_observer{fout.native_handle()}, rv, 2, ::fast_io::intfpos_opt{64}, {},
 			[&](::std::cxx_std_error e, fi::io_scatter_status_t s) noexcept {
 				fired = true;
@@ -174,7 +176,7 @@ int main()
 	/* transmit regular->regular: splice cannot serve it -> bounce fallback */
 	{
 		bool fired{};
-		fad::async_transmit_some_bytes_decay_callback(
+		fad::async_transmit_some_bytes_callback(
 			sched, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{200},
 			fi::posix_io_observer{fin.native_handle()}, ::fast_io::intfpos_opt{0},
 			fi::size_t_opt{64}, {},
@@ -201,7 +203,7 @@ int main()
 		CHECK(::write(pfds[1], pipemsg, sizeof(pipemsg) - 1) == static_cast<long>(sizeof(pipemsg) - 1));
 		bool fired{};
 		::std::size_t moved{};
-		fad::async_transmit_some_bytes_decay_callback(
+		fad::async_transmit_some_bytes_callback(
 			sched, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{400},
 			fi::posix_io_observer{pfds[0]}, {},
 			fi::size_t_opt{sizeof(pipemsg) - 1}, {},
@@ -231,7 +233,7 @@ int main()
 		::std::byte buf[8]{};
 		bool fired{};
 		::std::cxx_std_error err{};
-		fad::async_pread_some_bytes_decay_callback(
+		fad::async_pread_some_bytes_callback(
 			sched, fi::posix_io_observer{pfds[0]}, buf, sizeof(buf), {},
 			fi::posix_statx_timestamp_opt{fi::posix_statx_timestamp64{0, 50000000}},
 			[&](::std::cxx_std_error e, ::std::size_t) noexcept {
@@ -260,7 +262,7 @@ int main()
 			ibf{fi::posix_io_observer{fin.native_handle()}};
 		::std::byte buf[8]{};
 		bool fired{};
-		fad::async_pread_some_bytes_decay_callback(
+		fad::async_pread_some_bytes_callback(
 			sched, ibf, buf, sizeof(buf), {}, {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				fired = true;
@@ -280,7 +282,7 @@ int main()
 		bool fired{};
 		::std::cxx_std_error err{};
 		::std::byte buf[8]{};
-		fad::async_pread_some_bytes_decay_callback(
+		fad::async_pread_some_bytes_callback(
 			sched, fi::posix_io_observer{-1}, buf, sizeof(buf), {}, {},
 			[&](::std::cxx_std_error e, ::std::size_t) noexcept {
 				fired = true;

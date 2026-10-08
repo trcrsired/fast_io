@@ -37,7 +37,7 @@ struct async_transmit_bytes_state
 	::std::size_t round_base;
 	::std::byte buf[async_transmit_bounce_size];
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -172,7 +172,7 @@ struct async_transmit_all_native_state
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -235,14 +235,14 @@ namespace fast_io::operations::decay
 template <typename async_scheduler_type, typename outstmtype, typename instmtype,
 		  typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
-				 ::std::remove_cvref_t<callback_type>>
+		::std::remove_cvref_t<callback_type>>
 inline void async_transmit_some_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype &&outstm, ::fast_io::intfpos_opt off_out,
-	instmtype &&instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
+	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::intfpos_opt off_out,
+	instmtype instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
 	::fast_io::posix_statx_timestamp_opt timeout, callback_type callback) noexcept
 {
-	using outstm_reftype = ::fast_io::details::async_output_stream_ref_t<outstmtype>;
-	using instm_reftype = ::fast_io::details::async_input_stream_ref_t<instmtype>;
+	using outstm_reftype = outstmtype;
+	using instm_reftype = instmtype;
 	if constexpr (::fast_io::operations::decay::defines::
 					  has_async_transmit_some_bytes_overflow_underflow_callback_define<
 						  async_scheduler_type, outstm_reftype, instm_reftype,
@@ -250,11 +250,9 @@ inline void async_transmit_some_bytes_decay_callback(
 	{
 		async_transmit_some_bytes_overflow_underflow_callback_define(
 			scheduler,
-			::fast_io::details::async_output_stream_ref(
-				::fast_io::freestanding::forward<outstmtype>(outstm)),
+			outstm,
 			off_out,
-			::fast_io::details::async_input_stream_ref(
-				::fast_io::freestanding::forward<instmtype>(instm)),
+			instm,
 			off_in, bound, timeout,
 			::std::move(callback));
 		return;
@@ -264,8 +262,8 @@ inline void async_transmit_some_bytes_decay_callback(
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 		using state_type =
 			::fast_io::details::async_transmit_bytes_state<false, async_scheduler_type,
-														 outstm_reftype, instm_reftype, alloc_type,
-														 ::std::remove_cvref_t<callback_type>>;
+														   outstm_reftype, instm_reftype, alloc_type,
+														   ::std::remove_cvref_t<callback_type>>;
 		::std::size_t const remaining{bound.has_opt ? bound.opt
 													: ::std::numeric_limits<::std::size_t>::max()};
 		if (remaining == 0)
@@ -278,11 +276,9 @@ inline void async_transmit_some_bytes_decay_callback(
 			::fast_io::details::async_transmit_bytes_read_round(
 				::fast_io::details::async_new_state<state_type>(
 					scheduler,
-					::fast_io::details::async_output_stream_ref(
-						::fast_io::freestanding::forward<outstmtype>(outstm)),
+					outstm,
 					off_out,
-					::fast_io::details::async_input_stream_ref(
-						::fast_io::freestanding::forward<instmtype>(instm)),
+					instm,
 					off_in, remaining, timeout,
 					::std::move(callback), 0, 0, 0));
 			return;
@@ -304,12 +300,12 @@ template <typename async_scheduler_type, typename outstmtype, typename instmtype
 		  typename callback_type>
 	requires ::std::is_nothrow_invocable_v<callback_type, ::std::cxx_std_error>
 inline void async_transmit_all_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype &&outstm, ::fast_io::intfpos_opt off_out,
-	instmtype &&instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
+	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::intfpos_opt off_out,
+	instmtype instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
 	::fast_io::posix_statx_timestamp_opt timeout, callback_type callback) noexcept
 {
-	using outstm_reftype = ::fast_io::details::async_output_stream_ref_t<outstmtype>;
-	using instm_reftype = ::fast_io::details::async_input_stream_ref_t<instmtype>;
+	using outstm_reftype = outstmtype;
+	using instm_reftype = instmtype;
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 	::std::size_t const remaining{bound.has_opt ? bound.opt
 												: ::std::numeric_limits<::std::size_t>::max()};
@@ -327,34 +323,30 @@ inline void async_transmit_all_bytes_decay_callback(
 		{
 			using state_type =
 				::fast_io::details::async_transmit_all_native_state<async_scheduler_type,
-																  outstm_reftype, instm_reftype,
-																  alloc_type,
-																  ::std::remove_cvref_t<callback_type>>;
+																	outstm_reftype, instm_reftype,
+																	alloc_type,
+																	::std::remove_cvref_t<callback_type>>;
 			::fast_io::details::async_transmit_all_native_submit(
 				::fast_io::details::async_new_state<state_type>(
 					scheduler,
-					::fast_io::details::async_output_stream_ref(
-						::fast_io::freestanding::forward<outstmtype>(outstm)),
+					outstm,
 					off_out,
-					::fast_io::details::async_input_stream_ref(
-						::fast_io::freestanding::forward<instmtype>(instm)),
+					instm,
 					off_in, remaining, timeout, ::std::move(callback)));
 		}
 		else
 		{
 			using state_type =
 				::fast_io::details::async_transmit_bytes_state<true, async_scheduler_type,
-															 outstm_reftype, instm_reftype,
-															 alloc_type,
-															 ::std::remove_cvref_t<callback_type>>;
+															   outstm_reftype, instm_reftype,
+															   alloc_type,
+															   ::std::remove_cvref_t<callback_type>>;
 			::fast_io::details::async_transmit_bytes_read_round(
 				::fast_io::details::async_new_state<state_type>(
 					scheduler,
-					::fast_io::details::async_output_stream_ref(
-						::fast_io::freestanding::forward<outstmtype>(outstm)),
+					outstm,
 					off_out,
-					::fast_io::details::async_input_stream_ref(
-						::fast_io::freestanding::forward<instmtype>(instm)),
+					instm,
 					off_in, remaining, timeout, ::std::move(callback), 0, 0, 0));
 		}
 		return;
@@ -459,41 +451,29 @@ namespace fast_io::operations::decay
 /* Coroutine forms of the transmit decays. The some form yields the bytes
  * transmitted; the all form yields void. */
 template <typename async_scheduler_type, typename outstmtype, typename instmtype>
-inline auto async_transmit_some_bytes_decay(async_scheduler_type scheduler, outstmtype &&outstm,
-											::fast_io::intfpos_opt off_out, instmtype &&instm,
+inline auto async_transmit_some_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
+											::fast_io::intfpos_opt off_out, instmtype instm,
 											::fast_io::intfpos_opt off_in,
 											::fast_io::size_t_opt bound,
 											::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_transmit_some_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_output_stream_ref_t<outstmtype>,
-		::fast_io::details::async_input_stream_ref_t<instmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_output_stream_ref(
-			::fast_io::freestanding::forward<outstmtype>(outstm)),
-		off_out,
-		::fast_io::details::async_input_stream_ref(
-			::fast_io::freestanding::forward<instmtype>(instm)),
-		off_in, bound, timeout};
+		async_scheduler_type, outstmtype,
+		instmtype>{
+		{}, scheduler, outstm, off_out, instm, off_in, bound, timeout};
 }
 
 template <typename async_scheduler_type, typename outstmtype, typename instmtype>
-inline auto async_transmit_all_bytes_decay(async_scheduler_type scheduler, outstmtype &&outstm,
-										   ::fast_io::intfpos_opt off_out, instmtype &&instm,
+inline auto async_transmit_all_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
+										   ::fast_io::intfpos_opt off_out, instmtype instm,
 										   ::fast_io::intfpos_opt off_in,
 										   ::fast_io::size_t_opt bound,
 										   ::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_transmit_all_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_output_stream_ref_t<outstmtype>,
-		::fast_io::details::async_input_stream_ref_t<instmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_output_stream_ref(
-			::fast_io::freestanding::forward<outstmtype>(outstm)),
-		off_out,
-		::fast_io::details::async_input_stream_ref(
-			::fast_io::freestanding::forward<instmtype>(instm)),
-		off_in, bound, timeout};
+		async_scheduler_type, outstmtype,
+		instmtype>{
+		{}, scheduler, outstm, off_out, instm, off_in, bound, timeout};
 }
 
 } // namespace fast_io::operations::decay

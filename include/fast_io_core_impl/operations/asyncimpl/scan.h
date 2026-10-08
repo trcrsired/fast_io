@@ -19,8 +19,7 @@ struct async_scan_get_context_awaiter : async_awaiter_result<T>
 	using char_type = typename instmtype::input_char_type;
 	using arg_type = decltype(::fast_io::io_scan_forward<char_type>(
 		::fast_io::io_scan_alias(::std::declval<T &>())));
-	using scan_state_type = typename ::std::remove_cvref_t<decltype(
-		scan_context_type(::fast_io::io_reserve_type<char_type, arg_type>))>::type;
+	using scan_state_type = typename ::std::remove_cvref_t<decltype(scan_context_type(::fast_io::io_reserve_type<char_type, arg_type>))>::type;
 
 	scheduler sched;
 	instmtype instm;
@@ -311,10 +310,10 @@ namespace fast_io::operations::decay
  */
 template <typename T, typename async_scheduler_type, typename instmtype>
 	requires ::fast_io::operations::decay::defines::async_scheduler_observer<async_scheduler_type>
-inline auto async_scan_get(async_scheduler_type scheduler, instmtype &&instm,
+inline auto async_scan_get(async_scheduler_type scheduler, instmtype instm,
 						   ::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
-	using instm_reftype = ::fast_io::details::async_input_stream_ref_t<instmtype>;
+	using instm_reftype = instmtype;
 	using char_type = typename instm_reftype::input_char_type;
 	using arg_type = decltype(::fast_io::io_scan_forward<char_type>(
 		::fast_io::io_scan_alias(::std::declval<T &>())));
@@ -333,11 +332,10 @@ inline auto async_scan_get(async_scheduler_type scheduler, instmtype &&instm,
 					decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>,
 			"precise async scan needs the stream's async pread");
 		return ::fast_io::details::async_scan_get_precise_awaiter<async_scheduler_type, instm_reftype,
-																T, n>{
+																  T, n>{
 			{},
 			scheduler,
-			::fast_io::details::async_input_stream_ref(
-				::fast_io::freestanding::forward<instmtype>(instm)),
+			instm,
 			timeout};
 	}
 	else
@@ -350,11 +348,10 @@ inline auto async_scan_get(async_scheduler_type scheduler, instmtype &&instm,
 				decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>,
 			"context async scan needs the stream's async_ibuffer_underflow");
 		return ::fast_io::details::async_scan_get_context_awaiter<async_scheduler_type, instm_reftype,
-																T>{
+																  T>{
 			{},
 			scheduler,
-			::fast_io::details::async_input_stream_ref(
-				::fast_io::freestanding::forward<instmtype>(instm)),
+			instm,
 			timeout};
 	}
 }

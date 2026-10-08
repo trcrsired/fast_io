@@ -14,7 +14,7 @@ concept async_scheduler_has_allocator = requires { typename scheduler::allocator
 template <typename scheduler>
 using async_scheduler_allocator_t =
 	::std::conditional_t<async_scheduler_has_allocator<scheduler>, typename scheduler::allocator_type,
-					   ::fast_io::native_global_allocator>;
+						 ::fast_io::native_global_allocator>;
 
 /* RAII owner of raw storage for one state object — the
  * local_operator_new_array_ptr pattern, minus array construction
@@ -175,46 +175,6 @@ inline void async_submit_catching(submitfunc &&submit, errfunc &&onerr) noexcept
 		::std::forward<errfunc>(onerr)(e.release());
 	}
 }
-
-/* Stream-to-reference conversion for async entry points: like the sync
- * operations layer, the stream argument is reduced to its
- * input/output/io_stream ref before a define is invoked, so a buffered
- * stream (basic_ibuf_file etc.) arrives at the define as
- * basic_io_buffer_ref and the buffer-aware defines get their say.
- * The stream object named by the caller must outlive the operation. */
-template <typename T>
-inline constexpr decltype(auto) async_input_stream_ref(T &&t) noexcept
-{
-	if constexpr (::fast_io::operations::defines::has_input_or_io_stream_ref_define<T>)
-	{
-		return ::fast_io::operations::input_stream_ref(::fast_io::freestanding::forward<T>(t));
-	}
-	else
-	{
-		return ::fast_io::freestanding::forward<T>(t);
-	}
-}
-
-template <typename T>
-inline constexpr decltype(auto) async_output_stream_ref(T &&t) noexcept
-{
-	if constexpr (::fast_io::operations::defines::has_output_or_io_stream_ref_define<T>)
-	{
-		return ::fast_io::operations::output_stream_ref(::fast_io::freestanding::forward<T>(t));
-	}
-	else
-	{
-		return ::fast_io::freestanding::forward<T>(t);
-	}
-}
-
-template <typename T>
-using async_input_stream_ref_t =
-	::std::remove_cvref_t<decltype(::fast_io::details::async_input_stream_ref(::std::declval<T &&>()))>;
-
-template <typename T>
-using async_output_stream_ref_t =
-	::std::remove_cvref_t<decltype(::fast_io::details::async_output_stream_ref(::std::declval<T &&>()))>;
 
 /* Coroutine plumbing shared by every async_*_decay awaiter: the awaiter
  * stores params by value, awaits submission of the callback form, and

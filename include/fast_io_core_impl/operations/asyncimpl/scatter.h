@@ -31,7 +31,7 @@ struct async_scatter_pread_some_bytes_state
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -54,7 +54,8 @@ inline void async_scatter_pread_some_bytes_submit(
 	}
 	auto const elem{state->scatters[state->index]};
 	::std::byte *base{const_cast<::std::byte *>(
-		static_cast<::std::byte const *>(elem.base)) + state->elem_off};
+						  static_cast<::std::byte const *>(elem.base)) +
+					  state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pread_some_bytes_underflow_callback_define(
 		state->sched, state->instm, base, elem_remaining, state->off, state->timeout,
@@ -114,7 +115,8 @@ inline void async_scatter_pread_all_bytes_submit(
 	}
 	auto const elem{state->scatters[state->index]};
 	::std::byte *base{const_cast<::std::byte *>(
-		static_cast<::std::byte const *>(elem.base)) + state->elem_off};
+						  static_cast<::std::byte const *>(elem.base)) +
+					  state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pread_some_bytes_underflow_callback_define(
 		state->sched, state->instm, base, elem_remaining, state->off, state->timeout,
@@ -167,7 +169,7 @@ struct async_scatter_pwrite_some_bytes_state
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											 ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -293,13 +295,13 @@ namespace fast_io::operations::decay
  */
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
-				 ::std::remove_cvref_t<callback_type>>
+		::std::remove_cvref_t<callback_type>>
 inline void async_scatter_pread_some_bytes_decay_callback(
-	async_scheduler_type scheduler, instmtype &&instm, ::fast_io::io_scatter_t const *pscatters,
+	async_scheduler_type scheduler, instmtype instm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
 	callback_type callback) noexcept
 {
-	using instm_reftype = ::fast_io::details::async_input_stream_ref_t<instmtype>;
+	using instm_reftype = instmtype;
 	if constexpr (::fast_io::operations::decay::defines::
 					  has_async_scatter_pread_some_bytes_underflow_callback_define<
 						  async_scheduler_type, instm_reftype,
@@ -307,8 +309,7 @@ inline void async_scatter_pread_some_bytes_decay_callback(
 	{
 		async_scatter_pread_some_bytes_underflow_callback_define(
 			scheduler,
-			::fast_io::details::async_input_stream_ref(
-				::fast_io::freestanding::forward<instmtype>(instm)),
+			instm,
 			pscatters, n, off, timeout,
 			::std::move(callback));
 		return;
@@ -324,8 +325,8 @@ inline void async_scatter_pread_some_bytes_decay_callback(
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 		using state_type =
 			::fast_io::details::async_scatter_pread_some_bytes_state<async_scheduler_type,
-																   instm_reftype, alloc_type,
-																   ::std::remove_cvref_t<callback_type>>;
+																	 instm_reftype, alloc_type,
+																	 ::std::remove_cvref_t<callback_type>>;
 		if (n == 0)
 		{
 			callback(::std::cxx_std_error{}, ::fast_io::io_scatter_status_t{0, 0});
@@ -336,8 +337,7 @@ inline void async_scatter_pread_some_bytes_decay_callback(
 			::fast_io::details::async_scatter_pread_some_bytes_submit(
 				::fast_io::details::async_new_state<state_type>(
 					scheduler,
-					::fast_io::details::async_input_stream_ref(
-						::fast_io::freestanding::forward<instmtype>(instm)),
+					instm,
 					pscatters, n, 0, 0, off, timeout,
 					::std::move(callback)));
 			return;
@@ -354,19 +354,19 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 			 ::fast_io::operations::decay::defines::
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 async_scheduler_type,
-					 ::fast_io::details::async_input_stream_ref_t<instmtype>,
+					 instmtype,
 					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
 inline void async_scatter_pread_all_bytes_decay_callback(
-	async_scheduler_type scheduler, instmtype &&instm, ::fast_io::io_scatter_t const *pscatters,
+	async_scheduler_type scheduler, instmtype instm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
 	callback_type callback) noexcept
 {
-	using instm_reftype = ::fast_io::details::async_input_stream_ref_t<instmtype>;
+	using instm_reftype = instmtype;
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 	using state_type =
 		::fast_io::details::async_scatter_pread_some_bytes_state<async_scheduler_type,
-															   instm_reftype, alloc_type,
-															   ::std::remove_cvref_t<callback_type>>;
+																 instm_reftype, alloc_type,
+																 ::std::remove_cvref_t<callback_type>>;
 	if (n == 0)
 	{
 		callback(::std::cxx_std_error{});
@@ -377,8 +377,7 @@ inline void async_scatter_pread_all_bytes_decay_callback(
 		::fast_io::details::async_scatter_pread_all_bytes_submit(
 			::fast_io::details::async_new_state<state_type>(
 				scheduler,
-				::fast_io::details::async_input_stream_ref(
-					::fast_io::freestanding::forward<instmtype>(instm)),
+				instm,
 				pscatters, n, 0, 0, off, timeout, ::std::move(callback)));
 		return;
 	}
@@ -390,13 +389,13 @@ inline void async_scatter_pread_all_bytes_decay_callback(
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
-				 ::std::remove_cvref_t<callback_type>>
+		::std::remove_cvref_t<callback_type>>
 inline void async_scatter_pwrite_some_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype &&outstm, ::fast_io::io_scatter_t const *pscatters,
+	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
 	callback_type callback) noexcept
 {
-	using outstm_reftype = ::fast_io::details::async_output_stream_ref_t<outstmtype>;
+	using outstm_reftype = outstmtype;
 	if constexpr (::fast_io::operations::decay::defines::
 					  has_async_scatter_pwrite_some_bytes_overflow_callback_define<
 						  async_scheduler_type, outstm_reftype,
@@ -404,8 +403,7 @@ inline void async_scatter_pwrite_some_bytes_decay_callback(
 	{
 		async_scatter_pwrite_some_bytes_overflow_callback_define(
 			scheduler,
-			::fast_io::details::async_output_stream_ref(
-				::fast_io::freestanding::forward<outstmtype>(outstm)),
+			outstm,
 			pscatters, n, off, timeout,
 			::std::move(callback));
 		return;
@@ -421,8 +419,8 @@ inline void async_scatter_pwrite_some_bytes_decay_callback(
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 		using state_type =
 			::fast_io::details::async_scatter_pwrite_some_bytes_state<async_scheduler_type,
-																	outstm_reftype, alloc_type,
-																	::std::remove_cvref_t<callback_type>>;
+																	  outstm_reftype, alloc_type,
+																	  ::std::remove_cvref_t<callback_type>>;
 		if (n == 0)
 		{
 			callback(::std::cxx_std_error{}, ::fast_io::io_scatter_status_t{0, 0});
@@ -433,8 +431,7 @@ inline void async_scatter_pwrite_some_bytes_decay_callback(
 			::fast_io::details::async_scatter_pwrite_some_bytes_submit(
 				::fast_io::details::async_new_state<state_type>(
 					scheduler,
-					::fast_io::details::async_output_stream_ref(
-						::fast_io::freestanding::forward<outstmtype>(outstm)),
+					outstm,
 					pscatters, n, 0, 0, off, timeout,
 					::std::move(callback)));
 			return;
@@ -451,19 +448,19 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 			 ::fast_io::operations::decay::defines::
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 async_scheduler_type,
-					 ::fast_io::details::async_output_stream_ref_t<outstmtype>,
+					 outstmtype,
 					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
 inline void async_scatter_pwrite_all_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype &&outstm, ::fast_io::io_scatter_t const *pscatters,
+	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
 	callback_type callback) noexcept
 {
-	using outstm_reftype = ::fast_io::details::async_output_stream_ref_t<outstmtype>;
+	using outstm_reftype = outstmtype;
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 	using state_type =
 		::fast_io::details::async_scatter_pwrite_some_bytes_state<async_scheduler_type,
-																outstm_reftype, alloc_type,
-																::std::remove_cvref_t<callback_type>>;
+																  outstm_reftype, alloc_type,
+																  ::std::remove_cvref_t<callback_type>>;
 	if (n == 0)
 	{
 		callback(::std::cxx_std_error{});
@@ -474,8 +471,7 @@ inline void async_scatter_pwrite_all_bytes_decay_callback(
 		::fast_io::details::async_scatter_pwrite_all_bytes_submit(
 			::fast_io::details::async_new_state<state_type>(
 				scheduler,
-				::fast_io::details::async_output_stream_ref(
-					::fast_io::freestanding::forward<outstmtype>(outstm)),
+				outstm,
 				pscatters, n, 0, 0, off, timeout, ::std::move(callback)));
 		return;
 	}
@@ -655,59 +651,49 @@ namespace fast_io::operations::decay
 /* Coroutine forms of the scatter decays. The some forms yield
  * io_scatter_status_t; the all forms yield void. */
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler, instmtype &&instm,
+inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler, instmtype instm,
 												 ::fast_io::io_scatter_t const *pscatters,
 												 ::std::size_t n, ::fast_io::intfpos_opt off,
 												 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_scatter_pread_some_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_input_stream_ref_t<instmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_input_stream_ref(::fast_io::freestanding::forward<instmtype>(instm)),
-		pscatters, n, off, timeout};
+		async_scheduler_type, instmtype>{
+		{}, scheduler, instm, pscatters, n, off, timeout};
 }
 
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler, instmtype &&instm,
+inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler, instmtype instm,
 												::fast_io::io_scatter_t const *pscatters,
 												::std::size_t n, ::fast_io::intfpos_opt off,
 												::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_scatter_pread_all_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_input_stream_ref_t<instmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_input_stream_ref(::fast_io::freestanding::forward<instmtype>(instm)),
-		pscatters, n, off, timeout};
+		async_scheduler_type, instmtype>{
+		{}, scheduler, instm, pscatters, n, off, timeout};
 }
 
 template <typename async_scheduler_type, typename outstmtype>
 inline auto async_scatter_pwrite_some_bytes_decay(async_scheduler_type scheduler,
-												  outstmtype &&outstm,
+												  outstmtype outstm,
 												  ::fast_io::io_scatter_t const *pscatters,
 												  ::std::size_t n, ::fast_io::intfpos_opt off,
 												  ::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_scatter_pwrite_some_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_output_stream_ref_t<outstmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_output_stream_ref(
-			::fast_io::freestanding::forward<outstmtype>(outstm)),
-		pscatters, n, off, timeout};
+		async_scheduler_type, outstmtype>{
+		{}, scheduler, outstm, pscatters, n, off, timeout};
 }
 
 template <typename async_scheduler_type, typename outstmtype>
 inline auto async_scatter_pwrite_all_bytes_decay(async_scheduler_type scheduler,
-												 outstmtype &&outstm,
+												 outstmtype outstm,
 												 ::fast_io::io_scatter_t const *pscatters,
 												 ::std::size_t n, ::fast_io::intfpos_opt off,
 												 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
 {
 	return ::fast_io::details::async_scatter_pwrite_all_bytes_awaiter<
-		async_scheduler_type, ::fast_io::details::async_output_stream_ref_t<outstmtype>>{
-		{}, scheduler,
-		::fast_io::details::async_output_stream_ref(
-			::fast_io::freestanding::forward<outstmtype>(outstm)),
-		pscatters, n, off, timeout};
+		async_scheduler_type, outstmtype>{
+		{}, scheduler, outstm, pscatters, n, off, timeout};
 }
 
 } // namespace fast_io::operations::decay

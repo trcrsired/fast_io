@@ -7,3 +7,4 @@
 #include "transmit.h"
 #include "flush.h"
 #include "scan.h"
+#include "ptrops.h"
