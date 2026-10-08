@@ -16,4 +16,7 @@
 #include "printimpl/impl.h"
 #include "scan_freestanding.h"
 #include "transmitimpl/impl.h"
+#if defined(__HERBCEPTIONS__)
+#include "asyncimpl/impl.h"
+#endif
 #include "to/to_cxx26.h"

@@ -1,0 +1,223 @@
+#pragma once
+
+#include <coroutine>
+
+namespace fast_io::details
+{
+
+/* scheduler-provided allocator: a fast_io generic allocator adapter.
+ * Async defines allocate and free their operation state through
+ * it; schedulers without one fall back to native_global_allocator. */
+template <typename scheduler>
+concept async_scheduler_has_allocator = requires { typename scheduler::allocator_type; };
+
+template <typename scheduler>
+using async_scheduler_allocator_t =
+	::std::conditional_t<async_scheduler_has_allocator<scheduler>, typename scheduler::allocator_type,
+					   ::fast_io::native_global_allocator>;
+
+/* RAII owner of raw storage for one state object — the
+ * local_operator_new_array_ptr pattern, minus array construction
+ * (states hold lambdas which are never default-constructible). The
+ * block frees itself on destruction unless release()d; allocation is
+ * the plain allocate/handle_allocate entry point, so it throws only
+ * when the adapter carries throws_on_allocation_failure — the same
+ * conditional contract as buffer_alloc_arr_ptr. */
+template <typename T, typename allocator>
+class async_state_ptr
+{
+public:
+	using allocator_type = allocator;
+	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator, T>;
+	static inline constexpr bool alloc_with_status{typed_allocator_type::has_status};
+	using handle_type =
+		::std::conditional_t<alloc_with_status, typename typed_allocator_type::handle_type,
+							 ::fast_io::details::empty>;
+	[[no_unique_address]] handle_type allochdl{};
+	T *ptr{};
+	::std::size_t size{};
+
+	inline explicit async_state_ptr(::std::size_t n) throws
+		requires(!alloc_with_status)
+		: ptr(static_cast<T *>(typed_allocator_type::allocate(n))), size(n)
+	{
+	}
+	inline explicit async_state_ptr(handle_type hdl, ::std::size_t n) throws
+		requires(alloc_with_status)
+		: allochdl(hdl), ptr(static_cast<T *>(typed_allocator_type::handle_allocate(hdl, n))), size(n)
+	{
+	}
+	async_state_ptr(async_state_ptr const &) = delete;
+	async_state_ptr &operator=(async_state_ptr const &) = delete;
+	inline ~async_state_ptr()
+	{
+		if (ptr) [[likely]]
+		{
+			if constexpr (alloc_with_status)
+			{
+				typed_allocator_type::handle_deallocate_n(allochdl, ptr, size);
+			}
+			else if constexpr (typed_allocator_type::has_deallocate)
+			{
+				typed_allocator_type::deallocate(ptr);
+			}
+			else
+			{
+				typed_allocator_type::deallocate_n(ptr, size);
+			}
+		}
+	}
+	inline constexpr T *get() noexcept
+	{
+		return ptr;
+	}
+	inline constexpr T *release() noexcept
+	{
+		T *p{ptr};
+		ptr = nullptr;
+		return p;
+	}
+};
+
+/* allocate + construct a T state object through the scheduler's
+ * allocator: async_state_ptr frees the raw block if the T constructor
+ * throws. Every state object's first ctor argument is the scheduler; a
+ * scheduler whose allocator_type has status supplies the handle as an
+ * alloc_handle member, which the object copies into itself so
+ * async_delete_state can free without the scheduler. */
+template <typename T, typename scheduler, typename... Args>
+inline T *async_new_state(scheduler sched, Args &&...args) throws
+{
+	using guard_type = async_state_ptr<T, async_scheduler_allocator_t<scheduler>>;
+	if constexpr (guard_type::alloc_with_status)
+	{
+		guard_type guard{sched.alloc_handle, 1};
+		new (guard.ptr) T(sched, ::std::forward<Args>(args)...);
+		guard.ptr->alloc_handle = sched.alloc_handle;
+		return guard.release();
+	}
+	else
+	{
+		guard_type guard{1};
+		new (guard.ptr) T(sched, ::std::forward<Args>(args)...);
+		return guard.release();
+	}
+}
+
+/* every self-owning state object exposes its allocator as
+ * allocator_type; status allocators additionally carry the handle in
+ * alloc_handle */
+template <typename T>
+inline void async_delete_state(T *p) noexcept
+{
+	using typed_alloc = ::fast_io::typed_generic_allocator_adapter<typename T::allocator_type, T>;
+	if constexpr (typed_alloc::has_status)
+	{
+		auto handle{p->alloc_handle};
+		p->~T();
+		typed_alloc::handle_deallocate_n(handle, p, 1);
+	}
+	else
+	{
+		p->~T();
+		typed_alloc::deallocate(p);
+	}
+}
+
+/* synthesize a cxx_std_error for a registered errc type the way
+ * `throw throws` would: error_domain<T>::domain() + code(ec). Used for
+ * generic-layer errors such as end_of_file on an unfinished all loop. */
+template <typename T>
+inline constexpr ::std::cxx_std_error async_make_error(T ec) noexcept
+{
+	return {::std::error_domain<T>::domain(), ::std::error_domain<T>::code(ec)};
+}
+
+/*
+ * Release a held error value's payload. A cxx_std_error is an owning
+ * handle: domain == nullptr is the success value (not an error at all),
+ * and when domain->do_cleanup is non-null the code slot carries a
+ * resource — e.g. a C++ exception object handle — that must be released.
+ * Ownership of every cxx_std_error a callback receives transfers to the
+ * callee; forwarding the value transfers it onward. Whatever path is
+ * terminal for the handle runs this once — or rethrows it through
+ * `throw throws`, which hands ownership back to the error channel and
+ * lets the caught std::error's destructor clean up.
+ */
+inline void async_dispose_error(::std::cxx_std_error err) noexcept
+{
+	if (err.domain != nullptr) [[unlikely]]
+	{
+		auto domain{static_cast<::std::error_domain_singleton const *>(err.domain)};
+		if (domain->do_cleanup != nullptr)
+		{
+			domain->do_cleanup(err.code);
+		}
+	}
+}
+
+/*
+ * Submit one backend operation and translate a synchronous submission
+ * failure into the callback contract: submission runs inside a
+ * throws-try so a backend that throws before committing delivers the
+ * error through onerr(::std::cxx_std_error) instead of escaping the
+ * noexcept generic functions.
+ */
+template <typename submitfunc, typename errfunc>
+inline void async_submit_catching(submitfunc &&submit, errfunc &&onerr) noexcept
+{
+	try
+	{
+		::std::forward<submitfunc>(submit)();
+	}
+	catch throws(::std::error e)
+	{
+		::std::forward<errfunc>(onerr)(e.release());
+	}
+}
+
+/* Stream-to-reference conversion for async entry points: like the sync
+ * operations layer, the stream argument is reduced to its
+ * input/output/io_stream ref before a define is invoked, so a buffered
+ * stream (basic_ibuf_file etc.) arrives at the define as
+ * basic_io_buffer_ref and the buffer-aware defines get their say.
+ * The stream object named by the caller must outlive the operation. */
+template <typename T>
+inline constexpr decltype(auto) async_input_stream_ref(T &&t) noexcept
+{
+	if constexpr (::fast_io::operations::defines::has_input_or_io_stream_ref_define<T>)
+	{
+		return ::fast_io::operations::input_stream_ref(::fast_io::freestanding::forward<T>(t));
+	}
+	else
+	{
+		return ::fast_io::freestanding::forward<T>(t);
+	}
+}
+
+template <typename T>
+inline constexpr decltype(auto) async_output_stream_ref(T &&t) noexcept
+{
+	if constexpr (::fast_io::operations::defines::has_output_or_io_stream_ref_define<T>)
+	{
+		return ::fast_io::operations::output_stream_ref(::fast_io::freestanding::forward<T>(t));
+	}
+	else
+	{
+		return ::fast_io::freestanding::forward<T>(t);
+	}
+}
+
+template <typename T>
+using async_input_stream_ref_t =
+	::std::remove_cvref_t<decltype(::fast_io::details::async_input_stream_ref(::std::declval<T &&>()))>;
+
+template <typename T>
+using async_output_stream_ref_t =
+	::std::remove_cvref_t<decltype(::fast_io::details::async_output_stream_ref(::std::declval<T &&>()))>;
+
+/* Coroutine plumbing shared by every async_*_decay awaiter: the awaiter
+ * stores params by value, awaits submission of the callback form, and
+ * await_resume rethrows a recorded error through the channel. */
+
+} // namespace fast_io::details

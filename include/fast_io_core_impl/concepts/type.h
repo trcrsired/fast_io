@@ -121,6 +121,25 @@ using size32_t = ::std::conditional_t<(sizeof(::std::uint_least32_t) < sizeof(::
 									  ::std::uint_least32_t, ::std::size_t>;
 
 /*
+A nullable file position carried by value, for interfaces where the
+position is submitted to the kernel rather than read back through a
+pointer (async submission, io_uring-style sqe offsets):
+- has_opt == false means "use and advance the object's own file position";
+- has_opt == true means "start at opt"; the object's own position is
+  untouched.
+*/
+struct intfpos_opt
+{
+	::fast_io::intfpos_t opt{};
+	bool has_opt{false};
+	inline constexpr intfpos_opt() noexcept = default;
+	inline constexpr intfpos_opt(::fast_io::intfpos_t fpos) noexcept
+		: opt{fpos}, has_opt{true}
+	{
+	}
+};
+
+/*
 A nullable file-position pointer. It carries the same semantics as the
 `off_t *_Nullable` parameters of copy_file_range(2)/splice(2):
 - a null pointer means "use and advance the object's own file position";
@@ -156,6 +175,53 @@ struct size_t_opt
 	inline constexpr size_t_opt(::std::size_t optsize) noexcept
 		: opt{optsize}, has_opt{true}
 	{}
+};
+
+struct posix_statx_timestamp64
+{
+	::std::int_least64_t tv_sec;   // Seconds since the Epoch (UNIX time)
+	::std::uint_least32_t tv_nsec; // Nanoseconds since tv_sec
+
+	template <::std::floating_point flt_type>
+	inline explicit constexpr operator flt_type() const noexcept
+	{
+		// I know this is not accurate. but it is better than nothing
+		return static_cast<flt_type>(tv_sec) + static_cast<flt_type>(tv_nsec) / static_cast<flt_type>(1000000000u);
+	}
+};
+
+inline constexpr bool operator==(posix_statx_timestamp64 a, posix_statx_timestamp64 b) noexcept
+{
+	return (a.tv_sec == b.tv_sec) & (a.tv_nsec == b.tv_nsec);
+}
+
+#if defined(__cpp_lib_three_way_comparison) && __cpp_lib_three_way_comparison >= 201907L
+inline constexpr auto operator<=>(posix_statx_timestamp64 a, posix_statx_timestamp64 b) noexcept
+{
+	auto v{a.tv_sec <=> b.tv_sec};
+	if (v == ::std::strong_ordering::equal)
+	{
+		return a.tv_nsec <=> b.tv_nsec;
+	}
+	return v;
+}
+#endif
+
+/*
+An optional timeout for asynchronous operations: has_opt == false means
+"no timeout"; has_opt == true means the operation fails with a timeout
+error once opt elapses (or, where the backend interprets it as a
+timepoint, once opt passes — posix_statx_timestamp64 carries both).
+*/
+struct posix_statx_timestamp_opt
+{
+	::fast_io::posix_statx_timestamp64 opt{};
+	bool has_opt{false};
+	inline constexpr posix_statx_timestamp_opt() noexcept = default;
+	inline constexpr posix_statx_timestamp_opt(::fast_io::posix_statx_timestamp64 ts) noexcept
+		: opt{ts}, has_opt{true}
+	{
+	}
 };
 
 struct io_construct_t

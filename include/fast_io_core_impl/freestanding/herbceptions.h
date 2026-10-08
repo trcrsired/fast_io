@@ -57,47 +57,26 @@ struct cxx_std_error
 };
 
 #endif
-#if 0
+#if defined(__HERBCEPTIONS__)
 struct cxx_std_error_guard
 {
 public:
-	::fast_io::freestanding::cxx_std_error err{};
+	::std::cxx_std_error err{};
 	constexpr cxx_std_error_guard() noexcept = default;
-	explicit constexpr cxx_std_error_guard(::fast_io::freeestanding::cxx_std_error other) noexcept:
-		err(other)
+	explicit constexpr cxx_std_error_guard(::std::cxx_std_error other) noexcept
+		: err(other)
 	{
 	}
-private:
-	constexpr void destroy() noexcept
-	{
-		auto domain{err.domain};
-		if(domain)
-		{
-#ifdef __HERBCEPTIONS__
-			try
-			{
-				throw throws err;
-			}
-			catch throws(::std::error)
-			{}
-#else
-			using do_cleanup_function_pointer_type = 
-			void (*)(::std::size_t cd) noexcept;
-			do_cleanup_function_pointer_type do_cleanup{*static_cast<do_cleanup_function_pointer_type*>(domain)};
-			do_cleanup(err.code);
-#endif
-		}
-	}
-public:
-	constexpr cxx_std_error_guard(cxx_std_error_guard const&) = delete;
-	constexpr cxx_std_error_guard& operator=(cxx_std_error_guard const&) = delete;
-	constexpr cxx_std_error_guard(cxx_std_error_guard&& other) noexcept : err(other.err)
+	constexpr cxx_std_error_guard(cxx_std_error_guard const &) = delete;
+	constexpr cxx_std_error_guard &operator=(cxx_std_error_guard const &) = delete;
+	constexpr cxx_std_error_guard(cxx_std_error_guard &&other) noexcept
+		: err(other.err)
 	{
 		other.err = {};
 	}
-	constexpr cxx_std_error_guard& operator=(cxx_std_error_guard&& other) noexcept
+	constexpr cxx_std_error_guard &operator=(cxx_std_error_guard &&other) noexcept
 	{
-		if(__builtin_addressof(other) == this) [[unlikely]]
+		if (__builtin_addressof(other) == this) [[unlikely]]
 		{
 			return *this;
 		}
@@ -106,27 +85,51 @@ public:
 		other.err = {};
 		return *this;
 	}
-#ifdef __HERBCEPTIONS__
+	/* overwrite the held error, releasing the previous payload's
+	 * resources through its domain's do_cleanup when it owns any */
+	constexpr cxx_std_error_guard &operator=(::std::cxx_std_error other) noexcept
+	{
+		this->destroy();
+		this->err = other;
+		return *this;
+	}
 	constexpr void rethrow_if_cxx_std_error() throws
 	{
-		if(this->err.domain)
+		if (this->err.domain != nullptr)
 		{
-			auto tmp{this->err};
-			this->err = {};
-			throw throws tmp;
+			throw throws this->release();
 		}
 	}
-#endif
-	constexpr ::fast_io::freestanding::cxx_std_error release() noexcept
+	constexpr ::std::cxx_std_error release() noexcept
 	{
-		auto tmp = this->err;
+		auto tmp{this->err};
 		this->err = {};
 		return tmp;
 	}
-	constexpr ~cxx_std_error_guard()
+	constexpr ~cxx_std_error_guard() noexcept
 	{
 		this->destroy();
 	}
+
+private:
+	/* domain == nullptr is not an error at all. Otherwise the payload may
+	 * own resources — a C++ exception object handle is a typical one — and
+	 * the domain's do_cleanup releases it */
+	constexpr void destroy() noexcept
+	{
+		if (this->err.domain != nullptr)
+		{
+			auto domain{static_cast<::std::error_domain_singleton const *>(this->err.domain)};
+			auto code{this->err.code};
+			this->err = {};
+			if (domain->do_cleanup != nullptr)
+			{
+				domain->do_cleanup(code);
+			}
+		}
+	}
 };
-#endif
+
+#endif /* defined(__HERBCEPTIONS__) */
+
 } // namespace fast_io::freestanding

@@ -3,34 +3,6 @@
 namespace fast_io
 {
 
-struct posix_statx_timestamp64
-{
-	::std::int_least64_t tv_sec;   // Seconds since the Epoch (UNIX time)
-	::std::uint_least32_t tv_nsec; // Nanoseconds since tv_sec
-
-	template <::std::floating_point flt_type>
-	inline explicit constexpr operator flt_type() const noexcept
-	{
-		// I know this is not accurate. but it is better than nothing
-		return static_cast<flt_type>(tv_sec) + static_cast<flt_type>(tv_nsec) / static_cast<flt_type>(1000000000u);
-	}
-};
-
-inline constexpr bool operator==(posix_statx_timestamp64 a, posix_statx_timestamp64 b) noexcept
-{
-	return (a.tv_sec == b.tv_sec) & (a.tv_nsec == b.tv_nsec);
-}
-
-inline constexpr auto operator<=>(posix_statx_timestamp64 a, posix_statx_timestamp64 b) noexcept
-{
-	auto v{a.tv_sec <=> b.tv_sec};
-	if (v == ::std::strong_ordering::equal)
-	{
-		return a.tv_nsec <=> b.tv_nsec;
-	}
-	return v;
-}
-
 namespace details
 {
 inline constexpr ::std::uint_least64_t statx_timestamp64_nanoseconds_per_second{1000000000u};
