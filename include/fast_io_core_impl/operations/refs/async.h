@@ -155,6 +155,22 @@ template <typename streamtype>
 using async_accept_file_t = typename async_accept_file_type<streamtype>::type;
 
 /*
+ * async_status_print_define<line>(sched, stream, timeout, args...) is the
+ * async counterpart of status_print_define: streams carrying print state
+ * (e.g. locale imbuer) implement it so async_print can format through the
+ * status machinery into owned storage and write the bytes out
+ * asynchronously. It returns an awaiter whose await_resume reports the
+ * write result.
+ */
+template <typename schedulertype, typename outstmtype, typename... Args>
+concept has_async_status_print_define =
+	requires(schedulertype sched, outstmtype outstm, Args &&...args) {
+		async_status_print_define<false>(sched, outstm,
+										 ::fast_io::posix_statx_timestamp_opt{},
+										 ::std::forward<Args>(args)...);
+	};
+
+/*
 Buffered-stream defines — both live beneath their public wrappers and are
 likewise noexcept with callback-delivered errors:
 

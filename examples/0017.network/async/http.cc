@@ -13,9 +13,18 @@ namespace fop = ::fast_io::operations;
  * the first read — no explicit flush needed, same ordering as sync.
  */
 static fi::io_async_task<> fetch(fi::io_async_observer sched, fi::u8iobuf_socket_file sock,
-								 fi::u8native_file out) throws
+								 fi::u8native_file out, char const *host) throws
 {
-	auto hdr{co_await fop::async_scan_get<fi::u8http_header_buffer>(sched, sock, {})};
+	co_await fi::async_print(sched, {}, sock,
+							 u8"GET / HTTP/1.1\r\n"
+							 "Host:",
+							 ::fast_io::mnp::code_cvt_os_c_str(host),
+							 u8"\r\n"
+							 "User-agent:whatever\r\n"
+							 "Accept-Type:*/*\r\n"
+							 "Connection:close\r\n\r\n");
+	fi::u8http_header_buffer hdr{};
+	co_await fi::async_scan(sched, {}, sock, hdr);
 	using namespace std::string_view_literals;
 	for (auto [key, value] : line_generator(hdr))
 	{
@@ -50,16 +59,8 @@ int main(int argc, char const **argv)
 			fi::open_mode::no_block)};
 		fi::u8native_file out{u8"index.html", fi::open_mode::out | fi::open_mode::no_block};
 
-		print(sock,
-			  u8"GET / HTTP/1.1\r\n"
-			  "Host:",
-			  ::fast_io::mnp::code_cvt_os_c_str(argv[1]),
-			  u8"\r\n"
-			  "User-agent:whatever\r\n"
-			  "Accept-Type:*/*\r\n"
-			  "Connection:close\r\n\r\n");
-
-		fi::io_async_task<> t{fetch(sched, ::std::move(sock), ::std::move(out))};
+		fi::io_async_task<> t{
+			fetch(sched, ::std::move(sock), ::std::move(out), argv[1])};
 		t.resume();
 		while (!t.done())
 		{

@@ -374,7 +374,7 @@ inline auto async_transmit_all_bytes(async_scheduler_type &&scheduler, outstmtyp
 		::fast_io::operations::input_stream_ref(instm), off_in, bound, timeout);
 }
 
-/* ------------------------ flush / scan_get ------------------------- */
+/* ------------------------------- flush ----------------------------- */
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
 inline void async_output_stream_flush_callback(async_scheduler_type &&scheduler, outstmtype &&outstm,
@@ -403,17 +403,6 @@ inline auto async_output_stream_flush(async_scheduler_type &&scheduler, outstmty
 	return ::fast_io::operations::decay::async_output_stream_flush_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
 		::fast_io::operations::output_stream_ref(outstm), timeout);
-}
-
-template <typename T, typename async_scheduler_type, typename instmtype>
-inline auto async_scan_get(async_scheduler_type &&scheduler, instmtype &&instm,
-						   ::fast_io::posix_statx_timestamp_opt timeout) noexcept
-	requires(::fast_io::operations::decay::defines::async_scheduler_observer<
-			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>>)
-{
-	return ::fast_io::operations::decay::async_scan_get<T>(
-		::fast_io::operations::async_scheduler_ref(scheduler),
-		::fast_io::operations::input_stream_ref(instm), timeout);
 }
 
 /* ------------------------------ accept ------------------------------ */

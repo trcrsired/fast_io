@@ -71,6 +71,10 @@ freestanding ones.
 
 #include "fast_io_hosted/io_file.h"
 
+#if defined(__HERBCEPTIONS__)
+#include "fast_io_hosted/async_print.h"
+#endif
+
 #if defined(_MSVC_EXECUTION_CHARACTER_SET)
 #if _MSVC_EXECUTION_CHARACTER_SET == 936 || _MSVC_EXECUTION_CHARACTER_SET == 54936
 #include "fast_io_unit/gb18030.h"

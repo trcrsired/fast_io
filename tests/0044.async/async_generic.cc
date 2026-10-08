@@ -234,8 +234,8 @@ static test_task coro_scan(mock_scheduler sched, ::std::byte *data, ::std::size_
 																 ::fast_io::native_global_allocator,
 																 char, void, 32>>
 		ibf{mock_file{data, size, __builtin_addressof(pos)}};
-	auto hdr{co_await ::fast_io::operations::async_scan_get<::fast_io::http_header_buffer>(
-		sched, ibf, ::fast_io::posix_statx_timestamp_opt{})};
+	::fast_io::http_header_buffer hdr{};
+	co_await ::fast_io::async_scan(sched, ::fast_io::posix_statx_timestamp_opt{}, ibf, hdr);
 	CHECK(hdr.code().size() == 3);
 	CHECK(::std::memcmp(hdr.code().data(), "200", 3) == 0);
 	CHECK(hdr.request().size() == 8);
@@ -588,7 +588,7 @@ int main()
 		CHECK(pos == 8 + 64);                      /* flush 8, then underflow read 64 */
 	}
 
-	/* async_scan_get over a buffered stream: the mock serves the header
+	/* async_scan over a buffered stream: the mock serves the header
 	 * in pieces across underflows */
 	{
 		char const text[]{"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\n"};

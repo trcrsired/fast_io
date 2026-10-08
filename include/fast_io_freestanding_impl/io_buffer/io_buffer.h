@@ -73,6 +73,68 @@ inline constexpr void iobuffer_deallocate_n(iobuffer_alloc_handle_t<allocator_ty
 	}
 }
 
+/*
+ * RAII owner of a buffer detached from basic_io_buffer by
+ * detach_output_buffer. The pending bytes [buffer_begin, buffer_curr)
+ * can be handed to an async write while the stream buffers into a fresh
+ * allocation — no copying of already-buffered data is needed. The
+ * allocation is released when the guard dies; pending_bytes() exposes
+ * the byte range to write.
+ */
+template <typename iobuffertraits>
+struct io_detached_output_buffer
+{
+	using traits_type = iobuffertraits;
+	using char_type = typename traits_type::output_char_type;
+	using allocator_type = typename traits_type::allocator_type;
+	using allocator_handle_type = iobuffer_alloc_handle_t<allocator_type, char_type>;
+	allocator_handle_type allocator_handle{};
+	char_type *buffer_begin{}, *buffer_curr{}, *buffer_end{};
+
+	inline constexpr io_detached_output_buffer() noexcept = default;
+	inline io_detached_output_buffer(io_detached_output_buffer const &) = delete;
+	inline io_detached_output_buffer &operator=(io_detached_output_buffer const &) = delete;
+	inline constexpr io_detached_output_buffer(io_detached_output_buffer &&other) noexcept
+		: allocator_handle(other.allocator_handle),
+		  buffer_begin(::std::exchange(other.buffer_begin, nullptr)),
+		  buffer_curr(::std::exchange(other.buffer_curr, nullptr)),
+		  buffer_end(::std::exchange(other.buffer_end, nullptr))
+	{
+	}
+	inline constexpr io_detached_output_buffer &operator=(io_detached_output_buffer &&other) noexcept
+	{
+		if (__builtin_addressof(other) == this) [[unlikely]]
+		{
+			return *this;
+		}
+		release();
+		allocator_handle = other.allocator_handle;
+		buffer_begin = ::std::exchange(other.buffer_begin, nullptr);
+		buffer_curr = ::std::exchange(other.buffer_curr, nullptr);
+		buffer_end = ::std::exchange(other.buffer_end, nullptr);
+		return *this;
+	}
+	inline constexpr void release() noexcept
+	{
+		if (buffer_begin != nullptr)
+		{
+			iobuffer_deallocate_n<char_type, allocator_type>(allocator_handle, buffer_begin,
+															 traits_type::output_buffer_size);
+			buffer_begin = buffer_curr = buffer_end = nullptr;
+		}
+	}
+	inline constexpr ~io_detached_output_buffer()
+	{
+		release();
+	}
+	/* pending bytes as [first, count) byte range */
+	inline constexpr ::std::pair<::std::byte const *, ::std::size_t> pending_bytes() const noexcept
+	{
+		return {reinterpret_cast<::std::byte const *>(buffer_begin),
+				static_cast<::std::size_t>(buffer_curr - buffer_begin) * sizeof(char_type)};
+	}
+};
+
 } // namespace io_buffer
 
 } // namespace details
@@ -130,7 +192,7 @@ public:
 
 	inline explicit constexpr basic_io_buffer()
 		requires(!allocator_has_status)
-		= default;
+	= default;
 	inline explicit constexpr basic_io_buffer(allocator_handle_type allochdl) noexcept
 		requires(allocator_has_status && ::std::is_default_constructible_v<handle_type>)
 		: allocator_handle(allochdl)
@@ -214,6 +276,38 @@ public:
 		other.input_buffer = {};
 		other.output_buffer = {};
 		return *this;
+	}
+
+	using detached_output_buffer_type =
+		::fast_io::details::io_buffer::io_detached_output_buffer<traits_type>;
+	/* Hands the pending output buffer allocation to the returned RAII
+	 * guard and installs a fresh output_buffer_size allocation, so an
+	 * async writer can send the detached bytes while this stream keeps
+	 * buffering — the pending bytes are never copied. When no output
+	 * buffer was ever allocated the guard is empty and nothing is
+	 * allocated; the next buffered write allocates lazily. */
+	[[nodiscard]] inline detached_output_buffer_type detach_output_buffer()
+		FAST_IO_HERBCEPTIONS_THROWS_IF(
+			::fast_io::typed_generic_allocator_adapter<allocator_type,
+													   output_char_type>::throws_on_allocation_failure)
+		requires((traits_type::mode & ::fast_io::buffer_mode::out) ==
+				 ::fast_io::buffer_mode::out)
+	{
+		detached_output_buffer_type detached;
+		if (output_buffer.buffer_begin != nullptr)
+		{
+			detached.allocator_handle = allocator_handle;
+			detached.buffer_begin = output_buffer.buffer_begin;
+			detached.buffer_curr = output_buffer.buffer_curr;
+			detached.buffer_end = output_buffer.buffer_end;
+			output_char_type *fresh{
+				::fast_io::details::io_buffer::iobuffer_allocate<output_char_type, allocator_type>(
+					allocator_handle, traits_type::output_buffer_size)};
+			output_buffer.buffer_begin = fresh;
+			output_buffer.buffer_curr = fresh;
+			output_buffer.buffer_end = fresh + traits_type::output_buffer_size;
+		}
+		return detached;
 	}
 
 	inline constexpr ~basic_io_buffer()

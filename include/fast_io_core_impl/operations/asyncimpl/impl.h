@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "task.h"
 #include "pread.h"
 #include "pwrite.h"
 #include "scatter.h"
@@ -9,4 +10,3 @@
 #include "scan.h"
 #include "accept.h"
 #include "ptrops.h"
-#include "task.h"

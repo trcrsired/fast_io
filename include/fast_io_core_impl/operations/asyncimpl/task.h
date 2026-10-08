@@ -21,16 +21,20 @@ namespace fast_io
  * coroutine_handle::destroy() anywhere; dropping a suspended task tears
  * the frame down like any other RAII object.
  *
+ * T is the co_return value: void tasks return_void; value tasks use
+ * return_value and co_await/rethrow_if_error hands the result back —
+ *     io_async_task<int> f(args...) throws { co_return 42; }
+ *
  * The frame is allocated through a fast_io allocator — a template
  * parameter, not a global default — so the task also works where there
  * is no global operator new. Statusless allocators
  * (generic_allocator_adapter<alloc>::has_status == false) need nothing
  * extra:
- *     io_async_task<alloc> f(args...) throws { ... }
+ *     io_async_task<void, alloc> f(args...) throws { ... }
  * Status (handle-based) allocators take the allocator handle as the
  * coroutine's first parameter; the compiler passes the coroutine
  * arguments to promise_type::operator new:
- *     io_async_task<alloc> f(alloc::handle_type handle, args...) throws
+ *     io_async_task<void, alloc> f(alloc::handle_type handle, args...) throws
  * A status coroutine without the leading handle is a hard error rather
  * than a silent fall back to global operator new.
  *
@@ -40,9 +44,10 @@ namespace fast_io
  * other ramp-phase failure.
  */
 
-template <typename allocator = ::fast_io::native_global_allocator>
+template <typename T = void, typename allocator = ::fast_io::native_global_allocator>
 struct io_async_task
 {
+	using value_type = T;
 	using allocator_type = allocator;
 	using untyped_allocator_type = ::fast_io::generic_allocator_adapter<allocator_type>;
 	static inline constexpr bool alloc_with_status{untyped_allocator_type::has_status};
@@ -57,7 +62,51 @@ struct io_async_task
 		 untyped_allocator_type::default_alignment) *
 		untyped_allocator_type::default_alignment};
 
-	struct promise_type
+	/* co_return payload for value tasks: lives in the promise so a coroutine
+	 * that dies to an herbception never constructs a T just to destroy it,
+	 * and the frame destructor disposes a deposited result nobody took. */
+	struct result_storage
+	{
+		bool ready{};
+		union value_union
+		{
+			char dummy{};
+			T value;
+			constexpr value_union() noexcept
+			{}
+			inline ~value_union() noexcept
+			{}
+		};
+		value_union store{};
+		inline ~result_storage() noexcept
+		{
+			if (ready)
+			{
+				store.value.~T();
+			}
+		}
+	};
+
+	/* the promise's co_return entry lives in a base — a promise may name
+	 * either return_void or return_value, never both */
+	struct void_return_member
+	{
+		static inline constexpr void return_void() noexcept
+		{}
+	};
+	struct value_return_member
+	{
+		result_storage result{};
+		inline void return_value(T v) noexcept(::std::is_nothrow_move_constructible_v<T>)
+		{
+			new (__builtin_addressof(result.store.value)) T(::std::move(v));
+			result.ready = true;
+		}
+	};
+	using return_member =
+		::std::conditional_t<::std::is_void_v<T>, void_return_member, value_return_member>;
+
+	struct promise_type : return_member
 	{
 		::std::cxx_std_error error{};
 		::std::coroutine_handle<> continuation{};
@@ -111,9 +160,6 @@ struct io_async_task
 		{
 			::fast_io::fast_terminate();
 		}
-		static inline constexpr void return_void() noexcept
-		{}
-
 		static inline void *operator new(::std::size_t n, auto &&...) throws
 			requires(!alloc_with_status)
 		{
@@ -126,9 +172,25 @@ struct io_async_task
 				return untyped_allocator_type::allocate_die(n);
 			}
 		}
-		static inline void *operator new(::std::size_t n, alloc_handle_type handle, auto &&...) throws
+		/* the first coroutine parameter carries the allocator handle —
+		 * either the handle itself or a scheduler/device exposing
+		 * .alloc_handle, which is how async APIs pass the scheduler:
+		 *     f(sched, ...) — the scheduler decides frame allocation */
+		static inline void *operator new(::std::size_t n, auto &&first, auto &&...) throws
 			requires(alloc_with_status)
 		{
+			alloc_handle_type handle;
+			if constexpr (requires { first.alloc_handle; })
+			{
+				handle = ::std::forward<decltype(first)>(first).alloc_handle;
+			}
+			else
+			{
+				static_assert(::std::convertible_to<decltype(first), alloc_handle_type>,
+							  "status-allocator coroutine: first parameter must be the "
+							  "allocator handle or expose .alloc_handle (e.g. a scheduler)");
+				handle = ::std::forward<decltype(first)>(first);
+			}
 			void *base;
 			if constexpr (untyped_allocator_type::has_native_handle_allocate_try)
 			{
@@ -253,18 +315,26 @@ struct io_async_task
 		return handle;
 	}
 	/* co_await yields the stored herbception error back to the awaiting
-	 * coroutine as a real throw — no manual error slot inspection */
+	 * coroutine as a real throw — no manual error slot inspection; for
+	 * value tasks the deposited result is moved out on success */
 	inline void await_resume() throws
+		requires(::std::is_void_v<T>)
 	{
 		rethrow_if_error();
+	}
+	inline T await_resume() throws
+		requires(!::std::is_void_v<T>)
+	{
+		rethrow_if_error();
+		return ::std::move(handle.promise().result.store.value);
 	}
 };
 
 /* co_await this inside an io_async_task coroutine to reach its promise */
-template <typename allocator>
+template <typename T, typename allocator>
 struct io_async_task_promise_access
 {
-	using promise_type = typename io_async_task<allocator>::promise_type;
+	using promise_type = typename io_async_task<T, allocator>::promise_type;
 	promise_type *promise{};
 	inline constexpr bool await_ready() const noexcept
 	{
