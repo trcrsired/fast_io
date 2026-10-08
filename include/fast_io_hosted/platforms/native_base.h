@@ -18,6 +18,9 @@ inline constexpr ::std::uint_least32_t win32_stderr_number(static_cast<::std::ui
 
 #include "win32.h"
 #include "win32_network/win32.h"
+#if defined(__HERBCEPTIONS__)
+#include "win32_iocp.h"
+#endif
 #endif
 #include "linux/system_call.h"
 #include "posix.h"

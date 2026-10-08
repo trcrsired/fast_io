@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
+#include <sys/socket.h>
 
 static int failures{};
 
@@ -18,50 +19,16 @@ static int failures{};
 		}                                                                 \
 	} while (0)
 
-/* minimal lazy task for the coroutine forms */
-struct test_task
-{
-	struct promise_type
-	{
-		::std::cxx_std_error error{};
-		::std::coroutine_handle<> continuation{};
-		test_task get_return_object() noexcept
-		{
-			return {::std::coroutine_handle<promise_type>::from_promise(*this)};
-		}
-		static constexpr ::std::suspend_always initial_suspend() noexcept
-		{
-			return {};
-		}
-		struct final_awaiter
-		{
-			static constexpr bool await_ready() noexcept
-			{
-				return false;
-			}
-			static ::std::coroutine_handle<> await_suspend(::std::coroutine_handle<promise_type> h) noexcept
-			{
-				auto c{h.promise().continuation};
-				return c ? c : ::std::noop_coroutine();
-			}
-			static constexpr void await_resume() noexcept
-			{}
-		};
-		static constexpr final_awaiter final_suspend() noexcept
-		{
-			return {};
-		}
-		void unhandled_herbception(::std::cxx_std_error e) noexcept
-		{
-			error = e;
-		}
-		static constexpr void return_void() noexcept
-		{}
-	};
-	::std::coroutine_handle<promise_type> handle{};
-};
+using test_task = ::fast_io::io_async_task<>;
 
 namespace fad = ::fast_io::operations;
+
+static test_task coro_accept(::fast_io::linux_io_uring_observer sched, int listen_fd,
+							 ::fast_io::posix_file *out) throws
+{
+	*out = co_await fad::async_accept(sched, ::fast_io::posix_io_observer{listen_fd},
+									  ::fast_io::open_mode{}, {});
+}
 
 static test_task coro_main(::fast_io::linux_io_uring_observer sched, int fd_in, int fd_out) throws
 {
@@ -96,13 +63,19 @@ int main()
 	/* coroutine forms */
 	{
 		auto t{coro_main(sched, fin.native_handle(), fout.native_handle())};
-		auto h{t.handle};
-		h.resume();
-		while (!h.done())
+		t.resume();
+		while (!t.done())
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
-		CHECK(h.promise().error.domain == nullptr);
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
 		char check[64]{};
 		auto got{::pread(fout.native_handle(), check, 64, 0)};
 		CHECK(got == 64);
@@ -123,7 +96,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(err.domain == nullptr);
 		CHECK(::std::memcmp(buf, filedata, 128) == 0);
@@ -147,7 +120,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		char vbuf[32]{};
 		auto got{::pread(fout.native_handle(), vbuf, 32, 64)};
@@ -167,7 +140,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(st.position == 2 && st.position_in_scatter == 0);
 		CHECK(a[0] == ::std::byte{0x11} && b[0] == ::std::byte{0x22});
@@ -187,7 +160,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		char tbuf[64]{};
 		auto got{::pread(fout.native_handle(), tbuf, 64, 200)};
@@ -214,7 +187,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(moved == sizeof(pipemsg) - 1);
 		char pbuf[sizeof(pipemsg)]{};
@@ -242,7 +215,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(fired);
 		CHECK(err.domain == ::std::error_domain<::std::errc>::domain());
@@ -271,7 +244,7 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(::std::memcmp(buf, filedata, 8) == 0);
 		CHECK(::lseek(fin.native_handle(), 0, SEEK_CUR) == 64);
@@ -290,9 +263,39 @@ int main()
 			});
 		while (!fired)
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
 		CHECK(err.code == static_cast<::std::size_t>(EBADF));
+	}
+
+	/* async accept: real loopback listener, connect from a helper socket */
+	{
+		fi::posix_file listener{fi::tcp_listen(0)};
+		/* discover the bound port */
+		::fast_io::posix_sockaddr_in bound{};
+		::fast_io::posix_socklen_t blen{sizeof(bound)};
+		::getsockname(listener.native_handle(), reinterpret_cast<struct sockaddr *>(&bound), &blen);
+		auto port{::fast_io::big_endian(bound.sin_port)};
+
+		fi::posix_file accepted{};
+		auto t{coro_accept(sched, listener.native_handle(), __builtin_addressof(accepted))};
+		t.resume();
+
+		/* synchronous connect drives the completion */
+		fi::posix_file client{fi::tcp_connect(fi::ipv4{{127, 0, 0, 1}, port})};
+		while (!t.done())
+		{
+			fi::io_async_wait(sched);
+		}
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+		CHECK(accepted.native_handle() >= 0);
 	}
 
 	::std::fprintf(stderr, "io_uring test: %s (failures=%d)\n", failures == 0 ? "all ok" : "FAILED",

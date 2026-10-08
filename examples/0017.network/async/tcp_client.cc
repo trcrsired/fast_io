@@ -1,15 +1,17 @@
 ﻿#include <fast_io.h>
-#include "task.h"
+#include <fast_io_device.h>
 
 namespace fi = ::fast_io;
 namespace fop = ::fast_io::operations;
 
 /* one transmit engine per direction: the coroutine owns no buffer at
- * all, the fallback bounce engine manages its own scratch space */
-static async_task pump(fi::linux_io_uring_observer sched, fi::posix_io_observer to,
-					   fi::posix_io_observer from) throws
+ * all, the fallback bounce engine manages its own scratch space.
+ * Parameters are stream refs BY VALUE — coroutine arguments live in the
+ * frame, so nothing here can dangle. */
+static fi::io_async_task<> pump(fi::io_async_observer sched, auto to, auto from) throws
 {
-	co_await fop::async_transmit_all_bytes(sched, to, {}, from, {}, {}, {});
+	co_await fop::async_transmit_all_bytes(sched, to, {}, from, {}, {},
+										   {::fast_io::posix_statx_timestamp64{10}});
 }
 
 int main()
@@ -17,33 +19,26 @@ int main()
 	try
 	{
 		fi::net_service service;
-		fi::linux_io_uring ring{fi::native_interface, 32, 0};
-		fi::linux_io_uring_observer sched{ring.native_handle()};
-		fi::native_socket_file sock{fi::tcp_connect(fi::ipv4{{127, 0, 0, 1}, 2000})};
-		fi::posix_io_observer sob{sock.native_handle()};
+		fi::io_async_scheduler scheduler{fi::io_async};
+		fi::io_async_observer sched{scheduler.native_handle()};
+		fi::native_socket_file sock{fi::tcp_connect(fi::ipv4{{127, 0, 0, 1}, 2000},
+													fi::open_mode::no_block)};
 
 		/* full duplex: stdin->socket and socket->stdout run concurrently */
-		auto up{pump(sched, sob, fi::in())};
-		auto down{pump(sched, fi::out(), sob)};
-		up.handle.resume();
-		down.handle.resume();
-		while (!up.handle.done() || !down.handle.done())
+		fi::io_async_task<> up{pump(sched, fop::io_stream_ref(sock), fop::input_stream_ref(fi::in()))};
+		fi::io_async_task<> down{pump(sched, fop::output_stream_ref(fi::out()), fop::io_stream_ref(sock))};
+		up.resume();
+		down.resume();
+		while (!up.done() || !down.done())
 		{
-			fi::liburing::io_async_wait(sched);
+			fi::io_async_wait(sched);
 		}
-		for (auto h : {up.handle, down.handle})
-		{
-			if (h.promise().error.domain != nullptr)
-			{
-				fi::perrln("transfer failed, error code: ", h.promise().error.code);
-			}
-		}
-		up.handle.destroy();
-		down.handle.destroy();
+		up.rethrow_if_error();
+		down.rethrow_if_error();
 	}
 	catch throws(::std::error e)
 	{
-		fi::perrln("fatal: error code: ", e.code());
+		fi::perrln("fatal: ", e);
 		return 1;
 	}
 }

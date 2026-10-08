@@ -170,61 +170,7 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(mock_sc
 	cb(::std::cxx_std_error{}, n);
 }
 
-/* minimal lazy task for the coroutine forms */
-struct test_task
-{
-	struct promise_type
-	{
-		::std::cxx_std_error error{};
-		::std::coroutine_handle<> continuation{};
-		test_task get_return_object() noexcept
-		{
-			return {::std::coroutine_handle<promise_type>::from_promise(*this)};
-		}
-		static constexpr ::std::suspend_always initial_suspend() noexcept
-		{
-			return {};
-		}
-		struct final_awaiter
-		{
-			static constexpr bool await_ready() noexcept
-			{
-				return false;
-			}
-			static ::std::coroutine_handle<> await_suspend(::std::coroutine_handle<promise_type> h) noexcept
-			{
-				auto c{h.promise().continuation};
-				return c ? c : ::std::noop_coroutine();
-			}
-			static constexpr void await_resume() noexcept
-			{}
-		};
-		static constexpr final_awaiter final_suspend() noexcept
-		{
-			return {};
-		}
-		void unhandled_herbception(::std::cxx_std_error e) noexcept
-		{
-			error = e;
-		}
-		static constexpr void return_void() noexcept
-		{}
-	};
-	::std::coroutine_handle<promise_type> handle{};
-	inline bool await_ready() const noexcept
-	{
-		return false;
-	}
-	inline ::std::coroutine_handle<> await_suspend(::std::coroutine_handle<> h) noexcept
-	{
-		handle.promise().continuation = h;
-		return handle;
-	}
-	inline ::std::cxx_std_error await_resume() noexcept
-	{
-		return handle.promise().error;
-	}
-};
+using test_task = ::fast_io::io_async_task<>;
 
 static int failures{};
 
@@ -303,7 +249,15 @@ int main()
 	/* run coroutine test */
 	{
 		auto t{coro_main(sched)};
-		t.handle.resume();
+		t.resume();
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
 	}
 
 	/* callback: pread_all current position */
@@ -640,7 +594,15 @@ int main()
 		char const text[]{"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\n"};
 		auto t{coro_scan(sched, reinterpret_cast<::std::byte *>(const_cast<char *>(text)),
 						 sizeof(text) - 1)};
-		t.handle.resume();
+		t.resume();
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
 	}
 
 	/* buffered transmit out: pending output flushes to the device first;

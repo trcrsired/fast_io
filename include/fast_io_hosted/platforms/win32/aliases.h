@@ -84,9 +84,8 @@ using u32win32_io_observer = basic_win32_io_observer<char32_t>;
 using u32win32_file = basic_win32_file<char32_t>;
 using u32win32_pipe = basic_win32_pipe<char32_t>;
 
-#if 0
-using io_async_observer=win32_io_observer;
-using io_async_scheduler=win32_file;
-#endif
+/* IOCP completion-port scheduler: open the file with fi::io_async */
+using io_async_observer = win32_io_observer;
+using io_async_scheduler = win32_file;
 
 } // namespace fast_io

@@ -416,4 +416,46 @@ inline auto async_scan_get(async_scheduler_type &&scheduler, instmtype &&instm,
 		::fast_io::operations::input_stream_ref(instm), timeout);
 }
 
+/* ------------------------------ accept ------------------------------ */
+
+/*
+ * async_accept: co_await suspends until a connection arrives and yields
+ * the accepted socket's native handle — int on posix, SOCKET on win32.
+ * Wrap it in native_socket_file:
+ *     fi::native_socket_file s{co_await fop::async_accept(sched, listener)};
+ * mode describes the accepted socket (no_block marks it async-capable;
+ * required for IOCP sockets, ignored on posix — io_uring needs no flag).
+ */
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_accept(async_scheduler_type &&scheduler, streamtype &&listenstm,
+						 ::fast_io::open_mode mode = ::fast_io::open_mode{},
+						 ::fast_io::posix_statx_timestamp_opt timeout = {}) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_accept_callback_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(listenstm))>,
+			 decltype([](::std::cxx_std_error,
+						 typename ::std::remove_cvref_t<
+							 decltype(::fast_io::operations::io_stream_ref(listenstm))>::
+							 native_handle_type) noexcept {})>)
+{
+	return ::fast_io::operations::decay::async_accept_decay(
+		::fast_io::operations::async_scheduler_ref(scheduler),
+		::fast_io::operations::io_stream_ref(listenstm), mode, timeout);
+}
+
+template <typename async_scheduler_type, typename streamtype, typename callback_type>
+inline void async_accept_callback(async_scheduler_type &&scheduler, streamtype &&listenstm,
+								  ::fast_io::open_mode mode,
+								  ::fast_io::posix_statx_timestamp_opt timeout,
+								  callback_type callback) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_accept_callback_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(listenstm))>,
+			 ::std::remove_cvref_t<callback_type>>)
+{
+	::fast_io::operations::decay::async_accept_decay_callback(
+		::fast_io::operations::async_scheduler_ref(scheduler),
+		::fast_io::operations::io_stream_ref(listenstm), mode, timeout, ::std::move(callback));
+}
+
 } // namespace fast_io::operations

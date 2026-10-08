@@ -309,6 +309,16 @@ using lpwsaoverlapped_completion_routine = void(
 		*)(::std::uint_least32_t dwError, ::std::uint_least32_t cbTransferred, overlapped *lpOverlapped,
 		   ::std::uint_least32_t dwFlags) noexcept;
 
+// PTP_TIMER_CALLBACK: the threadpool timer fires it as
+// (instance, context, timer)
+using ptp_timer_callback = void(
+#if defined(_MSC_VER) && (!__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__stdcall
+#elif (__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__attribute__((__stdcall__))
+#endif
+		*)(void *, void *, void *) noexcept;
+
 struct flowspec
 {
 	::std::uint_least32_t TokenRate;
@@ -336,6 +346,18 @@ using lpconditionproc = void(
 #endif
 		*)(wsabuf *, wsabuf *, qualityofservice *, qualityofservice *, wsabuf *, wsabuf *, ::std::uint_least32_t *,
 		   ::std::size_t) noexcept;
+
+/* LPFN_ACCEPTEX: the AcceptEx extension function, resolved at runtime
+ * through WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) since it lives
+ * in mswsock.dll rather than ws2_32 */
+using acceptex_func = int(
+#if defined(_MSC_VER) && (!__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__stdcall
+#elif (__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__attribute__((__stdcall__))
+#endif
+		*)(::std::size_t, ::std::size_t, void *, ::std::uint_least32_t, ::std::uint_least32_t,
+		   ::std::uint_least32_t, ::std::uint_least32_t *, overlapped *) noexcept;
 
 template <win32_family fam>
 	requires(fam == win32_family::ansi_9x || fam == win32_family::wide_nt)

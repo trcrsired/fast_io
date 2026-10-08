@@ -1,82 +1,62 @@
 ﻿#include <fast_io.h>
 #include <fast_io_device.h>
-#include <fast_io_dsal/vector.h>
-#include "task.h"
 
 namespace fi = ::fast_io;
 namespace fop = ::fast_io::operations;
 
 /*
- * One coroutine per connection: transmit the socket back onto itself
- * until the peer closes. No buffer management anywhere — the transmit
- * engine owns its scratch space. socket->socket cannot splice on Linux,
- * so the io_uring backend transparently falls back to the generic
- * bounce engine.
+ * One detached coroutine per connection: a single transmit_some round —
+ * read what arrived, write it back, done. No buffer management anywhere;
+ * the transmit engine owns its scratch space. A detached frame reports
+ * errors to nobody: an escaping herbception is stored in the promise and
+ * released when the frame self-destroys at final_suspend.
  */
-static async_task echo_session(fi::linux_io_uring_observer sched, fi::native_socket_file sock) throws
+static fi::io_async_task<> echo_session(fi::io_async_observer sched, fi::native_socket_file sock) throws
 {
-	fi::posix_io_observer ob{sock.native_handle()};
-	co_await fop::async_transmit_all_bytes(sched, ob, {}, ob, {}, {}, {});
+	co_await fop::async_transmit_some_bytes(sched, sock, {}, sock, {}, {}, {});
+}
+
+/*
+ * The accept coroutine: same shape as asio's listener() — one suspended
+ * coroutine accepts connections and detaches a session task per client.
+ * async_accept needs no nonblocking listener: the io_uring sqe /
+ * AcceptEx completion carries the accepted handle.
+ */
+static fi::io_async_task<> accept_loop(fi::io_async_observer sched, fi::native_socket_file listener) throws
+{
+	for (;;)
+	{
+		/* accepted sockets need async capability: no_block marks the
+		 * socket overlapped on win32; posix schedulers need nothing.
+		 * async_accept yields the owning native_socket_file — the
+		 * handle can never escape ownership */
+		echo_session(sched,
+					 co_await fop::async_accept(sched, listener, fi::open_mode::no_block, {}))
+			.detach();
+	}
 }
 
 int main()
 {
+	fi::net_service service;
+	fi::io_async_scheduler scheduler{fi::io_async};
+
+	/* supervisor: when the accept loop dies to a herbception (listener
+	 * error, accept failure), the frame unwinds here — log and rebuild
+	 * it instead of letting one dead listener take the server down */
+	for (;;)
 	try
 	{
-		fi::net_service service;
-		fi::linux_io_uring ring{fi::native_interface, 256, 0};
-		fi::linux_io_uring_observer sched{ring.native_handle()};
-		fi::native_socket_file listener{fi::tcp_listen(2000, fi::open_mode::no_block)};
-
-		::fast_io::vector<::std::coroutine_handle<async_task::promise_type>> sessions;
-		for (;;)
+		auto acceptor{accept_loop(scheduler, fi::native_socket_file{fi::tcp_listen(2000)})};
+		acceptor.resume();
+		while (!acceptor.done())
 		{
-			/* drain pending accepts; the listener is nonblocking so an
-			 * empty accept queue reports resource_unavailable_try_again */
-			for (;;)
-			{
-				try
-				{
-					auto t{echo_session(sched, fi::native_socket_file{fi::tcp_accept(listener)})};
-					sessions.push_back(t.handle);
-					t.handle.resume();
-				}
-				catch throws(::std::error e)
-				{
-					if (e.equivalent(::std::errc::resource_unavailable_try_again))
-					{
-						break;
-					}
-					fi::perrln("accept failed, error code: ", e.code());
-					break;
-				}
-			}
-			/* reap finished sessions */
-			for (::std::size_t i{}; i != sessions.size();)
-			{
-				auto h{sessions[i]};
-				if (h.done())
-				{
-					if (h.promise().error.domain != nullptr)
-					{
-						fi::perrln("echo session failed, error code: ", h.promise().error.code);
-					}
-					h.destroy();
-					sessions.erase_index(i);
-				}
-				else
-				{
-					++i;
-				}
-			}
-			/* block for one completion, bounded so the accept queue gets
-			 * polled even when existing sessions are idle */
-			fi::liburing::io_async_wait_timeout(sched, {0, 50000000});
+			fi::io_async_wait(scheduler);
 		}
+		acceptor.rethrow_if_error();
 	}
 	catch throws(::std::error e)
 	{
-		fi::perrln("fatal: error code: ", e.code());
-		return 1;
+		fi::perrln(e);
 	}
 }

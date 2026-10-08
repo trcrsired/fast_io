@@ -526,18 +526,39 @@ inline ::std::size_t open_win32_socket_raw_impl(int af, int tp, int prt, ::std::
 	}
 }
 
+/* FIONBIO, matching posix O_NONBLOCK: overlapped sockets stay capable of
+ * overlapped I/O, and calls like WSAAccept report WSAEWOULDBLOCK instead
+ * of blocking. Kept out of open_win32_socket_raw_impl so callers that
+ * need a synchronous connect() can defer it past the handshake. */
+inline void win32_socket_apply_no_block(::std::size_t hsocket)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::uint_least32_t nonblock{1u};
+	if (::fast_io::win32::ioctlsocket(hsocket, static_cast<long>(0x8004667Eu),
+									  __builtin_addressof(nonblock)) != 0) [[unlikely]]
+	{
+		throw_win32_error(static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError()));
+	}
+}
+
 template <win32_family family>
 inline ::std::size_t open_win32_socket_raw_om_custom_only_impl(int af, int tp, int prt, open_mode om)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
+	::std::size_t ret;
 	if constexpr (family == ::fast_io::win32_family::wide_nt)
 	{
-		return open_win32_socket_raw_impl<family>(af, tp, prt, to_win32_sock_open_mode(om));
+		ret = open_win32_socket_raw_impl<family>(af, tp, prt, to_win32_sock_open_mode(om));
 	}
 	else
 	{
-		return open_win32_socket_raw_impl<family>(af, tp, prt, to_win32_sock_open_mode_9xa(om));
+		ret = open_win32_socket_raw_impl<family>(af, tp, prt, to_win32_sock_open_mode_9xa(om));
 	}
+	if ((om & open_mode::no_block) == open_mode::no_block)
+	{
+		win32_socket_apply_no_block(ret);
+	}
+	return ret;
 }
 
 template <win32_family family>
@@ -699,16 +720,46 @@ public:
 namespace details
 {
 
+/* Socket creation for connect(): to_win32_sock_open_mode already sets
+ * WSA_FLAG_OVERLAPPED when no_block is requested, so the socket is
+ * IOCP-capable; FIONBIO is deferred until after connect() — a
+ * nonblocking socket reports WSAEWOULDBLOCK from the handshake instead
+ * of completing it */
+template <win32_family family>
+inline ::std::size_t open_win32_socket_connect_impl(sock_family d, open_mode m)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	if constexpr (family == ::fast_io::win32_family::wide_nt)
+	{
+		return ::fast_io::win32::details::open_win32_socket_raw_impl<family>(to_win32_sock_family(d),
+																			 to_win32_sock_type(sock_type::stream),
+																			 to_win32_sock_protocol(sock_protocol::tcp),
+																			 to_win32_sock_open_mode(m));
+	}
+	else
+	{
+		return ::fast_io::win32::details::open_win32_socket_raw_impl<family>(to_win32_sock_family(d),
+																			 to_win32_sock_type(sock_type::stream),
+																			 to_win32_sock_protocol(sock_protocol::tcp),
+																			 to_win32_sock_open_mode_9xa(m));
+	}
+}
+
 template <win32_family family>
 inline ::std::size_t win32_family_tcp_connect_v4_impl(ipv4 v4, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	basic_win32_family_socket_file<family, char> soc(sock_family::inet, sock_type::stream, m, sock_protocol::tcp);
+	basic_win32_family_socket_file<family, char> soc{
+		open_win32_socket_connect_impl<family>(sock_family::inet, m)};
 	constexpr auto inet{to_win32_sock_family(sock_family::inet)};
 	posix_sockaddr_in in{.sin_family = inet,
 						 .sin_port = big_endian(static_cast<::std::uint_least16_t>(v4.port)),
 						 .sin_addr = v4.address};
 	posix_connect(soc, __builtin_addressof(in), sizeof(in));
+	if ((m & open_mode::no_block) == open_mode::no_block)
+	{
+		::fast_io::win32::details::win32_socket_apply_no_block(soc.hsocket);
+	}
 	return soc.release();
 }
 
@@ -716,12 +767,17 @@ template <win32_family family>
 inline ::std::size_t win32_family_tcp_connect_v6_impl(ipv6 v6, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	basic_win32_family_socket_file<family, char> soc(sock_family::inet6, sock_type::stream, m, sock_protocol::tcp);
+	basic_win32_family_socket_file<family, char> soc{
+		open_win32_socket_connect_impl<family>(sock_family::inet6, m)};
 	constexpr auto inet6{to_win32_sock_family(sock_family::inet6)};
 	posix_sockaddr_in6 in6{.sin6_family = inet6,
 						   .sin6_port = big_endian(static_cast<::std::uint_least16_t>(v6.port)),
 						   .sin6_addr = v6.address};
 	posix_connect(soc, __builtin_addressof(in6), sizeof(in6));
+	if ((m & open_mode::no_block) == open_mode::no_block)
+	{
+		::fast_io::win32::details::win32_socket_apply_no_block(soc.hsocket);
+	}
 	return soc.release();
 }
 
@@ -729,8 +785,8 @@ template <win32_family family>
 inline ::std::size_t win32_family_tcp_connect_ip_impl(ip v, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	basic_win32_family_socket_file<family, char> soc(v.address.isv4 ? sock_family::inet : sock_family::inet6,
-													 sock_type::stream, m, sock_protocol::tcp);
+	basic_win32_family_socket_file<family, char> soc{
+		open_win32_socket_connect_impl<family>(v.address.isv4 ? sock_family::inet : sock_family::inet6, m)};
 	if (v.address.isv4)
 	{
 		constexpr auto inet{to_win32_sock_family(sock_family::inet)};
@@ -743,6 +799,10 @@ inline ::std::size_t win32_family_tcp_connect_ip_impl(ip v, open_mode m)
 		posix_sockaddr_in6 in6{
 			.sin6_family = inet6, .sin6_port = big_endian(v.port), .sin6_addr = v.address.address.v6};
 		posix_connect(soc, __builtin_addressof(in6), sizeof(in6));
+	}
+	if ((m & open_mode::no_block) == open_mode::no_block)
+	{
+		::fast_io::win32::details::win32_socket_apply_no_block(soc.hsocket);
 	}
 	return soc.release();
 }

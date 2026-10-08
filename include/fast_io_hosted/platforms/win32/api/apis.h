@@ -85,6 +85,9 @@ FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL bind(::std::size_t, void const *, int) 
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL listen(::std::size_t, int) noexcept FAST_IO_WINSTDCALL_RENAME(listen, 8);
 FAST_IO_DLLIMPORT ::std::size_t FAST_IO_WINSTDCALL WSAAccept(::std::size_t, void const *, int *, ::fast_io::win32::lpconditionproc, ::std::size_t) noexcept FAST_IO_WINSTDCALL_RENAME(WSAAccept, 20);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL ioctlsocket(::std::size_t, long, ::std::uint_least32_t *) noexcept FAST_IO_WINSTDCALL_RENAME(ioctlsocket, 12);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL getsockname(::std::size_t, void *, int *) noexcept FAST_IO_WINSTDCALL_RENAME(getsockname, 12);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL setsockopt(::std::size_t, int, int, void const *, int) noexcept FAST_IO_WINSTDCALL_RENAME(setsockopt, 20);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL WSAIoctl(::std::size_t, ::std::uint_least32_t, void *, ::std::uint_least32_t, void *, ::std::uint_least32_t, ::std::uint_least32_t *, ::fast_io::win32::overlapped *, ::fast_io::win32::lpwsaoverlapped_completion_routine) noexcept FAST_IO_WINSTDCALL_RENAME(WSAIoctl, 36);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL sendto(::std::size_t, char const *, int, int, void const *, int) noexcept FAST_IO_WINSTDCALL_RENAME(sendto, 24);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL WSASend(::std::size_t, ::fast_io::win32::wsabuf *, ::std::uint_least32_t, ::std::uint_least32_t *, ::std::uint_least32_t, ::fast_io::win32::overlapped *, ::fast_io::win32::lpwsaoverlapped_completion_routine) noexcept FAST_IO_WINSTDCALL_RENAME(WSASend, 28);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL WSASendMsg(::std::size_t, ::fast_io::win32::wsamsg *, ::std::uint_least32_t, ::std::uint_least32_t *, ::fast_io::win32::overlapped *, ::fast_io::win32::lpwsaoverlapped_completion_routine) noexcept FAST_IO_WINSTDCALL_RENAME(WSASendMsg, 24);
@@ -194,5 +197,12 @@ FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetDiskFreeSpaceA(char const *, ::std::
 FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL RaiseException(::std::uint_least32_t, ::std::uint_least32_t, ::std::uint_least32_t, ::std::size_t const *) noexcept FAST_IO_WINSTDCALL_RENAME(RaiseException, 16);
 FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL ExitProcess(::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(ExitProcess, 4);
 FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL AddVectoredExceptionHandler(::std::uint_least32_t, pvectored_exception_handler) noexcept FAST_IO_WINSTDCALL_RENAME(AddVectoredExceptionHandler, 8);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL PostQueuedCompletionStatus(void *, ::std::uint_least32_t, ::std::size_t, ::fast_io::win32::overlapped *) noexcept FAST_IO_WINSTDCALL_RENAME(PostQueuedCompletionStatus, 16);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetOverlappedResult(void *, ::fast_io::win32::overlapped *, ::std::uint_least32_t *, int) noexcept FAST_IO_WINSTDCALL_RENAME(GetOverlappedResult, 16);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL CancelIoEx(void *, ::fast_io::win32::overlapped *) noexcept FAST_IO_WINSTDCALL_RENAME(CancelIoEx, 8);
+FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL CreateThreadpoolTimer(::fast_io::win32::ptp_timer_callback, void *, void *) noexcept FAST_IO_WINSTDCALL_RENAME(CreateThreadpoolTimer, 12);
+FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL SetThreadpoolTimer(void *, ::fast_io::win32::filetime *, ::std::uint_least32_t, ::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(SetThreadpoolTimer, 16);
+FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL WaitForThreadpoolTimerCallbacks(void *, int) noexcept FAST_IO_WINSTDCALL_RENAME(WaitForThreadpoolTimerCallbacks, 8);
+FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL CloseThreadpoolTimer(void *) noexcept FAST_IO_WINSTDCALL_RENAME(CloseThreadpoolTimer, 4);
 
 } // namespace fast_io::win32

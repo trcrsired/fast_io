@@ -41,10 +41,17 @@ inline ::std::ptrdiff_t posix_sendto(basic_posix_io_observer<ch_type> h, void co
 namespace details
 {
 
+/* a no_block stream still connects synchronously, and an async-scheduled
+ * posix socket needs no O_NONBLOCK at all — a would-block io_uring op on a
+ * nonblocking socket reports EAGAIN instead of staying pending. Strip the
+ * flag entirely for connected sockets; it is purely an async-capability
+ * marker (WSA_FLAG_OVERLAPPED) on the win32 side. tcp_listen keeps it —
+ * the drain pattern needs nonblocking accept */
 inline int posix_tcp_connect_v4_impl(ipv4 v4, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	posix_file soc(sock_family::inet, sock_type::stream, m, sock_protocol::tcp);
+	posix_file soc(sock_family::inet, sock_type::stream, m & ~open_mode::no_block,
+				   sock_protocol::tcp);
 	constexpr auto inet{to_posix_sock_family(sock_family::inet)};
 	posix_sockaddr_in in{.sin_family = inet,
 						 .sin_port = big_endian(static_cast<::std::uint_least16_t>(v4.port)),
@@ -56,7 +63,8 @@ inline int posix_tcp_connect_v4_impl(ipv4 v4, open_mode m)
 inline int posix_tcp_connect_v6_impl(ipv6 v6, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	posix_file soc(sock_family::inet6, sock_type::stream, m, sock_protocol::tcp);
+	posix_file soc(sock_family::inet6, sock_type::stream, m & ~open_mode::no_block,
+				   sock_protocol::tcp);
 	constexpr auto inet6{to_posix_sock_family(sock_family::inet6)};
 	posix_sockaddr_in6 in6{.sin6_family = inet6,
 						   .sin6_port = big_endian(static_cast<::std::uint_least16_t>(v6.port)),
@@ -68,7 +76,8 @@ inline int posix_tcp_connect_v6_impl(ipv6 v6, open_mode m)
 inline int posix_tcp_connect_ip_impl(ip v, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	posix_file soc(v.address.isv4 ? sock_family::inet : sock_family::inet6, sock_type::stream, m, sock_protocol::tcp);
+	posix_file soc(v.address.isv4 ? sock_family::inet : sock_family::inet6, sock_type::stream,
+				   m & ~open_mode::no_block, sock_protocol::tcp);
 	if (v.address.isv4)
 	{
 		constexpr auto inet{to_posix_sock_family(sock_family::inet)};
@@ -89,6 +98,24 @@ inline int posix_tcp_listen_impl(::std::uint_least16_t port, open_mode m)
 	FAST_IO_HERBCEPTIONS_THROWS
 {
 	posix_file soc(sock_family::inet, sock_type::stream, m, sock_protocol::tcp);
+	constexpr int one{1};
+	/* rebind must succeed even while sessions accepted by a previous
+	 * listener on this port linger in TIME_WAIT — otherwise a supervisor
+	 * that recreates a dead listener would spin on EADDRINUSE.
+	 * SO_REUSEADDR=2 / SOL_SOCKET=1 on linux; BSD/macOS/Solaris use 4 /
+	 * 0xffff — prefer the header constants when they are visible */
+#ifdef SO_REUSEADDR
+	constexpr int sol_socket_v{SOL_SOCKET};
+	constexpr int so_reuseaddr_v{SO_REUSEADDR};
+#elif defined(__linux__)
+	constexpr int sol_socket_v{1};
+	constexpr int so_reuseaddr_v{2};
+#else
+	constexpr int sol_socket_v{0xffff};
+	constexpr int so_reuseaddr_v{4};
+#endif
+	posix_setsockopt_posix_socket_impl(soc.fd, sol_socket_v, so_reuseaddr_v,
+									   __builtin_addressof(one), sizeof(one));
 	constexpr auto inet{to_posix_sock_family(sock_family::inet)};
 	posix_sockaddr_in in{.sin_family = inet, .sin_port = big_endian(port), .sin_addr = {}};
 	posix_bind_posix_socket_impl(soc.fd, __builtin_addressof(in), sizeof(in));

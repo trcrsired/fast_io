@@ -770,6 +770,20 @@ inline void posix_listen_posix_socket_impl(int fd, int backlog)
 #endif
 }
 
+inline void posix_setsockopt_posix_socket_impl(int fd, int level, int optname, void const *optval,
+											   posix_socklen_t optlen)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+#if defined(__linux__) && defined(__NR_setsockopt)
+	system_call_throw_error(system_call<__NR_setsockopt, int>(fd, level, optname, optval, optlen));
+#else
+	if (::fast_io::noexcept_call(::setsockopt, fd, level, optname, optval, optlen) == -1)
+	{
+		throw_posix_error();
+	}
+#endif
+}
+
 inline int posix_accept_posix_socket_impl(int fd, void *addr, posix_socklen_t *addrlen)
 	FAST_IO_HERBCEPTIONS_THROWS
 {

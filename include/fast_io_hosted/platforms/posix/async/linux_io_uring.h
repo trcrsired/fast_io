@@ -123,6 +123,10 @@ inline constexpr ::fast_io::io_type_t<linux_io_uring_observer>
 	return {};
 }
 
+/* generic native names matching the win32 IOCP backend's aliases */
+using io_async_observer = linux_io_uring_observer;
+using io_async_scheduler = linux_io_uring;
+
 } // namespace fast_io
 
 namespace fast_io::liburing
@@ -327,44 +331,6 @@ inline void io_uring_dispatch_cqe(linux_io_uring_observer ring, io_uring_cqe *cq
 		invoke(data, static_cast<::std::size_t>(res), 0);
 	}
 }
-} // namespace details
-
-/*
- * Event pump: reap one completion and dispatch it to its cookie.
- * io_async_wait blocks; io_async_peek returns false when nothing is
- * ready; io_async_wait_timeout returns false when the deadline elapsed.
- */
-inline void io_async_wait(linux_io_uring_observer ring) throws
-{
-	io_uring_cqe *cqe{io_uring_wait_cqe(*ring.ring)};
-	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
-}
-
-inline bool io_async_peek(linux_io_uring_observer ring) throws
-{
-	io_uring_cqe *cqe{io_uring_peek_cqe(*ring.ring)};
-	if (cqe == nullptr)
-	{
-		return false;
-	}
-	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
-	return true;
-}
-
-inline bool io_async_wait_timeout(linux_io_uring_observer ring,
-								  ::fast_io::posix_statx_timestamp64 timestamp) throws
-{
-	io_uring_cqe *cqe{io_uring_wait_cqe_timeout(*ring.ring, timestamp)};
-	if (cqe == nullptr)
-	{
-		return false;
-	}
-	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
-	return true;
-}
-
-namespace details
-{
 
 /* ======================= pread / pwrite ======================= */
 
@@ -642,6 +608,90 @@ inline void io_uring_transmit_invoke(void *self, ::std::size_t transferred, int 
 	}
 }
 
+/* ======================= accept ======================= */
+
+/*
+ * Cookie for one pending accept: the sqe is IORING_OP_ACCEPT; the cqe's
+ * res is the accepted fd on success. tlink/ts ride the same
+ * linked-timeout machinery as the rw cookies.
+ */
+template <typename alloc_type, typename T>
+struct io_uring_accept_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	io_uring_invoke_func invoke;
+	io_uring_timeout_link_block tlink;
+	int accepted{};
+	int errn{};
+	::fast_io::liburing::io_uring_timespec ts{};
+	T callback;
+	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+											   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+template <typename alloc_type, typename T>
+inline void io_uring_accept_deliver(void *self) noexcept
+{
+	using cookie_type = io_uring_accept_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	int const accepted{cookie->accepted};
+	::std::cxx_std_error err{io_uring_cqe_error(cookie->tlink.fired, cookie->errn)};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err, accepted);
+}
+
+template <typename alloc_type, typename T>
+inline void io_uring_accept_invoke(void *self, ::std::size_t res, int errn) noexcept
+{
+	using cookie_type = io_uring_accept_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	cookie->accepted = static_cast<int>(res);
+	cookie->errn = errn;
+	if (--cookie->tlink.pending == 0)
+	{
+		io_uring_accept_deliver<alloc_type, T>(cookie);
+	}
+}
+
+template <typename sched_type, typename T>
+inline void io_uring_accept_submit(sched_type sched, ::fast_io::liburing::io_uring_ring_state &ring,
+								   int fd, ::fast_io::open_mode m,
+								   ::fast_io::posix_statx_timestamp_opt timeout,
+								   T callback) noexcept
+{
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using cookie_type = io_uring_accept_cookie<alloc_type, T>;
+	try
+	{
+		::fast_io::liburing::details::io_uring_submit_guard<cookie_type> guard{
+			io_uring_new_state<cookie_type>(sched, io_uring_invoke_func{},
+											io_uring_timeout_link_block{}, 0, 0,
+											::fast_io::liburing::io_uring_timespec{},
+											::std::move(callback))};
+		guard.cookie->invoke = io_uring_accept_invoke<alloc_type, T>;
+		io_uring_reserve_sqes(ring, timeout.has_opt ? 2 : 1);
+		io_uring_sqe *sqe{io_uring_get_sqe(ring)};
+		/* accepted sockets used with io_uring must not be nonblocking —
+		 * a would-block op reports EAGAIN in its cqe; the mode's
+		 * no_block bit is an async-capability marker here, only the
+		 * CLOEXEC choice survives */
+		::fast_io::liburing::io_uring_prep_accept(
+			sqe, fd, nullptr, nullptr,
+			::fast_io::to_posix_sock_open_mode(m & ~::fast_io::open_mode::no_block));
+		io_uring_arm_timeout(ring, guard.cookie, sqe,
+							 io_uring_accept_deliver<alloc_type, T>, timeout);
+		guard.release();
+		io_uring_commit(ring);
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release(), 0);
+	}
+}
+
 } // namespace details
 } // namespace fast_io::liburing
 
@@ -788,6 +838,67 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	{
 		callback(e.release(), 0zu);
 	}
+}
+
+template <::fast_io::posix_family family, ::std::integral char_type>
+struct ::fast_io::operations::decay::defines::async_accept_file_type<
+	::fast_io::basic_posix_family_io_observer<family, char_type>>
+{
+	using type = ::fast_io::basic_posix_family_file<family, char_type>;
+};
+
+/*
+ * async_accept_callback_define: submits IORING_OP_ACCEPT on the
+ * listener; the callback receives the accepted fd through
+ * cb(::std::cxx_std_error, int). mode's no_block bit is deliberately not
+ * mapped to SOCK_NONBLOCK — io_uring ops on a nonblocking socket report
+ * EAGAIN from would-block completions; posix async sockets need nothing
+ * from it. inherit drops SOCK_CLOEXEC.
+ */
+template <::fast_io::posix_family family, ::std::integral char_type, typename func>
+	requires ::std::is_nothrow_invocable_v<func, ::std::cxx_std_error, int>
+inline void async_accept_callback_define(
+	::fast_io::linux_io_uring_observer sched,
+	::fast_io::basic_posix_family_io_observer<family, char_type> instm,
+	::fast_io::open_mode m, ::fast_io::posix_statx_timestamp_opt timeout,
+	func callback) noexcept
+{
+	::fast_io::liburing::details::io_uring_accept_submit(
+		sched, *sched.ring, instm.fd, m, timeout, ::std::move(callback));
+}
+
+/*
+ * Event pump: reap one completion and dispatch it to its cookie.
+ * io_async_wait blocks; io_async_peek returns false when nothing is
+ * ready; io_async_wait_timeout returns false when the deadline elapsed.
+ */
+inline void io_async_wait(linux_io_uring_observer ring) throws
+{
+	liburing::io_uring_cqe *cqe{liburing::io_uring_wait_cqe(*ring.ring)};
+	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
+}
+
+inline bool io_async_peek(linux_io_uring_observer ring) throws
+{
+	liburing::io_uring_cqe *cqe{liburing::io_uring_peek_cqe(*ring.ring)};
+	if (cqe == nullptr)
+	{
+		return false;
+	}
+	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
+	return true;
+}
+
+inline bool io_async_wait_timeout(linux_io_uring_observer ring,
+								  ::fast_io::posix_statx_timestamp64 timestamp) throws
+{
+	liburing::io_uring_cqe *cqe{liburing::io_uring_wait_cqe_timeout(*ring.ring, timestamp)};
+	if (cqe == nullptr)
+	{
+		return false;
+	}
+	::fast_io::liburing::details::io_uring_dispatch_cqe(ring, cqe);
+	return true;
 }
 
 } // namespace fast_io

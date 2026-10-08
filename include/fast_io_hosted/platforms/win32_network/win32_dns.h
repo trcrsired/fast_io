@@ -173,6 +173,7 @@ template <win32_family fam>
 struct win32_family_dns_open_parameter
 {
 	inline auto operator()(::std::conditional_t<fam == win32_family::wide_nt, char16_t, char> const *node_name_c_str)
+		FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return ::fast_io::details::win32_family_dns_open_internal_impl<fam>(node_name_c_str);
 	}

@@ -121,6 +121,40 @@ concept has_async_transmit_some_bytes_overflow_underflow_callback_define =
 	};
 
 /*
+async_accept_callback_define(sched, listenstm, mode, timeout, func):
+asynchronous accept on a listening stream; func is invoked once as
+func(::std::cxx_std_error, typename streamtype::native_handle_type) —
+the raw accepted handle (fd on posix, SOCKET on win32). `mode` describes
+the accepted socket: open_mode::no_block marks it async-capable
+(overlapped machinery on win32; a plain fd on posix — io_uring needs no
+socket flag). No peer-address capture yet.
+*/
+template <typename schedulertype, typename streamtype, typename functype>
+concept has_async_accept_callback_define =
+	::std::is_nothrow_invocable_v<functype, ::std::cxx_std_error,
+								  typename streamtype::native_handle_type> &&
+	requires(schedulertype sched, streamtype listenstm, functype func) {
+		{
+			async_accept_callback_define(sched, listenstm, ::fast_io::open_mode{},
+										 ::fast_io::posix_statx_timestamp_opt{}, func)
+		} noexcept;
+	};
+
+/*
+ * The owning file type an async accept yields for a given listen-stream
+ * observer — each backend specializes this on its observer type (posix
+ * io_observer -> basic_posix_family_file, win32 socket observer ->
+ * basic_win32_family_socket_file). Deliberately no primary: a stream
+ * without a backend cannot accept. Keeps the generic awaiter free of
+ * hosted-layer names.
+ */
+template <typename streamtype>
+struct async_accept_file_type;
+
+template <typename streamtype>
+using async_accept_file_t = typename async_accept_file_type<streamtype>::type;
+
+/*
 Buffered-stream defines — both live beneath their public wrappers and are
 likewise noexcept with callback-delivered errors:
 

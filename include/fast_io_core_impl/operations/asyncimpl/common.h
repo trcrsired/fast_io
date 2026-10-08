@@ -11,10 +11,22 @@ namespace fast_io::details
 template <typename scheduler>
 concept async_scheduler_has_allocator = requires { typename scheduler::allocator_type; };
 
+/* lazily resolved: scheduler::allocator_type is named only when the
+ * scheduler actually provides one — schedulers without it fall back to
+ * native_global_allocator */
+template <typename scheduler, bool = async_scheduler_has_allocator<scheduler>>
+struct async_scheduler_allocator
+{
+	using type = ::fast_io::native_global_allocator;
+};
 template <typename scheduler>
-using async_scheduler_allocator_t =
-	::std::conditional_t<async_scheduler_has_allocator<scheduler>, typename scheduler::allocator_type,
-						 ::fast_io::native_global_allocator>;
+struct async_scheduler_allocator<scheduler, true>
+{
+	using type = typename scheduler::allocator_type;
+};
+
+template <typename scheduler>
+using async_scheduler_allocator_t = typename async_scheduler_allocator<scheduler>::type;
 
 /* RAII owner of raw storage for one state object — the
  * local_operator_new_array_ptr pattern, minus array construction
@@ -100,6 +112,29 @@ inline T *async_new_state(scheduler sched, Args &&...args) throws
 	{
 		guard_type guard{1};
 		new (guard.ptr) T(sched, ::std::forward<Args>(args)...);
+		return guard.release();
+	}
+}
+
+/*
+ * like async_new_state but without the leading scheduler ctor argument —
+ * backends whose cookie's first member is a dispatch base (the io_uring
+ * invoke pointer, the IOCP OVERLAPPED) construct T purely from args */
+template <typename T, typename scheduler, typename... Args>
+inline T *async_new_state_plain(scheduler sched, Args &&...args) throws
+{
+	using guard_type = async_state_ptr<T, async_scheduler_allocator_t<scheduler>>;
+	if constexpr (guard_type::alloc_with_status)
+	{
+		guard_type guard{sched.alloc_handle, 1};
+		new (guard.ptr) T(::std::forward<Args>(args)...);
+		guard.ptr->alloc_handle = sched.alloc_handle;
+		return guard.release();
+	}
+	else
+	{
+		guard_type guard{1};
+		new (guard.ptr) T(::std::forward<Args>(args)...);
 		return guard.release();
 	}
 }
