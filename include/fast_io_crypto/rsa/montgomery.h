@@ -14,8 +14,8 @@ openssl computes n0inv through the full bignum extended gcd as
 (R * (R^-1 mod n0) - 1) / n0; for a single limb the Newton iteration
 x = x*(2 - n0*x) reaches the identical -n^-1 mod B value, so we use it
 directly. openssl computes RR = 2^(2*ri) mod N with a bignum division;
-a power of two reduces by pure shift/subtract, which is the doubling
-loop below (Go's math/big does the same).
+limbs_pow2_mod does the same division a limb at a time through a
+normalized quotient-digit estimate.
 */
 
 namespace fast_io::details::rsa
@@ -52,6 +52,13 @@ with t[2nl] == 0, and we add m_i * n * B^i with m_i = t[i]*n0inv mod B so
 the low limb zeroes out. Carries may ripple one limb above i+nl, reaching
 at most index 2nl. Afterwards the value lives in t[nl..2nl] (< 2n) and a
 single conditional subtract of n brings it below n.
+
+PERFORMANCE: dominant cost of the whole verify (~all of the modexp time
+lands here and in limbs_multiplication). Two issues: (1) SOS does a full
+n-limb multiply and then a full n-limb reduction pass; a fused CIOS loop
+(interleave product row and reduction row) halves memory traffic. (2) all
+loops are rolled runtime-n loops -- see limbs_addition; no unrolled carry
+chains, no mulx/adx. openssl's montgomery is hand-written asm.
 */
 inline constexpr void montgomery_reduction(value_type *z, value_type *t, value_type const *n, value_type n0inv, ::std::size_t nl) noexcept
 {
@@ -111,6 +118,12 @@ scratch must hold 5*nl+2 limbs (product buffer, xm, acc, one).
 Binary square-and-multiply over the exponent bits, most significant
 first. e is public (the RSA public exponent), so no blinding or window
 machinery is needed.
+
+PERFORMANCE: variable-time by design -- do NOT reuse this for secret
+exponents (RSA private op, FFDHE). For the common e = 65537 the cost is
+17 squarings + 1 multiply, so windowing buys nothing; the squarings
+themselves are the rolled-loop montgomery_multiplication above, which is
+where the ~4x gap vs openssl's ADX asm lives.
 */
 inline constexpr void montgomery_pow(value_type *z, value_type const *x,
 									 ::std::byte const *e, ::std::size_t elen,

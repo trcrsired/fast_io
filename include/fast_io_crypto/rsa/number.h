@@ -16,7 +16,15 @@ using value_type = ::std::uint_least64_t;
 inline constexpr ::std::size_t limb_digits{::std::numeric_limits<value_type>::digits};
 inline constexpr ::std::size_t limb_bytes{sizeof(value_type)};
 
-/* z[0..n) = x[0..n) + y[0..n); returns the carry-out as a limb (0 or 1). */
+/*
+z[0..n) = x[0..n) + y[0..n); returns the carry-out as a limb (0 or 1).
+
+PERFORMANCE: runtime-n loop does not unroll under clang -O2/-O3
+(even -funroll-loops); each limb costs movzbl+btl+adcq+setb (~8 insns)
+instead of a flat movq/adcq chain (~3 insns). A fixed limb count or a
+manually expanded chain fixes it, but the limb count is genuinely
+runtime here.
+*/
 inline constexpr value_type limbs_addition(value_type *z, value_type const *x, value_type const *y, ::std::size_t n) noexcept
 {
 	bool carry{};
@@ -28,7 +36,12 @@ inline constexpr value_type limbs_addition(value_type *z, value_type const *x, v
 	return ::fast_io::intrinsics::addc(zero, zero, carry, carry);
 }
 
-/* z[0..n) = x[0..n) - y[0..n); returns ~0 when x < y (borrow) else 0. */
+/*
+z[0..n) = x[0..n) - y[0..n); returns ~0 when x < y (borrow) else 0.
+
+PERFORMANCE: same rolled-loop problem as limbs_addition -- sbb/setb
+per limb rather than a straight sbb chain.
+*/
 inline constexpr value_type limbs_subtraction(value_type *z, value_type const *x, value_type const *y, ::std::size_t n) noexcept
 {
 	bool borrow{};
@@ -70,6 +83,8 @@ inline constexpr bool limbs_is_zero(value_type const *x, ::std::size_t n) noexce
 z[0..n) = x[0..n) << 1, returning the shifted-out top bit as a limb (0 or 1).
 addc(v, v) doubles through the carry flag (the adc x,x idiom). z and x may
 alias for in-place shifts.
+
+PERFORMANCE: rolled loop; see limbs_addition.
 */
 inline constexpr value_type limbs_shift_left1(value_type *z, value_type const *x, ::std::size_t n) noexcept
 {
@@ -86,6 +101,12 @@ inline constexpr value_type limbs_shift_left1(value_type *z, value_type const *x
 dest[0..n) += x[0..n) * b and dest[n] = carry-out.
 dest[n] is written (not accumulated); callers arrange scratch so it is
 untouched. One schoolbook row of a product.
+
+PERFORMANCE: this is the hot inner row of both the product and the
+Montgomery reduction. Rolled loop: mulq+add+adc per limb (~7 insns).
+-march=native does not turn it into a mulxq/adcxq/adoxq sequence; openssl's
+asm rsaz/avx512 paths are ~4x faster on the full verify partly for this
+reason.
 */
 inline constexpr void limbs_multiply_add(value_type *dest, value_type const *x, value_type b, ::std::size_t n) noexcept
 {
