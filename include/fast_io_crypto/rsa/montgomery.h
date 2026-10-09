@@ -36,20 +36,13 @@ inline constexpr value_type montgomery_n0_inverse(value_type n0) noexcept
 
 /*
 r2[0..nl) = 2^(2*nl*limb_digits) mod n = R^2 mod n.
-Computed by doubling 1 a total of 2*nl*limb_digits times with a
-conditional subtract of n each step. d is scratch of nl limbs.
+Computed by limbs_pow2_mod, which does the division a limb at a time.
+scratch must hold 3*nl+1 limbs.
 */
-inline constexpr void montgomery_r2_setup(value_type *r2, value_type const *n, value_type *d, ::std::size_t nl) noexcept
+inline constexpr void montgomery_r2_setup(value_type *r2, value_type const *n, ::std::size_t nl,
+										  value_type *scratch) noexcept
 {
-	for (::std::size_t i{}; i != nl; ++i)
-	{
-		r2[i] = 0;
-	}
-	r2[0] = 1;
-	for (::std::size_t i{2 * nl * limb_digits}; i--;)
-	{
-		limbs_mod_double(r2, n, d, nl);
-	}
+	limbs_pow2_mod(r2, 2 * nl * limb_digits, n, nl, scratch);
 }
 
 /*

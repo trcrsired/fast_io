@@ -229,6 +229,106 @@ inline constexpr void limbs_to_bytes_be(::std::byte *p, value_type const *z, ::s
 	}
 }
 
+/*
+x[0..nl) = 2^bits mod n.
+
+Divides a power of two by n one limb at a time instead of one bit at a
+time (what BN_mod ends up doing for 2^k). Each step multiplies the
+running remainder by 2^limb_digits and reduces it with a single
+2-by-1 quotient-digit estimate:
+
+  qhat = floor((v_hi * B + v_next) / n_top)   (clamped to B-1)
+  v   -= qhat * n
+  while (v top limb wrapped) v += n           (add-back, <= 2 times)
+
+The divisor is normalized so its top limb has the high bit set, which is
+the Knuth D precondition bounding qhat - q <= 2. The remainder is
+unnormalized at the end. scratch must hold 3*nl+1 limbs
+[normalized n | running remainder | shifted dividend].
+*/
+inline constexpr void limbs_pow2_mod(value_type *x, ::std::size_t bits,
+									 value_type const *n, ::std::size_t nl,
+									 value_type *scratch) noexcept
+{
+	constexpr value_type zero{};
+	value_type *const np{scratch};
+	value_type *const rem{np + nl};
+	value_type *const v{rem + nl};
+	unsigned const s{static_cast<unsigned>(::std::countl_zero(n[nl - 1]))};
+	/* np = n << s */
+	np[0] = static_cast<value_type>(n[0] << s);
+	for (::std::size_t i{1}; i != nl; ++i)
+	{
+		np[i] = ::fast_io::intrinsics::shiftleft(n[i - 1], n[i], s);
+	}
+	for (::std::size_t i{}; i != nl; ++i)
+	{
+		rem[i] = 0;
+	}
+	rem[0] = static_cast<value_type>(value_type{1} << s); /* normalized 1 */
+	/* sub-word leading steps: rem = rem * 2 mod n, done in normalized domain */
+	::std::size_t whole{bits / limb_digits};
+	for (::std::size_t i{bits % limb_digits}; i--;)
+	{
+		limbs_mod_double(rem, np, v, nl);
+	}
+	value_type const ntop{np[nl - 1]};
+	for (; whole--;)
+	{
+		/* v = rem * B: limbs shifted up by one */
+		v[0] = 0;
+		for (::std::size_t i{}; i != nl; ++i)
+		{
+			v[i + 1] = rem[i];
+		}
+		/* quotient-digit estimate (v < n*B, so qhat is a limb) */
+		value_type qhat;
+		if (v[nl] >= ntop)
+		{
+			qhat = static_cast<value_type>(~0);
+		}
+		else
+		{
+			qhat = ::fast_io::intrinsics::udivbigbysmalltosmalldefault(v[nl], v[nl - 1], ntop).quotient;
+		}
+		/* v -= qhat * np */
+		value_type cy{};
+		for (::std::size_t j{}; j != nl; ++j)
+		{
+			value_type hi;
+			value_type const lo{::fast_io::intrinsics::umul(qhat, np[j], hi)};
+			bool b1, b2;
+			value_type const t{::fast_io::intrinsics::subc(v[j], cy, false, b1)};
+			v[j] = ::fast_io::intrinsics::subc(t, lo, false, b2);
+			cy = hi + static_cast<value_type>(b1) + static_cast<value_type>(b2);
+		}
+		v[nl] = static_cast<value_type>(v[nl] - cy);
+		/*
+		Result is in (-2*n, n): a wrapped (nonzero) top limb means qhat
+		overshot; adding np once or twice restores a small nonneg value.
+		*/
+		while (v[nl] != 0)
+		{
+			bool c{};
+			for (::std::size_t j{}; j != nl; ++j)
+			{
+				v[j] = ::fast_io::intrinsics::addc(v[j], np[j], c, c);
+			}
+			v[nl] = ::fast_io::intrinsics::addc(v[nl], zero, c, c);
+		}
+		for (::std::size_t i{}; i != nl; ++i)
+		{
+			rem[i] = v[i];
+		}
+	}
+	/* x = rem >> s */
+	x[nl - 1] = ::fast_io::intrinsics::shiftright(rem[nl - 1], zero, s);
+	for (::std::size_t i{nl - 1}; i--;)
+	{
+		x[i] = ::fast_io::intrinsics::shiftright(rem[i], rem[i + 1], s);
+	}
+}
+
 /* bit length of x[0..nl) (0 for all-zero). */
 inline constexpr ::std::size_t limbs_bit_length(value_type const *x, ::std::size_t nl) noexcept
 {

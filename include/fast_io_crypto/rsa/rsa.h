@@ -60,8 +60,8 @@ inline constexpr bool rsa_verify_init_to_ptr(rsa_verify_context &ctx,
 		return false;
 	}
 	ctx.n0inv = montgomery_n0_inverse(ctx.modulus[0]);
-	value_type d FAST_IO_INDETERMINATE[modulus_max_limbs];
-	montgomery_r2_setup(ctx.r2, ctx.modulus, d, nl);
+	value_type d FAST_IO_INDETERMINATE[3 * modulus_max_limbs + 1];
+	montgomery_r2_setup(ctx.r2, ctx.modulus, nl, d);
 	for (::std::size_t i{}; i != exponent_size; ++i)
 	{
 		ctx.exponent[i] = exponent[i];
