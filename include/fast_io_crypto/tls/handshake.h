@@ -59,7 +59,8 @@ struct client_hello_params
 {
 	char8_t const *hostname{};
 	::std::size_t hostname_size{};
-	::std::byte const *session_id{};        /* 32 bytes; middlebox compat echo */
+	::std::byte const *session_id{};
+	::std::size_t session_id_size{32};      /* 32 bytes; middlebox compat echo */
 	::std::byte const *random{};            /* 32 bytes */
 	::std::byte const *x25519_public_key{}; /* 32 bytes */
 	bool offer_aes_128_gcm{true};
@@ -86,7 +87,7 @@ inline constexpr ::std::size_t client_hello_size(client_hello_params const &para
 								 static_cast<::std::size_t>(params.offer_aes_256_gcm) +
 								 static_cast<::std::size_t>(params.offer_chacha20_poly1305)};
 	::std::size_t const sni_bytes{params.hostname_size ? 4 + (2 + 1 + 2 + params.hostname_size) : 0};
-	return 2 /* legacy_version */ + 32 /* random */ + 1 + 32 /* session id */ +
+	return 2 /* legacy_version */ + 32 /* random */ + 1 + params.session_id_size /* session id */ +
 		   2 + n_suites * 2 /* cipher suites */ + 2 /* compression */ +
 		   2 /* ext list len */ +
 		   sni_bytes +
@@ -101,8 +102,8 @@ inline constexpr ::std::byte *client_hello_write_body(::std::byte *p, client_hel
 {
 	p = wire_put_u16(p, 0x0303); /* legacy_version */
 	p = wire_put_bytes(p, params.random, 32);
-	*p++ = ::std::byte{32};
-	p = wire_put_bytes(p, params.session_id, 32);
+	*p++ = static_cast<::std::byte>(params.session_id_size);
+	p = wire_put_bytes(p, params.session_id, params.session_id_size);
 	::std::byte *const suites_len{p};
 	p += 2;
 	::std::uint_least16_t suites_bytes{};

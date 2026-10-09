@@ -237,6 +237,48 @@ inline void tls13_send_alert(int fd, alert_description desc, bool tx_offloaded) 
 }
 
 /*
+read one record during the handshake's encrypted flight. The kernel is
+NOT involved yet -- openssl also does the hs epoch in userspace and
+only offloads the app epoch. Reads hdr+payload off the wire, AEAD-opens
+it under (key,iv,seq), and returns the inner type/content. seq counts
+encrypted records only and is advanced by the caller.
+*/
+inline bool tls13_recv_flight_record(int fd, ::std::byte *buf, ::std::size_t buf_cap,
+									 content_type &inner_type, ::std::size_t &inner_size,
+									 cipher_suite suite, ::std::byte const *key,
+									 ::std::byte const *iv, ::std::uint_least64_t seq) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::std::byte hdr[record_header_size];
+	tls_read_full(fd, hdr, record_header_size);
+	wire_reader h{hdr, hdr + record_header_size};
+	::std::uint_least8_t t;
+	::std::uint_least16_t ver, len;
+	if (!h.take_u8(t) || !h.take_u16(ver) || !h.take_u16(len))
+	{
+		return false;
+	}
+	(void)ver;
+	if (len > buf_cap)
+	{
+		return false;
+	}
+	tls_read_full(fd, buf, len);
+	if (static_cast<content_type>(t) == content_type::application_data)
+	{
+		if (!tls13_record_open(buf, inner_size, inner_type, hdr, buf, len,
+							   suite, key, iv, seq))
+		{
+			return false;
+		}
+		return true;
+	}
+	/* plaintext record (ccs / alert) -- not encrypted, seq untouched */
+	inner_type = static_cast<content_type>(t);
+	inner_size = len;
+	return true;
+}
+
+/*
 read one plaintext record (pre-offload phase). Returns payload size;
 ctype gets the record type.
 */
@@ -413,7 +455,11 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 	::std::byte key[32], iv[12];
 	::std::size_t const key_size{::fast_io::tls::details::cipher_suite_key_size(suite)};
 	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, s_hs);
-	details::ktls_set_key(fd, details::tls_rx, suite, key, iv, 0); /* next RX record uses s_hs */
+	/* userspace AEAD for the handshake epoch: openssl does the same --
+	   only the application epoch goes to the kernel */
+	::std::byte hs_rx_key[32], hs_rx_iv[12];
+	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_rx_key);
+	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_rx_iv);
 	::fast_io::secure_clear(key, sizeof(key));
 
 	enum : ::std::uint_least8_t
@@ -425,6 +471,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		flight_done
 	} state{want_ee};
 	bool cert_request_seen{};
+	::std::uint_least64_t hs_rx_seq{};
 	::std::byte cr_context[255];
 	::std::size_t cr_context_size{};
 	signature_scheme cv_scheme{};
@@ -448,14 +495,14 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::encrypted_extensions:
 				if (state != want_ee)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, true);
+					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
 				}
 				{
 					wire_reader ee{body, body + body_size};
 					wire_reader exts;
 					if (!ee.take_sub16(exts) || !ee.empty())
 					{
-						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, true);
+						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
 					}
 					while (!exts.empty())
 					{
@@ -464,14 +511,14 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 						::std::size_t en;
 						if (!exts.take_u16(et) || !exts.take_vector16(ep, en))
 						{
-							details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, true);
+							details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
 						}
 						/* these are SH-only extensions (rfc8446 4.2) */
 						if (et == static_cast<::std::uint_least16_t>(extension_type::key_share) ||
 							et == static_cast<::std::uint_least16_t>(extension_type::supported_versions) ||
 							et == static_cast<::std::uint_least16_t>(extension_type::pre_shared_key))
 						{
-							details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_flight2, true);
+							details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_flight2, false);
 						}
 					}
 					state = want_cert_or_cr;
@@ -480,7 +527,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::certificate_request:
 				if (state != want_cert_or_cr)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, true);
+					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
 				}
 				{
 					wire_reader cr{body, body + body_size};
@@ -488,7 +535,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 					::std::size_t ctx_size;
 					if (!cr.take_vector8(ctx, ctx_size))
 					{
-						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, true);
+						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
 					}
 					::fast_io::freestanding::non_overlapped_copy_n(ctx, ctx_size, cr_context);
 					cr_context_size = ctx_size;
@@ -498,16 +545,16 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::certificate:
 				if (state != want_cert_or_cr)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cert, true);
+					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cert, false);
 				}
 				if (!details::certificate_body_parse(peer, body, body_size))
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cert, true);
+					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cert, false);
 				}
 				if (peer.count == 0)
 				{
 					/* empty client-visible chain is an abort in 1.3 */
-					details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, true);
+					details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, false);
 				}
 				state = want_cv;
 				break;
@@ -515,12 +562,12 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			{
 				if (state != want_cv)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cv, true);
+					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cv, false);
 				}
 				::fast_io::tls::details::certificate_verify_info cvi;
 				if (!::fast_io::tls::details::certificate_verify_parse(cvi, body, body_size))
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cv, true);
+					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cv, false);
 				}
 				cv_scheme = cvi.scheme;
 				cv_sig.assign(cvi.signature_size, {});
@@ -534,7 +581,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			{
 				if (state != want_fin || body_size != digest_size)
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_fin, true);
+					details::tls13_fail(fd, alert_description::decode_error, hs_stage_fin, false);
 				}
 				/* pre holds Hash(CH..CV) -- what server Finished MACs */
 				::std::byte expect[digest_size];
@@ -546,13 +593,13 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 				}
 				if (!same)
 				{
-					details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_fin, true);
+					details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_fin, false);
 				}
 				state = flight_done;
 				break;
 			}
 			default:
-				details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, true);
+				details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
 			}
 			transcript.update(raw, raw + raw_size); /* fold in after processing */
 		}
@@ -560,25 +607,42 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		{
 			break;
 		}
-		details::ktls_recv_result rr{details::ktls_recv_record(fd, recbuf, sizeof(recbuf))};
-		switch (rr.ctype)
+		content_type inner{};
+		::std::size_t inner_size{};
+		if (!details::tls13_recv_flight_record(fd, recbuf, sizeof(recbuf), inner, inner_size,
+											   suite, hs_rx_key, hs_rx_iv, hs_rx_seq))
+		{
+			details::tls13_fail(fd, alert_description::bad_record_mac, hs_stage_flight2, false);
+		}
+		if (inner == content_type::application_data)
+		{
+			/* cannot happen: open() never yields outer-type; guard anyway */
+			details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+		}
+		if (inner != content_type::change_cipher_spec)
+		{
+			/* encrypted records only advance the seq */
+			if (inner_size == 0)
+			{
+				continue; /* empty protected record */
+			}
+			++hs_rx_seq;
+		}
+		switch (inner)
 		{
 		case content_type::handshake:
-			if (rr.size != 0)
-			{
-				q.feed(recbuf, rr.size);
-			}
+			q.feed(recbuf, inner_size);
 			break;
 		case content_type::change_cipher_spec:
 			break; /* compat CCS between epochs; never transcripted */
 		case content_type::alert:
 		{
 			alert_description desc;
-			(void)details::alert_level_of(recbuf, rr.size, desc);
+			(void)details::alert_level_of(recbuf, inner_size, desc);
 			throw throws handshake_error{desc, hs_stage_flight2};
 		}
 		default:
-			details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, true);
+			details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
 		}
 	}
 
@@ -589,7 +653,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		if (!::fast_io::tls::details::x509_certificate_parse(
 				presented[i], peer.storage.data() + peer.offsets[i], peer.sizes[i]))
 		{
-			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, true);
+			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, false);
 		}
 	}
 	if (cfg.check_chain)
@@ -600,7 +664,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		{
 			if (!::fast_io::tls::details::x509_certificate_parse(roots[i], cfg.roots[i], cfg.root_sizes[i]))
 			{
-				details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, true);
+				details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, false);
 			}
 		}
 		switch (::fast_io::tls::details::x509_chain_verify(presented, peer.count, roots, nroots, cfg.now))
@@ -609,17 +673,17 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			break;
 		case ::fast_io::tls::details::x509_chain_result::expired:
 		case ::fast_io::tls::details::x509_chain_result::not_yet_valid:
-			details::tls13_fail(fd, alert_description::certificate_expired, hs_stage_chain, true);
+			details::tls13_fail(fd, alert_description::certificate_expired, hs_stage_chain, false);
 		case ::fast_io::tls::details::x509_chain_result::untrusted:
-			details::tls13_fail(fd, alert_description::unknown_ca, hs_stage_chain, true);
+			details::tls13_fail(fd, alert_description::unknown_ca, hs_stage_chain, false);
 		default:
-			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, true);
+			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, false);
 		}
 	}
 	if (cfg.check_hostname && cfg.hostname_size &&
 		!::fast_io::tls::details::x509_hostname_match(presented[0], cfg.hostname, cfg.hostname_size))
 	{
-		details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_hostname, true);
+		details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_hostname, false);
 	}
 
 	/* ---- CertificateVerify over covered content ---- */
@@ -635,9 +699,9 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		case ::fast_io::tls::details::x509_verify_result::ok:
 			break;
 		case ::fast_io::tls::details::x509_verify_result::unsupported_algorithm:
-			details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_cv, true);
+			details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_cv, false);
 		default:
-			details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_cv, true);
+			details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_cv, false);
 		}
 	}
 
@@ -647,8 +711,8 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 	ks.extract_into(zero, digest_size); /* master secret */
 
 	::std::byte c_ap[digest_size], s_ap[digest_size];
-	ks.derive_to_ptr(c_ap, u8"c ap traffic", 13, transcript);
-	ks.derive_to_ptr(s_ap, u8"s ap traffic", 13, transcript);
+	ks.derive_to_ptr(c_ap, u8"c ap traffic", 12, transcript);
+	ks.derive_to_ptr(s_ap, u8"s ap traffic", 12, transcript);
 
 	/* ---- client second flight ---- */
 
@@ -661,7 +725,9 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		details::tls_write_full(fd, ccs, static_cast<::std::size_t>(p - ccs));
 	}
 	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, c_hs);
-	details::ktls_set_key(fd, details::tls_tx, suite, key, iv, 0);
+	::std::byte hs_tx_key[32], hs_tx_iv[12];
+	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_tx_key);
+	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_tx_iv);
 	::fast_io::secure_clear(key, sizeof(key));
 
 	::std::byte flight[4 + 255 + 3 + 4 + 64];
@@ -681,7 +747,13 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 	::std::byte *const fin_start{fp};
 	fp = details::handshake_header_write(fp, handshake_type::finished, digest_size);
 	fp = wire_put_bytes(fp, fin, digest_size);
-	details::ktls_send_record(fd, content_type::handshake, flight, static_cast<::std::size_t>(fp - flight));
+	{
+		::std::byte sealed[1024];
+		::std::size_t const sealed_size{::fast_io::tls::details::tls13_record_seal(
+			sealed, content_type::handshake, flight, static_cast<::std::size_t>(fp - flight),
+			suite, hs_tx_key, hs_tx_iv, 0)};
+		details::tls_write_full(fd, sealed, sealed_size);
+	}
 	transcript.update(fin_start, fp);
 
 	/* epoch switch: TX -> c_ap (after Finished is on the wire), RX -> s_ap */
@@ -694,6 +766,10 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 
 	::fast_io::freestanding::non_overlapped_copy_n(c_ap, digest_size, tx_secret_out);
 	::fast_io::freestanding::non_overlapped_copy_n(s_ap, digest_size, rx_secret_out);
+	::fast_io::secure_clear(hs_rx_key, sizeof(hs_rx_key));
+	::fast_io::secure_clear(hs_tx_key, sizeof(hs_tx_key));
+	::fast_io::secure_clear(hs_rx_iv, sizeof(hs_rx_iv));
+	::fast_io::secure_clear(hs_tx_iv, sizeof(hs_tx_iv));
 }
 
 } // namespace fast_io::tls
@@ -735,6 +811,10 @@ namespace fast_io::tls
 
 inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
+	/* attach the tls ulp before anything else -- without it every
+	   SOL_TLS setsockopt fails with ENOPROTOOPT */
+	details::ktls_attach(fd_);
+
 	::std::byte session_id[32], random[32], sk[32], pk[32];
 	details::tls_fill_random(session_id, 32);
 	details::tls_fill_random(random, 32);
@@ -747,6 +827,7 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 	params.hostname = cfg.hostname;
 	params.hostname_size = cfg.hostname_size;
 	params.session_id = session_id;
+	params.session_id_size = 32; /* middlebox-compat session id */
 	params.random = random;
 	params.x25519_public_key = pk;
 
@@ -813,7 +894,8 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 		details::tls13_fail(fd_, alert_description::decode_error, hs_stage_parse_sh, false);
 	}
 	::fast_io::tls::details::server_hello_info shi{};
-	if (!::fast_io::tls::details::server_hello_parse(shi, sh_body, sh_body_size, session_id, 32))
+	if (!::fast_io::tls::details::server_hello_parse(shi, sh_body, sh_body_size, session_id,
+													 32))
 	{
 		details::tls13_fail(fd_, alert_description::decode_error, hs_stage_parse_sh, false);
 	}

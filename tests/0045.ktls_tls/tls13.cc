@@ -346,6 +346,78 @@ int main()
 		}
 	}
 
+	/* ---- AES-128-GCM: NIST case 3 (key=iv=0, pt=16 zeros) ---- */
+	{
+		::std::byte key[16]{}, nonce[12]{}, pt[16]{}, ct[16], tag[16];
+		::fast_io::aes_gcm_seal_to_ptr<16>(ct, tag, key, nonce, nullptr, 0, pt, 16);
+		constexpr ::std::byte want_ct[]{
+			::std::byte{0x03}, ::std::byte{0x88}, ::std::byte{0xda}, ::std::byte{0xce}, ::std::byte{0x60}, ::std::byte{0xb6},
+			::std::byte{0xa3}, ::std::byte{0x92}, ::std::byte{0xf3}, ::std::byte{0x28}, ::std::byte{0xc2}, ::std::byte{0xb9},
+			::std::byte{0x71}, ::std::byte{0xb2}, ::std::byte{0xfe}, ::std::byte{0x78}};
+		constexpr ::std::byte want_tag[]{
+			::std::byte{0xab}, ::std::byte{0x6e}, ::std::byte{0x47}, ::std::byte{0xd4}, ::std::byte{0x2c}, ::std::byte{0xec},
+			::std::byte{0x13}, ::std::byte{0xbd}, ::std::byte{0xf5}, ::std::byte{0x3a}, ::std::byte{0x67}, ::std::byte{0xb2},
+			::std::byte{0x12}, ::std::byte{0x57}, ::std::byte{0xbd}, ::std::byte{0xdf}};
+		if (::fast_io::freestanding::my_memcmp(ct, want_ct, 16) != 0 ||
+			::fast_io::freestanding::my_memcmp(tag, want_tag, 16) != 0)
+		{
+			return 60;
+		}
+		::std::byte dec[16];
+		if (!::fast_io::aes_gcm_open_to_ptr<16>(dec, key, nonce, nullptr, 0, ct, 16, tag) ||
+			::fast_io::freestanding::my_memcmp(dec, pt, 16) != 0)
+		{
+			return 61;
+		}
+		tag[0] ^= ::std::byte{1};
+		if (::fast_io::aes_gcm_open_to_ptr<16>(dec, key, nonce, nullptr, 0, ct, 16, tag))
+		{
+			return 62; /* tampered tag must fail */
+		}
+	}
+
+	/* ---- ChaCha20-Poly1305: RFC 8439 A.1 seal ---- */
+	{
+		constexpr char8_t key_hex[]{u8"808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"};
+		constexpr char8_t nonce_hex[]{u8"070000004041424344454647"};
+		constexpr char8_t aad_hex[]{u8"50515253c0c1c2c3c4c5c6c7"};
+		auto unhex{[](::std::byte *out, char8_t const *hx, ::std::size_t n) noexcept {
+			auto v{[](char8_t c) noexcept {
+				return c <= u8'9' ? c - u8'0' : c <= u8'f' ? c - u8'a' + 10 : c - u8'A' + 10;
+			}};
+			for (::std::size_t i{}; i != n; ++i)
+			{
+				out[i] = static_cast<::std::byte>(v(hx[2 * i]) * 16 + v(hx[2 * i + 1]));
+			}
+		}};
+		::std::byte key[32], nonce[12], aad[12];
+		unhex(key, key_hex, 32);
+		unhex(nonce, nonce_hex, 12);
+		unhex(aad, aad_hex, 12);
+		char8_t const pt[]{u8"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it."};
+		::std::size_t const n{sizeof(pt) - 1};
+		::std::byte ct[128], tag[16];
+		::fast_io::chacha20_poly1305_seal_to_ptr(ct, tag, key, nonce, aad, 12,
+											   reinterpret_cast<::std::byte const *>(pt), n);
+		constexpr ::std::byte want_tag[]{
+			::std::byte{0x1a}, ::std::byte{0xe1}, ::std::byte{0x0b}, ::std::byte{0x59}, ::std::byte{0x4f}, ::std::byte{0x09},
+			::std::byte{0xe2}, ::std::byte{0x6a}, ::std::byte{0x7e}, ::std::byte{0x90}, ::std::byte{0x2e}, ::std::byte{0xcb},
+			::std::byte{0xd0}, ::std::byte{0x60}, ::std::byte{0x06}, ::std::byte{0x91}};
+		constexpr ::std::byte ct_head[]{::std::byte{0xd3}, ::std::byte{0x1a}, ::std::byte{0x8d}, ::std::byte{0x34},
+										::std::byte{0x64}, ::std::byte{0x8e}, ::std::byte{0x60}, ::std::byte{0xdb}};
+		if (::fast_io::freestanding::my_memcmp(ct, ct_head, 8) != 0 ||
+			::fast_io::freestanding::my_memcmp(tag, want_tag, 16) != 0)
+		{
+			return 63;
+		}
+		::std::byte dec[128];
+		if (!::fast_io::chacha20_poly1305_open_to_ptr(dec, key, nonce, aad, 12, ct, n, tag) ||
+			::fast_io::freestanding::my_memcmp(dec, pt, n) != 0)
+		{
+			return 64;
+		}
+	}
+
 	::fast_io::println(::fast_io::u8out(), u8"tls13 offline tests: all passed");
 	return 0;
 }

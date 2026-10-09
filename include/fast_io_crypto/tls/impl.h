@@ -11,5 +11,6 @@ the kTLS socket glue lives in <fast_io_tls.h> (hosted, Linux).
 #include "wire.h"
 #include "key_schedule.h"
 #include "handshake.h"
+#include "record.h"
 #include "x509.h"
 #include "pem.h"

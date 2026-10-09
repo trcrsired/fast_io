@@ -20,6 +20,8 @@ namespace fast_io::tls::details
 inline constexpr int sol_tls{282};
 inline constexpr int tls_tx{1};
 inline constexpr int tls_rx{2};
+inline constexpr int ipproto_tcp{6};
+inline constexpr int tcp_ulp{31};
 inline constexpr int tls_set_record_type{1};
 inline constexpr int tls_get_record_type{2};
 
@@ -147,6 +149,27 @@ inline constexpr ::std::size_t ktls_crypto_info_blob_size{sizeof(ktls_crypto_inf
 install one direction's traffic key. level SOL_TLS / optname TLS_TX or
 TLS_RX. `throw`s the posix errno on failure.
 */
+/*
+attach the tls ulp to the tcp socket. The tls module registers itself
+under TCP_ULP "tls"; until this setsockopt the socket has no SOL_TLS
+handler and every SOL_TLS setsockopt returns ENOPROTOOPT.
+*/
+inline void ktls_attach(int fd) FAST_IO_HERBCEPTIONS_THROWS
+{
+	char8_t const ulp_name[]{u8"tls"};
+#if defined(__NR_setsockopt)
+	system_call_throw_error(system_call<__NR_setsockopt, int>(fd, ipproto_tcp, tcp_ulp,
+															  reinterpret_cast<::std::byte const *>(ulp_name),
+															  sizeof(ulp_name)));
+#else
+	if (::fast_io::noexcept_call(::setsockopt, fd, ipproto_tcp, tcp_ulp,
+								 reinterpret_cast<char const *>(ulp_name), sizeof(ulp_name)) == -1)
+	{
+		::fast_io::throw_posix_error();
+	}
+#endif
+}
+
 inline void ktls_set_key(int fd, int optname, cipher_suite suite,
 						 ::std::byte const *key, ::std::byte const *iv12,
 						 ::std::uint_least64_t seq) FAST_IO_HERBCEPTIONS_THROWS
