@@ -36,7 +36,7 @@ struct async_transmit_bytes_state
 	::std::size_t moved;
 	::std::size_t round_base;
 	::std::byte buf[async_transmit_bounce_size];
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -171,7 +171,7 @@ struct async_transmit_all_native_state
 	::std::size_t remaining;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };

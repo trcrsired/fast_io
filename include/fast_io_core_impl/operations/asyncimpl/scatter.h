@@ -30,7 +30,7 @@ struct async_scatter_pread_some_bytes_state
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -168,7 +168,7 @@ struct async_scatter_pwrite_some_bytes_state
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };

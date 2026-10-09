@@ -21,7 +21,7 @@ struct async_pwrite_all_bytes_state
 	/* status allocator handle copied from the scheduler at submission so
 	 * the state can be freed without it; kept last to preserve the
 	 * aggregate initialization order */
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };

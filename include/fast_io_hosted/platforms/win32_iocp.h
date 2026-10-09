@@ -127,7 +127,7 @@ struct win32_iocp_rw_cookie
 	win32_iocp_state_base base;
 	::fast_io::win32::wsabuf wsa{};
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -422,7 +422,12 @@ struct win32_iocp_accept_cookie
 	::std::size_t accept_sock{};
 	::std::uint_least32_t received{};
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	/* AcceptEx writes the local and remote addresses into the output
+	 * buffer: each slot is sockaddr+16 per MSDN. Wine rejects a null
+	 * lpOutputBuffer outright (WSAEINVAL) even when no addresses are
+	 * wanted, so the buffer must always be real. */
+	::std::byte addrbuf[2 * (sizeof(::fast_io::posix_sockaddr_in6) + 16)]{};
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -613,9 +618,14 @@ inline void win32_iocp_accept_submit(sched_type sched, stream_type stream,
 		}
 	}
 
-	/* lpOutputBuffer null + all-zero lengths: no data, no addresses.
+	/* dwReceiveDataLength 0: the accepted socket is returned without
+	 * waiting for payload. The address buffer stays real — wine's
+	 * AcceptEx rejects a null lpOutputBuffer with WSAEINVAL, and real
+	 * Windows wants sockaddr_storage+16 per address slot anyway.
 	 * Synchronous success and WSA_IO_PENDING both queue a completion */
-	if (acceptex(listen_sock, accept_sock, nullptr, 0u, 0u, 0u,
+	constexpr ::std::uint_least32_t addrslotlen{
+		static_cast<::std::uint_least32_t>(sizeof(::fast_io::posix_sockaddr_in6) + 16)};
+	if (acceptex(listen_sock, accept_sock, cookie->addrbuf, 0u, addrslotlen, addrslotlen,
 				 __builtin_addressof(cookie->received),
 				 __builtin_addressof(cookie->base.ovl)) == 0)
 	{

@@ -45,7 +45,7 @@ struct async_print_strlike_buffer
 	using typed_allocator_type =
 		::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 	using handle_type = typename typed_allocator_type::handle_type;
-	[[no_unique_address]] handle_type allochdl;
+	FAST_IO_NO_UNIQUE_ADDRESS handle_type allochdl;
 	char_type *begin_ptr{}, *curr_ptr{}, *end_ptr{};
 
 	/* the buffer_strlike concept requires default constructibility;

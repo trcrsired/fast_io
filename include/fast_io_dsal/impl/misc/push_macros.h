@@ -304,6 +304,18 @@ Internal assert macros for fuzzing fast_io.
 #define FAST_IO_INDETERMINATE
 #endif
 
+/* [[no_unique_address]] is spelled [[msvc::no_unique_address]] on the
+ * msvc target — the standard attribute is ignored there */
+#pragma push_macro("FAST_IO_NO_UNIQUE_ADDRESS")
+#undef FAST_IO_NO_UNIQUE_ADDRESS
+#if __has_cpp_attribute(msvc::no_unique_address)
+#define FAST_IO_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address) >= 201803
+#define FAST_IO_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define FAST_IO_NO_UNIQUE_ADDRESS
+#endif
+
 /*
 the wine platform layer needs no winelibc headers — platforms/wine/api.h
 declares the wineunix.dll imports itself, so it is enabled on every windows

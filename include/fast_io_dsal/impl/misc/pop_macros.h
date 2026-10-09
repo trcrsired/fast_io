@@ -1,6 +1,7 @@
 ﻿// Please keep it in reverse order with the macros in push_macros.h
 
 #pragma pop_macro("FAST_IO_HAS_WINE_UNIX")
+#pragma pop_macro("FAST_IO_NO_UNIQUE_ADDRESS")
 #pragma pop_macro("FAST_IO_INDETERMINATE")
 #pragma pop_macro("FAST_IO_HERBCEPTIONS_CATCH_ALL")
 #pragma pop_macro("FAST_IO_HERBCEPTIONS_TRY")

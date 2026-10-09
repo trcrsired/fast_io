@@ -47,7 +47,11 @@ int main()
 	for (;;)
 	try
 	{
-		auto acceptor{accept_loop(scheduler, fi::native_socket_file{fi::tcp_listen(2000)})};
+		/* the listener itself must be async-capable too: no_block maps to
+		 * WSA_FLAG_OVERLAPPED on win32, which AcceptEx requires on the
+		 * listen socket */
+		auto acceptor{accept_loop(scheduler, fi::native_socket_file{
+									   fi::tcp_listen(2000, fi::open_mode::no_block)})};
 		acceptor.resume();
 		while (!acceptor.done())
 		{

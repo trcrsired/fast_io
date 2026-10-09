@@ -45,7 +45,7 @@ public:
 	using handle_type =
 		::std::conditional_t<alloc_with_status, typename typed_allocator_type::handle_type,
 							 ::fast_io::details::empty>;
-	[[no_unique_address]] handle_type allochdl{};
+	FAST_IO_NO_UNIQUE_ADDRESS handle_type allochdl{};
 	T *ptr{};
 	::std::size_t size{};
 

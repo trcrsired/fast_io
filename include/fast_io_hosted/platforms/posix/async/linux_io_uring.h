@@ -353,7 +353,7 @@ struct io_uring_rw_cookie
 	int errn{};
 	::fast_io::liburing::io_uring_timespec ts{};
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -432,7 +432,7 @@ struct io_uring_scatter_cookie
 	::fast_io::io_scatter_t const *scatters{};
 	::std::size_t n{};
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -536,7 +536,7 @@ struct io_uring_transmit_cookie
 	::fast_io::size_t_opt bound;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
@@ -626,7 +626,7 @@ struct io_uring_accept_cookie
 	int errn{};
 	::fast_io::liburing::io_uring_timespec ts{};
 	T callback;
-	[[no_unique_address]] ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
