@@ -202,6 +202,10 @@ inline ktls_recv_result ktls_recv_record(int fd, ::std::byte *buf, ::std::size_t
 	}
 #endif
 	res.size = static_cast<::std::size_t>(ret);
+	if ((msg.flags & 0x8 /* MSG_CTRUNC */) != 0)
+	{
+		::fast_io::throw_posix_error(EMSGSIZE);
+	}
 	/* walk control messages for TLS_GET_RECORD_TYPE */
 	::std::size_t off{};
 	while (off + sizeof(ktls_cmsghdr) <= msg.controllen)
