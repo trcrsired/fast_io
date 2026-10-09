@@ -909,6 +909,15 @@ presented[0] is the leaf; presented[1..] are intermediates; roots[] are
 trust anchors (already parsed). Issuer resolution is exact byte equality
 of the issuer Name TLV against candidate subject Name TLVs. Max depth 8.
 now is seconds since epoch for the validity window.
+
+Trusted-first path building (rfc5280 treats a trust anchor as a
+{subject name, public key} pair, the self-signed cert wrapper is
+incidental): at every step the trust anchors are consulted BEFORE the
+presented certs. This matters for cross-signed anchors — a server may
+present an anchor re-issued by some other CA (e.g. GTS Root R1
+cross-signed by a retired GlobalSign root); its name+key still match the
+trusted anchor, so the path must terminate there instead of chasing the
+cross-sign's dead-end issuer.
 */
 inline constexpr x509_chain_result x509_chain_verify(
 	x509_certificate const *presented, ::std::size_t presented_count,
@@ -931,56 +940,73 @@ inline constexpr x509_chain_result x509_chain_verify(
 		{
 			return x509_chain_result::expired;
 		}
-		/* find issuer among intermediates first, then roots */
-		x509_certificate const *issuer{};
-		bool issuer_is_root{};
+		/* is cur itself a trust anchor? (same name+key as a root) */
+		for (::std::size_t i{}; i != root_count; ++i)
+		{
+			x509_certificate const &r{roots[i]};
+			if (x509_name_eq(cur.subject, cur.subject_size, r.subject, r.subject_size) &&
+				x509_name_eq(cur.spki_algorithm.oid.value, cur.spki_algorithm.oid.value_size,
+							 r.spki_algorithm.oid.value, r.spki_algorithm.oid.value_size) &&
+				cur.public_key_size == r.public_key_size &&
+				::fast_io::freestanding::my_memcmp(cur.public_key, r.public_key, r.public_key_size) == 0)
+			{
+				return x509_chain_result::ok;
+			}
+		}
+		/* issuers among anchors first: signature under an anchor's key
+		   terminates the path immediately */
+		bool root_name_matched{};
+		for (::std::size_t i{}; i != root_count; ++i)
+		{
+			x509_certificate const &r{roots[i]};
+			if (!x509_name_eq(cur.issuer, cur.issuer_size, r.subject, r.subject_size))
+			{
+				continue;
+			}
+			root_name_matched = true;
+			if (x509_verify_signature(cur, r.spki_algorithm, r.public_key, r.public_key_size) ==
+				x509_verify_result::ok)
+			{
+				return x509_chain_result::ok;
+			}
+			/* same-name anchor with a different key (rotation): fall
+			   through to the presented issuers */
+		}
+		/* then issuers among the presented certs */
+		::std::size_t next_idx{presented_count};
+		bool bad_sig{};
 		for (::std::size_t i{1}; i != presented_count; ++i)
 		{
-			if (i != idx && x509_name_eq(cur.issuer, cur.issuer_size, presented[i].subject, presented[i].subject_size))
+			if (i == idx ||
+				!x509_name_eq(cur.issuer, cur.issuer_size, presented[i].subject, presented[i].subject_size))
 			{
-				issuer = &presented[i];
+				continue;
+			}
+			if (presented[i].has_basic_constraints && !presented[i].is_ca)
+			{
+				return x509_chain_result::not_ca;
+			}
+			x509_verify_result const vr{x509_verify_signature(cur, presented[i].spki_algorithm,
+															  presented[i].public_key, presented[i].public_key_size)};
+			if (vr == x509_verify_result::ok)
+			{
+				next_idx = i;
 				break;
 			}
-		}
-		if (issuer == nullptr)
-		{
-			for (::std::size_t i{}; i != root_count; ++i)
+			if (vr != x509_verify_result::bad_signature)
 			{
-				if (x509_name_eq(cur.issuer, cur.issuer_size, roots[i].subject, roots[i].subject_size))
-				{
-					issuer = &roots[i];
-					issuer_is_root = true;
-					break;
-				}
+				return x509_chain_result::unsupported_algorithm;
 			}
+			bad_sig = true;
+			/* other same-subject presented certs may still verify */
 		}
-		if (issuer == nullptr)
+		if (next_idx != presented_count)
 		{
-			return x509_chain_result::untrusted;
+			idx = next_idx;
+			continue;
 		}
-		if (!issuer_is_root && issuer->has_basic_constraints && !issuer->is_ca)
-		{
-			return x509_chain_result::not_ca;
-		}
-		x509_verify_result const vr{x509_verify_signature(cur, issuer->spki_algorithm,
-														  issuer->public_key, issuer->public_key_size)};
-		if (vr != x509_verify_result::ok)
-		{
-			return vr == x509_verify_result::bad_signature ? x509_chain_result::bad_signature : x509_chain_result::unsupported_algorithm;
-		}
-		if (issuer_is_root)
-		{
-			return x509_chain_result::ok;
-		}
-		/* walk up: issuer becomes cur; find its index in presented[] */
-		for (::std::size_t i{1}; i != presented_count; ++i)
-		{
-			if (&presented[i] == issuer)
-			{
-				idx = i;
-				break;
-			}
-		}
+		return (bad_sig || root_name_matched) ? x509_chain_result::bad_signature
+											  : x509_chain_result::untrusted;
 	}
 	return x509_chain_result::chain_too_long;
 }

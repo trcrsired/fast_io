@@ -658,16 +658,19 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 	}
 	if (cfg.check_chain)
 	{
-		::fast_io::tls::details::x509_certificate roots[16];
-		::std::size_t const nroots{cfg.root_count < 16 ? cfg.root_count : 16};
-		for (::std::size_t i{}; i != nroots; ++i)
+		/* parse every configured anchor; unparseable entries are skipped
+		   (a bundle may contain certs our minimal DER reader cannot handle) */
+		::fast_io::vector<::fast_io::tls::details::x509_certificate> roots{};
+		roots.reserve(cfg.root_count);
+		for (::std::size_t i{}; i != cfg.root_count; ++i)
 		{
-			if (!::fast_io::tls::details::x509_certificate_parse(roots[i], cfg.roots[i], cfg.root_sizes[i]))
+			::fast_io::tls::details::x509_certificate rc{};
+			if (::fast_io::tls::details::x509_certificate_parse(rc, cfg.roots[i], cfg.root_sizes[i]))
 			{
-				details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, false);
+				roots.push_back(rc);
 			}
 		}
-		switch (::fast_io::tls::details::x509_chain_verify(presented, peer.count, roots, nroots, cfg.now))
+		switch (::fast_io::tls::details::x509_chain_verify(presented, peer.count, roots.data(), roots.size(), cfg.now))
 		{
 		case ::fast_io::tls::details::x509_chain_result::ok:
 			break;

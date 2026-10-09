@@ -54,6 +54,94 @@ HekccGCwiJ2vHyKo8v9LKXTpC/q0PByNi1rBD2z6eZ/A/bMhxrBEzFfsMc9xyMzb
 -----END CERTIFICATE-----
 )"};
 
+/* cross-signed-anchor chain (mirrors www.google.com's GTS Root R1):
+   leafR <- intR <- "Test Root R" key. crossR carries "Test Root R"'s
+   subject+key but is signed by "Other Root CA" (not in the store).
+   Trusted-first path building must anchor intR directly to rootR. */
+inline constexpr char8_t leafR_pem[]{u8R"(-----BEGIN CERTIFICATE-----
+MIIDHTCCAgWgAwIBAgIUaZhvdDrkFSW+L+P405rzAYOY8ecwDQYJKoZIhvcNAQEL
+BQAwFTETMBEGA1UEAwwKVGVzdCBJbnQgUjAeFw0yNjEwMDkxNzU5MTdaFw0zNjEw
+MDYxNzU5MTdaMBQxEjAQBgNVBAMMCWxlYWYudGVzdDCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBANGNuG8l9Fq1ydYELijCxwhPNZ7o44O49/V75e5ppoZv
+zsJI4hsbpY/dmkRY/8BpgxonPjKP+sgAAjBUo+17RuLbCpLcGdrb6UcbV8Ud4+Dw
+0CHBljWWvm2uKbvROB03Bl81ixzOdydNeA8f/b2kgaWoSgoKuN5wwk4clh1xx0jG
+FTM5yL6/tIx5pt1nMP/Hy6aRN4lwzDl8pNt0n3KRBL0smaBYVVgY1xB/a35PXXbk
+yECTJ4pcJBwoQ9tf2XvLpgB3OK67ZmCTP99lOGXMB/AcYJ8qLeiiZU1Ric7YSVGA
+BbhHkwqYgeJ+BGjc6Uo7PwXYzzvrs401AQpYMqZdEqcCAwEAAaNmMGQwDAYDVR0T
+AQH/BAIwADAUBgNVHREEDTALgglsZWFmLnRlc3QwHQYDVR0OBBYEFDk5WY7wsKcE
+z0doqZHvQc12g+bRMB8GA1UdIwQYMBaAFJQhDiYJefqFNGUVER4McHagtjA8MA0G
+CSqGSIb3DQEBCwUAA4IBAQAcakaJY/K4xygtppdZHKqIS6p7Ey3qiV6N5ZSbHcli
+S7oBOQUVsUbsLQtiFY5mBRmszDAAxeu6MgE5+IFb+/LrO92p6eklRkZCHj6nw0tg
+wsMSHTs9MjGNZ7axuysMu/lj4PTTJA4rhTJepr0GPPKjuhT5BUl+lsCl0MK6RGMX
+38hJUQFmoPqtK2Cc5kLQgFaGnSnyXBf8XB35wvQ0wgjc0I/i5xSt22/0keXInek9
+ncoJo/9pt/IZ+a7avNUN65KkRiyNKHWDmT2yEPCLXCU5w1V0bdIMt21x2bRlscVZ
+EtZUTyzTJeKRKC98CzxlOZFWnRVww95fPt+r735fgzut
+-----END CERTIFICATE-----
+)"};
+
+inline constexpr char8_t intR_pem[]{u8R"(-----BEGIN CERTIFICATE-----
+MIIDHDCCAgSgAwIBAgIUKIglAVk+piLdiD5iW2uZa5ttZ2YwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAwwLVGVzdCBSb290IFIwHhcNMjYxMDA5MTc1OTE3WhcNMzYx
+MDA2MTc1OTE3WjAVMRMwEQYDVQQDDApUZXN0IEludCBSMIIBIjANBgkqhkiG9w0B
+AQEFAAOCAQ8AMIIBCgKCAQEA1jO31WJtBmdDzCdwgS7h7EI+vaBBufu+rF89PAIf
+DDRGKk02h35ZVbnxqffTwId/3p9fWUfRTBoH7n/EB/rrjKnfC1P/1bIZBWH5JHtn
+KGe9EQBehWCjnTVzTPXuyncmMm/kAJ78mBDZ6rNVMxFpy1+An0V78mEhBwxIDO/L
+hy8ZSxnZEuGT4/EL/P8Lm+npIDXs73DUn5knRwD2MsuCu/MagFWWEiZnbAB+6jlc
+squft2ulYylstlEo2c6QgrixkKLGRPb/vML1FN/4xtGt0f19znPTKA10YRY9fRTl
+2x4Wj4Hr7UYFBXjGHFo03gvNpDAhxJcRvSN75FaI9osaEQIDAQABo2MwYTAPBgNV
+HRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUlCEOJgl5+oU0
+ZRURHgxwdqC2MDwwHwYDVR0jBBgwFoAUOnqV7sr1JI8QHr0LXWyzzTQ98XIwDQYJ
+KoZIhvcNAQELBQADggEBAGtyoEhTvxNhiO/Brb/M0juiw2wGuPAwSpXgogZgSIA/
+3VgFVTSmfEItlbRhrifk1xrXpZ36uz1ZsbPJvvT3HQLwM+Gr/G9i73RtayhWBnmP
+rBlxjVqy9w0Axd1Pb/9YbkCFc9MWPsYh1hjZrlhVD2Ai4o0N2IznIsvuQy0Xjr3M
+4H3Oi0CEV5vg2LjTkPWJMDKQ3LGtCU5lbVLwb8g3JUl14MwTEQQICdBwqVcVSb+Q
+caIwuAyLu6aD1mHLBBz8Z3fMsQND8IwcmU9r6XCv52duY/F7ircuL09j8UP2LzaY
+TO9WoSZOqI55XFoGFaRSmZOTUxFI83zm0WeHsoSr08M=
+-----END CERTIFICATE-----
+)"};
+
+inline constexpr char8_t crossR_pem[]{u8R"(-----BEGIN CERTIFICATE-----
+MIIC/jCCAeagAwIBAgIUBIlyL88oPQxtqJrMzPCJcxxdPi4wDQYJKoZIhvcNAQEL
+BQAwGDEWMBQGA1UEAwwNT3RoZXIgUm9vdCBDQTAeFw0yNjEwMDkxNzU5MTdaFw0z
+NjEwMDYxNzU5MTdaMBYxFDASBgNVBAMMC1Rlc3QgUm9vdCBSMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkSv35Mw/6mDiYssiPEbN7k2Q2xrYe2AyAHfR
+7RwSM2FX1keVwwXbLhW8Hv9GJ0IvZ+FSUoMpXOdKo1rtyXkj5aJFovyshwN5VO+C
+e2rlJsF6u6z13hlaBmwU7SzQrUAdMJDQMVZsRXMc+2QRGa6na4SGMmQJznxe1jZ7
+hBGv3Aj8zmwPBis0SKGju6Nm0BGYqEAZrgDhI8vZL4z6JQblyW1IriJbLluNvQFp
+3jF/TVcX8xAZ3gnlS+tWQ/AjWBvhK62Yz5KiLgf8DE3QyKp4Ytvg7UWiIrc9PYmp
+Tb7asSN32ILIox6wBiE4xLub7fPjY+UCTltIchBk4SDJwSA0QwIDAQABo0IwQDAd
+BgNVHQ4EFgQUOnqV7sr1JI8QHr0LXWyzzTQ98XIwHwYDVR0jBBgwFoAUnfsIeGkB
+Oe3SljoeB5Wv5vU4ntYwDQYJKoZIhvcNAQELBQADggEBABMM/So8wsHbhTOy7qs8
+Z7mIpnd7g3iEMDz+HTGRvyVtre4t1WlgjsGJ0Kz+bwmjCH8KIHiOmASLpaRtZGFj
+Qnw0ni2JYHW3lT1WjzIvCx9OJ/izdSRiTtFGiWHLDzRhf09fz5m2+ChB/1ICkNhN
+6GtNLPNQdwvcc4dVSDqYLXR9F9RJsJGo5qy/k1I46sLTLGxJwfoVKxdaESwvZYEc
+UzXCDxSckgTT77KSSTA3TovTg7Spt47Kh6rIBOahcFlwvDW2mqlJPY5bqIAGG+BW
+qaAEm3CwqVpFZZd7V3DrIRE+kBaUkhHEwflZjB7Au1aLrggN4m/rtMjyx3SzDMTY
+DLI=
+-----END CERTIFICATE-----
+)"};
+
+inline constexpr char8_t rootR_pem[]{u8R"(-----BEGIN CERTIFICATE-----
+MIIDDTCCAfWgAwIBAgIUYBjUzMZoP5xzHWvYcUdOQBC6uNYwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAwwLVGVzdCBSb290IFIwHhcNMjYxMDA5MTc1OTE2WhcNMzYx
+MDA2MTc1OTE2WjAWMRQwEgYDVQQDDAtUZXN0IFJvb3QgUjCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAJEr9+TMP+pg4mLLIjxGze5NkNsa2HtgMgB30e0c
+EjNhV9ZHlcMF2y4VvB7/RidCL2fhUlKDKVznSqNa7cl5I+WiRaL8rIcDeVTvgntq
+5SbBerus9d4ZWgZsFO0s0K1AHTCQ0DFWbEVzHPtkERmup2uEhjJkCc58XtY2e4QR
+r9wI/M5sDwYrNEiho7ujZtARmKhAGa4A4SPL2S+M+iUG5cltSK4iWy5bjb0Bad4x
+f01XF/MQGd4J5UvrVkPwI1gb4SutmM+Soi4H/AxN0MiqeGLb4O1FoiK3PT2JqU2+
+2rEjd9iCyKMesAYhOMS7m+3z42PlAk5bSHIQZOEgycEgNEMCAwEAAaNTMFEwHQYD
+VR0OBBYEFDp6le7K9SSPEB69C11ss800PfFyMB8GA1UdIwQYMBaAFDp6le7K9SSP
+EB69C11ss800PfFyMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+AD5ciNkyaxJfXpdvgZXijcYi7/eHN0Op+B0PdS4WQiorxuP7Ny7o2ppdpcjBdibl
+SnVqxjSc0oyPT8mlWoQysMhyErwGRC74+iFHGeZ2gcPdNHbih/rgHGIVevK90uoe
+uUBn+AN7YaNknZjfhdAga6Yd3iXXl7V7iKZZCkbCWPswLNzceGSY89AxfDpAejyQ
+NiGt/vpLtYQGpq1CVlFgDwxlnnGuO8qqbTHhHppEB0nFM2aPawACurJFt3AWvzB5
+iteWjqMGoakNkgyzdCKDy2q8WqtX/ApSJ/U4GJuxYCItV6R9fMEwGwLD26HXni4s
+QbNEpXfNiHx6itIihLxx6Uk=
+-----END CERTIFICATE-----
+)"};
+
 inline constexpr bool check(bool cond) noexcept
 {
 	return cond;
@@ -163,6 +251,56 @@ int main()
 		if (x509_chain_verify(presented2, 1, presented, 1, inside) != x509_chain_result::untrusted)
 		{
 			return 15;
+		}
+	}
+
+	/* cross-signed anchor: leafR <- intR <- "Test Root R" key; the presented
+	   crossR is "Test Root R" re-issued by an untrusted "Other Root CA".
+	   roots[] holds the self-signed rootR (same subject+key). */
+	{
+		auto decode_cert = [](char8_t const *pem, ::std::size_t pem_size,
+							  ::std::byte *der, ::std::size_t cap,
+							  x509_certificate &out) {
+			char8_t const *cur{pem}, *end{pem + pem_size};
+			char8_t const *label, *b64;
+			::std::size_t lsz, bsz;
+			if (!pem_next_block(cur, end, label, lsz, b64, bsz))
+			{
+				return false;
+			}
+			::std::size_t const n{pem_decode_block(der, cap, b64, bsz)};
+			return n != 0 && x509_certificate_parse(out, der, n);
+		};
+		::std::byte d1[2048], d2[2048], d3[2048], d4[2048];
+		x509_certificate leafR{}, intR{}, crossR{}, rootR{};
+		if (!decode_cert(leafR_pem, sizeof(leafR_pem) - 1, d1, sizeof(d1), leafR) ||
+			!decode_cert(intR_pem, sizeof(intR_pem) - 1, d2, sizeof(d2), intR) ||
+			!decode_cert(crossR_pem, sizeof(crossR_pem) - 1, d3, sizeof(d3), crossR) ||
+			!decode_cert(rootR_pem, sizeof(rootR_pem) - 1, d4, sizeof(d4), rootR))
+		{
+			return 16;
+		}
+		if (!x509_hostname_match(leafR, u8"leaf.test", 9))
+		{
+			return 17;
+		}
+		x509_certificate cross_presented[]{leafR, intR, crossR};
+		x509_certificate cross_roots[]{rootR};
+		::std::int_least64_t const t{leafR.not_before + 60};
+		/* the whole point: anchors beat the presented dead-end cross-sign */
+		if (x509_chain_verify(cross_presented, 3, cross_roots, 1, t) != x509_chain_result::ok)
+		{
+			return 18;
+		}
+		/* empty trust -> untrusted */
+		if (x509_chain_verify(cross_presented, 3, cross_roots, 0, t) != x509_chain_result::untrusted)
+		{
+			return 19;
+		}
+		/* leaf alone can't reach the root (issuer is intR) */
+		if (x509_chain_verify(cross_presented, 1, cross_roots, 1, t) != x509_chain_result::untrusted)
+		{
+			return 20;
 		}
 	}
 
@@ -383,7 +521,8 @@ int main()
 		constexpr char8_t aad_hex[]{u8"50515253c0c1c2c3c4c5c6c7"};
 		auto unhex{[](::std::byte *out, char8_t const *hx, ::std::size_t n) noexcept {
 			auto v{[](char8_t c) noexcept {
-				return c <= u8'9' ? c - u8'0' : c <= u8'f' ? c - u8'a' + 10 : c - u8'A' + 10;
+				return c <= u8'9' ? c - u8'0' : c <= u8'f' ? c - u8'a' + 10
+														   : c - u8'A' + 10;
 			}};
 			for (::std::size_t i{}; i != n; ++i)
 			{
@@ -398,7 +537,7 @@ int main()
 		::std::size_t const n{sizeof(pt) - 1};
 		::std::byte ct[128], tag[16];
 		::fast_io::chacha20_poly1305_seal_to_ptr(ct, tag, key, nonce, aad, 12,
-											   reinterpret_cast<::std::byte const *>(pt), n);
+												 reinterpret_cast<::std::byte const *>(pt), n);
 		constexpr ::std::byte want_tag[]{
 			::std::byte{0x1a}, ::std::byte{0xe1}, ::std::byte{0x0b}, ::std::byte{0x59}, ::std::byte{0x4f}, ::std::byte{0x09},
 			::std::byte{0xe2}, ::std::byte{0x6a}, ::std::byte{0x7e}, ::std::byte{0x90}, ::std::byte{0x2e}, ::std::byte{0xcb},

@@ -28,6 +28,7 @@ keys are installed. Hosted Linux only.
 
 #include "fast_io_tls/ktls.h"
 #include "fast_io_tls/client.h"
+#include "fast_io_tls/roots.h"
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
