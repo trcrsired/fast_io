@@ -127,8 +127,12 @@ struct win32_iocp_rw_cookie
 	win32_iocp_state_base base;
 	::fast_io::win32::wsabuf wsa{};
 	T callback;
+	/* set when the op was submitted at an explicit offset emulating
+	 * FILE_USE_FILE_POINTER_POSITION — the file position is advanced by
+	 * the transferred count on delivery */
+	bool advance_position{};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -149,6 +153,18 @@ inline void win32_iocp_rw_deliver(void *self, ::std::size_t transferred,
 		::fast_io::win32::CloseThreadpoolTimer(timer);
 	}
 	bool const timed_out{cookie->base.timed_out};
+	if (cookie->advance_position)
+	{
+		/* FILE_USE_FILE_POINTER_POSITION emulation: move the file object's
+		 * position past the bytes actually transferred */
+		auto const &ovloff{cookie->base.ovl.dummy_union_name.dummy_struct_name};
+		::fast_io::win32::SetFilePointerEx(
+			cookie->base.file_handle,
+			static_cast<::std::int_least64_t>(
+				(static_cast<::std::uint_least64_t>(ovloff.OffsetHigh) << 32u) | ovloff.Offset) +
+				static_cast<::std::int_least64_t>(transferred),
+			nullptr, 0u /* FILE_BEGIN */);
+	}
 	auto callback{::std::move(cookie->callback)};
 	::fast_io::details::async_delete_state(cookie);
 	::std::cxx_std_error e{};
@@ -185,6 +201,23 @@ inline void win32_iocp_rw_deliver(void *self, ::std::size_t transferred,
  */
 inline void win32_iocp_associate(void *port, void *handle) throws
 {
+	/* IOCP only delivers packets for handles opened with overlapped
+	 * semantics; on a synchronous-mode handle the op completes inline and
+	 * nothing is ever queued — the coroutine would hang instead of
+	 * failing. FileModeInformation reports the create flags: synchronous
+	 * handles carry FILE_SYNCHRONOUS_IO_{ALERT,NONALERT}. Query failure
+	 * (e.g. non-file object types) is left alone — the op itself decides
+	 * whether it can go async. */
+	::fast_io::win32::nt::io_status_block isb{};
+	::std::uint_least32_t fmode{};
+	if (::fast_io::win32::nt::NtQueryInformationFile(
+			handle, __builtin_addressof(isb), __builtin_addressof(fmode),
+			static_cast<::std::uint_least32_t>(sizeof(fmode)),
+			::fast_io::win32::nt::file_information_class::FileModeInformation) == 0 &&
+		(fmode & 0x30u) != 0) [[unlikely]]
+	{
+		throw_win32_error(50u /* ERROR_NOT_SUPPORTED */);
+	}
 	if (::fast_io::win32::CreateIoCompletionPort(handle, port, 0, 0) == nullptr) [[unlikely]]
 	{
 		auto err{::fast_io::win32::GetLastError()};
@@ -295,8 +328,26 @@ inline void win32_iocp_rw_submit(sched_type sched, stream_type stream, void *fir
 	}
 	else if constexpr (!is_socket)
 	{
-		/* empty offset = current file position: FILE_USE_FILE_POINTER_POSITION */
-		cookie->base.ovl.dummy_union_name.dummy_struct_name = {~0u, ~0u};
+		/* empty offset = current file position: FILE_USE_FILE_POINTER_POSITION.
+		 * Wine does not implement the ~0/~0 sentinel in overlapped I/O
+		 * (ERROR_INVALID_PARAMETER), so emulate it: take the file object's
+		 * current position as an explicit offset and advance it on
+		 * delivery. Non-seekable handles (pipes) can't report a position —
+		 * their offset fields are ignored by the kernel, so 0 is fine. */
+		::std::int_least64_t cur{};
+		if (::fast_io::win32::SetFilePointerEx(file_handle, 0,
+											   __builtin_addressof(cur),
+											   1u /* FILE_CURRENT */))
+		{
+			cookie->base.ovl.dummy_union_name.dummy_struct_name = {
+				static_cast<::std::uint_least32_t>(cur),
+				static_cast<::std::uint_least32_t>(static_cast<::std::uint_least64_t>(cur) >> 32u)};
+			cookie->advance_position = true;
+		}
+		else
+		{
+			cookie->base.ovl.dummy_union_name.dummy_struct_name = {0u, 0u};
+		}
 	}
 	::std::uint_least32_t const len{
 		::fast_io::details::read_write_bytes_compute<::std::uint_least32_t>(
@@ -428,7 +479,7 @@ struct win32_iocp_accept_cookie
 	 * wanted, so the buffer must always be real. */
 	::std::byte addrbuf[2 * (sizeof(::fast_io::posix_sockaddr_in6) + 16)]{};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 

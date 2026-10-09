@@ -202,14 +202,14 @@ concept async_preadable =
 	::fast_io::operations::decay::defines::async_scheduler_observer<schedulertype> &&
 	::fast_io::operations::decay::defines::has_async_pread_some_bytes_underflow_callback_define<
 		schedulertype, instmtype,
-		decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>;
+		::fast_io::details::async_io_callback>;
 
 template <typename schedulertype, typename outstmtype>
 concept async_pwritable =
 	::fast_io::operations::decay::defines::async_scheduler_observer<schedulertype> &&
 	::fast_io::operations::decay::defines::has_async_pwrite_some_bytes_overflow_callback_define<
 		schedulertype, outstmtype,
-		decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>;
+		::fast_io::details::async_io_callback>;
 
 } // namespace fast_io::operations::decay::defines
 

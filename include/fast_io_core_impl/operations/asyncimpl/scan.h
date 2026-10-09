@@ -93,7 +93,7 @@ async_scan_some_freestanding_decay(async_scheduler_type sched,
 	static_assert(
 		::fast_io::operations::decay::defines::has_async_ibuffer_underflow<
 			async_scheduler_type, instmtype,
-			decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>,
+			::fast_io::details::async_io_callback>,
 		"async scan needs the stream's async_ibuffer_underflow");
 	using char_type = typename instmtype::input_char_type;
 	static_assert(sizeof(char_type) == 1,

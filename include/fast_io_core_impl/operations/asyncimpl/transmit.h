@@ -319,7 +319,7 @@ inline void async_transmit_all_bytes_decay_callback(
 		if constexpr (::fast_io::operations::decay::defines::
 						  has_async_transmit_some_bytes_overflow_underflow_callback_define<
 							  async_scheduler_type, outstm_reftype, instm_reftype,
-							  decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+							  ::fast_io::details::async_io_callback>)
 		{
 			using state_type =
 				::fast_io::details::async_transmit_all_native_state<async_scheduler_type,

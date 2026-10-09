@@ -192,7 +192,7 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 async_scheduler_type,
 					 instmtype,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
+					 ::fast_io::details::async_io_callback>
 inline void async_pread_all_bytes_decay_callback(async_scheduler_type scheduler, instmtype instm,
 												 ::std::byte *first, ::std::size_t count,
 												 ::fast_io::intfpos_opt off,

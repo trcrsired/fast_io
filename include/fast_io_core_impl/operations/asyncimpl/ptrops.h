@@ -44,7 +44,7 @@ inline void async_pread_all_bytes_callback(async_scheduler_type &&scheduler, ins
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -61,7 +61,7 @@ inline auto async_pread_some_bytes(async_scheduler_type &&scheduler, instmtype &
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_pread_some_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -77,7 +77,7 @@ inline auto async_pread_all_bytes(async_scheduler_type &&scheduler, instmtype &&
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_pread_all_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -114,7 +114,7 @@ inline void async_pwrite_all_bytes_callback(async_scheduler_type &&scheduler, ou
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -131,7 +131,7 @@ inline auto async_pwrite_some_bytes(async_scheduler_type &&scheduler, outstmtype
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_pwrite_some_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -147,7 +147,7 @@ inline auto async_pwrite_all_bytes(async_scheduler_type &&scheduler, outstmtype 
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_pwrite_all_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -172,7 +172,7 @@ inline void async_scatter_pread_some_bytes_callback(async_scheduler_type &&sched
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_scatter_pread_some_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -191,7 +191,7 @@ inline void async_scatter_pread_all_bytes_callback(async_scheduler_type &&schedu
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_scatter_pread_all_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -215,7 +215,7 @@ inline void async_scatter_pwrite_some_bytes_callback(async_scheduler_type &&sche
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_scatter_pwrite_some_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -234,7 +234,7 @@ inline void async_scatter_pwrite_all_bytes_callback(async_scheduler_type &&sched
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -251,12 +251,12 @@ inline auto async_scatter_pread_some_bytes(async_scheduler_type &&scheduler, ins
 				 has_async_scatter_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::fast_io::io_scatter_status_t) noexcept {})> ||
+					 ::fast_io::details::async_io_scatter_callback> ||
 			 ::fast_io::operations::decay::defines::
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_scatter_pread_some_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -272,7 +272,7 @@ inline auto async_scatter_pread_all_bytes(async_scheduler_type &&scheduler, inst
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_scatter_pread_all_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -288,12 +288,12 @@ inline auto async_scatter_pwrite_some_bytes(async_scheduler_type &&scheduler, ou
 				 has_async_scatter_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::fast_io::io_scatter_status_t) noexcept {})> ||
+					 ::fast_io::details::async_io_scatter_callback> ||
 			 ::fast_io::operations::decay::defines::
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_scatter_pwrite_some_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -309,7 +309,7 @@ inline auto async_scatter_pwrite_all_bytes(async_scheduler_type &&scheduler, out
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>)
+					 ::fast_io::details::async_io_callback>)
 {
 	return ::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -398,7 +398,7 @@ inline auto async_output_stream_flush(async_scheduler_type &&scheduler, outstmty
 				 has_async_output_stream_buffer_flush_define<
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 					 ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(outstm))>,
-					 decltype([](::std::cxx_std_error) noexcept {})>)
+					 ::fast_io::details::async_io_error_callback>)
 {
 	return ::fast_io::operations::decay::async_output_stream_flush_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),
@@ -422,10 +422,10 @@ inline auto async_accept(async_scheduler_type &&scheduler, streamtype &&listenst
 	requires(::fast_io::operations::decay::defines::has_async_accept_callback_define<
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(listenstm))>,
-			 decltype([](::std::cxx_std_error,
-						 typename ::std::remove_cvref_t<
-							 decltype(::fast_io::operations::io_stream_ref(listenstm))>::
-							 native_handle_type) noexcept {})>)
+			 ::fast_io::details::async_io_accept_callback<
+				 typename ::std::remove_cvref_t<
+					 decltype(::fast_io::operations::io_stream_ref(listenstm))>::
+					 native_handle_type>>)
 {
 	return ::fast_io::operations::decay::async_accept_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler),

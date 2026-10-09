@@ -128,7 +128,7 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 async_scheduler_type,
 					 outstmtype,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
+					 ::fast_io::details::async_io_callback>
 inline void async_pwrite_all_bytes_decay_callback(async_scheduler_type scheduler,
 												  outstmtype outstm, ::std::byte const *first,
 												  ::std::size_t count, ::fast_io::intfpos_opt off,

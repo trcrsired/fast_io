@@ -12,8 +12,13 @@ namespace fi = ::fast_io;
  */
 static fi::io_async_task<> work(fi::io_async_observer sched) throws
 {
-	::fast_io::in_buf_type inb(::fast_io::in());
-	::fast_io::out_buf_type outb{::fast_io::out()};
+	/* real files opened with no_block — win32 maps it to
+	 * FILE_FLAG_OVERLAPPED, which IOCP requires on every handle; std
+	 * handles can never be async on Windows (consoles can't do overlapped
+	 * I/O at all), so in()/out() are unusable there — files keep the
+	 * example portable */
+	::fast_io::ibuf_file inb{"input.txt", ::fast_io::open_mode::in | ::fast_io::open_mode::no_block};
+	::fast_io::obuf_file outb{"output.txt", ::fast_io::open_mode::out | ::fast_io::open_mode::no_block};
 	::std::size_t a{}, b{};
 	co_await fi::async_scan(sched, {}, inb, a, b);
 	co_await fi::async_println(sched, {}, outb, a + b);

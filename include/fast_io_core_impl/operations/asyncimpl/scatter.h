@@ -320,7 +320,7 @@ inline void async_scatter_pread_some_bytes_decay_callback(
 			::fast_io::operations::decay::defines::
 				has_async_pread_some_bytes_underflow_callback_define<
 					async_scheduler_type, instm_reftype,
-					decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>,
+					::fast_io::details::async_io_callback>,
 			"no scatter fast path and no scalar pread define to emulate with");
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 		using state_type =
@@ -355,7 +355,7 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 				 has_async_pread_some_bytes_underflow_callback_define<
 					 async_scheduler_type,
 					 instmtype,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
+					 ::fast_io::details::async_io_callback>
 inline void async_scatter_pread_all_bytes_decay_callback(
 	async_scheduler_type scheduler, instmtype instm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
@@ -414,7 +414,7 @@ inline void async_scatter_pwrite_some_bytes_decay_callback(
 			::fast_io::operations::decay::defines::
 				has_async_pwrite_some_bytes_overflow_callback_define<
 					async_scheduler_type, outstm_reftype,
-					decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>,
+					::fast_io::details::async_io_callback>,
 			"no scatter fast path and no scalar pwrite define to emulate with");
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
 		using state_type =
@@ -449,7 +449,7 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 				 has_async_pwrite_some_bytes_overflow_callback_define<
 					 async_scheduler_type,
 					 outstmtype,
-					 decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>
+					 ::fast_io::details::async_io_callback>
 inline void async_scatter_pwrite_all_bytes_decay_callback(
 	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::io_scatter_t const *pscatters,
 	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,

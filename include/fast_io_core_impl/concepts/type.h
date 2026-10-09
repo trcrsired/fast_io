@@ -268,4 +268,24 @@ struct scan_some_result_t
 	}
 };
 
+#if defined(__HERBCEPTIONS__)
+namespace details
+{
+
+/* callback-type aliases for the async has_*_callback_define probes. The
+ * lambdas are spelled at namespace scope on purpose: a lambda declared
+ * inside a requires-clause has the constrained function as its decl
+ * context, so mangling the trait specialization drags the still-dependent
+ * function pattern into the ABI mangler — which MSVC's mangler rejects
+ * when the pattern still contains a pack expansion */
+using async_io_callback = decltype([](::std::cxx_std_error, ::std::size_t) noexcept {});
+using async_io_scatter_callback =
+	decltype([](::std::cxx_std_error, io_scatter_status_t) noexcept {});
+using async_io_error_callback = decltype([](::std::cxx_std_error) noexcept {});
+template <typename handletype>
+using async_io_accept_callback = decltype([](::std::cxx_std_error, handletype) noexcept {});
+
+} // namespace details
+#endif
+
 } // namespace fast_io

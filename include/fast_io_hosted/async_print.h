@@ -663,7 +663,7 @@ namespace details
 template <typename schedulertype, typename T>
 concept async_print_device = requires {
 	::fast_io::operations::output_stream_ref(::std::declval<T &>());
-} && (::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>> || ::fast_io::operations::decay::defines::has_async_pwrite_some_bytes_overflow_callback_define<schedulertype, ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>, decltype([](::std::cxx_std_error, ::std::size_t) noexcept {})>);
+} && (::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>> || ::fast_io::operations::decay::defines::has_async_pwrite_some_bytes_overflow_callback_define<schedulertype, ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>, ::fast_io::details::async_io_callback>);
 
 } // namespace details
 
