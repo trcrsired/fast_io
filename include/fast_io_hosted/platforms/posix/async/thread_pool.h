@@ -381,6 +381,78 @@ inline void posix_thread_pool_close_dispatch(posix_thread_pool_node *p) noexcept
 	callback(err);
 }
 
+/*
+ * connect cookie: the worker blocks in connect() — connect is bounded
+ * (the kernel's SYN retransmission cap terminates it), so a parked
+ * worker is acceptable here, unlike an unbounded read. The peer address
+ * is copied into the cookie at submission; the deadline applies only
+ * until dequeue like the other pool ops. The socket stays with the
+ * caller either way — a failed connect leaves it unconnected.
+ */
+template <typename func>
+struct posix_thread_pool_connect_cookie : posix_thread_pool_node
+{
+	using allocator_type = ::fast_io::native_global_allocator;
+	int fd{-1};
+	::fast_io::posix_sockaddr_storage addr{};
+	::fast_io::posix_socklen_t addrlen{};
+	::timespec deadline{};
+	bool has_deadline{};
+	func callback;
+	::std::cxx_std_error err{};
+
+	inline posix_thread_pool_connect_cookie(int f, void const *a, ::std::size_t alen,
+											::fast_io::posix_statx_timestamp_opt timeout,
+											func &&cb) noexcept
+		: fd{f}, addrlen{static_cast<::fast_io::posix_socklen_t>(alen)},
+		  has_deadline{timeout.has_opt}, callback{::std::move(cb)}
+	{
+		if (alen <= sizeof(this->addr)) [[likely]]
+		{
+			__builtin_memcpy(__builtin_addressof(this->addr), a, alen);
+		}
+		if (timeout.has_opt)
+		{
+			this->deadline = posix_thread_pool_deadline(timeout.opt);
+		}
+	}
+};
+
+template <typename func>
+inline void posix_thread_pool_connect_run(posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_connect_cookie<func> *>(p)};
+	try
+	{
+		if (self->has_deadline && posix_thread_pool_expired(self->deadline))
+		{
+			self->err = ::fast_io::details::async_make_error(::std::errc::timed_out);
+			return;
+		}
+		if (self->addrlen > sizeof(self->addr)) [[unlikely]]
+		{
+			self->err = ::fast_io::details::async_make_error(::std::errc::invalid_argument);
+			return;
+		}
+		::fast_io::details::posix_connect_posix_socket_impl(
+			self->fd, __builtin_addressof(self->addr), self->addrlen);
+	}
+	catch throws(::std::error e)
+	{
+		self->err = e.release();
+	}
+}
+
+template <typename func>
+inline void posix_thread_pool_connect_dispatch(posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_connect_cookie<func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
 /* the pool's rw defines take ANY stream type so arbitrary synchronous
  * streams (hash sinks, memory devices, user types) can run on the pool —
  * but buffered refs carry their own async define; excluding them keeps
@@ -691,6 +763,34 @@ inline void async_accept_callback_define(
 	catch throws(::std::error e)
 	{
 		callback(e.release(), -1);
+	}
+}
+
+/*
+ * async_connect_define: a worker runs the blocking connect() — bounded
+ * by the kernel's SYN timeout, so parking a worker is acceptable. The
+ * socket is not consumed; a failed connect leaves it unconnected.
+ */
+template <::fast_io::posix_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_connect_define(
+	posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_posix_family_io_observer<family, char_type> sockstm, void const *addr,
+	::std::size_t addrlen, func callback) noexcept
+{
+	using cookie_type = ::fast_io::details::posix_thread_pool_connect_cookie<func>;
+	try
+	{
+		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
+			sched, sockstm.fd, addr, addrlen, timeout, ::std::move(callback))};
+		cookie->run = &::fast_io::details::posix_thread_pool_connect_run<func>;
+		cookie->dispatch = &::fast_io::details::posix_thread_pool_connect_dispatch<func>;
+		::fast_io::details::posix_thread_pool_submit(sched.native_handle(), cookie);
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
 	}
 }
 

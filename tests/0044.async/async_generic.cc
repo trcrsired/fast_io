@@ -35,6 +35,11 @@ inline constexpr mock_file output_stream_ref_define(mock_file f) noexcept
 	return f;
 }
 
+inline constexpr mock_file io_stream_ref_define(mock_file f) noexcept
+{
+	return f;
+}
+
 /* sync ops: basic_io_buffer's destructor/close flushes pending output
  * through the synchronous write path */
 inline void write_all_bytes_overflow_define(mock_file out, ::std::byte const *first,
@@ -180,6 +185,19 @@ inline void async_close_define(mock_scheduler, ::fast_io::posix_statx_timestamp_
 	cb(::std::cxx_std_error{});
 }
 
+/* a stream with an async connect define: copies the peer address into
+ * the stream's buffer like a real backend does at submission */
+template <typename func>
+inline void async_connect_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+								 mock_file f, void const *addr, ::std::size_t addrlen,
+								 func cb) noexcept
+{
+	::std::size_t n{addrlen < f.size ? addrlen : f.size};
+	::std::memcpy(f.data, addr, n);
+	*f.pos = n;
+	cb(::std::cxx_std_error{});
+}
+
 /* a stream with only synchronous byte operations — no async defines; the
  * generic transmit engine must drive it inline */
 struct sync_only_file
@@ -300,6 +318,12 @@ template <typename stmtype>
 static test_task coro_close_out(mock_scheduler sched, stmtype &&stm) throws
 {
 	co_await ::fast_io::operations::async_close(sched, {}, stm);
+}
+
+static test_task coro_connect(mock_scheduler sched, mock_file stm, void const *addr,
+							  ::std::size_t addrlen) throws
+{
+	co_await ::fast_io::operations::async_connect(sched, {}, stm, addr, addrlen);
 }
 
 static test_task coro_scan(mock_scheduler sched, ::std::byte *data, ::std::size_t size) throws
@@ -960,6 +984,40 @@ int main()
 		}
 		CHECK(dstpos == ::std::numeric_limits<::std::size_t>::max());
 		CHECK(::std::memcmp(dstdata, wdata, 4) == 0);
+	}
+
+	/* async_connect: the mock copies the peer address at submission */
+	{
+		::std::byte conbuf[16]{};
+		::std::size_t conpos{};
+		mock_file con{conbuf, sizeof(conbuf), __builtin_addressof(conpos)};
+		::std::uint_least32_t dest{0x7f000001u};
+		bool fired{};
+		::fast_io::operations::async_connect_callback(
+			sched, {}, con, __builtin_addressof(dest), sizeof(dest),
+			[&](::std::cxx_std_error e) noexcept {
+				fired = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(fired);
+		CHECK(conpos == sizeof(dest));
+		CHECK(::std::memcmp(conbuf, __builtin_addressof(dest), sizeof(dest)) == 0);
+
+		/* coroutine form: the awaiter carries its own address copy */
+		conpos = 0;
+		::std::memset(conbuf, 0, sizeof(conbuf));
+		auto t{coro_connect(sched, con, __builtin_addressof(dest), sizeof(dest))};
+		t.resume();
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+		CHECK(conpos == sizeof(dest));
+		CHECK(::std::memcmp(conbuf, __builtin_addressof(dest), sizeof(dest)) == 0);
 	}
 
 	if (failures == 0)

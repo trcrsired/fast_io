@@ -184,6 +184,61 @@ template <::std::integral ch_type>
 using basic_native_socket_file = basic_posix_file<ch_type>;
 using net_service = posix_empty_network_service;
 
+namespace operations
+{
+
+/*
+ * async_connect convenience overloads: build the peer sockaddr from a
+ * fast_io address exactly like tcp_connect does, then forward to the raw
+ * pointer-and-length form. The backend copies the address at submission,
+ * so the local does not need to outlive the call.
+ */
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_connect(async_scheduler_type &&scheduler,
+						  ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+						  ipv4 v4) noexcept
+{
+	constexpr auto inet{to_posix_sock_family(sock_family::inet)};
+	posix_sockaddr_in in{.sin_family = inet,
+						 .sin_port = big_endian(static_cast<::std::uint_least16_t>(v4.port)),
+						 .sin_addr = v4.address};
+	return async_connect(::fast_io::freestanding::forward<async_scheduler_type>(scheduler),
+						 timeout, ::fast_io::freestanding::forward<streamtype>(stm),
+						 __builtin_addressof(in), sizeof(in));
+}
+
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_connect(async_scheduler_type &&scheduler,
+						  ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+						  ipv6 v6) noexcept
+{
+	constexpr auto inet6{to_posix_sock_family(sock_family::inet6)};
+	posix_sockaddr_in6 in6{.sin6_family = inet6,
+						   .sin6_port = big_endian(static_cast<::std::uint_least16_t>(v6.port)),
+						   .sin6_addr = v6.address};
+	return async_connect(::fast_io::freestanding::forward<async_scheduler_type>(scheduler),
+						 timeout, ::fast_io::freestanding::forward<streamtype>(stm),
+						 __builtin_addressof(in6), sizeof(in6));
+}
+
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_connect(async_scheduler_type &&scheduler,
+						  ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+						  ip v) noexcept
+{
+	if (v.is_ipv4())
+	{
+		return async_connect(::fast_io::freestanding::forward<async_scheduler_type>(scheduler),
+							 timeout, ::fast_io::freestanding::forward<streamtype>(stm),
+							 ipv4{.address = v.address.address.v4, .port = v.port});
+	}
+	return async_connect(::fast_io::freestanding::forward<async_scheduler_type>(scheduler),
+						 timeout, ::fast_io::freestanding::forward<streamtype>(stm),
+						 ipv6{.address = v.address.address.v6, .port = v.port});
+}
+
+} // namespace operations
+
 #if defined(__HERBCEPTIONS__)
 /*
  * The owning file type an async accept yields for a posix listen-stream

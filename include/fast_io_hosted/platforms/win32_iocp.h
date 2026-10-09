@@ -704,6 +704,226 @@ inline void win32_iocp_accept_submit(sched_type sched, stream_type stream,
 	}
 }
 
+/* ======================= connect ======================= */
+
+/*
+ * Cookie for one pending ConnectEx: unlike accept the socket is the
+ * caller's — nothing is owned or cleaned up by the op. addr is copied
+ * at submission; ConnectEx dereferences it while the op is pending.
+ * file_handle in the base is the connecting socket, for CancelIoEx.
+ */
+template <typename alloc_type, typename T>
+struct win32_iocp_connect_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	win32_iocp_state_base base;
+	::std::uint_least32_t received{};
+	::fast_io::posix_sockaddr_storage addr{};
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+/*
+ * Resolves ConnectEx through the socket extension-function ioctl.
+ * WSAID_CONNECTEX = {25a207b9-ddf3-4660-8ee9-76e58c74063e} in the
+ * wire-layout byte order GUIDs marshal in.
+ */
+inline ::fast_io::win32::connectex_func win32_iocp_connectex(::std::size_t sock) throws
+{
+	static constexpr ::std::byte const guid[16]{
+		::std::byte{0xb9}, ::std::byte{0x07}, ::std::byte{0xa2}, ::std::byte{0x25},
+		::std::byte{0xf3}, ::std::byte{0xdd}, ::std::byte{0x60}, ::std::byte{0x46},
+		::std::byte{0x8e}, ::std::byte{0xe9}, ::std::byte{0x76}, ::std::byte{0xe5},
+		::std::byte{0x8c}, ::std::byte{0x74}, ::std::byte{0x06}, ::std::byte{0x3e}};
+	::fast_io::win32::connectex_func fp{};
+	::std::uint_least32_t nbytes{};
+	/* SIO_GET_EXTENSION_FUNCTION_POINTER */
+	if (::fast_io::win32::WSAIoctl(sock, 0xc8000006u,
+								   const_cast<::std::byte *>(guid),
+								   static_cast<::std::uint_least32_t>(sizeof(guid)),
+								   __builtin_addressof(fp),
+								   static_cast<::std::uint_least32_t>(sizeof(fp)),
+								   __builtin_addressof(nbytes), nullptr, nullptr) != 0 ||
+		fp == nullptr) [[unlikely]]
+	{
+		throw_win32_error(static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError()));
+	}
+	return fp;
+}
+
+/*
+ * On success the socket still lacks its connection context —
+ * SO_UPDATE_CONNECT_CONTEXT stamps it so getpeername/getsockname and
+ * the shutdown options behave like a synchronous connect()'s socket.
+ * The socket stays with the caller on every path.
+ */
+template <typename alloc_type, typename T>
+inline void win32_iocp_connect_deliver(void *self, ::std::size_t,
+									   ::std::uint_least32_t err) noexcept
+{
+	using cookie_type = win32_iocp_connect_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	if (auto *timer{cookie->base.timer}; timer != nullptr)
+	{
+		::fast_io::win32::SetThreadpoolTimer(timer, nullptr, 0, 0);
+		::fast_io::win32::WaitForThreadpoolTimerCallbacks(timer, 1);
+		::fast_io::win32::CloseThreadpoolTimer(timer);
+	}
+	bool const timed_out{cookie->base.timed_out};
+	::std::size_t const sock{
+		reinterpret_cast<::std::size_t>(cookie->base.file_handle)};
+	auto callback{::std::move(cookie->callback)};
+	::fast_io::details::async_delete_state(cookie);
+
+	::std::cxx_std_error e{};
+	if (timed_out && err != 0) [[unlikely]]
+	{
+		e = ::fast_io::details::async_make_error(::std::errc::timed_out);
+	}
+	else if (err != 0) [[unlikely]]
+	{
+		e = ::fast_io::details::async_make_error(
+			static_cast<::fast_io::freestanding::win32_errc>(err));
+	}
+	else if (::fast_io::win32::setsockopt(sock, 0xffffu /* SOL_SOCKET */,
+										  0x7010u /* SO_UPDATE_CONNECT_CONTEXT */, nullptr,
+										  0) != 0) [[unlikely]]
+	{
+		e = ::fast_io::details::async_make_error(
+			static_cast<::fast_io::freestanding::win32_errc>(
+				static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError())));
+	}
+	callback(e);
+}
+
+/*
+ * One ConnectEx submission: resolve the extension pointer, associate the
+ * socket with the port, bind it to the peer family's wildcard (ConnectEx
+ * requires a bound socket), submit. The socket is never touched on
+ * failure paths — the op does not own it.
+ */
+template <::fast_io::win32_family family, typename sched_type, typename stream_type, typename T>
+inline void win32_iocp_connect_submit(sched_type sched, stream_type stream, void const *addr,
+									  ::std::size_t addrlen,
+									  ::fast_io::posix_statx_timestamp_opt timeout,
+									  T &&callback) noexcept
+{
+	using callback_type = ::std::remove_cvref_t<T>;
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using cookie_type = win32_iocp_connect_cookie<alloc_type, callback_type>;
+
+	::std::size_t const sock{stream.native_handle()};
+	if (addr == nullptr || addrlen == 0 ||
+		addrlen > sizeof(::fast_io::posix_sockaddr_storage)) [[unlikely]]
+	{
+		callback(::fast_io::details::async_make_error(::std::errc::invalid_argument));
+		return;
+	}
+
+	::fast_io::win32::connectex_func connectex{};
+	try
+	{
+		connectex = win32_iocp_connectex(sock);
+		win32_iocp_associate(sched.native_handle(), reinterpret_cast<void *>(sock));
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+		return;
+	}
+
+	cookie_type *cookie;
+	try
+	{
+		cookie = ::fast_io::details::async_new_state_plain<cookie_type>(
+			sched,
+			win32_iocp_state_base{{},
+								  &win32_iocp_connect_deliver<alloc_type, callback_type>,
+								  reinterpret_cast<void *>(sock)},
+			0u, ::fast_io::posix_sockaddr_storage{},
+			callback_type{::std::forward<T>(callback)});
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+		return;
+	}
+	__builtin_memcpy(__builtin_addressof(cookie->addr), addr, addrlen);
+
+	try
+	{
+		/* ConnectEx requires a bound socket: bind the peer family's
+		 * wildcard address so the OS picks the source port/address */
+		::fast_io::posix_sockaddr_storage any{};
+		any.ss_family =
+			static_cast<::fast_io::posix_sockaddr const *>(addr)->sa_family;
+		if (::fast_io::win32::bind(sock, __builtin_addressof(any),
+								   static_cast<int>(addrlen)) != 0) [[unlikely]]
+		{
+			throw_win32_error(
+				static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError()));
+		}
+	}
+	catch throws(::std::error e)
+	{
+		auto cb{::std::move(cookie->callback)};
+		::fast_io::details::async_delete_state(cookie);
+		cb(e.release());
+		return;
+	}
+
+	if (timeout.has_opt)
+	{
+		if (timeout.opt.tv_sec == 0 && timeout.opt.tv_nsec == 0) [[unlikely]]
+		{
+			auto cb{::std::move(cookie->callback)};
+			::fast_io::details::async_delete_state(cookie);
+			cb(::fast_io::details::async_make_error(::std::errc::timed_out));
+			return;
+		}
+		cookie->base.timer = ::fast_io::win32::CreateThreadpoolTimer(
+			win32_iocp_timer_thunk, cookie, nullptr);
+		if (cookie->base.timer == nullptr) [[unlikely]]
+		{
+			auto err{::fast_io::win32::GetLastError()};
+			auto cb{::std::move(cookie->callback)};
+			::fast_io::details::async_delete_state(cookie);
+			cb(::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(err)));
+			return;
+		}
+	}
+
+	/* synchronous success and WSA_IO_PENDING both queue a completion */
+	if (connectex(sock, __builtin_addressof(cookie->addr), static_cast<int>(addrlen), nullptr,
+				  0u, __builtin_addressof(cookie->received),
+				  __builtin_addressof(cookie->base.ovl)) == 0)
+	{
+		auto const err{
+			static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError())};
+		if (err != 997u) [[unlikely]] // WSA_IO_PENDING
+		{
+			if (auto *timer{cookie->base.timer}; timer != nullptr)
+			{
+				::fast_io::win32::CloseThreadpoolTimer(timer);
+			}
+			auto cb{::std::move(cookie->callback)};
+			::fast_io::details::async_delete_state(cookie);
+			cb(::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(err)));
+			return;
+		}
+	}
+	if (auto *timer{cookie->base.timer}; timer != nullptr)
+	{
+		auto due{win32_iocp_relative_deadline(timeout.opt)};
+		::fast_io::win32::SetThreadpoolTimer(timer, __builtin_addressof(due), 0, 0);
+	}
+}
+
 /* ======================= close ======================= */
 
 /*
@@ -1059,6 +1279,27 @@ inline void async_accept_callback_define(
 {
 	::fast_io::details::win32_iocp_accept_submit<family>(
 		sched, wsiob, m, timeout, ::std::move(callback));
+}
+
+/*
+ * async_connect_define: ConnectEx on an unconnected socket — the socket
+ * must carry WSA_FLAG_OVERLAPPED (win32 sockets minted through the
+ * factory always do). The peer address is copied at submission and the
+ * socket is bound to the family's wildcard first, as ConnectEx requires;
+ * on success it gets SO_UPDATE_CONNECT_CONTEXT. The socket is not
+ * consumed — a failed connect leaves it unconnected for the caller to
+ * close.
+ */
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_connect_define(
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob, void const *addr,
+	::std::size_t addrlen, func callback) noexcept
+{
+	::fast_io::details::win32_iocp_connect_submit<family>(
+		sched, wsiob, addr, addrlen, timeout, ::std::move(callback));
 }
 
 /*

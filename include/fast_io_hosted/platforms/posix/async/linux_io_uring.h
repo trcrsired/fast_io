@@ -780,6 +780,95 @@ inline void io_uring_accept_submit(sched_type sched, ::fast_io::liburing::io_uri
 	}
 }
 
+/* ======================= connect ======================= */
+
+/*
+ * Cookie for one pending connect: the sqe is IORING_OP_CONNECT; the cqe's
+ * res is 0 on success, -errno on failure. addr is stored BY VALUE — the
+ * kernel dereferences it when the op runs, which may be long after
+ * submission returned. tlink/ts ride the linked-timeout machinery; a
+ * fired deadline cancels the connect and reports timed_out, leaving the
+ * socket in the platform's unconnected state (it is not owned by the
+ * op).
+ */
+template <typename alloc_type, typename T>
+struct io_uring_connect_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	io_uring_invoke_func invoke;
+	io_uring_timeout_link_block tlink;
+	int errn{};
+	::fast_io::liburing::io_uring_timespec ts{};
+	::fast_io::posix_sockaddr_storage addr{};
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+template <typename alloc_type, typename T>
+inline void io_uring_connect_deliver(void *self) noexcept
+{
+	using cookie_type = io_uring_connect_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	::std::cxx_std_error err{io_uring_cqe_error(cookie->tlink.fired, cookie->errn)};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err);
+}
+
+template <typename alloc_type, typename T>
+inline void io_uring_connect_invoke(void *self, ::std::size_t, int errn) noexcept
+{
+	using cookie_type = io_uring_connect_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	cookie->errn = errn;
+	if (--cookie->tlink.pending == 0)
+	{
+		io_uring_connect_deliver<alloc_type, T>(cookie);
+	}
+}
+
+template <typename sched_type, typename T>
+inline void io_uring_connect_submit(sched_type sched, ::fast_io::liburing::io_uring_ring_state &ring,
+									int fd, void const *addr, ::std::size_t addrlen,
+									::fast_io::posix_statx_timestamp_opt timeout,
+									T callback) noexcept
+{
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using cookie_type = io_uring_connect_cookie<alloc_type, T>;
+	if (addr == nullptr || addrlen > sizeof(::fast_io::posix_sockaddr_storage)) [[unlikely]]
+	{
+		callback(::fast_io::details::async_make_error(::std::errc::invalid_argument));
+		return;
+	}
+	try
+	{
+		::fast_io::liburing::details::io_uring_submit_guard<cookie_type> guard{
+			io_uring_new_state<cookie_type>(sched, io_uring_invoke_func{},
+											io_uring_timeout_link_block{}, 0,
+											::fast_io::liburing::io_uring_timespec{},
+											::fast_io::posix_sockaddr_storage{},
+											::std::move(callback))};
+		guard.cookie->invoke = io_uring_connect_invoke<alloc_type, T>;
+		__builtin_memcpy(__builtin_addressof(guard.cookie->addr), addr, addrlen);
+		io_uring_reserve_sqes(ring, timeout.has_opt ? 2 : 1);
+		io_uring_sqe *sqe{io_uring_get_sqe(ring)};
+		::fast_io::liburing::io_uring_prep_connect(
+			sqe, fd, __builtin_addressof(guard.cookie->addr),
+			static_cast<::std::uint_least32_t>(addrlen));
+		io_uring_arm_timeout(ring, guard.cookie, sqe,
+							 io_uring_connect_deliver<alloc_type, T>, timeout);
+		guard.release();
+		io_uring_commit(ring);
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+	}
+}
+
 } // namespace details
 } // namespace fast_io::liburing
 
@@ -945,6 +1034,26 @@ inline void async_accept_callback_define(
 {
 	::fast_io::liburing::details::io_uring_accept_submit(
 		sched, *sched.ring, instm.fd, m, timeout, ::std::move(callback));
+}
+
+/*
+ * async_connect_define: submits IORING_OP_CONNECT on the socket; the
+ * callback receives cb(::std::cxx_std_error) — domain == nullptr means
+ * connected. The peer address is copied into the op's state at
+ * submission, and the linked-timeout machinery cancels an overlong
+ * connect (reported as timed_out). The socket is not consumed — a
+ * failed connect leaves it unconnected for the caller to close.
+ */
+template <::fast_io::posix_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_connect_define(
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_posix_family_io_observer<family, char_type> sockstm, void const *addr,
+	::std::size_t addrlen, func callback) noexcept
+{
+	::fast_io::liburing::details::io_uring_connect_submit(
+		sched, *sched.ring, sockstm.fd, addr, addrlen, timeout, ::std::move(callback));
 }
 
 /*

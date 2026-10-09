@@ -368,6 +368,18 @@ using acceptex_func = int(
 		*)(::std::size_t, ::std::size_t, void *, ::std::uint_least32_t, ::std::uint_least32_t,
 		   ::std::uint_least32_t, ::std::uint_least32_t *, overlapped *) noexcept;
 
+/* LPFN_CONNECTEX: the ConnectEx extension function, resolved at runtime
+ * through WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) like AcceptEx —
+ * the socket must be bound before the call and carry WSA_FLAG_OVERLAPPED */
+using connectex_func = int(
+#if defined(_MSC_VER) && (!__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__stdcall
+#elif (__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__attribute__((__stdcall__))
+#endif
+		*)(::std::size_t, void const *, int, void *, ::std::uint_least32_t,
+		   ::std::uint_least32_t *, overlapped *) noexcept;
+
 template <win32_family fam>
 	requires(fam == win32_family::ansi_9x || fam == win32_family::wide_nt)
 struct

@@ -167,6 +167,29 @@ concept has_async_close_define =
 	};
 
 /*
+ * async_connect_define(sched, timeout, stream, addr, addrlen, func):
+ * asynchronous connect on an existing unconnected stream socket —
+ * io_uring's IORING_OP_CONNECT and winsock's ConnectEx are the models;
+ * backends without a kernel connect op run a blocking connect() on a
+ * worker. addr/addrlen are the peer address in the platform's sockaddr
+ * wire layout; the backend copies them at submission, so the caller's
+ * buffer need not outlive the call. Unlike async_close the stream is
+ * NOT consumed — on success it is connected and usable for I/O; on
+ * error its state follows the platform's failed connect() semantics
+ * (close and recreate it). func is invoked once as
+ * func(::std::cxx_std_error) noexcept.
+ */
+template <typename schedulertype, typename streamtype, typename functype>
+concept has_async_connect_define =
+	::fast_io::operations::decay::defines::async_completion_callback<functype> &&
+	requires(schedulertype sched, streamtype stm, functype func) {
+		{
+			async_connect_define(sched, ::fast_io::posix_statx_timestamp_opt{}, stm,
+								 static_cast<void const *>(nullptr), ::std::size_t{0}, func)
+		} noexcept;
+	};
+
+/*
  * The owning file type an async accept yields for a given listen-stream
  * observer — each backend specializes this on its observer type (posix
  * io_observer -> basic_posix_family_file, win32 socket observer ->

@@ -463,6 +463,50 @@ inline void async_accept_callback(async_scheduler_type &&scheduler,
 		::fast_io::operations::io_stream_ref(listenstm), mode, ::std::move(callback));
 }
 
+/* ------------------------------ connect ----------------------------- */
+
+/*
+ * async_connect: connects an existing unconnected stream socket to a
+ * peer address without blocking the caller — io_uring's
+ * IORING_OP_CONNECT and winsock's ConnectEx are the models. addr/addrlen
+ * are the peer's sockaddr in the platform's wire layout and are copied
+ * at submission. The socket is NOT consumed: on success it is connected
+ * and usable for I/O; on error it follows the platform's failed
+ * connect() semantics (close it and create a fresh socket to retry).
+ *
+ * Callback form invokes callback(::std::cxx_std_error) once; the
+ * coroutine form suspends until the connect resolves and
+ * await_resume() rethrows the error through the channel.
+ */
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_connect(async_scheduler_type &&scheduler,
+						  ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+						  void const *addr, ::std::size_t addrlen) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_connect_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(stm))>,
+			 ::fast_io::details::async_io_error_callback>)
+{
+	return ::fast_io::operations::decay::async_connect_decay(
+		::fast_io::operations::async_scheduler_ref(scheduler), timeout,
+		::fast_io::operations::io_stream_ref(stm), addr, addrlen);
+}
+
+template <typename async_scheduler_type, typename streamtype, typename callback_type>
+inline void async_connect_callback(async_scheduler_type &&scheduler,
+								   ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+								   void const *addr, ::std::size_t addrlen,
+								   callback_type callback) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_connect_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(stm))>,
+			 ::std::remove_cvref_t<callback_type>>)
+{
+	::fast_io::operations::decay::async_connect_decay_callback(
+		::fast_io::operations::async_scheduler_ref(scheduler), timeout,
+		::fast_io::operations::io_stream_ref(stm), addr, addrlen, ::std::move(callback));
+}
+
 /* ------------------------------- close ------------------------------ */
 
 /*

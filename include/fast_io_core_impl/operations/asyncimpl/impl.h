@@ -9,5 +9,6 @@
 #include "flush.h"
 #include "scan.h"
 #include "accept.h"
+#include "connect.h"
 #include "close.h"
 #include "ptrops.h"

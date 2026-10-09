@@ -36,6 +36,18 @@ static test_task coro_close(::fast_io::linux_io_uring_observer sched, int fd) th
 	co_await fad::async_close(sched, {}, ::fast_io::posix_io_observer{fd});
 }
 
+static test_task coro_connect(::fast_io::linux_io_uring_observer sched, int fd, void const *addr,
+							  ::std::size_t addrlen) throws
+{
+	co_await fad::async_connect(sched, {}, ::fast_io::posix_io_observer{fd}, addr, addrlen);
+}
+
+static test_task coro_connect_v4(::fast_io::linux_io_uring_observer sched, int fd,
+								 ::fast_io::ipv4 dest) throws
+{
+	co_await fad::async_connect(sched, {}, ::fast_io::posix_io_observer{fd}, dest);
+}
+
 static test_task coro_main(::fast_io::linux_io_uring_observer sched, int fd_in, int fd_out) throws
 {
 	::std::byte buf[128]{};
@@ -397,6 +409,86 @@ int main()
 			CHECK(false);
 		}
 		CHECK(accepted.native_handle() >= 0);
+	}
+
+	/* async connect: unconnected socket → IORING_OP_CONNECT to the
+	 * loopback listener, then traffic through the connected socket */
+	{
+		fi::posix_file listener{fi::tcp_listen(0)};
+		::fast_io::posix_sockaddr_in bound{};
+		::fast_io::posix_socklen_t blen{sizeof(bound)};
+		::getsockname(listener.native_handle(), reinterpret_cast<struct sockaddr *>(&bound), &blen);
+
+		fi::posix_file client{fi::sock_family::inet, fi::sock_type::stream, fi::open_mode{},
+							  fi::sock_protocol::tcp};
+		auto t{coro_connect(sched, client.native_handle(), __builtin_addressof(bound),
+							sizeof(bound))};
+		t.resume();
+		while (!t.done())
+		{
+			fi::io_async_wait(sched);
+		}
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+		/* the socket is usable after connect: accept the peer and do io */
+		int serverfd{::accept(listener.native_handle(), nullptr, nullptr)};
+		CHECK(serverfd >= 0);
+		::std::byte wbuf[4]{::std::byte{'p'}, ::std::byte{'i'}, ::std::byte{'n'}, ::std::byte{'g'}};
+		CHECK(::write(client.native_handle(), wbuf, 4) == 4);
+		::std::byte rbuf[4]{};
+		CHECK(::read(serverfd, rbuf, 4) == 4);
+		CHECK(::std::memcmp(wbuf, rbuf, 4) == 0);
+		::close(serverfd);
+
+		/* the ipv4 convenience overload builds the sockaddr itself */
+		fi::posix_file client2{fi::sock_family::inet, fi::sock_type::stream, fi::open_mode{},
+							   fi::sock_protocol::tcp};
+		auto port{::fast_io::big_endian(bound.sin_port)};
+		auto t2{coro_connect_v4(sched, client2.native_handle(),
+								fi::ipv4{{127, 0, 0, 1}, port})};
+		t2.resume();
+		while (!t2.done())
+		{
+			fi::io_async_wait(sched);
+		}
+		try
+		{
+			t2.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+	}
+
+	/* async connect callback form + error path: a dead loopback port
+	 * reports ECONNREFUSED through the callback */
+	{
+		fi::posix_file client{fi::sock_family::inet, fi::sock_type::stream, fi::open_mode{},
+							  fi::sock_protocol::tcp};
+		::fast_io::posix_sockaddr_in dead{};
+		dead.sin_family = AF_INET;
+		dead.sin_port = ::fast_io::big_endian(::std::uint_least16_t{1});
+		dead.sin_addr.address[0] = 127;
+		dead.sin_addr.address[3] = 1;
+		bool fired{};
+		fad::async_connect_callback(
+			sched, {}, ::fast_io::posix_io_observer{client.native_handle()},
+			__builtin_addressof(dead), sizeof(dead),
+			[&](::std::cxx_std_error e) noexcept {
+				fired = true;
+				CHECK(e.domain != nullptr);
+			});
+		while (!fired)
+		{
+			fi::io_async_wait(sched);
+		}
 	}
 
 	::std::fprintf(stderr, "io_uring test: %s (failures=%d)\n", failures == 0 ? "all ok" : "FAILED",
