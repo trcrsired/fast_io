@@ -208,11 +208,11 @@ inline void tls13_send_alert(int fd, alert_description desc, bool tx_offloaded) 
 	::std::byte body[2]{level, static_cast<::std::byte>(desc)};
 	if (tx_offloaded)
 	{
-		try
+		FAST_IO_HERBCEPTIONS_TRY
 		{
 			details::ktls_send_record(fd, content_type::alert, body, 2);
 		}
-		catch throws(::std::error)
+		FAST_IO_HERBCEPTIONS_CATCH_ALL
 		{
 		}
 		return;
@@ -220,11 +220,11 @@ inline void tls13_send_alert(int fd, alert_description desc, bool tx_offloaded) 
 	::std::byte rec[7];
 	::std::byte *p{details::record_header_write(rec, content_type::alert, 2)};
 	p = wire_put_bytes(p, body, 2);
-	try
+	FAST_IO_HERBCEPTIONS_TRY
 	{
 		details::tls_write_full(fd, rec, static_cast<::std::size_t>(p - rec));
 	}
-	catch throws(::std::error)
+	FAST_IO_HERBCEPTIONS_CATCH_ALL
 	{
 	}
 }
@@ -765,11 +765,11 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 	hdr = ::fast_io::tls::details::record_header_write(hdr, content_type::handshake,
 													   static_cast<::std::uint_least16_t>(ch_msg_size));
 	::std::size_t const rec_size{static_cast<::std::size_t>(hdr - ch) + ch_msg_size};
-	try
+	FAST_IO_HERBCEPTIONS_TRY
 	{
 		details::tls_write_full(fd_, ch, rec_size);
 	}
-	catch throws(::std::error)
+	FAST_IO_HERBCEPTIONS_CATCH_ALL
 	{
 		throw throws handshake_error{alert_description::internal_error, hs_stage_send_ch};
 	}
