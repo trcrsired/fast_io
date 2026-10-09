@@ -608,6 +608,94 @@ inline void io_uring_transmit_invoke(void *self, ::std::size_t transferred, int 
 	}
 }
 
+/* ======================= close ======================= */
+
+/*
+ * Cookie for one pending IORING_OP_CLOSE: the sqe carries the fd and
+ * nothing else. `fd` is retained so a cancelled close — the linked
+ * timeout fired and the kernel reports the op ECANCELED without having
+ * run it — can still be closed synchronously: the "handle is always
+ * consumed" contract holds either way.
+ */
+template <typename alloc_type, typename T>
+struct io_uring_close_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	io_uring_invoke_func invoke;
+	io_uring_timeout_link_block tlink;
+	int errn{};
+	int fd{-1};
+	::fast_io::liburing::io_uring_timespec ts{};
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+template <typename alloc_type, typename T>
+inline void io_uring_close_deliver(void *self) noexcept
+{
+	using cookie_type = io_uring_close_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	::std::cxx_std_error err{io_uring_cqe_error(cookie->tlink.fired, cookie->errn)};
+	int const fd{cookie->fd};
+	bool const cancelled{cookie->tlink.fired};
+	::fast_io::details::async_delete_state(cookie);
+	if (cancelled) [[unlikely]]
+	{
+		/* the linked timeout aborted the close before it ran — the
+		 * descriptor is still open, so finish it inline */
+		::fast_io::details::sys_close(fd);
+	}
+	callback(err);
+}
+
+template <typename alloc_type, typename T>
+inline void io_uring_close_invoke(void *self, ::std::size_t, int errn) noexcept
+{
+	using cookie_type = io_uring_close_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	cookie->errn = errn;
+	if (--cookie->tlink.pending == 0)
+	{
+		io_uring_close_deliver<alloc_type, T>(cookie);
+	}
+}
+
+template <typename sched_type, typename T>
+inline void io_uring_close_submit(sched_type sched, ::fast_io::liburing::io_uring_ring_state &ring,
+								  int fd, ::fast_io::posix_statx_timestamp_opt timeout,
+								  T callback) noexcept
+{
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using cookie_type = io_uring_close_cookie<alloc_type, T>;
+	try
+	{
+		::fast_io::liburing::details::io_uring_submit_guard<cookie_type> guard{
+			io_uring_new_state<cookie_type>(sched, io_uring_invoke_func{},
+											io_uring_timeout_link_block{}, 0, fd,
+											::fast_io::liburing::io_uring_timespec{},
+											::std::move(callback))};
+		guard.cookie->invoke = io_uring_close_invoke<alloc_type, T>;
+		io_uring_reserve_sqes(ring, timeout.has_opt ? 2 : 1);
+		io_uring_sqe *sqe{io_uring_get_sqe(ring)};
+		io_uring_prep_rw(io_uring_op_close, sqe, fd, nullptr, 0, 0);
+		io_uring_arm_timeout(ring, guard.cookie, sqe, io_uring_close_deliver<alloc_type, T>,
+							 timeout);
+		guard.release();
+		io_uring_commit(ring);
+	}
+	catch throws(::std::error e)
+	{
+		/* submission failure: the op still owns the handle — close it
+		 * inline so it cannot leak */
+		::fast_io::details::sys_close(fd);
+		callback(e.release());
+	}
+}
+
 /* ======================= accept ======================= */
 
 /*
@@ -857,6 +945,24 @@ inline void async_accept_callback_define(
 {
 	::fast_io::liburing::details::io_uring_accept_submit(
 		sched, *sched.ring, instm.fd, m, timeout, ::std::move(callback));
+}
+
+/*
+ * async_close_define: submits IORING_OP_CLOSE on the stream's fd. The fd
+ * rides the sqe and is closed by the kernel on completion — including a
+ * synchronous close() fallback when the submission itself fails or the
+ * linked timeout cancels the op, so the descriptor is always consumed.
+ * cb is invoked once as cb(::std::cxx_std_error).
+ */
+template <::fast_io::posix_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_posix_family_io_observer<family, char_type> piob, func callback) noexcept
+{
+	::fast_io::liburing::details::io_uring_close_submit(
+		sched, *sched.ring, piob.fd, timeout, ::std::move(callback));
 }
 
 /*

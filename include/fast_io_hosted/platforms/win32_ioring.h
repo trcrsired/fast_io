@@ -499,11 +499,119 @@ inline void win32_ioring_rw_submit(sched_type sched, stream_type stream, void *f
 	cb(win32_ioring_result_to_error(static_cast<::std::uint_least32_t>(hr), !is_write), 0zu);
 }
 
+/* ======================= close ======================= */
+
+/*
+ * Emulated async close: IoRing's public op enum has no close op, so the
+ * family's synchronous close runs on a threadpool worker and the
+ * completion is ferried through the ring — a cancel-request sqe whose
+ * opToCancel (userData 1) matches no live op completes instantly, and
+ * its cqe carries our cookie back to the pump. The stored result is
+ * what the user callback reports; the ferry's own cqe result is ignored.
+ */
+struct win32_ioring_close_state_base : win32_ioring_state_base
+{
+	int close_kind{};
+	::std::cxx_std_error result{};
+};
+
+template <typename alloc_type, typename T>
+struct win32_ioring_close_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	win32_ioring_close_state_base base;
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+/* pool worker: run the synchronous close, then ferry the cookie through
+ * the ring so the callback lands on the pump thread like a real op's */
+inline ::std::uint_least32_t FAST_IO_WINSTDCALL win32_ioring_close_work(void *context) noexcept
+{
+	auto *state{static_cast<win32_ioring_close_state_base *>(context)};
+	state->result = ::fast_io::details::win32_close_handle_now(state->file_handle,
+															   state->close_kind);
+	bool ferried{};
+	if (auto const *api{win32_ioring_api()}; api != nullptr) [[likely]]
+	{
+		win32_ioring_handle_ref file{};
+		file.kind = 0;
+		file.data.handle = state->file_handle;
+		ferried = api->build_cancel(state->ring, file, 1u /* opToCancel */,
+									reinterpret_cast<::std::uintptr_t>(state)) >= 0 &&
+				  api->submit(state->ring, 0u, 0u, nullptr) >= 0;
+	}
+	if (!ferried) [[unlikely]]
+	{
+		/* no ferry available — deliver on this worker rather than
+		 * lose the callback */
+		state->invoke(state, 0, 0);
+	}
+	return 0;
+}
+
+template <typename alloc_type, typename T>
+inline void win32_ioring_close_deliver(void *self, ::std::uintptr_t,
+									   ::std::uint_least32_t) noexcept
+{
+	using cookie_type = win32_ioring_close_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	auto err{cookie->base.result};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err);
+}
+
+/*
+ * One emulated-close submission: allocate the cookie, then queue the
+ * worker. Any submission failure still closes the handle inline — the
+ * op owns it from the moment the define is invoked.
+ */
+template <typename sched_type, typename T>
+inline void win32_ioring_close_submit(sched_type sched, void *ring, void *handle, int kind,
+									  ::fast_io::posix_statx_timestamp_opt, T callback) noexcept
+{
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using callback_type = ::std::remove_cvref_t<T>;
+	using cookie_type = win32_ioring_close_cookie<alloc_type, callback_type>;
+	cookie_type *cookie;
+	try
+	{
+		cookie = ::fast_io::details::async_new_state_plain<cookie_type>(
+			sched,
+			win32_ioring_close_state_base{
+				{&win32_ioring_close_deliver<alloc_type, callback_type>, ring, handle},
+				kind,
+				{}},
+			callback_type{::std::move(callback)});
+	}
+	catch throws(::std::error e)
+	{
+		win32_close_handle_now(handle, kind);
+		callback(e.release());
+		return;
+	}
+	/* WT_EXECUTELONGFUNCTION: a close can block in driver teardown. If
+	 * the default pool rejects the work, run it inline — the close and
+	 * the ferry still happen on this thread */
+	if (::fast_io::win32::QueueUserWorkItem(::fast_io::details::win32_ioring_close_work, cookie,
+											0x00000010u) == 0) [[unlikely]]
+	{
+		win32_ioring_close_work(cookie);
+	}
+}
+
 } // namespace details
 
 /*
  * Non-owning IoRing observer: the first parameter of every async
- * operation. native_handle() yields the HIORING.
+ * operation. native_handle() yields the HIORING; `event` is the ring's
+ * completion event (SetIoRingCompletionEvent) — the pump waits on it
+ * instead of SubmitIoRing's waitOperations, which real IoRing rejects
+ * with E_INVALIDARG when nothing is pending.
  */
 class win32_ioring_observer
 {
@@ -511,6 +619,7 @@ public:
 	using native_handle_type = void *;
 	using allocator_type = ::fast_io::native_global_allocator;
 	native_handle_type ring{};
+	void *event{};
 	inline constexpr native_handle_type native_handle() const noexcept
 	{
 		return ring;
@@ -531,6 +640,11 @@ public:
  * Owning IoRing scheduler. The api surface is resolved at construction;
  * on systems without it (Windows 10, wine) the ctor fails with a win32
  * error — the IOCP io_async backend remains the default.
+ *
+ * A manual-reset event is bound via SetIoRingCompletionEvent — the
+ * kernel signals it whenever a cqe is pushed, including completions
+ * queued by other threads (the emulated-close ferry), which the
+ * waitOperations path cannot wake for.
  *
  * Sizes are submission/completion entry counts. Defaults are modest —
  * every outstanding async op consumes one sqe slot for its lifetime.
@@ -572,6 +686,18 @@ public:
 			throw_win32_error(50u /* ERROR_NOT_SUPPORTED */);
 		}
 		this->ring = ring;
+		/* bind a manual-reset completion event so the pump can wait for
+		 * cqes pushed by any thread — a plain SubmitIoRing wait only
+		 * works while ops are pending and E_INVALIDARGs on an empty SQ */
+		if (api->set_event != nullptr)
+		{
+			this->event = ::fast_io::win32::CreateEventW(nullptr, 1, 0, nullptr);
+			if (this->event != nullptr && api->set_event(ring, this->event) < 0) [[unlikely]]
+			{
+				::fast_io::win32::CloseHandle(this->event);
+				this->event = nullptr;
+			}
+		}
 	}
 
 	inline explicit win32_ioring(::fast_io::io_async_t) throws
@@ -586,6 +712,11 @@ public:
 
 	inline ~win32_ioring()
 	{
+		if (this->event != nullptr)
+		{
+			::fast_io::win32::CloseHandle(this->event);
+			this->event = nullptr;
+		}
 		if (this->ring != nullptr)
 		{
 			auto const *api{details::win32_ioring_api()};
@@ -598,22 +729,27 @@ public:
 inline constexpr win32_ioring_observer
 async_scheduler_ref_define(win32_ioring &ring) noexcept
 {
-	return {ring.native_handle()};
+	return {ring.native_handle(), ring.event};
 }
 
 /*
- * Event pump: submit pending sqes and dispatch one completion to its
- * cookie. io_async_wait blocks until a cqe arrives; io_async_peek
- * returns false when the queue is empty; io_async_wait_timeout bounds
- * the wait by a relative duration. Cqes with userData == 0 are internal
- * sqes (cancel requests) — consumed, nothing dispatched.
+ * Event pump: flush pending sqes, then pop completions and dispatch one
+ * to its cookie. The blocking waits ride the ring's completion event
+ * (SetIoRingCompletionEvent) — the kernel signals it on every cqe push,
+ * whoever submitted the sqe; SubmitIoRing's waitOperations is unusable
+ * here because real IoRing answers E_INVALIDARG when the SQ is empty.
+ * The reset-pop-wait order matters: a cqe landing between ResetEvent
+ * and WaitForSingleObject re-signals the event, so the wait still
+ * returns and the loop finds it on the next pop. Rings without a bound
+ * event (old api surface) fall back to the waitOperations path.
+ * Cqes with userData == 0 are internal sqes — consumed, not dispatched.
  */
 inline void io_async_wait(win32_ioring_observer sched) throws
 {
 	auto const *api{details::win32_ioring_api()};
 	for (;;)
 	{
-		auto const hr{api->submit(sched.native_handle(), 1u, ~0u /* INFINITE */, nullptr)};
+		auto const hr{api->submit(sched.native_handle(), 0u, 0u, nullptr)};
 		if (hr < 0) [[unlikely]]
 		{
 			auto e{details::win32_ioring_result_to_error(
@@ -625,14 +761,40 @@ inline void io_async_wait(win32_ioring_observer sched) throws
 		}
 		for (;;)
 		{
-			details::win32_ioring_cqe cqe{};
-			if (api->pop(sched.native_handle(), __builtin_addressof(cqe)) < 0 || cqe.user_data == 0)
+			if (sched.event != nullptr)
 			{
+				::fast_io::win32::ResetEvent(sched.event);
+			}
+			details::win32_ioring_cqe cqe{};
+			auto const pr{api->pop(sched.native_handle(), __builtin_addressof(cqe))};
+			if (pr >= 0 && cqe.user_data != 0)
+			{
+				details::win32_ioring_dispatch(cqe.user_data, cqe.information,
+											   static_cast<::std::uint_least32_t>(cqe.result_code));
+				return;
+			}
+			if (pr < 0)
+			{
+				if (sched.event != nullptr)
+				{
+					::fast_io::win32::WaitForSingleObject(sched.event, ~0u /* INFINITE */);
+				}
+				else
+				{
+					auto const wr{api->submit(sched.native_handle(), 1u,
+											  ~0u /* INFINITE */, nullptr)};
+					if (wr < 0) [[unlikely]]
+					{
+						auto e{details::win32_ioring_result_to_error(
+							static_cast<::std::uint_least32_t>(wr), false)};
+						if (e.domain != nullptr)
+						{
+							throw throws e;
+						}
+					}
+				}
 				break;
 			}
-			details::win32_ioring_dispatch(cqe.user_data, cqe.information,
-										   static_cast<::std::uint_least32_t>(cqe.result_code));
-			return;
 		}
 	}
 }
@@ -670,8 +832,8 @@ inline bool io_async_peek(win32_ioring_observer sched) throws
 inline bool io_async_wait_timeout(win32_ioring_observer sched,
 								  ::fast_io::posix_statx_timestamp64 timeout) throws
 {
-	/* relative duration -> SubmitIoRing milliseconds, rounded up and
-	 * clamped below INFINITE */
+	/* relative duration -> WaitForSingleObject milliseconds, rounded up
+	 * and clamped below INFINITE */
 	auto ms{static_cast<::std::uint_least64_t>(timeout.tv_sec) * 1000u +
 			(timeout.tv_nsec + 999999u) / 1000000u};
 	if (ms > 0xFFFFFFFEu) [[unlikely]]
@@ -679,8 +841,7 @@ inline bool io_async_wait_timeout(win32_ioring_observer sched,
 		ms = 0xFFFFFFFEu;
 	}
 	auto const *api{details::win32_ioring_api()};
-	auto const hr{api->submit(sched.native_handle(), 1u,
-							  static_cast<::std::uint_least32_t>(ms), nullptr)};
+	auto const hr{api->submit(sched.native_handle(), 0u, 0u, nullptr)};
 	if (hr < 0) [[unlikely]]
 	{
 		auto e{details::win32_ioring_result_to_error(
@@ -692,18 +853,31 @@ inline bool io_async_wait_timeout(win32_ioring_observer sched,
 	}
 	for (;;)
 	{
-		details::win32_ioring_cqe cqe{};
-		if (api->pop(sched.native_handle(), __builtin_addressof(cqe)) < 0)
+		if (sched.event != nullptr)
+		{
+			::fast_io::win32::ResetEvent(sched.event);
+		}
+		for (;;)
+		{
+			details::win32_ioring_cqe cqe{};
+			if (api->pop(sched.native_handle(), __builtin_addressof(cqe)) < 0)
+			{
+				break;
+			}
+			if (cqe.user_data == 0)
+			{
+				continue;
+			}
+			details::win32_ioring_dispatch(cqe.user_data, cqe.information,
+										   static_cast<::std::uint_least32_t>(cqe.result_code));
+			return true;
+		}
+		if (sched.event == nullptr ||
+			::fast_io::win32::WaitForSingleObject(
+				sched.event, static_cast<::std::uint_least32_t>(ms)) != 0 /* WAIT_OBJECT_0 */)
 		{
 			return false;
 		}
-		if (cqe.user_data == 0)
-		{
-			continue;
-		}
-		details::win32_ioring_dispatch(cqe.user_data, cqe.information,
-									   static_cast<::std::uint_least32_t>(cqe.result_code));
-		return true;
 	}
 }
 
@@ -763,6 +937,50 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 {
 	::fast_io::details::win32_ioring_rw_submit<true>(
 		sched, wiob, const_cast<::std::byte *>(first), count, off, timeout,
+		::std::move(callback));
+}
+
+/*
+ * async_close_define: IoRing has no close op in its public enum, so the
+ * family's synchronous close runs on a threadpool worker and the
+ * completion is ferried through the ring via a no-match cancel-request
+ * sqe — the callback still arrives on the pump thread. Since no file op
+ * is involved the emulation covers sockets too. The timeout is advisory
+ * and ignored — a queued work item always runs.
+ */
+template <nt_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_ioring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_nt_family_io_observer<family, char_type> ntiob, func callback) noexcept
+{
+	::fast_io::details::win32_ioring_close_submit(
+		sched, sched.native_handle(), ntiob.handle,
+		family == nt_family::zw ? 3 : 2, timeout, ::std::move(callback));
+}
+
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_ioring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_io_observer<family, char_type> wiob, func callback) noexcept
+{
+	::fast_io::details::win32_ioring_close_submit(
+		sched, sched.native_handle(), wiob.handle, 0, timeout, ::std::move(callback));
+}
+
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_ioring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob,
+	func callback) noexcept
+{
+	::fast_io::details::win32_ioring_close_submit(
+		sched, sched.native_handle(), reinterpret_cast<void *>(wsiob.hsocket), 1, timeout,
 		::std::move(callback));
 }
 

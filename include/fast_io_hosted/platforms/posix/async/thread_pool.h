@@ -321,6 +321,66 @@ inline void posix_thread_pool_accept_dispatch(posix_thread_pool_node *p) noexcep
 	callback(err, fd);
 }
 
+/*
+ * close cookie: the worker runs the synchronous close — the handle is
+ * consumed off the submission thread, which is what "async close" means
+ * on this backend. The deadline applies only until dequeue like the
+ * other ops, but the fd is closed either way — an expired op still
+ * consumes its handle, it merely reports timed_out.
+ */
+template <typename func>
+struct posix_thread_pool_close_cookie : posix_thread_pool_node
+{
+	using allocator_type = ::fast_io::native_global_allocator;
+	int fd{-1};
+	::timespec deadline{};
+	bool has_deadline{};
+	func callback;
+	::std::cxx_std_error err{};
+
+	inline posix_thread_pool_close_cookie(int f, ::fast_io::posix_statx_timestamp_opt timeout,
+										  func &&cb) noexcept
+		: fd{f}, has_deadline{timeout.has_opt}, callback{::std::move(cb)}
+	{
+		if (timeout.has_opt)
+		{
+			this->deadline = posix_thread_pool_deadline(timeout.opt);
+		}
+	}
+};
+
+template <typename func>
+inline void posix_thread_pool_close_run(posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_close_cookie<func> *>(p)};
+	try
+	{
+		if (self->has_deadline && posix_thread_pool_expired(self->deadline))
+		{
+			/* never left the queue — still consume the descriptor */
+			::fast_io::details::sys_close(self->fd);
+			self->fd = -1;
+			self->err = ::fast_io::details::async_make_error(::std::errc::timed_out);
+			return;
+		}
+		::fast_io::details::sys_close_throw_error(self->fd);
+	}
+	catch throws(::std::error e)
+	{
+		self->err = e.release();
+	}
+}
+
+template <typename func>
+inline void posix_thread_pool_close_dispatch(posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_close_cookie<func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
 /* the pool's rw defines take ANY stream type so arbitrary synchronous
  * streams (hash sinks, memory devices, user types) can run on the pool —
  * but buffered refs carry their own async define; excluding them keeps
@@ -571,6 +631,37 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 	catch throws(::std::error e)
 	{
 		callback(e.release(), 0zu);
+	}
+}
+
+/*
+ * async_close_define: a worker runs the synchronous close on the fd —
+ * genuinely asynchronous (the syscall parks a worker, not the
+ * submission thread), and the completion rides the done queue like
+ * every other op.
+ */
+template <::fast_io::posix_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_posix_family_io_observer<family, char_type> piob, func callback) noexcept
+{
+	using cookie_type = ::fast_io::details::posix_thread_pool_close_cookie<func>;
+	try
+	{
+		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
+			sched, piob.fd, timeout, ::std::move(callback))};
+		cookie->run = &::fast_io::details::posix_thread_pool_close_run<func>;
+		cookie->dispatch = &::fast_io::details::posix_thread_pool_close_dispatch<func>;
+		::fast_io::details::posix_thread_pool_submit(sched.native_handle(), cookie);
+	}
+	catch throws(::std::error e)
+	{
+		/* submission failure: the op still owns the fd — close it
+		 * inline so it cannot leak */
+		::fast_io::details::sys_close(piob.fd);
+		callback(e.release());
 	}
 }
 

@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 
 static int failures{};
@@ -28,6 +29,11 @@ static test_task coro_accept(::fast_io::linux_io_uring_observer sched, int liste
 {
 	*out = co_await fad::async_accept(sched, {}, ::fast_io::posix_io_observer{listen_fd},
 									  ::fast_io::open_mode{});
+}
+
+static test_task coro_close(::fast_io::linux_io_uring_observer sched, int fd) throws
+{
+	co_await fad::async_close(sched, {}, ::fast_io::posix_io_observer{fd});
 }
 
 static test_task coro_main(::fast_io::linux_io_uring_observer sched, int fd_in, int fd_out) throws
@@ -266,6 +272,101 @@ int main()
 			fi::io_async_wait(sched);
 		}
 		CHECK(err.code == static_cast<::std::size_t>(EBADF));
+	}
+
+	/* async_close: the kernel closes the fd; the file object is released
+	 * at submission so its destructor cannot double-close */
+	{
+		fi::posix_file cf{"/tmp/uring_close.bin",
+						  fi::open_mode::out | fi::open_mode::in | fi::open_mode::creat |
+							  fi::open_mode::trunc};
+		int const cfd{cf.native_handle()};
+		bool fired{};
+		::std::cxx_std_error err{};
+		fad::async_close_callback(
+			sched, {}, cf,
+			[&](::std::cxx_std_error e) noexcept {
+				fired = true;
+				err = e;
+			});
+		CHECK(cf.native_handle() == -1); /* released at submission */
+		while (!fired)
+		{
+			fi::io_async_wait(sched);
+		}
+		CHECK(err.domain == nullptr);
+		CHECK(::fcntl(cfd, F_GETFD) == -1 && errno == EBADF);
+	}
+
+	/* buffered async_close: pending output must reach the device before
+	 * the underlying close runs — the async analog of close() */
+	{
+		fi::posix_file bf{"/tmp/uring_close_buf.bin",
+						  fi::open_mode::out | fi::open_mode::in | fi::open_mode::creat |
+							  fi::open_mode::trunc};
+		::fast_io::basic_io_buffer<fi::posix_file,
+								   ::fast_io::basic_io_buffer_traits<::fast_io::buffer_mode::out,
+																	 ::fast_io::native_global_allocator,
+																	 void, char, 0, 64>>
+			obf{::std::move(bf)};
+		::std::byte wdata[8];
+		for (::std::size_t i{}; i != sizeof(wdata); ++i)
+		{
+			wdata[i] = static_cast<::std::byte>('q' + i);
+		}
+		bool fired{};
+		fad::async_pwrite_all_bytes_callback(
+			sched, {}, obf, wdata, sizeof(wdata), {},
+			[&](::std::cxx_std_error e) noexcept {
+				fired = true;
+				CHECK(e.domain == nullptr);
+			});
+		while (!fired)
+		{
+			fi::io_async_wait(sched);
+		}
+		char peek{};
+		CHECK(::pread(obf.handle.native_handle(), &peek, 1, 0) == 0); /* still buffered */
+		fired = false;
+		fad::async_close_callback(
+			sched, {}, obf,
+			[&](::std::cxx_std_error e) noexcept {
+				fired = true;
+				CHECK(e.domain == nullptr);
+			});
+		while (!fired)
+		{
+			fi::io_async_wait(sched);
+		}
+		/* reopen and confirm the pending bytes beat the close */
+		char vbuf[8]{};
+		{
+			fi::posix_file chk{"/tmp/uring_close_buf.bin", fi::open_mode::in};
+			CHECK(::read(chk.native_handle(), vbuf, 8) == 8);
+		}
+		CHECK(::std::memcmp(vbuf, wdata, 8) == 0);
+	}
+
+	/* coroutine async_close on a socket pair fd */
+	{
+		int sv[2];
+		CHECK(::socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+		auto t{coro_close(sched, sv[0])};
+		t.resume();
+		while (!t.done())
+		{
+			fi::io_async_wait(sched);
+		}
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+		CHECK(::fcntl(sv[0], F_GETFD) == -1 && errno == EBADF);
+		::close(sv[1]);
 	}
 
 	/* async accept: real loopback listener, connect from a helper socket */

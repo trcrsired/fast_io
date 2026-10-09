@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <limits>
 
 struct mock_scheduler
 {
@@ -170,6 +171,15 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(mock_sc
 	cb(::std::cxx_std_error{}, n);
 }
 
+/* a stream with an async close define: marks the close as consumed */
+template <typename func>
+inline void async_close_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+							   mock_file f, func cb) noexcept
+{
+	*f.pos = ::std::numeric_limits<::std::size_t>::max();
+	cb(::std::cxx_std_error{});
+}
+
 /* a stream with only synchronous byte operations — no async defines; the
  * generic transmit engine must drive it inline */
 struct sync_only_file
@@ -284,6 +294,12 @@ static test_task coro_main(mock_scheduler sched) throws
 	co_await coro_write_all(sched, dst, rbuf, sizeof(rbuf), ::fast_io::intfpos_opt{50});
 	CHECK(::std::memcmp(dstdata + 50, srcdata + 100, 200) == 0);
 	CHECK(dstpos == 0);
+}
+
+template <typename stmtype>
+static test_task coro_close_out(mock_scheduler sched, stmtype &&stm) throws
+{
+	co_await ::fast_io::operations::async_close(sched, {}, stm);
 }
 
 static test_task coro_scan(mock_scheduler sched, ::std::byte *data, ::std::size_t size) throws
@@ -858,6 +874,92 @@ int main()
 		CHECK(called);
 		CHECK(::std::memcmp(dstdata, srcdata + 8, 56) == 0); /* pending first */
 		CHECK(dstpos == 56);
+	}
+
+	/* async_close on a plain stream: the define marks the handle
+	 * consumed; the callback reports success */
+	{
+		::std::byte data[8]{};
+		::std::size_t pos{};
+		mock_file f{data, sizeof(data), __builtin_addressof(pos)};
+		bool called{};
+		::fast_io::operations::async_close_callback(
+			sched, {}, f,
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		CHECK(pos == ::std::numeric_limits<::std::size_t>::max());
+	}
+
+	/* async_close on a buffered output stream: pending bytes flush to
+	 * the device BEFORE the handle close runs */
+	{
+		::std::byte dstdata[256]{};
+		::std::size_t dstpos{};
+		::fast_io::basic_io_buffer<mock_file,
+								   ::fast_io::basic_io_buffer_traits<::fast_io::buffer_mode::out,
+																	 ::fast_io::native_global_allocator,
+																	 void, char, 0, 64>>
+			obf{mock_file{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)}};
+		::std::byte wdata[8];
+		::std::memset(wdata, 0x42, sizeof(wdata));
+		bool called{};
+		::fast_io::operations::async_pwrite_some_bytes_callback(
+			sched, {}, obf, wdata, sizeof(wdata), {},
+			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+				CHECK(n == 8);
+			});
+		CHECK(called);
+		CHECK(dstpos == 0); /* still buffered */
+		called = false;
+		::fast_io::operations::async_close_callback(
+			sched, {}, obf,
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		CHECK(dstpos == ::std::numeric_limits<::std::size_t>::max());
+		CHECK(::std::memcmp(dstdata, wdata, 8) == 0); /* flush beat the close */
+	}
+
+	/* coroutine form of async_close on a buffered in+out stream */
+	{
+		::std::byte dstdata[256]{};
+		::std::size_t dstpos{};
+		::fast_io::basic_io_buffer<mock_file,
+								   ::fast_io::basic_io_buffer_traits<
+									   ::fast_io::buffer_mode::in | ::fast_io::buffer_mode::out,
+									   ::fast_io::native_global_allocator, char, char, 64, 64>>
+			iobf{mock_file{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)}};
+		::std::byte wdata[4];
+		::std::memset(wdata, 0x99, sizeof(wdata));
+		bool called{};
+		::fast_io::operations::async_pwrite_some_bytes_callback(
+			sched, {}, iobf, wdata, sizeof(wdata), {},
+			[&](::std::cxx_std_error e, ::std::size_t) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		/* the buffered close flushes pending output then runs the
+		 * handle's own close define — the coroutine form */
+		auto t{coro_close_out(sched, iobf)};
+		t.resume();
+		try
+		{
+			t.rethrow_if_error();
+		}
+		catch throws(::std::error)
+		{
+			CHECK(false);
+		}
+		CHECK(dstpos == ::std::numeric_limits<::std::size_t>::max());
+		CHECK(::std::memcmp(dstdata, wdata, 4) == 0);
 	}
 
 	if (failures == 0)

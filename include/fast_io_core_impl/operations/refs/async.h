@@ -145,6 +145,28 @@ concept has_async_accept_callback_define =
 	};
 
 /*
+ * async_close_define(sched, timeout, stream, func): asynchronous close of
+ * the stream's native handle — io_uring's IORING_OP_CLOSE is the model;
+ * backends without a kernel close op emulate it (a thread-pool worker or
+ * an inline close whose completion is ferried through the scheduler's
+ * pump). The stream argument CARRIES ownership: whatever object held the
+ * handle has released it before the define runs (the public wrappers do
+ * this; a basic_io_buffer_ref's buffered define releases handle itself
+ * after flushing), and the operation closes it exactly once — even on
+ * submission failure the backend performs the close so it cannot leak.
+ * func is invoked once as func(::std::cxx_std_error) noexcept. The
+ * timeout is advisory — emulated closes may ignore it.
+ */
+template <typename schedulertype, typename stmtype, typename functype>
+concept has_async_close_define =
+	::fast_io::operations::decay::defines::async_completion_callback<functype> &&
+	requires(schedulertype sched, stmtype stm, functype func) {
+		{
+			async_close_define(sched, ::fast_io::posix_statx_timestamp_opt{}, stm, func)
+		} noexcept;
+	};
+
+/*
  * The owning file type an async accept yields for a given listen-stream
  * observer — each backend specializes this on its observer type (posix
  * io_observer -> basic_posix_family_file, win32 socket observer ->

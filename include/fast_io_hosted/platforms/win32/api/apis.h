@@ -29,6 +29,8 @@ FAST_IO_DLLIMPORT ::fast_io::win32::farproc FAST_IO_WINSTDCALL GetProcAddress(vo
 FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL GetModuleHandleA(char const *) noexcept FAST_IO_WINSTDCALL_RENAME(GetModuleHandleA, 4);
 FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL GetModuleHandleW(char16_t const *) noexcept FAST_IO_WINSTDCALL_RENAME(GetModuleHandleW, 4);
 FAST_IO_DLLIMPORT ::std::uint_least32_t FAST_IO_WINSTDCALL WaitForSingleObject(void *, ::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(WaitForSingleObject, 8);
+FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL CreateEventW(void *, int, int, char16_t const *) noexcept FAST_IO_WINSTDCALL_RENAME(CreateEventW, 16);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL ResetEvent(void *) noexcept FAST_IO_WINSTDCALL_RENAME(ResetEvent, 4);
 FAST_IO_DLLIMPORT ::std::uint_least32_t FAST_IO_WINSTDCALL CancelIo(void *) noexcept FAST_IO_WINSTDCALL_RENAME(CancelIo, 4);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetFileInformationByHandle(void *__restrict, ::fast_io::win32::by_handle_file_information *__restrict) noexcept FAST_IO_WINSTDCALL_RENAME(GetFileInformationByHandle, 8);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetUserDefaultLocaleName(char16_t *, int) noexcept FAST_IO_WINSTDCALL_RENAME(GetUserDefaultLocaleName, 8);
@@ -204,5 +206,6 @@ FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL CreateThreadpoolTimer(::fast_io::win3
 FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL SetThreadpoolTimer(void *, ::fast_io::win32::filetime *, ::std::uint_least32_t, ::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(SetThreadpoolTimer, 16);
 FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL WaitForThreadpoolTimerCallbacks(void *, int) noexcept FAST_IO_WINSTDCALL_RENAME(WaitForThreadpoolTimerCallbacks, 8);
 FAST_IO_DLLIMPORT void FAST_IO_WINSTDCALL CloseThreadpoolTimer(void *) noexcept FAST_IO_WINSTDCALL_RENAME(CloseThreadpoolTimer, 4);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL QueueUserWorkItem(::fast_io::win32::lthread_start_routine, void *, ::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(QueueUserWorkItem, 12);
 
 } // namespace fast_io::win32

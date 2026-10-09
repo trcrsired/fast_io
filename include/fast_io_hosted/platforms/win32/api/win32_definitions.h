@@ -319,6 +319,15 @@ using ptp_timer_callback = void(
 #endif
 		*)(void *, void *, void *) noexcept;
 
+// LPTHREAD_START_ROUTINE: QueueUserWorkItem fires it as (context)
+using lthread_start_routine = ::std::uint_least32_t(
+#if defined(_MSC_VER) && (!__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__stdcall
+#elif (__has_cpp_attribute(__gnu__::__stdcall__) && !defined(__WINE__))
+	__attribute__((__stdcall__))
+#endif
+		*)(void *) noexcept;
+
 struct flowspec
 {
 	::std::uint_least32_t TokenRate;

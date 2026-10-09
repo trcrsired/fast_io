@@ -704,6 +704,149 @@ inline void win32_iocp_accept_submit(sched_type sched, stream_type stream,
 	}
 }
 
+/* ======================= close ======================= */
+
+/*
+ * Shared handle-close worker for the win32 schedulers: Windows has no
+ * kernel-side asynchronous close op (IoRing's op enum has none either),
+ * so async_close_define runs the family's synchronous close on a
+ * threadpool work item and ferries the completion back through the
+ * scheduler's pump — a posted OVERLAPPED packet for IOCP, a queued
+ * cancel-request sqe for IoRing. The stored result is what the user
+ * callback reports; the ferry's own outcome is irrelevant.
+ * kind: 0 CloseHandle (win32-family files/pipes), 1 closesocket,
+ *       2 NtClose, 3 ZwClose (nt-family observers).
+ */
+inline ::std::cxx_std_error win32_close_handle_now(void *handle, int kind) noexcept
+{
+	switch (kind)
+	{
+	case 1:
+		if (::fast_io::win32::closesocket(reinterpret_cast<::std::size_t>(handle)) != 0)
+		{
+			return ::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(
+					static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError())));
+		}
+		break;
+	case 3:
+		if (auto const status{::fast_io::win32::nt::ZwClose(handle)}; status != 0)
+		{
+			return ::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::nt_errc>(status));
+		}
+		break;
+	case 2:
+		if (auto const status{::fast_io::win32::nt::NtClose(handle)}; status != 0)
+		{
+			return ::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::nt_errc>(status));
+		}
+		break;
+	default:
+		if (::fast_io::win32::CloseHandle(handle) == 0)
+		{
+			return ::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(
+					::fast_io::win32::GetLastError()));
+		}
+		break;
+	}
+	return {};
+}
+
+/*
+ * Close cookie: the state base rides the posted OVERLAPPED packet — a
+ * posted packet always reports success, so the worker records the
+ * close's real outcome in result and the pump-side deliver reads it.
+ */
+struct win32_iocp_close_state_base : win32_iocp_state_base
+{
+	void *port{}; /* the port to ferry the completion through */
+	int close_kind{};
+	::std::cxx_std_error result{};
+};
+
+template <typename alloc_type, typename T>
+struct win32_iocp_close_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	win32_iocp_close_state_base base;
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+/* pool worker: run the synchronous close, then post the packet so the
+ * callback lands on the pump thread like a real op's */
+inline ::std::uint_least32_t FAST_IO_WINSTDCALL win32_iocp_close_work(void *context) noexcept
+{
+	auto *state{static_cast<win32_iocp_close_state_base *>(context)};
+	state->result = win32_close_handle_now(state->file_handle, state->close_kind);
+	if (::fast_io::win32::PostQueuedCompletionStatus(
+			state->port, 0u, 0u, __builtin_addressof(state->ovl)) == 0) [[unlikely]]
+	{
+		/* the port is gone — deliver on this worker rather than lose
+		 * the callback */
+		state->invoke(state, 0, 0);
+	}
+	return 0;
+}
+
+template <typename alloc_type, typename T>
+inline void win32_iocp_close_deliver(void *self, ::std::size_t,
+									 ::std::uint_least32_t) noexcept
+{
+	using cookie_type = win32_iocp_close_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	auto err{cookie->base.result};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err);
+}
+
+/*
+ * One emulated-close submission: allocate the cookie, then queue the
+ * worker. Any submission failure still closes the handle inline — the
+ * op owns it from the moment the define is invoked.
+ */
+template <typename sched_type, typename T>
+inline void win32_iocp_close_submit(sched_type sched, void *port, void *handle, int kind,
+									::fast_io::posix_statx_timestamp_opt, T callback) noexcept
+{
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using callback_type = ::std::remove_cvref_t<T>;
+	using cookie_type = win32_iocp_close_cookie<alloc_type, callback_type>;
+	cookie_type *cookie;
+	try
+	{
+		cookie = ::fast_io::details::async_new_state_plain<cookie_type>(
+			sched,
+			win32_iocp_close_state_base{
+				{{}, &win32_iocp_close_deliver<alloc_type, callback_type>, handle},
+				port,
+				kind,
+				{}},
+			callback_type{::std::move(callback)});
+	}
+	catch throws(::std::error e)
+	{
+		win32_close_handle_now(handle, kind);
+		callback(e.release());
+		return;
+	}
+	/* WT_EXECUTELONGFUNCTION: a close can block in driver teardown. If
+	 * the default pool rejects the work, run it inline — the completion
+	 * still ferries through the port */
+	if (::fast_io::win32::QueueUserWorkItem(::fast_io::details::win32_iocp_close_work, cookie,
+											0x00000010u) == 0) [[unlikely]]
+	{
+		win32_iocp_close_work(cookie);
+	}
+}
+
 } // namespace details
 
 /*
@@ -916,6 +1059,50 @@ inline void async_accept_callback_define(
 {
 	::fast_io::details::win32_iocp_accept_submit<family>(
 		sched, wsiob, m, timeout, ::std::move(callback));
+}
+
+/*
+ * async_close_define: Windows exposes no kernel close op, so the
+ * family's synchronous close runs on a threadpool worker and its
+ * completion is ferried through the port — the callback still arrives
+ * on the pump thread like a real op's. The stream needs no port
+ * association: PostQueuedCompletionStatus targets the port directly.
+ * The timeout is advisory and ignored — a queued work item always runs.
+ */
+template <nt_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_nt_family_io_observer<family, char_type> ntiob, func callback) noexcept
+{
+	::fast_io::details::win32_iocp_close_submit(
+		sched, sched.native_handle(), ntiob.handle,
+		family == nt_family::zw ? 3 : 2, timeout, ::std::move(callback));
+}
+
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_io_observer<family, char_type> wiob, func callback) noexcept
+{
+	::fast_io::details::win32_iocp_close_submit(
+		sched, sched.native_handle(), wiob.handle, 0, timeout, ::std::move(callback));
+}
+
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_close_define(
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob,
+	func callback) noexcept
+{
+	::fast_io::details::win32_iocp_close_submit(
+		sched, sched.native_handle(), reinterpret_cast<void *>(wsiob.hsocket), 1, timeout,
+		::std::move(callback));
 }
 
 } // namespace fast_io

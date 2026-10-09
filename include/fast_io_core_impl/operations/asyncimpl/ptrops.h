@@ -463,4 +463,54 @@ inline void async_accept_callback(async_scheduler_type &&scheduler,
 		::fast_io::operations::io_stream_ref(listenstm), mode, ::std::move(callback));
 }
 
+/* ------------------------------- close ------------------------------ */
+
+/*
+ * async_close: closes the stream's native handle asynchronously. The
+ * operation TAKES the handle — any stream exposing release() (file,
+ * socket, observer) is detached immediately at this call, so the
+ * object's destructor cannot close it again; a buffered stream keeps
+ * owning its handle object but the buffered define releases it after
+ * flushing pending output.
+ *
+ * Callback form invokes callback(::std::cxx_std_error) once; the
+ * coroutine form suspends until the handle is closed and await_resume()
+ * rethrows the error through the channel.
+ */
+template <typename async_scheduler_type, typename streamtype>
+inline auto async_close(async_scheduler_type &&scheduler,
+						::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_close_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::details::async_close_stream_ref(stm))>,
+			 ::fast_io::details::async_io_error_callback>)
+{
+	auto stmref{::fast_io::details::async_close_stream_ref(stm)};
+	if constexpr (requires { stm.release(); })
+	{
+		stm.release();
+	}
+	return ::fast_io::operations::decay::async_close_decay(
+		::fast_io::operations::async_scheduler_ref(scheduler), timeout, stmref);
+}
+
+template <typename async_scheduler_type, typename streamtype, typename callback_type>
+inline void async_close_callback(async_scheduler_type &&scheduler,
+								 ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
+								 callback_type callback) noexcept
+	requires(::fast_io::operations::decay::defines::has_async_close_define<
+			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
+			 ::std::remove_cvref_t<decltype(::fast_io::details::async_close_stream_ref(stm))>,
+			 ::std::remove_cvref_t<callback_type>>)
+{
+	auto stmref{::fast_io::details::async_close_stream_ref(stm)};
+	if constexpr (requires { stm.release(); })
+	{
+		stm.release();
+	}
+	::fast_io::operations::decay::async_close_decay_callback(
+		::fast_io::operations::async_scheduler_ref(scheduler), timeout, stmref,
+		::std::move(callback));
+}
+
 } // namespace fast_io::operations

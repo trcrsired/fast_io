@@ -8,6 +8,7 @@
 #if defined(__HERBCEPTIONS__)
 #include "input_async.h"
 #include "output_async.h"
+#include "close_async.h"
 #endif
 #include "destroy.h"
 
