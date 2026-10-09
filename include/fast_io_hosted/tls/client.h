@@ -27,114 +27,49 @@ Sequence:
 
 #if defined(__linux__)
 
-#include "../fast_io_dsal/vector.h"
+
+#include "../../fast_io_dsal/vector.h"
 
 namespace fast_io::tls
 {
-
-/* thrown as a value when the handshake aborts; alert is what we sent
-   (or would have sent before the record keys existed) */
-struct handshake_error
-{
-	alert_description alert;
-	::std::uint_least32_t where; /* diagnostic stage below */
-};
 
 namespace details
 {
 
-/* the herbceptions error channel needs a domain singleton; our code
-   packs (alert_description << 16) | stage */
-inline bool tls_error_domain_equivalent(::std::size_t code,
-										::std::error_domain_singleton const *other,
-										::std::size_t other_code) noexcept;
-
-inline ::std::errc tls_error_domain_to_errc(::std::size_t) noexcept;
-
-inline void tls_error_domain_query(::std::size_t, ::std::error_query_information kind,
-								   ::std::error_reporter_encoding, void *cookie,
-								   ::std::error_reporter_io_cookie_function emit) noexcept;
-
-inline constexpr ::std::error_domain_singleton tls_error_domain_singleton{
-	nullptr, tls_error_domain_equivalent, tls_error_domain_query, tls_error_domain_to_errc, nullptr};
-
-inline bool tls_error_domain_equivalent(::std::size_t code,
-										::std::error_domain_singleton const *other,
-										::std::size_t other_code) noexcept
+/* TLS alert failures are thrown as ::std::tls_alert -- the libherbceptions
+   domain whose code packs (level << 8) | description, so the wire value
+   is recoverable via herbception_cast or e.code(). */
+[[noreturn]] inline void tls13_throw_alert(alert_description desc) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return other == &tls_error_domain_singleton && code == other_code;
+	throw throws::std::tls_alert{::std::tls_alert::alert_level::fatal,
+								 static_cast<::std::tls_alert::alert_description>(
+									 static_cast<::std::uint_least8_t>(desc))};
 }
 
-inline ::std::errc tls_error_domain_to_errc(::std::size_t) noexcept
+/* rethrow the peer's own alert, preserving its level+description bytes */
+[[noreturn]] inline void tls13_throw_peer_alert(::std::byte const *alert_body,
+												::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return ::std::errc::protocol_error;
-}
-
-inline void tls_error_domain_query(::std::size_t, ::std::error_query_information kind,
-								   ::std::error_reporter_encoding, void *cookie,
-								   ::std::error_reporter_io_cookie_function emit) noexcept
-{
-	char8_t const *name{u8"fast_io::tls"};
-	char8_t const *msg{u8"tls handshake failure"};
-	::std::io_scatter_t const sc{kind == ::std::error_query_information::name ? name : msg,
-								 kind == ::std::error_query_information::name ? ::std::size_t{12} : ::std::size_t{22}};
-	emit(cookie, &sc, 1);
+	::std::uint_least8_t level{2}; /* RFC: unknown alerts are fatal */
+	::std::uint_least8_t desc{50}; /* decode_error */
+	if (n == 2)
+	{
+		level = static_cast<::std::uint_least8_t>(alert_body[0]);
+		desc = static_cast<::std::uint_least8_t>(alert_body[1]);
+	}
+	throw throws::std::tls_alert{static_cast<::std::tls_alert::alert_level>(level),
+								 static_cast<::std::tls_alert::alert_description>(desc)};
 }
 
 } // namespace details
 
-} // namespace fast_io::tls
-
-namespace std
-{
-
-/* registers handshake_error as throwable via `throw throws` */
-template <>
-class error_domain<::fast_io::tls::handshake_error>
-{
-public:
-	using errc_type = ::fast_io::tls::handshake_error;
-	static inline constexpr ::std::error_domain_singleton const *domain() noexcept
-	{
-		return &::fast_io::tls::details::tls_error_domain_singleton;
-	}
-	static inline constexpr ::std::size_t code(errc_type e) noexcept
-	{
-		return (static_cast<::std::size_t>(e.alert) << 16u) | static_cast<::std::size_t>(e.where);
-	}
-};
-
-} // namespace std
-
-namespace fast_io::tls
-{
-
-inline constexpr ::std::uint_least32_t hs_stage_send_ch{1};
-inline constexpr ::std::uint_least32_t hs_stage_recv_sh{2};
-inline constexpr ::std::uint_least32_t hs_stage_parse_sh{3};
-inline constexpr ::std::uint_least32_t hs_stage_sh_version{4};
-inline constexpr ::std::uint_least32_t hs_stage_sh_echo{5};
-inline constexpr ::std::uint_least32_t hs_stage_sh_suite{6};
-inline constexpr ::std::uint_least32_t hs_stage_sh_keyshare{7};
-inline constexpr ::std::uint_least32_t hs_stage_x25519{8};
-inline constexpr ::std::uint_least32_t hs_stage_flight2{9};
-inline constexpr ::std::uint_least32_t hs_stage_cert{10};
-inline constexpr ::std::uint_least32_t hs_stage_chain{11};
-inline constexpr ::std::uint_least32_t hs_stage_hostname{12};
-inline constexpr ::std::uint_least32_t hs_stage_cv{13};
-inline constexpr ::std::uint_least32_t hs_stage_fin{14};
-inline constexpr ::std::uint_least32_t hs_stage_send_fin{15};
-inline constexpr ::std::uint_least32_t hs_stage_app{16};
-
 struct tls13_client_config
 {
-	char8_t const *hostname{};
-	::std::size_t hostname_size{};
+	::fast_io::u8cstring_view hostname{};
 	/* DER-encoded trust anchors */
 	::std::byte const *const *roots{};
 	::std::size_t const *root_sizes{};
 	::std::size_t root_count{};
-	::std::int_least64_t now{};
 	bool check_hostname{true};
 	bool check_chain{true};
 };
@@ -148,7 +83,7 @@ struct peer_certificates
 	::std::size_t count{};
 };
 
-class ktls_client
+class tls_client
 {
 	int fd_{-1};
 	cipher_suite suite_{};
@@ -161,8 +96,8 @@ class ktls_client
 	inline void key_update_received(::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS;
 
 public:
-	inline constexpr ktls_client() noexcept = default;
-	inline explicit constexpr ktls_client(int fd) noexcept : fd_{fd}
+	inline constexpr tls_client() noexcept = default;
+	inline explicit constexpr tls_client(int fd) noexcept : fd_{fd}
 	{}
 
 	inline constexpr int fd() const noexcept
@@ -180,8 +115,13 @@ public:
 
 	inline void handshake(tls13_client_config const &cfg) FAST_IO_HERBCEPTIONS_THROWS;
 
+	/* simplest correct form: system trust bundle, hostname+chain checks
+	   on, current time. Defined in fast_io_hosted/tls/roots.h (needs root_store). */
+	inline void handshake(::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS;
+
 	/* application phase */
 	inline ::std::size_t read_some(::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
+	inline ::std::size_t write_some(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 	inline void write_all(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 	inline void send_close_notify() noexcept;
 
@@ -229,11 +169,11 @@ inline void tls13_send_alert(int fd, alert_description desc, bool tx_offloaded) 
 	}
 }
 
-[[noreturn]] inline void tls13_fail(int fd, alert_description desc, ::std::uint_least32_t where,
+[[noreturn]] inline void tls13_fail(int fd, alert_description desc,
 									bool tx_offloaded) FAST_IO_HERBCEPTIONS_THROWS
 {
 	tls13_send_alert(fd, desc, tx_offloaded);
-	throw throws handshake_error{desc, where};
+	tls13_throw_alert(desc);
 }
 
 /*
@@ -292,12 +232,12 @@ inline ::std::size_t tls13_read_plaintext_record(int fd, ::std::byte *buf, ::std
 	::std::uint_least16_t ver, len;
 	if (!h.take_u8(t) || !h.take_u16(ver) || !h.take_u16(len))
 	{
-		details::tls13_fail(fd, alert_description::decode_error, hs_stage_recv_sh, false);
+		details::tls13_fail(fd, alert_description::decode_error, false);
 	}
 	(void)ver;
 	if (len > buf_cap)
 	{
-		details::tls13_fail(fd, alert_description::record_overflow, hs_stage_recv_sh, false);
+		details::tls13_fail(fd, alert_description::record_overflow, false);
 	}
 	details::tls_read_full(fd, buf, len);
 	ctype = static_cast<content_type>(t);
@@ -401,18 +341,6 @@ inline bool certificate_body_parse(peer_certificates &peer,
 	return true;
 }
 
-inline ::std::uint_least8_t alert_level_of(::std::byte const *alert_body, ::std::size_t n,
-										   alert_description &desc) noexcept
-{
-	if (n != 2)
-	{
-		desc = alert_description::decode_error;
-		return 2;
-	}
-	desc = static_cast<alert_description>(alert_body[1]);
-	return static_cast<::std::uint_least8_t>(alert_body[0]);
-}
-
 } // namespace details
 
 /*
@@ -495,14 +423,14 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::encrypted_extensions:
 				if (state != want_ee)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+					details::tls13_fail(fd, alert_description::unexpected_message, false);
 				}
 				{
 					wire_reader ee{body, body + body_size};
 					wire_reader exts;
 					if (!ee.take_sub16(exts) || !ee.empty())
 					{
-						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
+						details::tls13_fail(fd, alert_description::decode_error, false);
 					}
 					while (!exts.empty())
 					{
@@ -511,14 +439,14 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 						::std::size_t en;
 						if (!exts.take_u16(et) || !exts.take_vector16(ep, en))
 						{
-							details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
+							details::tls13_fail(fd, alert_description::decode_error, false);
 						}
 						/* these are SH-only extensions (rfc8446 4.2) */
 						if (et == static_cast<::std::uint_least16_t>(extension_type::key_share) ||
 							et == static_cast<::std::uint_least16_t>(extension_type::supported_versions) ||
 							et == static_cast<::std::uint_least16_t>(extension_type::pre_shared_key))
 						{
-							details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_flight2, false);
+							details::tls13_fail(fd, alert_description::illegal_parameter, false);
 						}
 					}
 					state = want_cert_or_cr;
@@ -527,7 +455,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::certificate_request:
 				if (state != want_cert_or_cr)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+					details::tls13_fail(fd, alert_description::unexpected_message, false);
 				}
 				{
 					wire_reader cr{body, body + body_size};
@@ -535,7 +463,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 					::std::size_t ctx_size;
 					if (!cr.take_vector8(ctx, ctx_size))
 					{
-						details::tls13_fail(fd, alert_description::decode_error, hs_stage_flight2, false);
+						details::tls13_fail(fd, alert_description::decode_error, false);
 					}
 					::fast_io::freestanding::non_overlapped_copy_n(ctx, ctx_size, cr_context);
 					cr_context_size = ctx_size;
@@ -545,16 +473,16 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			case handshake_type::certificate:
 				if (state != want_cert_or_cr)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cert, false);
+					details::tls13_fail(fd, alert_description::unexpected_message, false);
 				}
 				if (!details::certificate_body_parse(peer, body, body_size))
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cert, false);
+					details::tls13_fail(fd, alert_description::decode_error, false);
 				}
 				if (peer.count == 0)
 				{
 					/* empty client-visible chain is an abort in 1.3 */
-					details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, false);
+					details::tls13_fail(fd, alert_description::bad_certificate, false);
 				}
 				state = want_cv;
 				break;
@@ -562,12 +490,12 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			{
 				if (state != want_cv)
 				{
-					details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_cv, false);
+					details::tls13_fail(fd, alert_description::unexpected_message, false);
 				}
 				::fast_io::tls::details::certificate_verify_info cvi;
 				if (!::fast_io::tls::details::certificate_verify_parse(cvi, body, body_size))
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_cv, false);
+					details::tls13_fail(fd, alert_description::decode_error, false);
 				}
 				cv_scheme = cvi.scheme;
 				cv_sig.assign(cvi.signature_size, {});
@@ -581,7 +509,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 			{
 				if (state != want_fin || body_size != digest_size)
 				{
-					details::tls13_fail(fd, alert_description::decode_error, hs_stage_fin, false);
+					details::tls13_fail(fd, alert_description::decode_error, false);
 				}
 				/* pre holds Hash(CH..CV) -- what server Finished MACs */
 				::std::byte expect[digest_size];
@@ -593,13 +521,13 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 				}
 				if (!same)
 				{
-					details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_fin, false);
+					details::tls13_fail(fd, alert_description::decrypt_error, false);
 				}
 				state = flight_done;
 				break;
 			}
 			default:
-				details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+				details::tls13_fail(fd, alert_description::unexpected_message, false);
 			}
 			transcript.update(raw, raw + raw_size); /* fold in after processing */
 		}
@@ -612,12 +540,12 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		if (!details::tls13_recv_flight_record(fd, recbuf, sizeof(recbuf), inner, inner_size,
 											   suite, hs_rx_key, hs_rx_iv, hs_rx_seq))
 		{
-			details::tls13_fail(fd, alert_description::bad_record_mac, hs_stage_flight2, false);
+			details::tls13_fail(fd, alert_description::bad_record_mac, false);
 		}
 		if (inner == content_type::application_data)
 		{
 			/* cannot happen: open() never yields outer-type; guard anyway */
-			details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+			details::tls13_fail(fd, alert_description::unexpected_message, false);
 		}
 		if (inner != content_type::change_cipher_spec)
 		{
@@ -636,13 +564,9 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		case content_type::change_cipher_spec:
 			break; /* compat CCS between epochs; never transcripted */
 		case content_type::alert:
-		{
-			alert_description desc;
-			(void)details::alert_level_of(recbuf, inner_size, desc);
-			throw throws handshake_error{desc, hs_stage_flight2};
-		}
+			details::tls13_throw_peer_alert(recbuf, inner_size);
 		default:
-			details::tls13_fail(fd, alert_description::unexpected_message, hs_stage_flight2, false);
+			details::tls13_fail(fd, alert_description::unexpected_message, false);
 		}
 	}
 
@@ -653,7 +577,7 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		if (!::fast_io::tls::details::x509_certificate_parse(
 				presented[i], peer.storage.data() + peer.offsets[i], peer.sizes[i]))
 		{
-			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_cert, false);
+			details::tls13_fail(fd, alert_description::bad_certificate, false);
 		}
 	}
 	if (cfg.check_chain)
@@ -670,23 +594,24 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 				roots.push_back(rc);
 			}
 		}
-		switch (::fast_io::tls::details::x509_chain_verify(presented, peer.count, roots.data(), roots.size(), cfg.now))
+		::std::int_least64_t const now{static_cast<::std::int_least64_t>(::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::realtime).tv_sec)};
+		switch (::fast_io::tls::details::x509_chain_verify(presented, peer.count, roots.data(), roots.size(), now))
 		{
 		case ::fast_io::tls::details::x509_chain_result::ok:
 			break;
 		case ::fast_io::tls::details::x509_chain_result::expired:
 		case ::fast_io::tls::details::x509_chain_result::not_yet_valid:
-			details::tls13_fail(fd, alert_description::certificate_expired, hs_stage_chain, false);
+			details::tls13_fail(fd, alert_description::certificate_expired, false);
 		case ::fast_io::tls::details::x509_chain_result::untrusted:
-			details::tls13_fail(fd, alert_description::unknown_ca, hs_stage_chain, false);
+			details::tls13_fail(fd, alert_description::unknown_ca, false);
 		default:
-			details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_chain, false);
+			details::tls13_fail(fd, alert_description::bad_certificate, false);
 		}
 	}
-	if (cfg.check_hostname && cfg.hostname_size &&
-		!::fast_io::tls::details::x509_hostname_match(presented[0], cfg.hostname, cfg.hostname_size))
+	if (cfg.check_hostname && !cfg.hostname.empty() &&
+		!::fast_io::tls::details::x509_hostname_match(presented[0], cfg.hostname.data(), cfg.hostname.size()))
 	{
-		details::tls13_fail(fd, alert_description::bad_certificate, hs_stage_hostname, false);
+		details::tls13_fail(fd, alert_description::bad_certificate, false);
 	}
 
 	/* ---- CertificateVerify over covered content ---- */
@@ -702,9 +627,9 @@ inline void ktls_handshake_flight2(int fd, cipher_suite suite,
 		case ::fast_io::tls::details::x509_verify_result::ok:
 			break;
 		case ::fast_io::tls::details::x509_verify_result::unsupported_algorithm:
-			details::tls13_fail(fd, alert_description::illegal_parameter, hs_stage_cv, false);
+			details::tls13_fail(fd, alert_description::illegal_parameter, false);
 		default:
-			details::tls13_fail(fd, alert_description::decrypt_error, hs_stage_cv, false);
+			details::tls13_fail(fd, alert_description::decrypt_error, false);
 		}
 	}
 
@@ -812,7 +737,7 @@ inline void ktls_handshake_dispatch(int fd, cipher_suite suite,
 namespace fast_io::tls
 {
 
-inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* attach the tls ulp before anything else -- without it every
 	   SOL_TLS setsockopt fails with ENOPROTOOPT */
@@ -827,8 +752,8 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 	::fast_io::diffie_hellman::x25519::calculate_public_key_to_ptr(pk, sk);
 
 	::fast_io::tls::details::client_hello_params params{};
-	params.hostname = cfg.hostname;
-	params.hostname_size = cfg.hostname_size;
+	params.hostname = cfg.hostname.data();
+	params.hostname_size = cfg.hostname.size();
 	params.session_id = session_id;
 	params.session_id_size = 32; /* middlebox-compat session id */
 	params.random = random;
@@ -838,7 +763,7 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 	::std::size_t const body_size{::fast_io::tls::details::client_hello_size(params)};
 	if (body_size + 9 > sizeof(ch))
 	{
-		throw throws handshake_error{alert_description::internal_error, hs_stage_send_ch};
+		details::tls13_throw_alert(alert_description::internal_error);
 	}
 	::std::byte *const msg{ch + 5};
 	::std::byte *const body{::fast_io::tls::details::handshake_header_write(
@@ -855,7 +780,7 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 	}
 	FAST_IO_HERBCEPTIONS_CATCH_ALL
 	{
-		throw throws handshake_error{alert_description::internal_error, hs_stage_send_ch};
+		details::tls13_throw_alert(alert_description::internal_error);
 	}
 
 	/* ---- read ServerHello (+ maybe plaintext CCS) ---- */
@@ -873,13 +798,11 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 			}
 			if (ctype == content_type::alert)
 			{
-				alert_description desc;
-				(void)details::alert_level_of(rec, n, desc);
-				throw throws handshake_error{desc, hs_stage_recv_sh};
+				details::tls13_throw_peer_alert(rec, n);
 			}
 			if (ctype != content_type::handshake || n < 4 || n > sizeof(sh_msg))
 			{
-				details::tls13_fail(fd_, alert_description::unexpected_message, hs_stage_recv_sh, false);
+				details::tls13_fail(fd_, alert_description::unexpected_message, false);
 			}
 			::fast_io::freestanding::non_overlapped_copy_n(rec, n, sh_msg);
 			sh_msg_size = n;
@@ -894,39 +817,39 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 		 (static_cast<::std::size_t>(sh_msg[2]) << 8u) |
 		 static_cast<::std::size_t>(sh_msg[3])) != sh_body_size)
 	{
-		details::tls13_fail(fd_, alert_description::decode_error, hs_stage_parse_sh, false);
+		details::tls13_fail(fd_, alert_description::decode_error, false);
 	}
 	::fast_io::tls::details::server_hello_info shi{};
 	if (!::fast_io::tls::details::server_hello_parse(shi, sh_body, sh_body_size, session_id,
 													 32))
 	{
-		details::tls13_fail(fd_, alert_description::decode_error, hs_stage_parse_sh, false);
+		details::tls13_fail(fd_, alert_description::decode_error, false);
 	}
 	if (shi.is_hello_retry_request || shi.has_pre_shared_key)
 	{
 		/* we only offer x25519 -- nothing to retry with */
-		details::tls13_fail(fd_, alert_description::handshake_failure, hs_stage_parse_sh, false);
+		details::tls13_fail(fd_, alert_description::handshake_failure, false);
 	}
 	if (!shi.supported_versions_tls13 || shi.downgrade_sentinel_seen)
 	{
 		/* absolutely no downgrade: not 1.2, not anything else */
-		details::tls13_fail(fd_, alert_description::protocol_version, hs_stage_sh_version, false);
+		details::tls13_fail(fd_, alert_description::protocol_version, false);
 	}
 	if (!shi.session_id_echo_match)
 	{
-		details::tls13_fail(fd_, alert_description::illegal_parameter, hs_stage_sh_echo, false);
+		details::tls13_fail(fd_, alert_description::illegal_parameter, false);
 	}
 	cipher_suite const suite{static_cast<cipher_suite>(shi.cipher_suite)};
 	if (suite != cipher_suite::aes_128_gcm_sha256 &&
 		suite != cipher_suite::aes_256_gcm_sha384 &&
 		suite != cipher_suite::chacha20_poly1305_sha256)
 	{
-		details::tls13_fail(fd_, alert_description::handshake_failure, hs_stage_sh_suite, false);
+		details::tls13_fail(fd_, alert_description::handshake_failure, false);
 	}
 	if (shi.key_share_group != named_group::x25519 ||
 		shi.key_share_public_key_size != 32)
 	{
-		details::tls13_fail(fd_, alert_description::illegal_parameter, hs_stage_sh_keyshare, false);
+		details::tls13_fail(fd_, alert_description::illegal_parameter, false);
 	}
 
 	::std::byte shared[32];
@@ -942,7 +865,7 @@ inline void ktls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBC
 		}
 		if (acc == ::std::byte{})
 		{
-			details::tls13_fail(fd_, alert_description::illegal_parameter, hs_stage_x25519, false);
+			details::tls13_fail(fd_, alert_description::illegal_parameter, false);
 		}
 	}
 
@@ -963,7 +886,7 @@ post-handshake record pump. KeyUpdate rotates the direction's traffic
 secret and reinstalls the kernel key (new epoch, seq 0); NST is dropped;
 alerts map: close_notify -> 0 return (eof), else throw the alert.
 */
-inline ::std::size_t ktls_client::read_some(::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client::read_some(::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	for (;;)
 	{
@@ -980,9 +903,7 @@ inline ::std::size_t ktls_client::read_some(::std::byte *buf, ::std::size_t buf_
 			{
 				return 0;
 			}
-			alert_description desc;
-			(void)details::alert_level_of(buf, rr.size, desc);
-			throw throws handshake_error{desc, hs_stage_app};
+			details::tls13_throw_peer_alert(buf, rr.size);
 		}
 		case content_type::handshake:
 			/* post-handshake: walk each msg; KeyUpdate -> rekey, NST -> drop */
@@ -1012,7 +933,7 @@ inline ::std::size_t ktls_client::read_some(::std::byte *buf, ::std::size_t buf_
 	}
 }
 
-inline void ktls_client::key_update_received(::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_client::key_update_received(::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* next = HKDF-Expand-Label(secret, "traffic upd", "", hash_size) */
 	::std::byte next[48];
@@ -1061,13 +982,18 @@ inline void ktls_client::key_update_received(::std::uint_least8_t request) FAST_
 	::fast_io::secure_clear(iv, sizeof(iv));
 }
 
-inline void ktls_client::write_all(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client::write_some(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
-	/* kernel wraps plaintext into application_data records itself */
+	/* one send: the kernel chunks plaintext into application_data records */
+	return static_cast<::std::size_t>(::fast_io::details::posix_write_bytes_impl(fd_, buf, buf_size) - buf);
+}
+
+inline void tls_client::write_all(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+{
 	details::tls_write_full(fd_, buf, buf_size);
 }
 
-inline void ktls_client::send_close_notify() noexcept
+inline void tls_client::send_close_notify() noexcept
 {
 	details::tls13_send_alert(fd_, alert_description::close_notify, true);
 }

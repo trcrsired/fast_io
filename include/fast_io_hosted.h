@@ -71,6 +71,10 @@ freestanding ones.
 
 #include "fast_io_hosted/io_file.h"
 
+#if defined(__linux__)
+#include "fast_io_hosted/tls/impl.h"
+#endif
+
 #if defined(__HERBCEPTIONS__)
 #include "fast_io_hosted/async_print.h"
 #endif
