@@ -820,10 +820,9 @@ template <nt_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_nt_family_io_observer<family, char_type> ntiob, ::std::byte *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<false>(
 		sched, ntiob, first, count, off, timeout, ::std::move(callback));
@@ -833,10 +832,9 @@ template <win32_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_win32_family_io_observer<family, char_type> wiob, ::std::byte *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<false>(
 		sched, wiob, first, count, off, timeout, ::std::move(callback));
@@ -846,10 +844,9 @@ template <win32_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob, ::std::byte *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<false>(
 		sched, wsiob, first, count, off, timeout, ::std::move(callback));
@@ -859,10 +856,9 @@ template <nt_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_nt_family_io_observer<family, char_type> ntiob, ::std::byte const *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<true>(
 		sched, ntiob, const_cast<::std::byte *>(first), count, off, timeout,
@@ -873,10 +869,9 @@ template <win32_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_win32_family_io_observer<family, char_type> wiob, ::std::byte const *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<true>(
 		sched, wiob, const_cast<::std::byte *>(first), count, off, timeout,
@@ -887,10 +882,10 @@ template <win32_family family, ::std::integral char_type, typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob,
 	::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	func callback) noexcept
 {
 	::fast_io::details::win32_iocp_rw_submit<true>(
 		sched, wsiob, const_cast<::std::byte *>(first), count, off, timeout,
@@ -915,10 +910,9 @@ struct ::fast_io::operations::decay::defines::async_accept_file_type<
 template <win32_family family, ::std::integral char_type, typename func>
 	requires ::std::is_nothrow_invocable_v<func, ::std::cxx_std_error, ::std::size_t>
 inline void async_accept_callback_define(
-	::fast_io::win32_io_observer sched,
+	::fast_io::win32_io_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob,
-	::fast_io::open_mode m, ::fast_io::posix_statx_timestamp_opt timeout,
-	func callback) noexcept
+	::fast_io::open_mode m, func callback) noexcept
 {
 	::fast_io::details::win32_iocp_accept_submit<family>(
 		sched, wsiob, m, timeout, ::std::move(callback));

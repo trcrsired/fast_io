@@ -56,15 +56,16 @@ inline void async_iobuffer_pwrite_submit(
 		auto timeout{state->timeout};
 		auto callback{::std::move(state->callback)};
 		::fast_io::details::async_delete_state(state);
-		async_pwrite_some_bytes_overflow_callback_define(sched, outstm, first, count,
-														 ::fast_io::intfpos_opt{}, timeout,
+		async_pwrite_some_bytes_overflow_callback_define(sched, timeout, outstm, first, count,
+														 ::fast_io::intfpos_opt{},
 														 ::std::move(callback));
 		return;
 	}
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-		state->sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+		state->sched, state->timeout,
+		::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
 		reinterpret_cast<::std::byte const *>(obuffer.buffer_begin), pending,
-		::fast_io::intfpos_opt{}, state->timeout,
+		::fast_io::intfpos_opt{},
 		[state](::std::cxx_std_error err) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
@@ -92,8 +93,8 @@ inline void async_iobuffer_pwrite_submit(
 			auto timeout{state->timeout};
 			auto callback{::std::move(state->callback)};
 			::fast_io::details::async_delete_state(state);
-			async_pwrite_some_bytes_overflow_callback_define(sched, outstm, first, count,
-															 ::fast_io::intfpos_opt{}, timeout,
+			async_pwrite_some_bytes_overflow_callback_define(sched, timeout, outstm, first, count,
+															 ::fast_io::intfpos_opt{},
 															 ::std::move(callback));
 		});
 }
@@ -143,13 +144,14 @@ inline void async_iobuffer_transmit_dispatch(state_type *state) noexcept
 		auto callback{::std::move(state->callback)};
 		::fast_io::details::async_delete_state(state);
 		::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
-			sched, outstm, off_out, instm, off_in, bound, timeout, ::std::move(callback));
+			sched, timeout, outstm, off_out, instm, off_in, bound, ::std::move(callback));
 		return;
 	}
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-		state->sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+		state->sched, state->timeout,
+		::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
 		reinterpret_cast<::std::byte const *>(obuffer.buffer_begin), pending,
-		::fast_io::intfpos_opt{}, state->timeout,
+		::fast_io::intfpos_opt{},
 		[state](::std::cxx_std_error err) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
@@ -178,8 +180,8 @@ template <typename io_buffer_type, typename scheduler, typename T>
 			 sizeof(typename io_buffer_type::output_char_type) == 1 &&
 			 ::fast_io::operations::decay::defines::async_completion_callback<T>)
 inline void async_output_stream_buffer_flush_define(
-	scheduler sched, ::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
-	::fast_io::posix_statx_timestamp_opt timeout, T callback) noexcept
+	scheduler sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref, T callback) noexcept
 {
 	auto &obuffer{iobref.iobptr->output_buffer};
 	::std::size_t const pending{
@@ -190,9 +192,9 @@ inline void async_output_stream_buffer_flush_define(
 		return;
 	}
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-		sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+		sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
 		reinterpret_cast<::std::byte const *>(obuffer.buffer_begin), pending,
-		::fast_io::intfpos_opt{}, timeout,
+		::fast_io::intfpos_opt{},
 		[iobref, callback{::std::move(callback)}](::std::cxx_std_error err) noexcept {
 			if (err.domain == nullptr)
 			{
@@ -220,15 +222,16 @@ template <typename io_buffer_type, typename scheduler, typename T>
 			 sizeof(typename io_buffer_type::output_char_type) == 1 &&
 			 ::fast_io::operations::decay::defines::async_bytes_completion_callback<T>)
 inline void async_pwrite_some_bytes_overflow_callback_define(
-	scheduler sched, ::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
+	scheduler sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
 	::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, T callback) noexcept
+	T callback) noexcept
 {
 	if (off.has_opt)
 	{
 		async_pwrite_some_bytes_overflow_callback_define(
-			sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle), first, count, off,
-			timeout, ::std::move(callback));
+			sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+			first, count, off, ::std::move(callback));
 		return;
 	}
 	if (count == 0)
@@ -262,8 +265,8 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 			return;
 		}
 		async_pwrite_some_bytes_overflow_callback_define(
-			sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle), first, count,
-			off, timeout, ::std::move(callback));
+			sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+			first, count, off, ::std::move(callback));
 		return;
 	}
 	::std::size_t const space{
@@ -280,8 +283,8 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 	{
 		/* window empty and the range cannot fit — straight to device */
 		async_pwrite_some_bytes_overflow_callback_define(
-			sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle), first, count,
-			off, timeout, ::std::move(callback));
+			sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+			first, count, off, ::std::move(callback));
 		return;
 	}
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<scheduler>;
@@ -312,16 +315,17 @@ template <typename io_buffer_type, typename scheduler, typename instmtype, typen
 			 sizeof(typename io_buffer_type::output_char_type) == 1 &&
 			 ::fast_io::operations::decay::defines::async_bytes_completion_callback<T>)
 inline void async_transmit_some_bytes_overflow_underflow_callback_define(
-	scheduler sched, ::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
+	scheduler sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
 	::fast_io::intfpos_opt off_out, instmtype instm, ::fast_io::intfpos_opt off_in,
-	::fast_io::size_t_opt bound, ::fast_io::posix_statx_timestamp_opt timeout, T callback) noexcept
+	::fast_io::size_t_opt bound, T callback) noexcept
 {
 	auto &obuffer{iobref.iobptr->output_buffer};
 	if (obuffer.buffer_curr == obuffer.buffer_begin)
 	{
 		::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
-			sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle), off_out,
-			::std::move(instm), off_in, bound, timeout, ::std::move(callback));
+			sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle), off_out,
+			::std::move(instm), off_in, bound, ::std::move(callback));
 		return;
 	}
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<scheduler>;

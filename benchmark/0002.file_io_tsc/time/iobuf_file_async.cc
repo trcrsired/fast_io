@@ -18,7 +18,7 @@ static fi::io_async_task<> output(fi::io_async_observer sched) throws
 	{
 		co_await fi::async_println(sched, {}, obf, i);
 	}
-	co_await fi::operations::async_output_stream_flush(sched, obf, {});
+	co_await fi::operations::async_output_stream_flush(sched, {}, obf);
 }
 
 static fi::io_async_task<> input(fi::io_async_observer sched,

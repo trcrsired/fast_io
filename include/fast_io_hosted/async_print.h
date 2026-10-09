@@ -3,7 +3,7 @@
 /*
  * async_print — coroutine-facing print for async output streams.
  *
- *   co_await operations::async_print(sched, out, timeout, "x=", 42, '\n');
+ *   co_await operations::async_print(sched, timeout, out, "x=", 42, '\n');
  *
  * Formatting always runs synchronously at call time so temporaries never
  * cross a suspension point; only the byte write is asynchronous. The
@@ -363,13 +363,13 @@ struct async_print_awaiter : async_awaiter_result<void>
 		if (nsc == 1)
 		{
 			::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-				sched, outstm, static_cast<::std::byte const *>(w->scatters[0].base),
-				w->scatters[0].len, ::fast_io::intfpos_opt{}, timeout, callback);
+				sched, timeout, outstm, static_cast<::std::byte const *>(w->scatters[0].base),
+				w->scatters[0].len, ::fast_io::intfpos_opt{}, callback);
 		}
 		else
 		{
 			::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay_callback(
-				sched, outstm, w->scatters, nsc, ::fast_io::intfpos_opt{}, timeout,
+				sched, timeout, outstm, w->scatters, nsc, ::fast_io::intfpos_opt{},
 				callback);
 		}
 		return this->async_suspend_done();

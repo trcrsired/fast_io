@@ -62,9 +62,9 @@ static ::std::size_t mock_advance(::fast_io::intfpos_opt &off, ::std::size_t *po
 /* synchronous inline-completion backend: the callback fires during the
  * define call, which also exercises the awaiter inline path */
 template <typename func>
-inline void async_pread_some_bytes_underflow_callback_define(mock_scheduler, mock_file in, ::std::byte *first,
+inline void async_pread_some_bytes_underflow_callback_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+															 mock_file in, ::std::byte *first,
 															 ::std::size_t count, ::fast_io::intfpos_opt off,
-															 ::fast_io::posix_statx_timestamp_opt,
 															 func cb) noexcept
 {
 	::std::size_t pos{off.has_opt ? static_cast<::std::size_t>(off.opt) : *in.pos};
@@ -79,10 +79,10 @@ inline void async_pread_some_bytes_underflow_callback_define(mock_scheduler, moc
 }
 
 template <typename func>
-inline void async_pwrite_some_bytes_overflow_callback_define(mock_scheduler, mock_file out,
+inline void async_pwrite_some_bytes_overflow_callback_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+															 mock_file out,
 															 ::std::byte const *first, ::std::size_t count,
 															 ::fast_io::intfpos_opt off,
-															 ::fast_io::posix_statx_timestamp_opt,
 															 func cb) noexcept
 {
 	::std::size_t pos{off.has_opt ? static_cast<::std::size_t>(off.opt) : *out.pos};
@@ -116,11 +116,11 @@ static int native_scatter_calls{};
 static int native_transmit_calls{};
 
 template <typename func>
-inline void async_scatter_pwrite_some_bytes_overflow_callback_define(mock_scheduler, mock_file2 out,
+inline void async_scatter_pwrite_some_bytes_overflow_callback_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+																	 mock_file2 out,
 																	 ::fast_io::io_scatter_t const *scatters,
 																	 ::std::size_t n,
 																	 ::fast_io::intfpos_opt off,
-																	 ::fast_io::posix_statx_timestamp_opt,
 																	 func cb) noexcept
 {
 	++native_scatter_calls;
@@ -140,11 +140,11 @@ inline void async_scatter_pwrite_some_bytes_overflow_callback_define(mock_schedu
 }
 
 template <typename func>
-inline void async_transmit_some_bytes_overflow_underflow_callback_define(mock_scheduler, mock_file2 out,
+inline void async_transmit_some_bytes_overflow_underflow_callback_define(mock_scheduler, ::fast_io::posix_statx_timestamp_opt,
+																		 mock_file2 out,
 																		 ::fast_io::intfpos_opt off_out, mock_file2 in,
 																		 ::fast_io::intfpos_opt off_in,
 																		 ::fast_io::size_t_opt bound,
-																		 ::fast_io::posix_statx_timestamp_opt,
 																		 func cb) noexcept
 {
 	++native_transmit_calls;
@@ -247,7 +247,7 @@ static int failures{};
 static test_task coro_read(mock_scheduler sched, mock_file in, ::std::byte *buf, ::std::size_t n,
 						   ::fast_io::intfpos_opt off) throws
 {
-	auto got{co_await ::fast_io::operations::async_pread_some_bytes(sched, in, buf, n, off, {})};
+	auto got{co_await ::fast_io::operations::async_pread_some_bytes(sched, {}, in, buf, n, off)};
 	if (got != n)
 	{
 		++failures;
@@ -257,7 +257,7 @@ static test_task coro_read(mock_scheduler sched, mock_file in, ::std::byte *buf,
 static test_task coro_write_all(mock_scheduler sched, mock_file out, ::std::byte const *buf,
 								::std::size_t n, ::fast_io::intfpos_opt off) throws
 {
-	co_await ::fast_io::operations::async_pwrite_all_bytes(sched, out, buf, n, off, {});
+	co_await ::fast_io::operations::async_pwrite_all_bytes(sched, {}, out, buf, n, off);
 }
 
 static test_task coro_main(mock_scheduler sched) throws
@@ -332,7 +332,7 @@ int main()
 		::std::byte buf[512]{};
 		bool called{};
 		::fast_io::operations::async_pread_all_bytes_callback(
-			sched, src, buf, sizeof(buf), {}, {},
+			sched, {}, src, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -363,7 +363,7 @@ int main()
 		::fast_io::io_scatter_t scs[3]{{a, sizeof(a)}, {b, sizeof(b)}, {c, sizeof(c)}};
 		bool called{};
 		::fast_io::operations::async_scatter_pwrite_all_bytes_callback(
-			sched, dst, scs, 3, ::fast_io::intfpos_opt{4}, {},
+			sched, {}, dst, scs, 3, ::fast_io::intfpos_opt{4},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -387,7 +387,7 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -410,8 +410,8 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_some_bytes_callback(
-			sched, dst, ::fast_io::intfpos_opt{10}, src, ::fast_io::intfpos_opt{50},
-			::fast_io::size_t_opt{200}, {},
+			sched, {}, dst, ::fast_io::intfpos_opt{10}, src, ::fast_io::intfpos_opt{50},
+			::fast_io::size_t_opt{200},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -429,7 +429,7 @@ int main()
 		::std::byte buf[128]{};
 		bool called{};
 		::fast_io::operations::async_pread_all_bytes_callback(
-			sched, src, buf, sizeof(buf), {}, {},
+			sched, {}, src, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain != nullptr);
@@ -453,7 +453,7 @@ int main()
 		mock_file2 dst{{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)}};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -477,7 +477,7 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -501,7 +501,7 @@ int main()
 		sync_only_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -524,7 +524,7 @@ int main()
 		sync_only_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -547,7 +547,7 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_some_bytes_callback(
-			sched, dst, {}, src, {}, ::fast_io::size_t_opt{100}, {},
+			sched, {}, dst, {}, src, {}, ::fast_io::size_t_opt{100},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -566,7 +566,7 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		bool called{};
 		::fast_io::operations::async_transmit_all_bytes_callback(
-			sched, dst, {}, src, {}, {}, {},
+			sched, {}, dst, {}, src, {}, {},
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain != nullptr);
@@ -585,7 +585,7 @@ int main()
 		::fast_io::io_scatter_t scs[2]{{a, sizeof(a)}, {b, sizeof(b)}};
 		bool called{};
 		::fast_io::operations::async_scatter_pwrite_some_bytes_callback(
-			sched, dst, scs, 2, ::fast_io::intfpos_opt{0}, {},
+			sched, {}, dst, scs, 2, ::fast_io::intfpos_opt{0},
 			[&](::std::cxx_std_error e, ::fast_io::io_scatter_status_t st) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -614,7 +614,7 @@ int main()
 		::std::byte buf[8]{};
 		bool called{};
 		::fast_io::operations::async_pread_some_bytes_callback(
-			sched, ibf, buf, sizeof(buf), {}, {},
+			sched, {}, ibf, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -626,7 +626,7 @@ int main()
 		::std::byte buf2[16]{};
 		called = false;
 		::fast_io::operations::async_pread_some_bytes_callback(
-			sched, ibf, buf2, sizeof(buf2), {}, {},
+			sched, {}, ibf, buf2, sizeof(buf2), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -637,7 +637,7 @@ int main()
 		CHECK(srcpos == 64); /* drained from the window, no device read */
 		called = false;
 		::fast_io::operations::async_pread_some_bytes_callback(
-			sched, ibf, buf2, 4, ::fast_io::intfpos_opt{100}, {},
+			sched, {}, ibf, buf2, 4, ::fast_io::intfpos_opt{100},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -662,7 +662,7 @@ int main()
 		::std::memset(wdata, 0x5A, sizeof(wdata));
 		bool called{};
 		::fast_io::operations::async_pwrite_some_bytes_callback(
-			sched, obf, wdata, sizeof(wdata), {}, {},
+			sched, {}, obf, wdata, sizeof(wdata), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -672,7 +672,7 @@ int main()
 		CHECK(dstpos == 0); /* still buffered — no device write */
 		called = false;
 		::fast_io::operations::async_output_stream_flush_callback(
-			sched, obf, {},
+			sched, {}, obf,
 			[&](::std::cxx_std_error e) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -696,7 +696,7 @@ int main()
 		::std::memset(wdata, 0x11, sizeof(wdata));
 		bool called{};
 		::fast_io::operations::async_pwrite_some_bytes_callback(
-			sched, obf, wdata, sizeof(wdata), {}, {},
+			sched, {}, obf, wdata, sizeof(wdata), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -711,7 +711,7 @@ int main()
 		}
 		called = false;
 		::fast_io::operations::async_pwrite_some_bytes_callback(
-			sched, obf, big, sizeof(big), {}, {},
+			sched, {}, obf, big, sizeof(big), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -737,7 +737,7 @@ int main()
 		::std::memset(wdata, 0x77, sizeof(wdata));
 		bool called{};
 		::fast_io::operations::async_pwrite_some_bytes_callback(
-			sched, iobf, wdata, sizeof(wdata), {}, {},
+			sched, {}, iobf, wdata, sizeof(wdata), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -748,7 +748,7 @@ int main()
 		::std::byte rbuf[8]{};
 		called = false;
 		::fast_io::operations::async_pread_some_bytes_callback(
-			sched, iobf, rbuf, sizeof(rbuf), {}, {},
+			sched, {}, iobf, rbuf, sizeof(rbuf), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -790,7 +790,7 @@ int main()
 		::std::memset(wdata, 0x33, sizeof(wdata));
 		bool called{};
 		::fast_io::operations::async_pwrite_some_bytes_callback(
-			sched, obf, wdata, sizeof(wdata), {}, {},
+			sched, {}, obf, wdata, sizeof(wdata), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -807,7 +807,7 @@ int main()
 		mock_file src{srcdata, sizeof(srcdata), __builtin_addressof(srcpos)};
 		called = false;
 		::fast_io::operations::async_transmit_some_bytes_callback(
-			sched, obf, {}, src, {}, ::fast_io::size_t_opt{200}, {},
+			sched, {}, obf, {}, src, {}, ::fast_io::size_t_opt{200},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -836,7 +836,7 @@ int main()
 		::std::byte warm[8]{};
 		bool called{};
 		::fast_io::operations::async_pread_some_bytes_callback(
-			sched, ibf, warm, sizeof(warm), {}, {},
+			sched, {}, ibf, warm, sizeof(warm), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);
@@ -849,7 +849,7 @@ int main()
 		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
 		called = false;
 		::fast_io::operations::async_transmit_some_bytes_callback(
-			sched, dst, {}, ibf, {}, ::fast_io::size_t_opt{120}, {},
+			sched, {}, dst, {}, ibf, {}, ::fast_io::size_t_opt{120},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				called = true;
 				CHECK(e.domain == nullptr);

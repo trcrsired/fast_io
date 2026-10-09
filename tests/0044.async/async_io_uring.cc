@@ -26,21 +26,21 @@ namespace fad = ::fast_io::operations;
 static test_task coro_accept(::fast_io::linux_io_uring_observer sched, int listen_fd,
 							 ::fast_io::posix_file *out) throws
 {
-	*out = co_await fad::async_accept(sched, ::fast_io::posix_io_observer{listen_fd},
-									  ::fast_io::open_mode{}, {});
+	*out = co_await fad::async_accept(sched, {}, ::fast_io::posix_io_observer{listen_fd},
+									  ::fast_io::open_mode{});
 }
 
 static test_task coro_main(::fast_io::linux_io_uring_observer sched, int fd_in, int fd_out) throws
 {
 	::std::byte buf[128]{};
 	/* positioned read */
-	auto n{co_await fad::async_pread_some_bytes(sched, ::fast_io::posix_io_observer{fd_in}, buf,
-												sizeof(buf), ::fast_io::intfpos_opt{0}, {})};
+	auto n{co_await fad::async_pread_some_bytes(sched, {}, ::fast_io::posix_io_observer{fd_in}, buf,
+												sizeof(buf), ::fast_io::intfpos_opt{0})};
 	CHECK(n == 128);
 	CHECK(buf[0] == ::std::byte{'A'});
 	/* positioned write_all through the coroutine form */
-	co_await fad::async_pwrite_all_bytes(sched, ::fast_io::posix_io_observer{fd_out}, buf, 64,
-										 ::fast_io::intfpos_opt{0}, {});
+	co_await fad::async_pwrite_all_bytes(sched, {}, ::fast_io::posix_io_observer{fd_out}, buf, 64,
+										 ::fast_io::intfpos_opt{0});
 }
 
 int main()
@@ -89,7 +89,7 @@ int main()
 		::std::cxx_std_error err{};
 		::std::byte buf[128]{};
 		fad::async_pread_all_bytes_callback(
-			sched, fi::posix_io_observer{fin.native_handle()}, buf, sizeof(buf), {}, {},
+			sched, {}, fi::posix_io_observer{fin.native_handle()}, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e) noexcept {
 				fired = true;
 				err = e;
@@ -113,7 +113,7 @@ int main()
 		fi::io_scatter_t wv[2]{{a, 16}, {b, 16}};
 		bool fired{};
 		fad::async_scatter_pwrite_all_bytes_callback(
-			sched, fi::posix_io_observer{fout.native_handle()}, wv, 2, ::fast_io::intfpos_opt{64}, {},
+			sched, {}, fi::posix_io_observer{fout.native_handle()}, wv, 2, ::fast_io::intfpos_opt{64},
 			[&](::std::cxx_std_error e) noexcept {
 				fired = true;
 				CHECK(e.domain == nullptr);
@@ -132,7 +132,7 @@ int main()
 		fired = false;
 		fi::io_scatter_status_t st{};
 		fad::async_scatter_pread_some_bytes_callback(
-			sched, fi::posix_io_observer{fout.native_handle()}, rv, 2, ::fast_io::intfpos_opt{64}, {},
+			sched, {}, fi::posix_io_observer{fout.native_handle()}, rv, 2, ::fast_io::intfpos_opt{64},
 			[&](::std::cxx_std_error e, fi::io_scatter_status_t s) noexcept {
 				fired = true;
 				st = s;
@@ -150,9 +150,9 @@ int main()
 	{
 		bool fired{};
 		fad::async_transmit_some_bytes_callback(
-			sched, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{200},
+			sched, {}, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{200},
 			fi::posix_io_observer{fin.native_handle()}, ::fast_io::intfpos_opt{0},
-			fi::size_t_opt{64}, {},
+			fi::size_t_opt{64},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				fired = true;
 				CHECK(e.domain == nullptr);
@@ -177,9 +177,9 @@ int main()
 		bool fired{};
 		::std::size_t moved{};
 		fad::async_transmit_some_bytes_callback(
-			sched, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{400},
+			sched, {}, fi::posix_io_observer{fout.native_handle()}, ::fast_io::intfpos_opt{400},
 			fi::posix_io_observer{pfds[0]}, {},
-			fi::size_t_opt{sizeof(pipemsg) - 1}, {},
+			fi::size_t_opt{sizeof(pipemsg) - 1},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				fired = true;
 				moved = n;
@@ -207,8 +207,8 @@ int main()
 		bool fired{};
 		::std::cxx_std_error err{};
 		fad::async_pread_some_bytes_callback(
-			sched, fi::posix_io_observer{pfds[0]}, buf, sizeof(buf), {},
-			fi::posix_statx_timestamp_opt{fi::posix_statx_timestamp64{0, 50000000}},
+			sched, fi::posix_statx_timestamp_opt{fi::posix_statx_timestamp64{0, 50000000}},
+			fi::posix_io_observer{pfds[0]}, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e, ::std::size_t) noexcept {
 				fired = true;
 				err = e;
@@ -236,7 +236,7 @@ int main()
 		::std::byte buf[8]{};
 		bool fired{};
 		fad::async_pread_some_bytes_callback(
-			sched, ibf, buf, sizeof(buf), {}, {},
+			sched, {}, ibf, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				fired = true;
 				CHECK(e.domain == nullptr);
@@ -256,7 +256,7 @@ int main()
 		::std::cxx_std_error err{};
 		::std::byte buf[8]{};
 		fad::async_pread_some_bytes_callback(
-			sched, fi::posix_io_observer{-1}, buf, sizeof(buf), {}, {},
+			sched, {}, fi::posix_io_observer{-1}, buf, sizeof(buf), {},
 			[&](::std::cxx_std_error e, ::std::size_t) noexcept {
 				fired = true;
 				err = e;

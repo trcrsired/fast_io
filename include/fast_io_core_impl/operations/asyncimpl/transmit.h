@@ -254,7 +254,7 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept
 								  ::fast_io::details::async_io_callback>)
 			{
 				async_pread_some_bytes_underflow_callback_define(
-					state->sched, state->instm, state->buf, chunk, state->off_in, state->timeout,
+					state->sched, state->timeout, state->instm, state->buf, chunk, state->off_in,
 					[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
 						::fast_io::details::async_transmit_bytes_read_done(state, err, bytesread);
 					});
@@ -289,8 +289,8 @@ inline void async_transmit_bytes_write_staged(state_type *state) noexcept
 								  ::fast_io::details::async_io_callback>)
 			{
 				async_pwrite_some_bytes_overflow_callback_define(
-					state->sched, state->outstm, first, left,
-					state->off_out, state->timeout,
+					state->sched, state->timeout, state->outstm, first, left,
+					state->off_out,
 					[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
 						::fast_io::details::async_transmit_bytes_write_done(state, err, byteswritten);
 					});
@@ -344,8 +344,8 @@ inline void async_transmit_all_native_submit(
 	::fast_io::details::async_submit_catching(
 		[state, bound]() noexcept {
 			async_transmit_some_bytes_overflow_underflow_callback_define(
-				state->sched, state->outstm, state->off_out, state->instm, state->off_in,
-				::fast_io::size_t_opt{bound}, state->timeout,
+				state->sched, state->timeout, state->outstm, state->off_out, state->instm,
+				state->off_in, ::fast_io::size_t_opt{bound},
 				[state](::std::cxx_std_error err, ::std::size_t moved) noexcept {
 					if (err.domain == nullptr)
 					{
@@ -396,9 +396,10 @@ template <typename async_scheduler_type, typename outstmtype, typename instmtype
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<callback_type>>
 inline void async_transmit_some_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::intfpos_opt off_out,
-	instmtype instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
-	::fast_io::posix_statx_timestamp_opt timeout, callback_type callback) noexcept
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
+	outstmtype outstm, ::fast_io::intfpos_opt off_out, instmtype instm,
+	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
+	callback_type callback) noexcept
 {
 	using outstm_reftype = outstmtype;
 	using instm_reftype = instmtype;
@@ -408,11 +409,11 @@ inline void async_transmit_some_bytes_decay_callback(
 						  ::std::remove_cvref_t<callback_type>>)
 	{
 		async_transmit_some_bytes_overflow_underflow_callback_define(
-			scheduler,
+			scheduler, timeout,
 			outstm,
 			off_out,
 			instm,
-			off_in, bound, timeout,
+			off_in, bound,
 			::std::move(callback));
 		return;
 	}
@@ -500,9 +501,10 @@ template <typename async_scheduler_type, typename outstmtype, typename instmtype
 		  typename callback_type>
 	requires ::std::is_nothrow_invocable_v<callback_type, ::std::cxx_std_error>
 inline void async_transmit_all_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::intfpos_opt off_out,
-	instmtype instm, ::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
-	::fast_io::posix_statx_timestamp_opt timeout, callback_type callback) noexcept
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
+	outstmtype outstm, ::fast_io::intfpos_opt off_out, instmtype instm,
+	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
+	callback_type callback) noexcept
 {
 	using outstm_reftype = outstmtype;
 	using instm_reftype = instmtype;
@@ -607,7 +609,7 @@ struct async_transmit_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
-			sched, outstm, off_out, instm, off_in, bound, timeout,
+			sched, timeout, outstm, off_out, instm, off_in, bound,
 			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				this->err = e;
 				this->value = n;
@@ -648,7 +650,7 @@ struct async_transmit_all_bytes_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_transmit_all_bytes_decay_callback(
-			sched, outstm, off_out, instm, off_in, bound, timeout,
+			sched, timeout, outstm, off_out, instm, off_in, bound,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -681,11 +683,12 @@ namespace fast_io::operations::decay
 /* Coroutine forms of the transmit decays. The some form yields the bytes
  * transmitted; the all form yields void. */
 template <typename async_scheduler_type, typename outstmtype, typename instmtype>
-inline auto async_transmit_some_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
+inline auto async_transmit_some_bytes_decay(async_scheduler_type scheduler,
+											::fast_io::posix_statx_timestamp_opt timeout,
+											outstmtype outstm,
 											::fast_io::intfpos_opt off_out, instmtype instm,
 											::fast_io::intfpos_opt off_in,
-											::fast_io::size_t_opt bound,
-											::fast_io::posix_statx_timestamp_opt timeout) noexcept
+											::fast_io::size_t_opt bound) noexcept
 {
 	return ::fast_io::details::async_transmit_some_bytes_awaiter<
 		async_scheduler_type, outstmtype,
@@ -694,11 +697,12 @@ inline auto async_transmit_some_bytes_decay(async_scheduler_type scheduler, outs
 }
 
 template <typename async_scheduler_type, typename outstmtype, typename instmtype>
-inline auto async_transmit_all_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
+inline auto async_transmit_all_bytes_decay(async_scheduler_type scheduler,
+										   ::fast_io::posix_statx_timestamp_opt timeout,
+										   outstmtype outstm,
 										   ::fast_io::intfpos_opt off_out, instmtype instm,
 										   ::fast_io::intfpos_opt off_in,
-										   ::fast_io::size_t_opt bound,
-										   ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+										   ::fast_io::size_t_opt bound) noexcept
 {
 	return ::fast_io::details::async_transmit_all_bytes_awaiter<
 		async_scheduler_type, outstmtype,

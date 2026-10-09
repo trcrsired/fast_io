@@ -36,8 +36,8 @@ static fi::io_async_task<> fetch(fi::io_async_observer sched, fi::u8iobuf_socket
 		if (::std::u8string_view(key) == u8"Content-Length"sv)
 		{
 			auto content_length{::fast_io::u8to<::std::uint_least64_t>(value)};
-			co_await fop::async_transmit_all_bytes(sched, out, {}, sock, {},
-												   fi::size_t_opt{content_length}, {});
+			co_await fop::async_transmit_all_bytes(sched, {}, out, {}, sock, {},
+												   fi::size_t_opt{content_length});
 			co_return;
 		}
 	}

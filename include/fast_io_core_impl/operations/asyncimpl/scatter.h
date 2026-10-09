@@ -58,7 +58,7 @@ inline void async_scatter_pread_some_bytes_submit(
 					  state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pread_some_bytes_underflow_callback_define(
-		state->sched, state->instm, base, elem_remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->instm, base, elem_remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
 			state->elem_off += bytesread;
 			if (err.domain != nullptr) [[unlikely]]
@@ -119,7 +119,7 @@ inline void async_scatter_pread_all_bytes_submit(
 					  state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pread_some_bytes_underflow_callback_define(
-		state->sched, state->instm, base, elem_remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->instm, base, elem_remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
 			if (err.domain == nullptr)
 			{
@@ -194,7 +194,7 @@ inline void async_scatter_pwrite_some_bytes_submit(
 	::std::byte const *base{static_cast<::std::byte const *>(elem.base) + state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pwrite_some_bytes_overflow_callback_define(
-		state->sched, state->outstm, base, elem_remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->outstm, base, elem_remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
 			state->elem_off += byteswritten;
 			if (err.domain != nullptr) [[unlikely]]
@@ -247,7 +247,7 @@ inline void async_scatter_pwrite_all_bytes_submit(
 	::std::byte const *base{static_cast<::std::byte const *>(elem.base) + state->elem_off};
 	::std::size_t const elem_remaining{elem.len - state->elem_off};
 	async_pwrite_some_bytes_overflow_callback_define(
-		state->sched, state->outstm, base, elem_remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->outstm, base, elem_remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
 			if (err.domain == nullptr)
 			{
@@ -297,8 +297,8 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<callback_type>>
 inline void async_scatter_pread_some_bytes_decay_callback(
-	async_scheduler_type scheduler, instmtype instm, ::fast_io::io_scatter_t const *pscatters,
-	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout, instmtype instm,
+	::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	callback_type callback) noexcept
 {
 	using instm_reftype = instmtype;
@@ -308,9 +308,9 @@ inline void async_scatter_pread_some_bytes_decay_callback(
 						  ::std::remove_cvref_t<callback_type>>)
 	{
 		async_scatter_pread_some_bytes_underflow_callback_define(
-			scheduler,
+			scheduler, timeout,
 			instm,
-			pscatters, n, off, timeout,
+			pscatters, n, off,
 			::std::move(callback));
 		return;
 	}
@@ -357,8 +357,8 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 instmtype,
 					 ::fast_io::details::async_io_callback>
 inline void async_scatter_pread_all_bytes_decay_callback(
-	async_scheduler_type scheduler, instmtype instm, ::fast_io::io_scatter_t const *pscatters,
-	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout, instmtype instm,
+	::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	callback_type callback) noexcept
 {
 	using instm_reftype = instmtype;
@@ -391,9 +391,9 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<callback_type>>
 inline void async_scatter_pwrite_some_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::io_scatter_t const *pscatters,
-	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
-	callback_type callback) noexcept
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
+	outstmtype outstm, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
+	::fast_io::intfpos_opt off, callback_type callback) noexcept
 {
 	using outstm_reftype = outstmtype;
 	if constexpr (::fast_io::operations::decay::defines::
@@ -402,9 +402,9 @@ inline void async_scatter_pwrite_some_bytes_decay_callback(
 						  ::std::remove_cvref_t<callback_type>>)
 	{
 		async_scatter_pwrite_some_bytes_overflow_callback_define(
-			scheduler,
+			scheduler, timeout,
 			outstm,
-			pscatters, n, off, timeout,
+			pscatters, n, off,
 			::std::move(callback));
 		return;
 	}
@@ -451,9 +451,9 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 					 outstmtype,
 					 ::fast_io::details::async_io_callback>
 inline void async_scatter_pwrite_all_bytes_decay_callback(
-	async_scheduler_type scheduler, outstmtype outstm, ::fast_io::io_scatter_t const *pscatters,
-	::std::size_t n, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
-	callback_type callback) noexcept
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
+	outstmtype outstm, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
+	::fast_io::intfpos_opt off, callback_type callback) noexcept
 {
 	using outstm_reftype = outstmtype;
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
@@ -500,7 +500,7 @@ struct async_scatter_pread_some_bytes_awaiter : async_awaiter_result<::fast_io::
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pread_some_bytes_decay_callback(
-			sched, instm, scatters, n, off, timeout,
+			sched, timeout, instm, scatters, n, off,
 			[this](::std::cxx_std_error e, ::fast_io::io_scatter_status_t status) noexcept {
 				this->err = e;
 				this->value = status;
@@ -540,7 +540,7 @@ struct async_scatter_pread_all_bytes_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pread_all_bytes_decay_callback(
-			sched, instm, scatters, n, off, timeout,
+			sched, timeout, instm, scatters, n, off,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -578,7 +578,7 @@ struct async_scatter_pwrite_some_bytes_awaiter : async_awaiter_result<::fast_io:
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pwrite_some_bytes_decay_callback(
-			sched, outstm, scatters, n, off, timeout,
+			sched, timeout, outstm, scatters, n, off,
 			[this](::std::cxx_std_error e, ::fast_io::io_scatter_status_t status) noexcept {
 				this->err = e;
 				this->value = status;
@@ -618,7 +618,7 @@ struct async_scatter_pwrite_all_bytes_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay_callback(
-			sched, outstm, scatters, n, off, timeout,
+			sched, timeout, outstm, scatters, n, off,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -651,10 +651,12 @@ namespace fast_io::operations::decay
 /* Coroutine forms of the scatter decays. The some forms yield
  * io_scatter_status_t; the all forms yield void. */
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler, instmtype instm,
+inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler,
+												 ::fast_io::posix_statx_timestamp_opt timeout,
+												 instmtype instm,
 												 ::fast_io::io_scatter_t const *pscatters,
-												 ::std::size_t n, ::fast_io::intfpos_opt off,
-												 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+												 ::std::size_t n,
+												 ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_scatter_pread_some_bytes_awaiter<
 		async_scheduler_type, instmtype>{
@@ -662,10 +664,12 @@ inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler, instmtype instm,
+inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler,
+												::fast_io::posix_statx_timestamp_opt timeout,
+												instmtype instm,
 												::fast_io::io_scatter_t const *pscatters,
-												::std::size_t n, ::fast_io::intfpos_opt off,
-												::fast_io::posix_statx_timestamp_opt timeout) noexcept
+												::std::size_t n,
+												::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_scatter_pread_all_bytes_awaiter<
 		async_scheduler_type, instmtype>{
@@ -674,10 +678,11 @@ inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler, 
 
 template <typename async_scheduler_type, typename outstmtype>
 inline auto async_scatter_pwrite_some_bytes_decay(async_scheduler_type scheduler,
+												  ::fast_io::posix_statx_timestamp_opt timeout,
 												  outstmtype outstm,
 												  ::fast_io::io_scatter_t const *pscatters,
-												  ::std::size_t n, ::fast_io::intfpos_opt off,
-												  ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+												  ::std::size_t n,
+												  ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_scatter_pwrite_some_bytes_awaiter<
 		async_scheduler_type, outstmtype>{
@@ -686,10 +691,11 @@ inline auto async_scatter_pwrite_some_bytes_decay(async_scheduler_type scheduler
 
 template <typename async_scheduler_type, typename outstmtype>
 inline auto async_scatter_pwrite_all_bytes_decay(async_scheduler_type scheduler,
+												 ::fast_io::posix_statx_timestamp_opt timeout,
 												 outstmtype outstm,
 												 ::fast_io::io_scatter_t const *pscatters,
-												 ::std::size_t n, ::fast_io::intfpos_opt off,
-												 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+												 ::std::size_t n,
+												 ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_scatter_pwrite_all_bytes_awaiter<
 		async_scheduler_type, outstmtype>{

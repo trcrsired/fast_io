@@ -243,8 +243,8 @@ struct async_scan_arg_awaiter
 		if (awaiting_pread)
 		{
 			::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
-				sched, instm, reinterpret_cast<::std::byte *>(pread_buffer),
-				precise_n * sizeof(char_type), ::fast_io::intfpos_opt{}, timeout,
+				sched, timeout, instm, reinterpret_cast<::std::byte *>(pread_buffer),
+				precise_n * sizeof(char_type), ::fast_io::intfpos_opt{},
 				[this](::std::cxx_std_error e) noexcept {
 					refill_err = e;
 					refill_ready = true;
@@ -261,7 +261,7 @@ struct async_scan_arg_awaiter
 		else
 		{
 			async_ibuffer_underflow(
-				sched, instm, timeout,
+				sched, timeout, instm,
 				[this](::std::cxx_std_error e, ::std::size_t got) noexcept {
 					refill_err = e;
 					refill_got = got;

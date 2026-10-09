@@ -22,7 +22,7 @@ static fi::io_async_task<> work(fi::io_async_observer sched) throws
 	::std::size_t a{}, b{};
 	co_await fi::async_scan(sched, {}, inb, a, b);
 	co_await fi::async_println(sched, {}, outb, a + b);
-	co_await fi::operations::async_output_stream_flush(sched, outb, {});
+	co_await fi::operations::async_output_stream_flush(sched, {}, outb);
 }
 
 int main()

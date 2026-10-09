@@ -39,7 +39,7 @@ inline void async_pwrite_all_bytes_submit(
 	async_pwrite_all_bytes_state<scheduler, outstmtype, alloc_type, T> *state) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
-		state->sched, state->outstm, state->first, state->remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->outstm, state->first, state->remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
@@ -102,15 +102,15 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 					 outstmtype,
 					 ::std::remove_cvref_t<callback_type>>
 inline void async_pwrite_some_bytes_decay_callback(async_scheduler_type scheduler,
+												   ::fast_io::posix_statx_timestamp_opt timeout,
 												   outstmtype outstm, ::std::byte const *first,
 												   ::std::size_t count, ::fast_io::intfpos_opt off,
-												   ::fast_io::posix_statx_timestamp_opt timeout,
 												   callback_type callback) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
-		scheduler,
+		scheduler, timeout,
 		outstm,
-		first, count, off, timeout,
+		first, count, off,
 		::std::move(callback));
 }
 
@@ -130,9 +130,9 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 					 outstmtype,
 					 ::fast_io::details::async_io_callback>
 inline void async_pwrite_all_bytes_decay_callback(async_scheduler_type scheduler,
+												  ::fast_io::posix_statx_timestamp_opt timeout,
 												  outstmtype outstm, ::std::byte const *first,
 												  ::std::size_t count, ::fast_io::intfpos_opt off,
-												  ::fast_io::posix_statx_timestamp_opt timeout,
 												  callback_type callback) noexcept
 {
 	using outstm_reftype = outstmtype;
@@ -181,7 +181,7 @@ struct async_pwrite_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_pwrite_some_bytes_decay_callback(
-			sched, outstm, first, count, off, timeout,
+			sched, timeout, outstm, first, count, off,
 			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				this->err = e;
 				this->value = n;
@@ -222,7 +222,7 @@ struct async_pwrite_all_bytes_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-			sched, outstm, first, count, off, timeout,
+			sched, timeout, outstm, first, count, off,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -256,10 +256,11 @@ namespace fast_io::operations::decay
  * completion runs. await_resume() rethrows the error through the channel;
  * the some form yields the bytes written. */
 template <typename async_scheduler_type, typename outstmtype>
-inline auto async_pwrite_some_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
-										  ::std::byte const *first, ::std::size_t count,
-										  ::fast_io::intfpos_opt off,
-										  ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_pwrite_some_bytes_decay(async_scheduler_type scheduler,
+										  ::fast_io::posix_statx_timestamp_opt timeout,
+										  outstmtype outstm, ::std::byte const *first,
+										  ::std::size_t count,
+										  ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_pwrite_some_bytes_awaiter<
 		async_scheduler_type, outstmtype>{
@@ -267,10 +268,11 @@ inline auto async_pwrite_some_bytes_decay(async_scheduler_type scheduler, outstm
 }
 
 template <typename async_scheduler_type, typename outstmtype>
-inline auto async_pwrite_all_bytes_decay(async_scheduler_type scheduler, outstmtype outstm,
-										 ::std::byte const *first, ::std::size_t count,
-										 ::fast_io::intfpos_opt off,
-										 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_pwrite_all_bytes_decay(async_scheduler_type scheduler,
+										 ::fast_io::posix_statx_timestamp_opt timeout,
+										 outstmtype outstm, ::std::byte const *first,
+										 ::std::size_t count,
+										 ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_pwrite_all_bytes_awaiter<
 		async_scheduler_type, outstmtype>{

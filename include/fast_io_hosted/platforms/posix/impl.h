@@ -89,3 +89,10 @@
 #include "async/linux_liburing.h"
 #include "async/linux_io_uring.h"
 #endif
+
+/* thread-pool fallback scheduler — portable across every POSIX target;
+ * on Linux io_uring remains the io_async default while the pool stays
+ * available explicitly, elsewhere io_async maps to the pool */
+#if !defined(_WIN32) && !defined(__MSDOS__) && !defined(__wasi__) && defined(__HERBCEPTIONS__)
+#include "async/thread_pool.h"
+#endif

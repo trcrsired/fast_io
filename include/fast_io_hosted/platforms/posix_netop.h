@@ -183,4 +183,18 @@ using basic_native_socket_io_observer = basic_posix_io_observer<ch_type>;
 template <::std::integral ch_type>
 using basic_native_socket_file = basic_posix_file<ch_type>;
 using net_service = posix_empty_network_service;
+
+#if defined(__HERBCEPTIONS__)
+/*
+ * The owning file type an async accept yields for a posix listen-stream
+ * observer — a property of the stream type, shared by every posix async
+ * backend (io_uring, the thread-pool fallback, ...).
+ */
+template <::fast_io::posix_family family, ::std::integral char_type>
+struct ::fast_io::operations::decay::defines::async_accept_file_type<
+	::fast_io::basic_posix_family_io_observer<family, char_type>>
+{
+	using type = ::fast_io::basic_posix_family_file<family, char_type>;
+};
+#endif
 } // namespace fast_io

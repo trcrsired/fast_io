@@ -75,8 +75,9 @@ concept has_async_pread_some_bytes_underflow_callback_define =
 	requires(schedulertype sched, instmtype instm, functype func) {
 		{
 			async_pread_some_bytes_underflow_callback_define(
-				sched, instm, static_cast<::std::byte *>(nullptr), ::std::size_t{0},
-				::fast_io::intfpos_opt{}, ::fast_io::posix_statx_timestamp_opt{}, func)
+				sched, ::fast_io::posix_statx_timestamp_opt{}, instm,
+				static_cast<::std::byte *>(nullptr), ::std::size_t{0},
+				::fast_io::intfpos_opt{}, func)
 		} noexcept;
 	};
 
@@ -85,8 +86,9 @@ concept has_async_pwrite_some_bytes_overflow_callback_define =
 	requires(schedulertype sched, outstmtype outstm, functype func) {
 		{
 			async_pwrite_some_bytes_overflow_callback_define(
-				sched, outstm, static_cast<::std::byte const *>(nullptr), ::std::size_t{0},
-				::fast_io::intfpos_opt{}, ::fast_io::posix_statx_timestamp_opt{}, func)
+				sched, ::fast_io::posix_statx_timestamp_opt{}, outstm,
+				static_cast<::std::byte const *>(nullptr), ::std::size_t{0},
+				::fast_io::intfpos_opt{}, func)
 		} noexcept;
 	};
 
@@ -95,8 +97,9 @@ concept has_async_scatter_pread_some_bytes_underflow_callback_define =
 	requires(schedulertype sched, instmtype instm, functype func) {
 		{
 			async_scatter_pread_some_bytes_underflow_callback_define(
-				sched, instm, static_cast<::fast_io::io_scatter_t const *>(nullptr), ::std::size_t{0},
-				::fast_io::intfpos_opt{}, ::fast_io::posix_statx_timestamp_opt{}, func)
+				sched, ::fast_io::posix_statx_timestamp_opt{}, instm,
+				static_cast<::fast_io::io_scatter_t const *>(nullptr), ::std::size_t{0},
+				::fast_io::intfpos_opt{}, func)
 		} noexcept;
 	};
 
@@ -105,8 +108,9 @@ concept has_async_scatter_pwrite_some_bytes_overflow_callback_define =
 	requires(schedulertype sched, outstmtype outstm, functype func) {
 		{
 			async_scatter_pwrite_some_bytes_overflow_callback_define(
-				sched, outstm, static_cast<::fast_io::io_scatter_t const *>(nullptr), ::std::size_t{0},
-				::fast_io::intfpos_opt{}, ::fast_io::posix_statx_timestamp_opt{}, func)
+				sched, ::fast_io::posix_statx_timestamp_opt{}, outstm,
+				static_cast<::fast_io::io_scatter_t const *>(nullptr), ::std::size_t{0},
+				::fast_io::intfpos_opt{}, func)
 		} noexcept;
 	};
 
@@ -115,13 +119,13 @@ concept has_async_transmit_some_bytes_overflow_underflow_callback_define =
 	requires(schedulertype sched, outstmtype outstm, instmtype instm, functype func) {
 		{
 			async_transmit_some_bytes_overflow_underflow_callback_define(
-				sched, outstm, ::fast_io::intfpos_opt{}, instm, ::fast_io::intfpos_opt{},
-				::fast_io::size_t_opt{}, ::fast_io::posix_statx_timestamp_opt{}, func)
+				sched, ::fast_io::posix_statx_timestamp_opt{}, outstm, ::fast_io::intfpos_opt{},
+				instm, ::fast_io::intfpos_opt{}, ::fast_io::size_t_opt{}, func)
 		} noexcept;
 	};
 
 /*
-async_accept_callback_define(sched, listenstm, mode, timeout, func):
+async_accept_callback_define(sched, timeout, listenstm, mode, func):
 asynchronous accept on a listening stream; func is invoked once as
 func(::std::cxx_std_error, typename streamtype::native_handle_type) —
 the raw accepted handle (fd on posix, SOCKET on win32). `mode` describes
@@ -135,8 +139,8 @@ concept has_async_accept_callback_define =
 								  typename streamtype::native_handle_type> &&
 	requires(schedulertype sched, streamtype listenstm, functype func) {
 		{
-			async_accept_callback_define(sched, listenstm, ::fast_io::open_mode{},
-										 ::fast_io::posix_statx_timestamp_opt{}, func)
+			async_accept_callback_define(sched, ::fast_io::posix_statx_timestamp_opt{}, listenstm,
+										 ::fast_io::open_mode{}, func)
 		} noexcept;
 	};
 
@@ -155,7 +159,7 @@ template <typename streamtype>
 using async_accept_file_t = typename async_accept_file_type<streamtype>::type;
 
 /*
- * async_status_print_define<line>(sched, stream, timeout, args...) is the
+ * async_status_print_define<line>(sched, timeout, stream, args...) is the
  * async counterpart of status_print_define: streams carrying print state
  * (e.g. locale imbuer) implement it so async_print can format through the
  * status machinery into owned storage and write the bytes out
@@ -165,8 +169,7 @@ using async_accept_file_t = typename async_accept_file_type<streamtype>::type;
 template <typename schedulertype, typename outstmtype, typename... Args>
 concept has_async_status_print_define =
 	requires(schedulertype sched, outstmtype outstm, Args &&...args) {
-		async_status_print_define<false>(sched, outstm,
-										 ::fast_io::posix_statx_timestamp_opt{},
+		async_status_print_define<false>(sched, ::fast_io::posix_statx_timestamp_opt{}, outstm,
 										 ::std::forward<Args>(args)...);
 	};
 
@@ -174,17 +177,17 @@ concept has_async_status_print_define =
 Buffered-stream defines — both live beneath their public wrappers and are
 likewise noexcept with callback-delivered errors:
 
-- async_ibuffer_underflow(sched, instm, timeout, cb): refill the input
+- async_ibuffer_underflow(sched, timeout, instm, cb): refill the input
   buffer's pending window; cb(err, n) reports the bytes made available
   (n == 0 = end of file). The buffering equivalent of
   ibuffer_underflow(iobref).
-- async_output_stream_buffer_flush_define(sched, outstm, timeout, cb):
+- async_output_stream_buffer_flush_define(sched, timeout, outstm, cb):
   write every pending output byte to the underlying handle; cb(err).
 */
 template <typename schedulertype, typename instmtype, typename functype>
 concept has_async_ibuffer_underflow = requires(schedulertype sched, instmtype instm, functype func) {
 	{
-		async_ibuffer_underflow(sched, instm, ::fast_io::posix_statx_timestamp_opt{}, func)
+		async_ibuffer_underflow(sched, ::fast_io::posix_statx_timestamp_opt{}, instm, func)
 	} noexcept;
 };
 
@@ -192,8 +195,8 @@ template <typename schedulertype, typename outstmtype, typename functype>
 concept has_async_output_stream_buffer_flush_define =
 	requires(schedulertype sched, outstmtype outstm, functype func) {
 		{
-			async_output_stream_buffer_flush_define(sched, outstm,
-													::fast_io::posix_statx_timestamp_opt{}, func)
+			async_output_stream_buffer_flush_define(sched, ::fast_io::posix_statx_timestamp_opt{},
+													outstm, func)
 		} noexcept;
 	};
 

@@ -80,11 +80,12 @@ inline void async_iobuffer_flush_submit(state_type *state, resubmit &&resm) noex
 	auto &obuffer{iobref.iobptr->output_buffer};
 	state->output_flushed = true;
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-		state->sched, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
+		state->sched, state->timeout,
+		::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
 		reinterpret_cast<::std::byte const *>(obuffer.buffer_begin),
 		static_cast<::std::size_t>(obuffer.buffer_curr - obuffer.buffer_begin) *
 			sizeof(typename state_type::io_buffer_type_t::output_char_type),
-		::fast_io::intfpos_opt{}, state->timeout,
+		::fast_io::intfpos_opt{},
 		[state, resm{::std::move(resm)}](::std::cxx_std_error err) noexcept {
 			if (err.domain == nullptr)
 			{
@@ -131,7 +132,7 @@ inline void async_iobuffer_pread_submit(
 		auto timeout{state->timeout};
 		auto callback{::std::move(state->callback)};
 		::fast_io::details::async_delete_state(state);
-		async_pread_some_bytes_underflow_callback_define(sched, instm, first, count, off, timeout,
+		async_pread_some_bytes_underflow_callback_define(sched, timeout, instm, first, count, off,
 														 ::std::move(callback));
 		return;
 	}
@@ -163,8 +164,8 @@ inline void async_iobuffer_pread_submit(
 			auto timeout{state->timeout};
 			auto callback{::std::move(state->callback)};
 			::fast_io::details::async_delete_state(state);
-			async_pread_some_bytes_underflow_callback_define(sched, instm, first, count,
-															 ::fast_io::intfpos_opt{}, timeout,
+			async_pread_some_bytes_underflow_callback_define(sched, timeout, instm, first, count,
+															 ::fast_io::intfpos_opt{},
 															 ::std::move(callback));
 			return;
 		}
@@ -178,9 +179,9 @@ inline void async_iobuffer_pread_submit(
 					iobref.iobptr->allocator_handle, bfsz);
 		}
 		async_pread_some_bytes_underflow_callback_define(
-			state->sched, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
+			state->sched, state->timeout,
+			::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
 			reinterpret_cast<::std::byte *>(ibuffer.buffer_begin), bfsz, ::fast_io::intfpos_opt{},
-			state->timeout,
 			[state](::std::cxx_std_error err, ::std::size_t got) noexcept {
 				if (err.domain != nullptr) [[unlikely]]
 				{
@@ -269,9 +270,9 @@ inline void async_iobuffer_underflow_submit(
 					iobref.iobptr->allocator_handle, bfsz);
 		}
 		async_pread_some_bytes_underflow_callback_define(
-			state->sched, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
+			state->sched, state->timeout,
+			::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
 			reinterpret_cast<::std::byte *>(ibuffer.buffer_begin), bfsz, ::fast_io::intfpos_opt{},
-			state->timeout,
 			[state](::std::cxx_std_error err, ::std::size_t got) noexcept {
 				if (err.domain == nullptr)
 				{
@@ -291,7 +292,7 @@ inline void async_iobuffer_underflow_submit(
 } // namespace details::io_buffer
 
 /*
- * async_ibuffer_underflow(sched, iobref, timeout, cb): the async form of
+ * async_ibuffer_underflow(sched, timeout, iobref, cb): the async form of
  * ibuffer_underflow — refill the input window with one async read on the
  * handle. cb(err, n) reports the bytes made pending; n == 0 on EOF.
  * Flushes a tied output buffer first, like the sync form.
@@ -302,8 +303,9 @@ template <typename io_buffer_type, typename scheduler, typename T>
 			 sizeof(typename io_buffer_type::input_char_type) == 1 &&
 			 ::fast_io::operations::decay::defines::async_bytes_completion_callback<T>)
 inline void async_ibuffer_underflow(scheduler sched,
+									::fast_io::posix_statx_timestamp_opt timeout,
 									::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
-									::fast_io::posix_statx_timestamp_opt timeout, T callback) noexcept
+									T callback) noexcept
 {
 	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<scheduler>;
 	try
@@ -336,9 +338,9 @@ template <typename io_buffer_type, typename scheduler, typename T>
 			 sizeof(typename io_buffer_type::input_char_type) == 1 &&
 			 ::fast_io::operations::decay::defines::async_bytes_completion_callback<T>)
 inline void async_pread_some_bytes_underflow_callback_define(
-	scheduler sched, ::fast_io::basic_io_buffer_ref<io_buffer_type> iobref, ::std::byte *first,
-	::std::size_t count, ::fast_io::intfpos_opt off, ::fast_io::posix_statx_timestamp_opt timeout,
-	T callback) noexcept
+	scheduler sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref, ::std::byte *first,
+	::std::size_t count, ::fast_io::intfpos_opt off, T callback) noexcept
 {
 	if (count == 0)
 	{
@@ -351,8 +353,8 @@ inline void async_pread_some_bytes_underflow_callback_define(
 		if (off.has_opt)
 		{
 			async_pread_some_bytes_underflow_callback_define(
-				sched, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle), first, count,
-				off, timeout, ::std::move(callback));
+				sched, timeout, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
+				first, count, off, ::std::move(callback));
 			return;
 		}
 		auto &ibuffer{iobref.iobptr->input_buffer};
@@ -370,8 +372,8 @@ inline void async_pread_some_bytes_underflow_callback_define(
 		if (count >= bfsz)
 		{
 			async_pread_some_bytes_underflow_callback_define(
-				sched, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle), first, count,
-				off, timeout, ::std::move(callback));
+				sched, timeout, ::fast_io::operations::input_stream_ref(iobref.iobptr->handle),
+				first, count, off, ::std::move(callback));
 			return;
 		}
 	}

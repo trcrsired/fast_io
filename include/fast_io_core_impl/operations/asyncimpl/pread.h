@@ -104,7 +104,7 @@ inline void async_pread_all_bytes_submit(
 	async_pread_all_bytes_state<scheduler, instmtype, alloc_type, T> *state) noexcept
 {
 	async_pread_some_bytes_underflow_callback_define(
-		state->sched, state->instm, state->first, state->remaining, state->off, state->timeout,
+		state->sched, state->timeout, state->instm, state->first, state->remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
@@ -165,16 +165,17 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 async_scheduler_type,
 					 instmtype,
 					 ::std::remove_cvref_t<callback_type>>
-inline void async_pread_some_bytes_decay_callback(async_scheduler_type scheduler, instmtype instm,
-												  ::std::byte *first, ::std::size_t count,
-												  ::fast_io::intfpos_opt off,
+inline void async_pread_some_bytes_decay_callback(async_scheduler_type scheduler,
 												  ::fast_io::posix_statx_timestamp_opt timeout,
+												  instmtype instm, ::std::byte *first,
+												  ::std::size_t count,
+												  ::fast_io::intfpos_opt off,
 												  callback_type callback) noexcept
 {
 	async_pread_some_bytes_underflow_callback_define(
-		scheduler,
+		scheduler, timeout,
 		instm,
-		first, count, off, timeout,
+		first, count, off,
 		::std::move(callback));
 }
 
@@ -193,10 +194,11 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 async_scheduler_type,
 					 instmtype,
 					 ::fast_io::details::async_io_callback>
-inline void async_pread_all_bytes_decay_callback(async_scheduler_type scheduler, instmtype instm,
-												 ::std::byte *first, ::std::size_t count,
-												 ::fast_io::intfpos_opt off,
+inline void async_pread_all_bytes_decay_callback(async_scheduler_type scheduler,
 												 ::fast_io::posix_statx_timestamp_opt timeout,
+												 instmtype instm, ::std::byte *first,
+												 ::std::size_t count,
+												 ::fast_io::intfpos_opt off,
 												 callback_type callback) noexcept
 {
 	using instm_reftype = instmtype;
@@ -245,7 +247,7 @@ struct async_pread_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_pread_some_bytes_decay_callback(
-			sched, instm, first, count, off, timeout,
+			sched, timeout, instm, first, count, off,
 			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
 				this->err = e;
 				this->value = n;
@@ -286,7 +288,7 @@ struct async_pread_all_bytes_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
-			sched, instm, first, count, off, timeout,
+			sched, timeout, instm, first, count, off,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -320,10 +322,11 @@ namespace fast_io::operations::decay
  * completion runs. await_resume() rethrows the error through the channel;
  * the some form yields the bytes read. */
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_pread_some_bytes_decay(async_scheduler_type scheduler, instmtype instm,
-										 ::std::byte *first, ::std::size_t count,
-										 ::fast_io::intfpos_opt off,
-										 ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_pread_some_bytes_decay(async_scheduler_type scheduler,
+										 ::fast_io::posix_statx_timestamp_opt timeout,
+										 instmtype instm, ::std::byte *first,
+										 ::std::size_t count,
+										 ::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_pread_some_bytes_awaiter<
 		async_scheduler_type, instmtype>{
@@ -331,10 +334,11 @@ inline auto async_pread_some_bytes_decay(async_scheduler_type scheduler, instmty
 }
 
 template <typename async_scheduler_type, typename instmtype>
-inline auto async_pread_all_bytes_decay(async_scheduler_type scheduler, instmtype instm,
-										::std::byte *first, ::std::size_t count,
-										::fast_io::intfpos_opt off,
-										::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_pread_all_bytes_decay(async_scheduler_type scheduler,
+										::fast_io::posix_statx_timestamp_opt timeout,
+										instmtype instm, ::std::byte *first,
+										::std::size_t count,
+										::fast_io::intfpos_opt off) noexcept
 {
 	return ::fast_io::details::async_pread_all_bytes_awaiter<
 		async_scheduler_type, instmtype>{

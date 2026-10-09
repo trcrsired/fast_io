@@ -22,13 +22,13 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 					 outstmtype,
 					 ::std::remove_cvref_t<callback_type>>
 inline void async_output_stream_flush_decay_callback(
-	async_scheduler_type scheduler, outstmtype outstm,
-	::fast_io::posix_statx_timestamp_opt timeout, callback_type callback) noexcept
+	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
+	outstmtype outstm, callback_type callback) noexcept
 {
 	async_output_stream_buffer_flush_define(
-		scheduler,
+		scheduler, timeout,
 		outstm,
-		timeout, ::std::move(callback));
+		::std::move(callback));
 }
 
 } // namespace fast_io::operations::decay
@@ -47,7 +47,7 @@ struct async_output_stream_flush_awaiter : async_awaiter_result<void>
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_output_stream_flush_decay_callback(
-			sched, outstm, timeout,
+			sched, timeout, outstm,
 			[this](::std::cxx_std_error e) noexcept {
 				this->err = e;
 				if (this->suspended)
@@ -81,8 +81,9 @@ namespace fast_io::operations::decay
  * pending output byte reached the device; await_resume() rethrows the
  * error through the channel. */
 template <typename async_scheduler_type, typename outstmtype>
-inline auto async_output_stream_flush_decay(async_scheduler_type scheduler, outstmtype outstm,
-											::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_output_stream_flush_decay(async_scheduler_type scheduler,
+											::fast_io::posix_statx_timestamp_opt timeout,
+											outstmtype outstm) noexcept
 {
 	return ::fast_io::details::async_output_stream_flush_awaiter<
 		async_scheduler_type, outstmtype>{

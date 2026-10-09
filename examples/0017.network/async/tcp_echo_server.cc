@@ -13,7 +13,7 @@ namespace fop = ::fast_io::operations;
  */
 static fi::io_async_task<> echo_session(fi::io_async_observer sched, fi::native_socket_file sock) throws
 {
-	co_await fop::async_transmit_some_bytes(sched, sock, {}, sock, {}, {}, {});
+	co_await fop::async_transmit_some_bytes(sched, {}, sock, {}, sock, {}, {});
 }
 
 /*
@@ -31,7 +31,7 @@ static fi::io_async_task<> accept_loop(fi::io_async_observer sched, fi::native_s
 		 * async_accept yields the owning native_socket_file — the
 		 * handle can never escape ownership */
 		echo_session(sched,
-					 co_await fop::async_accept(sched, listener, fi::open_mode::no_block, {}))
+					 co_await fop::async_accept(sched, {}, listener, fi::open_mode::no_block))
 			.detach();
 	}
 }

@@ -354,7 +354,7 @@ struct io_uring_rw_cookie
 	::fast_io::liburing::io_uring_timespec ts{};
 	T callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -433,7 +433,7 @@ struct io_uring_scatter_cookie
 	::std::size_t n{};
 	T callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -537,7 +537,7 @@ struct io_uring_transmit_cookie
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -627,7 +627,7 @@ struct io_uring_accept_cookie
 	::fast_io::liburing::io_uring_timespec ts{};
 	T callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -711,10 +711,9 @@ template <::fast_io::posix_family family, ::std::integral char_type, typename fu
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family, char_type> piob, ::std::byte *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_rw_submit(sched, *sched.ring, ::fast_io::liburing::io_uring_op_read,
 													 piob.fd, first, count, off, timeout,
@@ -725,10 +724,9 @@ template <::fast_io::posix_family family, ::std::integral char_type, typename fu
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family, char_type> piob, ::std::byte const *first,
-	::std::size_t count, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_rw_submit(sched, *sched.ring, ::fast_io::liburing::io_uring_op_write,
 													 piob.fd, first, count, off, timeout,
@@ -743,10 +741,10 @@ template <::fast_io::posix_family family, ::std::integral char_type, typename fu
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pread_some_bytes_underflow_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family, char_type> piob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_scatter_submit(sched, *sched.ring,
 														  ::fast_io::liburing::io_uring_op_readv, piob.fd,
@@ -758,10 +756,10 @@ template <::fast_io::posix_family family, ::std::integral char_type, typename fu
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family, char_type> piob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_scatter_submit(sched, *sched.ring,
 														  ::fast_io::liburing::io_uring_op_writev, piob.fd,
@@ -780,12 +778,11 @@ template <::fast_io::posix_family family_out, ::fast_io::posix_family family_in,
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_transmit_some_bytes_overflow_underflow_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family_out, char_type_out> outstm,
 	::fast_io::intfpos_opt off_out,
 	::fast_io::basic_posix_family_io_observer<family_in, char_type_in> instm,
-	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound,
-	::fast_io::posix_statx_timestamp_opt timeout, func callback) noexcept
+	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound, func callback) noexcept
 {
 	using outstmtype =
 		::fast_io::basic_posix_family_io_observer<family_out, char_type_out>;
@@ -840,12 +837,8 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	}
 }
 
-template <::fast_io::posix_family family, ::std::integral char_type>
-struct ::fast_io::operations::decay::defines::async_accept_file_type<
-	::fast_io::basic_posix_family_io_observer<family, char_type>>
-{
-	using type = ::fast_io::basic_posix_family_file<family, char_type>;
-};
+/* async_accept_file_type for posix observers is shared by every posix
+ * backend — it lives in posix_netmode.h next to the accept impl. */
 
 /*
  * async_accept_callback_define: submits IORING_OP_ACCEPT on the
@@ -858,10 +851,9 @@ struct ::fast_io::operations::decay::defines::async_accept_file_type<
 template <::fast_io::posix_family family, ::std::integral char_type, typename func>
 	requires ::std::is_nothrow_invocable_v<func, ::std::cxx_std_error, int>
 inline void async_accept_callback_define(
-	::fast_io::linux_io_uring_observer sched,
+	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	::fast_io::basic_posix_family_io_observer<family, char_type> instm,
-	::fast_io::open_mode m, ::fast_io::posix_statx_timestamp_opt timeout,
-	func callback) noexcept
+	::fast_io::open_mode m, func callback) noexcept
 {
 	::fast_io::liburing::details::io_uring_accept_submit(
 		sched, *sched.ring, instm.fd, m, timeout, ::std::move(callback));

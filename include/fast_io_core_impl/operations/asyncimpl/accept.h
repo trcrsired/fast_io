@@ -14,12 +14,12 @@ namespace fast_io::operations::decay
 template <typename async_scheduler_type, typename streamtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::has_async_accept_callback_define<
 		async_scheduler_type, streamtype, callback_type>
-inline void async_accept_decay_callback(async_scheduler_type scheduler, streamtype listenstm,
-										::fast_io::open_mode mode,
+inline void async_accept_decay_callback(async_scheduler_type scheduler,
 										::fast_io::posix_statx_timestamp_opt timeout,
+										streamtype listenstm, ::fast_io::open_mode mode,
 										callback_type callback) noexcept
 {
-	async_accept_callback_define(scheduler, listenstm, mode, timeout, ::std::move(callback));
+	async_accept_callback_define(scheduler, timeout, listenstm, mode, ::std::move(callback));
 }
 
 } // namespace fast_io::operations::decay
@@ -43,7 +43,7 @@ struct async_accept_awaiter
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_accept_decay_callback(
-			sched, listenstm, mode, timeout,
+			sched, timeout, listenstm, mode,
 			[this](::std::cxx_std_error e,
 				   typename streamtype::native_handle_type accepted) noexcept {
 				this->err = e;
@@ -77,9 +77,9 @@ namespace fast_io::operations::decay
 {
 
 template <typename async_scheduler_type, typename streamtype>
-inline auto async_accept_decay(async_scheduler_type scheduler, streamtype listenstm,
-							   ::fast_io::open_mode mode,
-							   ::fast_io::posix_statx_timestamp_opt timeout) noexcept
+inline auto async_accept_decay(async_scheduler_type scheduler,
+							   ::fast_io::posix_statx_timestamp_opt timeout, streamtype listenstm,
+							   ::fast_io::open_mode mode) noexcept
 {
 	return ::fast_io::details::async_accept_awaiter<async_scheduler_type, streamtype>{
 		{}, scheduler, listenstm, mode, timeout};
