@@ -85,7 +85,7 @@ struct peer_certificates
 
 class tls_client
 {
-	int fd_{-1};
+	::fast_io::native_socket_io_observer sock_{};
 	cipher_suite suite_{};
 	/* current application traffic secrets, needed for KeyUpdate rekey */
 	::std::byte tx_secret_[48]{};
@@ -97,12 +97,18 @@ class tls_client
 
 public:
 	inline constexpr tls_client() noexcept = default;
-	inline explicit constexpr tls_client(int fd) noexcept : fd_{fd}
+	template <::std::integral sch_type>
+	inline explicit constexpr tls_client(::fast_io::basic_native_socket_io_observer<sch_type> sock) noexcept
+		: sock_{sock.fd}
 	{}
 
+	inline constexpr ::fast_io::native_socket_io_observer socket() const noexcept
+	{
+		return sock_;
+	}
 	inline constexpr int fd() const noexcept
 	{
-		return fd_;
+		return sock_.fd;
 	}
 	inline constexpr cipher_suite suite() const noexcept
 	{
@@ -741,7 +747,7 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 {
 	/* attach the tls ulp before anything else -- without it every
 	   SOL_TLS setsockopt fails with ENOPROTOOPT */
-	details::ktls_attach(fd_);
+	details::ktls_attach(sock_.fd);
 
 	::std::byte session_id[32], random[32], sk[32], pk[32];
 	details::tls_fill_random(session_id, 32);
@@ -776,7 +782,7 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 	::std::size_t const rec_size{static_cast<::std::size_t>(hdr - ch) + ch_msg_size};
 	FAST_IO_HERBCEPTIONS_TRY
 	{
-		details::tls_write_full(fd_, ch, rec_size);
+		details::tls_write_full(sock_.fd, ch, rec_size);
 	}
 	FAST_IO_HERBCEPTIONS_CATCH_ALL
 	{
@@ -791,7 +797,7 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 		for (;;)
 		{
 			content_type ctype;
-			::std::size_t const n{details::tls13_read_plaintext_record(fd_, rec, sizeof(rec), ctype)};
+			::std::size_t const n{details::tls13_read_plaintext_record(sock_.fd, rec, sizeof(rec), ctype)};
 			if (ctype == content_type::change_cipher_spec)
 			{
 				continue;
@@ -802,7 +808,7 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 			}
 			if (ctype != content_type::handshake || n < 4 || n > sizeof(sh_msg))
 			{
-				details::tls13_fail(fd_, alert_description::unexpected_message, false);
+				details::tls13_fail(sock_.fd, alert_description::unexpected_message, false);
 			}
 			::fast_io::freestanding::non_overlapped_copy_n(rec, n, sh_msg);
 			sh_msg_size = n;
@@ -817,39 +823,39 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 		 (static_cast<::std::size_t>(sh_msg[2]) << 8u) |
 		 static_cast<::std::size_t>(sh_msg[3])) != sh_body_size)
 	{
-		details::tls13_fail(fd_, alert_description::decode_error, false);
+		details::tls13_fail(sock_.fd, alert_description::decode_error, false);
 	}
 	::fast_io::tls::details::server_hello_info shi{};
 	if (!::fast_io::tls::details::server_hello_parse(shi, sh_body, sh_body_size, session_id,
 													 32))
 	{
-		details::tls13_fail(fd_, alert_description::decode_error, false);
+		details::tls13_fail(sock_.fd, alert_description::decode_error, false);
 	}
 	if (shi.is_hello_retry_request || shi.has_pre_shared_key)
 	{
 		/* we only offer x25519 -- nothing to retry with */
-		details::tls13_fail(fd_, alert_description::handshake_failure, false);
+		details::tls13_fail(sock_.fd, alert_description::handshake_failure, false);
 	}
 	if (!shi.supported_versions_tls13 || shi.downgrade_sentinel_seen)
 	{
 		/* absolutely no downgrade: not 1.2, not anything else */
-		details::tls13_fail(fd_, alert_description::protocol_version, false);
+		details::tls13_fail(sock_.fd, alert_description::protocol_version, false);
 	}
 	if (!shi.session_id_echo_match)
 	{
-		details::tls13_fail(fd_, alert_description::illegal_parameter, false);
+		details::tls13_fail(sock_.fd, alert_description::illegal_parameter, false);
 	}
 	cipher_suite const suite{static_cast<cipher_suite>(shi.cipher_suite)};
 	if (suite != cipher_suite::aes_128_gcm_sha256 &&
 		suite != cipher_suite::aes_256_gcm_sha384 &&
 		suite != cipher_suite::chacha20_poly1305_sha256)
 	{
-		details::tls13_fail(fd_, alert_description::handshake_failure, false);
+		details::tls13_fail(sock_.fd, alert_description::handshake_failure, false);
 	}
 	if (shi.key_share_group != named_group::x25519 ||
 		shi.key_share_public_key_size != 32)
 	{
-		details::tls13_fail(fd_, alert_description::illegal_parameter, false);
+		details::tls13_fail(sock_.fd, alert_description::illegal_parameter, false);
 	}
 
 	::std::byte shared[32];
@@ -865,14 +871,14 @@ inline void tls_client::handshake(tls13_client_config const &cfg) FAST_IO_HERBCE
 		}
 		if (acc == ::std::byte{})
 		{
-			details::tls13_fail(fd_, alert_description::illegal_parameter, false);
+			details::tls13_fail(sock_.fd, alert_description::illegal_parameter, false);
 		}
 	}
 
 	peer_certificates peer{};
 	::std::byte tx_secret[48], rx_secret[48];
 	::std::size_t secret_size{};
-	details::ktls_handshake_dispatch(fd_, suite, shared,
+	details::ktls_handshake_dispatch(sock_.fd, suite, shared,
 									 msg, ch_msg_size, sh_msg, sh_msg_size,
 									 cfg, peer, tx_secret, rx_secret, secret_size);
 	::fast_io::secure_clear(shared, sizeof(shared));
@@ -890,7 +896,7 @@ inline ::std::size_t tls_client::read_some(::std::byte *buf, ::std::size_t buf_s
 {
 	for (;;)
 	{
-		auto rr{details::ktls_recv_record(fd_, buf, buf_size)};
+		auto rr{details::ktls_recv_record(sock_.fd, buf, buf_size)};
 		switch (rr.ctype)
 		{
 		case content_type::application_data:
@@ -953,14 +959,14 @@ inline void tls_client::key_update_received(::std::uint_least8_t request) FAST_I
 		::fast_io::freestanding::non_overlapped_copy_n(next, secret_size_, rx_secret_);
 		::fast_io::tls::details::traffic_key_iv_to_ptr<::fast_io::sha256_context>(key, key_size, iv, rx_secret_);
 	}
-	::fast_io::tls::details::ktls_set_key(fd_, details::tls_rx, suite_, key, iv, 0);
+	::fast_io::tls::details::ktls_set_key(sock_.fd, details::tls_rx, suite_, key, iv, 0);
 	if (request != 0)
 	{
 		/* peer asked us to rotate TX too: send our KeyUpdate then rekey */
 		::std::byte ku[5];
 		::std::byte *p{details::handshake_header_write(ku, handshake_type::key_update, 1)};
 		*p++ = ::std::byte{0}; /* update_not_requested */
-		::fast_io::tls::details::ktls_send_record(fd_, content_type::handshake, ku,
+		::fast_io::tls::details::ktls_send_record(sock_.fd, content_type::handshake, ku,
 												  static_cast<::std::size_t>(p - ku));
 		if (secret_size_ == ::fast_io::sha384_context::digest_size)
 		{
@@ -976,7 +982,7 @@ inline void tls_client::key_update_received(::std::uint_least8_t request) FAST_I
 			::fast_io::freestanding::non_overlapped_copy_n(next, secret_size_, tx_secret_);
 			::fast_io::tls::details::traffic_key_iv_to_ptr<::fast_io::sha256_context>(key, key_size, iv, tx_secret_);
 		}
-		::fast_io::tls::details::ktls_set_key(fd_, details::tls_tx, suite_, key, iv, 0);
+		::fast_io::tls::details::ktls_set_key(sock_.fd, details::tls_tx, suite_, key, iv, 0);
 	}
 	::fast_io::secure_clear(key, sizeof(key));
 	::fast_io::secure_clear(iv, sizeof(iv));
@@ -985,17 +991,17 @@ inline void tls_client::key_update_received(::std::uint_least8_t request) FAST_I
 inline ::std::size_t tls_client::write_some(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* one send: the kernel chunks plaintext into application_data records */
-	return static_cast<::std::size_t>(::fast_io::details::posix_write_bytes_impl(fd_, buf, buf_size) - buf);
+	return static_cast<::std::size_t>(::fast_io::details::posix_write_bytes_impl(sock_.fd, buf, buf_size) - buf);
 }
 
 inline void tls_client::write_all(::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
-	details::tls_write_full(fd_, buf, buf_size);
+	details::tls_write_full(sock_.fd, buf, buf_size);
 }
 
 inline void tls_client::send_close_notify() noexcept
 {
-	details::tls13_send_alert(fd_, alert_description::close_notify, true);
+	details::tls13_send_alert(sock_.fd, alert_description::close_notify, true);
 }
 
 } // namespace fast_io::tls

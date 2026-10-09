@@ -28,7 +28,7 @@ int main(int argc, char const **argv)
 		::fast_io::native_socket_file socket{
 			::fast_io::tcp_connect(::fast_io::to_ip(::fast_io::native_dns_file{::fast_io::mnp::os_c_str(argv[1])}, 443))};
 
-		::fast_io::tls::tls_file tls{socket.fd};
+		::fast_io::tls::tls_file tls{socket};
 		tls.handshake(host);
 
 		char8_t const req_head[]{u8"GET / HTTP/1.1\r\nHost: "};

@@ -28,8 +28,10 @@ public:
 	{
 		this->handle = __builtin_addressof(client_);
 	}
-	/* borrow an established TCP fd (kernel ULP+keys are installed by handshake) */
-	inline explicit constexpr basic_tls_file(int fd) noexcept : client_{fd}
+	/* borrow an established TCP socket (kernel ULP+keys are installed by handshake) */
+	template <::std::integral sch_type>
+	inline explicit constexpr basic_tls_file(::fast_io::basic_native_socket_io_observer<sch_type> sock) noexcept
+		: client_{sock}
 	{
 		this->handle = __builtin_addressof(client_);
 	}
