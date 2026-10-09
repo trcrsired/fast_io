@@ -170,6 +170,66 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(mock_sc
 	cb(::std::cxx_std_error{}, n);
 }
 
+/* a stream with only synchronous byte operations — no async defines; the
+ * generic transmit engine must drive it inline */
+struct sync_only_file
+{
+	using input_char_type = char;
+	using output_char_type = char;
+	::std::byte *data;
+	::std::size_t size;
+	::std::size_t *pos;
+};
+
+inline constexpr sync_only_file input_stream_ref_define(sync_only_file f) noexcept
+{
+	return f;
+}
+
+inline constexpr sync_only_file output_stream_ref_define(sync_only_file f) noexcept
+{
+	return f;
+}
+
+inline ::std::byte *read_some_bytes_underflow_define(sync_only_file in, ::std::byte *first,
+													 ::std::size_t count) noexcept
+{
+	::std::size_t const room{*in.pos < in.size ? in.size - *in.pos : 0};
+	::std::size_t const n{room < count ? room : count};
+	::std::memcpy(first, in.data + *in.pos, n);
+	*in.pos += n;
+	return first + n;
+}
+
+inline ::std::byte const *write_some_bytes_overflow_define(sync_only_file out,
+														   ::std::byte const *first,
+														   ::std::size_t count) noexcept
+{
+	::std::size_t const room{*out.pos < out.size ? out.size - *out.pos : 0};
+	::std::size_t const n{room < count ? room : count};
+	::std::memcpy(out.data + *out.pos, first, n);
+	*out.pos += n;
+	return first + n;
+}
+
+/* sync input whose read always fails — checks error propagation through
+ * the synchronous side of the transmit engine */
+struct sync_fail_file
+{
+	using input_char_type = char;
+};
+
+inline constexpr sync_fail_file input_stream_ref_define(sync_fail_file f) noexcept
+{
+	return f;
+}
+
+inline ::std::byte *read_some_bytes_underflow_define(sync_fail_file, ::std::byte *,
+													 ::std::size_t) throws
+{
+	::fast_io::herbceptions::throws_errc(::std::errc::io_error);
+}
+
 using test_task = ::fast_io::io_async_task<>;
 
 static int failures{};
@@ -401,6 +461,117 @@ int main()
 		CHECK(called);
 		CHECK(native_transmit_calls > 0);
 		CHECK(::std::memcmp(dstdata, srcdata, 200) == 0);
+	}
+
+	/* hybrid transmit: synchronous-only input into an async output — the
+	 * read side runs inline, the write side goes through the scheduler */
+	{
+		::std::byte srcdata[600];
+		for (::std::size_t i{}; i != sizeof(srcdata); ++i)
+		{
+			srcdata[i] = static_cast<::std::byte>((i * 7) & 0xff);
+		}
+		::std::size_t srcpos{}, dstpos{};
+		sync_only_file src{srcdata, sizeof(srcdata), __builtin_addressof(srcpos)};
+		::std::byte dstdata[1024]{};
+		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
+		bool called{};
+		::fast_io::operations::async_transmit_all_bytes_callback(
+			sched, dst, {}, src, {}, {}, {},
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		CHECK(::std::memcmp(dstdata, srcdata, 600) == 0);
+		CHECK(srcpos == 600 && dstpos == 600);
+	}
+
+	/* hybrid transmit: async input into a synchronous-only output (e.g. a
+	 * hash context or in-memory sink) */
+	{
+		::std::byte srcdata[600];
+		for (::std::size_t i{}; i != sizeof(srcdata); ++i)
+		{
+			srcdata[i] = static_cast<::std::byte>((i * 11) & 0xff);
+		}
+		::std::size_t srcpos{}, dstpos{};
+		mock_file src{srcdata, sizeof(srcdata), __builtin_addressof(srcpos)};
+		::std::byte dstdata[1024]{};
+		sync_only_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
+		bool called{};
+		::fast_io::operations::async_transmit_all_bytes_callback(
+			sched, dst, {}, src, {}, {}, {},
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		CHECK(::std::memcmp(dstdata, srcdata, 600) == 0);
+		CHECK(srcpos == 600 && dstpos == 600);
+	}
+
+	/* both sides synchronous — the fully-sync shortcut runs transmit inline */
+	{
+		::std::byte srcdata[300];
+		for (::std::size_t i{}; i != sizeof(srcdata); ++i)
+		{
+			srcdata[i] = static_cast<::std::byte>((i * 5) & 0xff);
+		}
+		::std::size_t srcpos{}, dstpos{};
+		sync_only_file src{srcdata, sizeof(srcdata), __builtin_addressof(srcpos)};
+		::std::byte dstdata[512]{};
+		sync_only_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
+		bool called{};
+		::fast_io::operations::async_transmit_all_bytes_callback(
+			sched, dst, {}, src, {}, {}, {},
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+			});
+		CHECK(called);
+		CHECK(::std::memcmp(dstdata, srcdata, 300) == 0);
+		CHECK(srcpos == 300 && dstpos == 300);
+	}
+
+	/* hybrid transmit_some: synchronous-only input, async output, bound */
+	{
+		::std::byte srcdata[256];
+		for (::std::size_t i{}; i != sizeof(srcdata); ++i)
+		{
+			srcdata[i] = static_cast<::std::byte>((i * 3) & 0xff);
+		}
+		::std::size_t srcpos{}, dstpos{};
+		sync_only_file src{srcdata, sizeof(srcdata), __builtin_addressof(srcpos)};
+		::std::byte dstdata[512]{};
+		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
+		bool called{};
+		::fast_io::operations::async_transmit_some_bytes_callback(
+			sched, dst, {}, src, {}, ::fast_io::size_t_opt{100}, {},
+			[&](::std::cxx_std_error e, ::std::size_t n) noexcept {
+				called = true;
+				CHECK(e.domain == nullptr);
+				CHECK(n == 100);
+			});
+		CHECK(called);
+		CHECK(::std::memcmp(dstdata, srcdata, 100) == 0);
+		CHECK(dstpos == 100);
+	}
+
+	/* a synchronous read error is delivered through the callback */
+	{
+		sync_fail_file src{};
+		::std::byte dstdata[64]{};
+		::std::size_t dstpos{};
+		mock_file dst{dstdata, sizeof(dstdata), __builtin_addressof(dstpos)};
+		bool called{};
+		::fast_io::operations::async_transmit_all_bytes_callback(
+			sched, dst, {}, src, {}, {}, {},
+			[&](::std::cxx_std_error e) noexcept {
+				called = true;
+				CHECK(e.domain != nullptr);
+			});
+		CHECK(called);
 	}
 
 	/* native scatter define preferred over lio emulation */

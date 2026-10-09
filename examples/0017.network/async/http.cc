@@ -15,10 +15,15 @@ namespace fop = ::fast_io::operations;
 static fi::io_async_task<> fetch(fi::io_async_observer sched, fi::u8iobuf_socket_file sock,
 								 fi::u8native_file out, char const *host) throws
 {
+	/* host goes straight into the Host: header — the string_filters
+	 * guard validates the hostname grammar and throws before any
+	 * byte is written, so a hostile argv string cannot inject headers */
 	co_await fi::async_print(sched, {}, sock,
 							 u8"GET / HTTP/1.1\r\n"
 							 "Host:",
-							 ::fast_io::mnp::code_cvt_os_c_str(host),
+							 ::fast_io::mnp::code_cvt(
+								 ::fast_io::mnp::string_filters::host(
+									 ::fast_io::mnp::os_c_str(host))),
 							 u8"\r\n"
 							 "User-agent:whatever\r\n"
 							 "Accept-Type:*/*\r\n"

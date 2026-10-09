@@ -19,6 +19,9 @@ struct async_transmit_bytes_state
 {
 	static inline constexpr bool transmit_all{all};
 	using allocator_type = alloc_type;
+	using scheduler_type = scheduler;
+	using instm_type = instmtype;
+	using outstm_type = outstmtype;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
 	scheduler sched;
 	outstmtype outstm;
@@ -37,7 +40,7 @@ struct async_transmit_bytes_state
 	::std::size_t round_base;
 	::std::byte buf[async_transmit_bounce_size];
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -60,40 +63,212 @@ inline void async_transmit_bytes_deliver(state_type *state, ::std::cxx_std_error
 template <typename state_type>
 inline void async_transmit_bytes_write_staged(state_type *state) noexcept;
 
+template <typename state_type>
+inline void async_transmit_bytes_read_round(state_type *state) noexcept;
+
+/*
+ * Shared read-round completion: advance off_in, stage the bytes and chain
+ * into the write side; a zero-byte read is EOF and delivers. Used both as
+ * the backend callback and as the inline completion for inputs that only
+ * offer synchronous reads (e.g. a memory source — the sync call runs inside
+ * the submit lambda so a throw is still converted by async_submit_catching).
+ */
+template <typename state_type>
+inline void async_transmit_bytes_read_done(state_type *state, ::std::cxx_std_error err,
+										   ::std::size_t bytesread) noexcept
+{
+	if (err.domain == nullptr)
+	{
+		if (state->off_in.has_opt)
+		{
+			state->off_in.opt = ::fast_io::fposoffadd_nonegative(
+				state->off_in.opt, static_cast<::std::ptrdiff_t>(bytesread));
+		}
+		if (bytesread != 0)
+		{
+			state->staged = bytesread;
+			async_transmit_bytes_write_staged(state);
+			return;
+		}
+	}
+	::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
+}
+
+/*
+ * Shared write-round completion: account the bytes, resubmit on short
+ * writes, and for transmit_all chain back into a read round. A zero-byte
+ * partial write reports no_space_on_device.
+ */
+template <typename state_type>
+inline void async_transmit_bytes_write_done(state_type *state, ::std::cxx_std_error err,
+											::std::size_t byteswritten) noexcept
+{
+	if (err.domain == nullptr)
+	{
+		state->moved += byteswritten;
+		state->remaining -= byteswritten;
+		if (state->off_out.has_opt)
+		{
+			state->off_out.opt = ::fast_io::fposoffadd_nonegative(
+				state->off_out.opt, static_cast<::std::ptrdiff_t>(byteswritten));
+		}
+		if (state->moved - state->round_base != state->staged)
+		{
+			if (byteswritten == 0) [[unlikely]]
+			{
+				::fast_io::details::async_transmit_bytes_deliver(
+					state,
+					::fast_io::details::async_make_error(
+						::std::errc::no_space_on_device),
+					state->moved);
+				return;
+			}
+			async_transmit_bytes_write_staged(state);
+			return;
+		}
+		if constexpr (state_type::transmit_all)
+		{
+			if (state->remaining != 0)
+			{
+				state->round_base = state->moved;
+				async_transmit_bytes_read_round(state);
+				return;
+			}
+		}
+	}
+	::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
+}
+
+/*
+ * Synchronous read for inputs without an async pread define: pread_some
+ * when an explicit offset was requested (streams that cannot pread report
+ * invalid_seek, matching the sync transmit emulation), read_some
+ * otherwise. A throw is delivered through the done path like any backend
+ * error — it never escapes the noexcept state machine.
+ */
+template <typename state_type>
+inline void async_transmit_bytes_sync_read(state_type *state, ::std::size_t chunk) noexcept
+{
+	using instmtype = typename state_type::instm_type;
+	try
+	{
+		::std::byte *iter;
+		if (state->off_in.has_opt)
+		{
+			if constexpr (::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
+			{
+				iter = ::fast_io::operations::decay::pread_some_bytes_decay(
+					state->instm, state->buf, chunk, state->off_in.opt);
+			}
+			else
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			}
+		}
+		else
+		{
+			if constexpr (::fast_io::operations::decay::defines::bytes_readable<instmtype>)
+			{
+				iter = ::fast_io::operations::decay::read_some_bytes_decay(state->instm, state->buf,
+																		   chunk);
+			}
+			else
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			}
+		}
+		::fast_io::details::async_transmit_bytes_read_done(state, {},
+														   static_cast<::std::size_t>(iter - state->buf));
+	}
+	catch throws(::std::error e)
+	{
+		::fast_io::details::async_transmit_bytes_read_done(state, e.release(), 0);
+	}
+}
+
+/* the write-side mirror of async_transmit_bytes_sync_read */
+template <typename state_type>
+inline void async_transmit_bytes_sync_write(state_type *state, ::std::byte const *first,
+											::std::size_t left) noexcept
+{
+	using outstmtype = typename state_type::outstm_type;
+	try
+	{
+		::std::byte const *iter;
+		if (state->off_out.has_opt)
+		{
+			if constexpr (::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
+			{
+				iter = ::fast_io::operations::decay::pwrite_some_bytes_decay(state->outstm, first,
+																			 left, state->off_out.opt);
+			}
+			else
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			}
+		}
+		else
+		{
+			if constexpr (::fast_io::operations::decay::defines::bytes_writable<outstmtype>)
+			{
+				iter = ::fast_io::operations::decay::write_some_bytes_decay(state->outstm, first,
+																			left);
+			}
+			else
+			{
+				::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			}
+		}
+		::fast_io::details::async_transmit_bytes_write_done(state, {},
+															static_cast<::std::size_t>(iter - first));
+	}
+	catch throws(::std::error e)
+	{
+		::fast_io::details::async_transmit_bytes_write_done(state, e.release(), 0);
+	}
+}
+
 /*
  * The generic engine is shared by transmit_some and transmit_all: `some`
  * delivers after the first fully-written round (bytes moved can be short of
  * the bound — the caller loops); `all` resubmits read rounds until the
  * bound is met or EOF. EOF is a normal stop for both (some reports 0, all
- * reports success).
+ * reports success). Each side dispatches independently: a stream with an
+ * async pread/pwrite define goes through the scheduler; a stream with only
+ * synchronous operations (a hash context, an in-memory source, a file not
+ * opened for async) is driven inline — its "completion" is invoked directly
+ * inside the submit lambda.
  */
 template <typename state_type>
 inline void async_transmit_bytes_read_round(state_type *state) noexcept
 {
+	using instmtype = typename state_type::instm_type;
 	::std::size_t const chunk{state->remaining < ::fast_io::details::async_transmit_bounce_size
 								  ? state->remaining
 								  : ::fast_io::details::async_transmit_bounce_size};
 	::fast_io::details::async_submit_catching(
 		[state, chunk]() noexcept {
-			async_pread_some_bytes_underflow_callback_define(
-				state->sched, state->instm, state->buf, chunk, state->off_in, state->timeout,
-				[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
-					if (err.domain == nullptr)
-					{
-						if (state->off_in.has_opt)
-						{
-							state->off_in.opt = ::fast_io::fposoffadd_nonegative(
-								state->off_in.opt, static_cast<::std::ptrdiff_t>(bytesread));
-						}
-						if (bytesread != 0)
-						{
-							state->staged = bytesread;
-							async_transmit_bytes_write_staged(state);
-							return;
-						}
-					}
-					::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
-				});
+			if constexpr (::fast_io::operations::decay::defines::
+							  has_async_pread_some_bytes_underflow_callback_define<
+								  typename state_type::scheduler_type, instmtype,
+								  ::fast_io::details::async_io_callback>)
+			{
+				async_pread_some_bytes_underflow_callback_define(
+					state->sched, state->instm, state->buf, chunk, state->off_in, state->timeout,
+					[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
+						::fast_io::details::async_transmit_bytes_read_done(state, err, bytesread);
+					});
+			}
+			else if constexpr (::fast_io::operations::decay::defines::bytes_readable<instmtype> ||
+							   ::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
+			{
+				::fast_io::details::async_transmit_bytes_sync_read(state, chunk);
+			}
+			else
+			{
+				static_assert(!sizeof(state_type),
+							  "async_transmit input supports neither async nor synchronous byte reads");
+			}
 		},
 		[state](::std::cxx_std_error err) noexcept {
 			::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
@@ -103,49 +278,33 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept
 template <typename state_type>
 inline void async_transmit_bytes_write_staged(state_type *state) noexcept
 {
+	using outstmtype = typename state_type::outstm_type;
 	::std::size_t const left{state->staged - (state->moved - state->round_base)};
 	::fast_io::details::async_submit_catching(
 		[state, left]() noexcept {
-			async_pwrite_some_bytes_overflow_callback_define(
-				state->sched, state->outstm,
-				state->buf + (state->moved - state->round_base), left,
-				state->off_out, state->timeout,
-				[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
-					if (err.domain == nullptr)
-					{
-						state->moved += byteswritten;
-						state->remaining -= byteswritten;
-						if (state->off_out.has_opt)
-						{
-							state->off_out.opt = ::fast_io::fposoffadd_nonegative(
-								state->off_out.opt, static_cast<::std::ptrdiff_t>(byteswritten));
-						}
-						if (state->moved - state->round_base != state->staged)
-						{
-							if (byteswritten == 0) [[unlikely]]
-							{
-								::fast_io::details::async_transmit_bytes_deliver(
-									state,
-									::fast_io::details::async_make_error(
-										::std::errc::no_space_on_device),
-									state->moved);
-								return;
-							}
-							async_transmit_bytes_write_staged(state);
-							return;
-						}
-						if constexpr (state_type::transmit_all)
-						{
-							if (state->remaining != 0)
-							{
-								state->round_base = state->moved;
-								async_transmit_bytes_read_round(state);
-								return;
-							}
-						}
-					}
-					::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
-				});
+			::std::byte const *first{state->buf + (state->moved - state->round_base)};
+			if constexpr (::fast_io::operations::decay::defines::
+							  has_async_pwrite_some_bytes_overflow_callback_define<
+								  typename state_type::scheduler_type, outstmtype,
+								  ::fast_io::details::async_io_callback>)
+			{
+				async_pwrite_some_bytes_overflow_callback_define(
+					state->sched, state->outstm, first, left,
+					state->off_out, state->timeout,
+					[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
+						::fast_io::details::async_transmit_bytes_write_done(state, err, byteswritten);
+					});
+			}
+			else if constexpr (::fast_io::operations::decay::defines::bytes_writable<outstmtype> ||
+							   ::fast_io::operations::decay::defines::bytes_pwritable<outstmtype>)
+			{
+				::fast_io::details::async_transmit_bytes_sync_write(state, first, left);
+			}
+			else
+			{
+				static_assert(!sizeof(state_type),
+							  "async_transmit output supports neither async nor synchronous byte writes");
+			}
 		},
 		[state](::std::cxx_std_error err) noexcept {
 			::fast_io::details::async_transmit_bytes_deliver(state, err, state->moved);
@@ -172,7 +331,7 @@ struct async_transmit_all_native_state
 	::fast_io::posix_statx_timestamp_opt timeout;
 	T callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-											   ::fast_io::details::empty>
+												   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
@@ -257,6 +416,47 @@ inline void async_transmit_some_bytes_decay_callback(
 			::std::move(callback));
 		return;
 	}
+	else if constexpr (!::fast_io::operations::decay::defines::
+						   has_async_pread_some_bytes_underflow_callback_define<
+							   async_scheduler_type, instm_reftype,
+							   ::fast_io::details::async_io_callback> &&
+					   !::fast_io::operations::decay::defines::
+						   has_async_pwrite_some_bytes_overflow_callback_define<
+							   async_scheduler_type, outstm_reftype,
+							   ::fast_io::details::async_io_callback> &&
+					   (::fast_io::operations::decay::defines::bytes_readable<instm_reftype> ||
+						::fast_io::operations::decay::defines::bytes_preadable<instm_reftype>) &&
+					   (::fast_io::operations::decay::defines::bytes_writable<outstm_reftype> ||
+						::fast_io::operations::decay::defines::bytes_pwritable<outstm_reftype>))
+	{
+		/* neither side speaks async — run the synchronous transmit inline
+		 * and report through the callback contract */
+		::fast_io::intfpos_t off_out_v{}, off_in_v{};
+		::fast_io::fpos_nullable_ptr poff_out{}, poff_in{};
+		if (off_out.has_opt)
+		{
+			off_out_v = off_out.opt;
+			poff_out = {off_out_v};
+		}
+		if (off_in.has_opt)
+		{
+			off_in_v = off_in.opt;
+			poff_in = {off_in_v};
+		}
+		::std::size_t const remaining{bound.has_opt ? bound.opt
+													: ::std::numeric_limits<::std::size_t>::max()};
+		try
+		{
+			callback(::std::cxx_std_error{},
+					 ::fast_io::operations::decay::transmit_some_bytes_decay(outstm, poff_out, instm,
+																			 poff_in, remaining));
+		}
+		catch throws(::std::error e)
+		{
+			callback(e.release(), 0);
+		}
+		return;
+	}
 	else
 	{
 		using alloc_type = ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>;
@@ -333,6 +533,36 @@ inline void async_transmit_all_bytes_decay_callback(
 					off_out,
 					instm,
 					off_in, remaining, timeout, ::std::move(callback)));
+		}
+		else if constexpr (!::fast_io::operations::decay::defines::
+							   has_async_pread_some_bytes_underflow_callback_define<
+								   async_scheduler_type, instm_reftype,
+								   ::fast_io::details::async_io_callback> &&
+						   !::fast_io::operations::decay::defines::
+							   has_async_pwrite_some_bytes_overflow_callback_define<
+								   async_scheduler_type, outstm_reftype,
+								   ::fast_io::details::async_io_callback> &&
+						   (::fast_io::operations::decay::defines::bytes_readable<instm_reftype> ||
+							::fast_io::operations::decay::defines::bytes_preadable<instm_reftype>) &&
+						   (::fast_io::operations::decay::defines::bytes_writable<outstm_reftype> ||
+							::fast_io::operations::decay::defines::bytes_pwritable<outstm_reftype>))
+		{
+			/* neither side speaks async — synchronous transmit inline */
+			::fast_io::intfpos_t off_out_v{}, off_in_v{};
+			::fast_io::fpos_nullable_ptr poff_out{}, poff_in{};
+			if (off_out.has_opt)
+			{
+				off_out_v = off_out.opt;
+				poff_out = {off_out_v};
+			}
+			if (off_in.has_opt)
+			{
+				off_in_v = off_in.opt;
+				poff_in = {off_in_v};
+			}
+			::fast_io::operations::decay::transmit_all_bytes_decay(outstm, poff_out, instm, poff_in,
+																   bound);
+			callback(::std::cxx_std_error{});
 		}
 		else
 		{

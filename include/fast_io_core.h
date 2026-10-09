@@ -93,6 +93,7 @@
 #include "fast_io_core_impl/dll_mode.h"
 #include "fast_io_core_impl/socket/impl.h"
 #include "fast_io_core_impl/http_header.h"
+#include "fast_io_core_impl/string_filters.h"
 #include "fast_io_core_impl/io_lockable.h"
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
