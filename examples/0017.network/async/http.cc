@@ -44,38 +44,35 @@ static fi::io_async_task<> fetch(fi::io_async_observer sched, fi::u8iobuf_socket
 }
 
 int main(int argc, char const **argv)
+try
 {
-	try
+	if (argc < 2)
 	{
-		if (argc < 2)
+		if (argc == 0)
 		{
-			if (argc == 0)
-			{
-				return 1;
-			}
-			fi::perr("Usage: ", ::fast_io::mnp::os_c_str(*argv), " <domain>\n");
 			return 1;
 		}
-		fi::net_service service;
-		fi::io_async_scheduler scheduler{fi::io_async};
-		fi::io_async_observer sched{scheduler.native_handle()};
-		fi::u8iobuf_socket_file sock{fi::tcp_connect(
-			fi::to_ip(fi::native_dns_file(::fast_io::mnp::os_c_str(argv[1])), 80),
-			fi::open_mode::no_block)};
-		fi::u8native_file out{u8"index.html", fi::open_mode::out | fi::open_mode::no_block};
-
-		fi::io_async_task<> t{
-			fetch(sched, ::std::move(sock), ::std::move(out), argv[1])};
-		t.resume();
-		while (!t.done())
-		{
-			fi::io_async_wait(sched);
-		}
-		t.rethrow_if_error();
-	}
-	catch throws(::std::error e)
-	{
-		fi::perrln("fatal: ", e);
+		fi::perr("Usage: ", ::fast_io::mnp::os_c_str(*argv), " <domain>\n");
 		return 1;
 	}
+	fi::net_service service;
+	fi::io_async_scheduler sched{fi::io_async};
+	fi::u8iobuf_socket_file sock{fi::tcp_connect(
+		fi::to_ip(fi::native_dns_file(::fast_io::mnp::os_c_str(argv[1])), 80),
+		fi::open_mode::no_block)};
+	fi::u8native_file out{u8"index.html", fi::open_mode::out | fi::open_mode::no_block};
+
+	fi::io_async_task<> t{
+		fetch(sched, ::std::move(sock), ::std::move(out), argv[1])};
+	t.resume();
+	while (!t.done())
+	{
+		fi::io_async_wait(sched);
+	}
+	t.rethrow_if_error();
+}
+catch throws(::std::error e)
+{
+	fi::perrln("fatal: ", e);
+	return 1;
 }
