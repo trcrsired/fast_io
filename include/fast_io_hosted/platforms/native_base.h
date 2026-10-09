@@ -20,6 +20,9 @@ inline constexpr ::std::uint_least32_t win32_stderr_number(static_cast<::std::ui
 #include "win32_network/win32.h"
 #if defined(__HERBCEPTIONS__)
 #include "win32_iocp.h"
+/* Windows 11 IoRing backend — opt-in, never the io_async default:
+ * resolved at runtime, absent on Win10 and wine */
+#include "win32_ioring.h"
 #endif
 #endif
 #include "linux/system_call.h"
