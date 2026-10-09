@@ -332,6 +332,22 @@ inline constexpr void output_stream_buffer_flush_define(basic_io_buffer_ref<io_b
 		::fast_io::operations::output_stream_ref(iobref.iobptr->handle), iobref.iobptr->output_buffer);
 }
 
+/*
+ * output_stream_buffer_detach_define(iobref): hand the pending output
+ * buffer allocation to the returned RAII guard so an async writer can
+ * send those bytes zero-copy while the stream keeps buffering into a
+ * lazily-allocated fresh buffer. Any buffered stream can participate in
+ * zero-copy async print by providing this define; the guard must expose
+ * pending_bytes() -> {first, count}.
+ */
+template <typename io_buffer_type>
+	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) ==
+			 ::fast_io::buffer_mode::out)
+inline constexpr auto output_stream_buffer_detach_define(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
+{
+	return iobref.iobptr->detach_output_buffer();
+}
+
 template <typename io_buffer_type>
 inline constexpr auto obuffer_begin(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
 {

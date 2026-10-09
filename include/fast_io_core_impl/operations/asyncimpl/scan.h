@@ -3,45 +3,346 @@
 namespace fast_io::details
 {
 
-/*
- * underflow awaiter for async scanning: submits one async refill of the
- * input buffer's pending window and resumes the scan coroutine with the
- * byte count — 0 on EOF. Mirrors sync scan's ibuffer_underflow step.
- */
-template <typename scheduler, typename instmtype>
-struct async_scan_underflow_awaiter : async_awaiter_result<::std::size_t>
+/* Per-arg scan state: the incremental context state for
+ * context_scannable args; precise-reserve args parse in one shot and
+ * carry no state, so the member degenerates to empty. */
+template <typename char_type, typename argtype, bool>
+struct async_scan_arg_state
 {
+	using type = ::fast_io::details::empty;
+};
+
+template <typename char_type, typename argtype>
+struct async_scan_arg_state<char_type, argtype, true>
+{
+	using type = typename ::std::remove_cvref_t<decltype(scan_context_type(
+		::fast_io::io_reserve_type<char_type, argtype>))>::type;
+};
+
+/* Staging buffer for precise-reserve scans that must be fed through an
+ * async read when the pending window is shorter than the fixed token
+ * size; absent (size 0) for non-precise args. */
+template <typename char_type, typename argtype, bool>
+struct async_scan_precise_size
+{
+	static inline constexpr ::std::size_t value{0};
+};
+
+template <typename char_type, typename argtype>
+struct async_scan_precise_size<char_type, argtype, true>
+{
+	static inline constexpr ::std::size_t value{
+		scan_precise_reserve_size(::fast_io::io_reserve_type<char_type, argtype>)};
+};
+
+/*
+ * Resumable per-argument scan awaiter: parses one arg from the input
+ * stream's pending window, refilling it asynchronously when the window
+ * runs out mid-token. This is a plain awaiter — no coroutine frame, no
+ * allocation — so the common case (the whole token already buffered)
+ * resolves entirely inside await_ready at the cost of a synchronous
+ * scan. The multi-arg async_scan_some coroutine drives one of these per
+ * argument and pays a single coroutine frame per call, not per arg.
+ *
+ * Semantics mirror the sync per-arg scan: await_resume reports
+ * scan_some_result_t{0} on success and {1} when the stream hit
+ * end_of_file mid-arg (or require_all turns it into an end_of_file
+ * herbception); parse failures arrive through the error channel.
+ *
+ * Suspension/resumption is callback-driven: an exhausted window submits
+ * async_ibuffer_underflow; a precise-reserve arg with a short window
+ * submits async_pread_all_bytes into the staging buffer (the buffered
+ * define serves pending bytes first, preserving order). The completion
+ * re-enters pump() which either parses on or submits again — the user
+ * coroutine resumes only when the arg is fully resolved.
+ */
+template <bool require_all, typename scheduler, typename instmtype, typename argtype>
+struct async_scan_arg_awaiter
+	: async_awaiter_result<::fast_io::scan_some_result_t>
+{
+	using char_type = typename instmtype::input_char_type;
+	static constexpr ::std::size_t precise_n{
+		async_scan_precise_size<char_type, argtype,
+								::fast_io::precise_reserve_scannable<char_type, argtype>>::value};
+
 	scheduler sched;
 	instmtype instm;
 	::fast_io::posix_statx_timestamp_opt timeout;
+	argtype arg;
+	FAST_IO_NO_UNIQUE_ADDRESS typename async_scan_arg_state<
+		char_type, argtype,
+		::fast_io::context_scannable<char_type, argtype>>::type state;
+	char_type pread_buffer[precise_n == 0 ? 1 : precise_n];
+	/* the parse-phase flags ride on await_ready's fast path and must be
+	 * initialized at construction; the refill machinery below is only
+	 * touched once a submission is in flight, so await_suspend does its
+	 * initialization lazily instead of paying for it on every call */
+	bool in_context{};
+	bool eof_seen{};
+	bool awaiting_pread{};
+	bool pread_done{};
+	::std::cxx_std_error refill_err;
+	::std::size_t refill_got;
+	bool pumping;
+	bool refill_ready;
 
-	inline constexpr bool await_ready() const noexcept
+	inline constexpr async_scan_arg_awaiter(scheduler s, instmtype i,
+											::fast_io::posix_statx_timestamp_opt t,
+											argtype a) noexcept
+		: sched{s}, instm{i}, timeout{t}, arg{::std::move(a)}, state{}
 	{
+	}
+
+	/* commit the consumed cursor — the iterator may differ in type from
+	 * the stream's cursor on transcode refs */
+	template <typename currtype, typename itertype>
+	inline void commit_curr(currtype c, itertype it) noexcept
+	{
+		if constexpr (::std::same_as<currtype, itertype>)
+		{
+			ibuffer_set_curr(instm, it);
+		}
+		else
+		{
+			ibuffer_set_curr(instm, it - c + c);
+		}
+	}
+
+	/* ec -> terminal: ok reports the arg scanned, end_of_file reports it
+	 * unscanned, anything else lands in the error slot */
+	inline bool resolve_ec(::fast_io::freestanding::parse_errc ec) noexcept
+	{
+		if (ec == ::fast_io::freestanding::parse_errc::ok)
+		{
+			this->value.remained_args = 0;
+			return true;
+		}
+		if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
+		{
+			this->value.remained_args = 1;
+			return true;
+		}
+		this->err = ::fast_io::details::async_make_error(ec);
+		return true;
+	}
+
+	inline bool resolve_precise(char_type const *p)
+	{
+		if constexpr (::fast_io::precise_reserve_scannable_no_error<char_type, argtype>)
+		{
+			scan_precise_reserve_define(::fast_io::io_reserve_type<char_type, argtype>, p, arg);
+			this->value.remained_args = 0;
+			return true;
+		}
+		else
+		{
+			return resolve_ec(scan_precise_reserve_define(
+				::fast_io::io_reserve_type<char_type, argtype>, p, arg));
+		}
+	}
+
+	/* one synchronous parse step; true = resolved, false = needs device
+	 * bytes (awaiting_pread selects the submission kind) */
+	inline bool step()
+	{
+		if constexpr (::fast_io::precise_reserve_scannable<char_type, argtype>)
+		{
+			if (pread_done)
+			{
+				pread_done = false;
+				return resolve_precise(pread_buffer);
+			}
+			auto curr{ibuffer_curr(instm)};
+			if (static_cast<::std::size_t>(ibuffer_end(instm) - curr) >= precise_n)
+			{
+				ibuffer_set_curr(instm, curr + precise_n);
+				return resolve_precise(curr);
+			}
+			if (eof_seen)
+			{
+				this->value.remained_args = 1;
+				return true;
+			}
+			awaiting_pread = true;
+			return false;
+		}
+		else if constexpr (::fast_io::context_scannable<char_type, argtype>)
+		{
+			if (!in_context)
+			{
+				in_context = true;
+				if constexpr (::fast_io::contiguous_scannable<char_type, argtype>)
+				{
+					auto curr{ibuffer_curr(instm)};
+					auto const end{ibuffer_end(instm)};
+					auto [it, ec]{scan_contiguous_define(
+						::fast_io::io_reserve_type<char_type, argtype>, curr, end, arg)};
+					if (it != end)
+					{
+						commit_curr(curr, it);
+						return resolve_ec(ec);
+					}
+				}
+			}
+			if (eof_seen)
+			{
+				return resolve_ec(scan_context_eof_define(
+					::fast_io::io_reserve_type<char_type, argtype>, state, arg));
+			}
+			auto c{ibuffer_curr(instm)};
+			auto const e{ibuffer_end(instm)};
+			auto [it, ec]{scan_context_define(
+				::fast_io::io_reserve_type<char_type, argtype>, state, c, e, arg)};
+			commit_curr(c, it);
+			if (ec == ::fast_io::freestanding::parse_errc::ok)
+			{
+				this->value.remained_args = 0;
+				return true;
+			}
+			if (ec != ::fast_io::freestanding::parse_errc::partial)
+			{
+				return resolve_ec(ec);
+			}
+			/* partial consumed the whole window (it == e), so the refill
+			 * cannot discard pending bytes */
+			return false;
+		}
+		else
+		{
+			static_assert(::fast_io::context_scannable<char_type, argtype>,
+						  "type not scannable. need context_scannable");
+			return true;
+		}
+	}
+
+	inline void consume_refill() noexcept
+	{
+		refill_ready = false;
+		if (refill_err.domain != nullptr)
+		{
+			this->err = refill_err;
+			refill_err = {};
+			return;
+		}
+		if (awaiting_pread)
+		{
+			awaiting_pread = false;
+			pread_done = true;
+		}
+		else if (refill_got == 0)
+		{
+			eof_seen = true;
+		}
+	}
+
+	/* fire the pending refill — inline completions loop back into pump,
+	 * async completions re-enter through the callback */
+	inline void submit() noexcept
+	{
+		refill_ready = false;
+		if (awaiting_pread)
+		{
+			::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
+				sched, instm, reinterpret_cast<::std::byte *>(pread_buffer),
+				precise_n * sizeof(char_type), ::fast_io::intfpos_opt{}, timeout,
+				[this](::std::cxx_std_error e) noexcept {
+					refill_err = e;
+					refill_ready = true;
+					if (pumping || !this->suspended)
+					{
+						return;
+					}
+					if (pump())
+					{
+						this->coro.resume();
+					}
+				});
+		}
+		else
+		{
+			async_ibuffer_underflow(
+				sched, instm, timeout,
+				[this](::std::cxx_std_error e, ::std::size_t got) noexcept {
+					refill_err = e;
+					refill_got = got;
+					refill_ready = true;
+					if (pumping || !this->suspended)
+					{
+						return;
+					}
+					if (pump())
+					{
+						this->coro.resume();
+					}
+				});
+		}
+	}
+
+	/* drive the state machine until resolved or a submission is genuinely
+	 * pending; returns true when value/err is ready */
+	inline bool pump() noexcept
+	{
+		if (this->err.domain != nullptr)
+		{
+			return true;
+		}
+		pumping = true;
+		for (;;)
+		{
+			if (refill_ready)
+			{
+				consume_refill();
+				if (this->err.domain != nullptr)
+				{
+					pumping = false;
+					return true;
+				}
+			}
+			try
+			{
+				if (step())
+				{
+					pumping = false;
+					return true;
+				}
+			}
+			catch throws(::std::error e)
+			{
+				this->err = e.release();
+				pumping = false;
+				return true;
+			}
+			submit();
+			if (!refill_ready)
+			{
+				break;
+			}
+		}
+		pumping = false;
 		return false;
 	}
+
+	/* the common case: the pending window already covers the token, so
+	 * the whole scan resolves here without suspending or allocating */
+	inline bool await_ready()
+	{
+		return step();
+	}
+
 	inline bool await_suspend(::std::coroutine_handle<> h) noexcept
 	{
 		this->coro = h;
-		/* unqualified on purpose: the freestanding-layer define is not
-		 * visible here at parse time — ADL reaches it through the
-		 * stream ref when the awaiter is instantiated */
-		async_ibuffer_underflow(
-			sched, instm, timeout,
-			[this](::std::cxx_std_error e, ::std::size_t got) noexcept {
-				this->err = e;
-				this->value = got;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
-		return this->async_suspend_done();
+		refill_ready = false;
+		if (pump())
+		{
+			return false;
+		}
+		this->suspended = true;
+		return true;
 	}
-	inline ::std::size_t await_resume() throws
+
+	inline ::fast_io::scan_some_result_t await_resume() throws
+		requires(!require_all)
 	{
 		if (this->err.domain != nullptr)
 		{
@@ -51,6 +352,22 @@ struct async_scan_underflow_awaiter : async_awaiter_result<::std::size_t>
 		}
 		return this->value;
 	}
+
+	inline void await_resume() throws
+		requires(require_all)
+	{
+		if (this->err.domain != nullptr)
+		{
+			auto e{this->err};
+			this->err = {};
+			throw throws e;
+		}
+		if (this->value.remained_args != 0)
+		{
+			::fast_io::herbceptions::throws_parse_errc(
+				::fast_io::freestanding::parse_errc::end_of_file);
+		}
+	}
 };
 
 } // namespace fast_io::details
@@ -59,18 +376,23 @@ namespace fast_io::operations::decay
 {
 
 /*
- * co_await-able async scan_some: parses each argument from the input
- * stream's buffer window, refilling it through async_ibuffer_underflow
- * when the context parser reports partial. This is the async mirror of
- * scan_some_freestanding_decay — the args are written in place (they
- * live in the awaiting caller's frame, so nothing here has a lifetime
- * problem) and the result reports the arguments left unscanned,
- * exactly like sync scan_some.
- *
- * The stream is the input_stream_ref (a basic_io_buffer_ref for
- * buffered streams): async scanning needs the pending-window machinery
- * plus an async underflow — a byte read past the token cannot be put
- * back on an unbuffered stream, exactly like sync scan needs basic_ibuf.
+ * Single-arg decay: returns the resumable awaiter — a plain object, no
+ * coroutine frame and no allocation. co_await resolves it synchronously
+ * whenever the pending window covers the token.
+ */
+template <bool require_all, typename async_scheduler_type, typename instmtype, typename argtype>
+inline auto async_scan_arg_decay(async_scheduler_type sched,
+								 ::fast_io::posix_statx_timestamp_opt timeout, instmtype instm,
+								 argtype arg) noexcept
+{
+	return ::fast_io::details::async_scan_arg_awaiter<require_all, async_scheduler_type, instmtype,
+													  argtype>{sched, instm, timeout, ::std::move(arg)};
+}
+
+/*
+ * Multi-arg async scan_some: one coroutine frame per call driving the
+ * per-arg awaiters — each of them suspends only when the pending window
+ * runs out, so in-buffer multi-arg scans pay a single frame.
  */
 template <typename async_scheduler_type, typename instmtype, typename... Args>
 inline ::fast_io::io_async_task<
@@ -100,130 +422,12 @@ async_scan_some_freestanding_decay(async_scheduler_type sched,
 				  "async scan is supported for sizeof(char_type) == 1 only");
 	template for (constexpr auto i : ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
 	{
-		using argtype = ::std::remove_cvref_t<Args...[i]>;
-		if constexpr (::fast_io::precise_reserve_scannable<char_type, argtype>)
+		if (!co_await ::fast_io::details::async_scan_arg_awaiter<
+				false, async_scheduler_type, instmtype,
+				::std::remove_cvref_t<Args... [i]>> { sched, instm, timeout,
+														  ::std::move(args...[i]) })
 		{
-			/* fixed-size scan: n pending chars satisfy it in place, else
-			 * read_all them out of the stream into the frame buffer and
-			 * parse there — the async equivalent of the sync path */
-			constexpr ::std::size_t n{
-				scan_precise_reserve_size(::fast_io::io_reserve_type<char_type, argtype>)};
-			char_type buffer[n == 0 ? 1 : n];
-			auto curr{ibuffer_curr(instm)};
-			char_type const *p{curr};
-			if (static_cast<::std::size_t>(ibuffer_end(instm) - curr) >= n)
-			{
-				ibuffer_set_curr(instm, curr + n);
-			}
-			else
-			{
-				co_await ::fast_io::operations::decay::async_pread_all_bytes_decay(
-					sched, instm, reinterpret_cast<::std::byte *>(buffer),
-					n * sizeof(char_type), ::fast_io::intfpos_opt{}, timeout);
-				p = buffer;
-			}
-			if constexpr (::fast_io::precise_reserve_scannable_no_error<char_type, argtype>)
-			{
-				scan_precise_reserve_define(::fast_io::io_reserve_type<char_type, argtype>, p,
-											args...[i]);
-			}
-			else
-			{
-				auto ec{scan_precise_reserve_define(
-					::fast_io::io_reserve_type<char_type, argtype>, p, args...[i])};
-				if (ec != ::fast_io::freestanding::parse_errc::ok)
-				{
-					if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
-					{
-						co_return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
-					}
-					::fast_io::herbceptions::throws_parse_errc(ec);
-				}
-			}
-		}
-		else if constexpr (::fast_io::context_scannable<char_type, argtype>)
-		{
-			/* contiguous attempt first over the pending window; only when
-			 * the window runs out does the context machine take over
-			 * across refills — same split as the sync path */
-			bool need_context{true};
-			if constexpr (::fast_io::contiguous_scannable<char_type, argtype>)
-			{
-				auto curr{ibuffer_curr(instm)};
-				auto const end{ibuffer_end(instm)};
-				auto [it, ec]{scan_contiguous_define(
-					::fast_io::io_reserve_type<char_type, argtype>, curr, end, args...[i])};
-				if (it != end)
-				{
-					need_context = false;
-					if constexpr (::std::same_as<decltype(curr), decltype(it)>)
-					{
-						ibuffer_set_curr(instm, it);
-					}
-					else
-					{
-						ibuffer_set_curr(instm, it - curr + curr);
-					}
-					if (ec != ::fast_io::freestanding::parse_errc::ok)
-					{
-						if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
-						{
-							co_return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
-						}
-						::fast_io::herbceptions::throws_parse_errc(ec);
-					}
-				}
-			}
-			if (need_context)
-			{
-				for (typename ::std::remove_cvref_t<decltype(scan_context_type(
-						 io_reserve_type<char_type, argtype>))>::type state;
-					 ;)
-				{
-					auto c{ibuffer_curr(instm)};
-					auto const e{ibuffer_end(instm)};
-					auto [it, ec]{scan_context_define(io_reserve_type<char_type, argtype>,
-													  state, c, e, args...[i])};
-					if constexpr (::std::same_as<decltype(c), decltype(it)>)
-					{
-						ibuffer_set_curr(instm, it);
-					}
-					else
-					{
-						ibuffer_set_curr(instm, it - c + c);
-					}
-					if (ec == ::fast_io::freestanding::parse_errc::ok)
-					{
-						break;
-					}
-					if (ec != ::fast_io::freestanding::parse_errc::partial)
-					{
-						::fast_io::herbceptions::throws_parse_errc(ec);
-					}
-					if (!co_await ::fast_io::details::async_scan_underflow_awaiter<
-							async_scheduler_type, instmtype>{{}, sched, instm, timeout})
-						[[unlikely]]
-					{
-						ec = scan_context_eof_define(io_reserve_type<char_type, argtype>,
-													 state, args...[i]);
-						if (ec == ::fast_io::freestanding::parse_errc::ok)
-						{
-							break;
-						}
-						else if (ec == ::fast_io::freestanding::parse_errc::end_of_file)
-						{
-							co_return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
-						}
-						::fast_io::herbceptions::throws_parse_errc(ec);
-					}
-				}
-			}
-		}
-		else
-		{
-			constexpr bool not_scannable{
-				::fast_io::context_scannable<char_type, argtype>};
-			static_assert(not_scannable, "type not scannable. need context_scannable");
+			co_return ::fast_io::scan_some_result_t{sizeof...(Args) - i};
 		}
 	}
 	co_return ::fast_io::scan_some_result_t{};
@@ -242,10 +446,16 @@ namespace fast_io::operations
  * every argument scanned; a nonzero remained_args reports the arguments
  * left unscanned.
  *
+ * A single arg resolves to a plain awaiter — no coroutine frame — so the
+ * in-buffer case costs no more than a synchronous scan; a multi-arg
+ * call pays one coroutine frame for the driver, still suspending only
+ * on real refills.
+ *
  * The stream must be a buffered input (basic_ibuf et al.) — scanning a
  * byte stream without a buffer cannot put back the byte past the token.
  */
-template <typename async_scheduler_type, typename instmtype, typename... Args>
+template <bool require_all = false, typename async_scheduler_type, typename instmtype,
+		  typename... Args>
 inline auto async_scan_some_freestanding(async_scheduler_type &&scheduler,
 										 ::fast_io::posix_statx_timestamp_opt timeout,
 										 instmtype &&instm, Args &&...args)
@@ -256,13 +466,45 @@ inline auto async_scan_some_freestanding(async_scheduler_type &&scheduler,
 	using instm_reftype =
 		::std::remove_cvref_t<decltype(::fast_io::operations::input_stream_ref(instm))>;
 	using char_type = typename instm_reftype::input_char_type;
-	return ::fast_io::operations::decay::async_scan_some_freestanding_decay(
-		::fast_io::operations::async_scheduler_ref(scheduler), timeout,
-		::fast_io::operations::input_stream_ref(instm),
-		::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...);
+	if constexpr (sizeof...(Args) == 1)
+	{
+		return ::fast_io::operations::decay::async_scan_arg_decay<require_all>(
+			::fast_io::operations::async_scheduler_ref(scheduler), timeout,
+			::fast_io::operations::input_stream_ref(instm),
+			::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...);
+	}
+	else
+	{
+		return ::fast_io::operations::decay::async_scan_some_freestanding_decay(
+			::fast_io::operations::async_scheduler_ref(scheduler), timeout,
+			::fast_io::operations::input_stream_ref(instm),
+			::fast_io::io_scan_forward<char_type>(::fast_io::io_scan_alias(args))...);
+	}
 }
 
 } // namespace fast_io::operations
+
+namespace fast_io::operations::decay
+{
+
+/* multi-arg async_scan driver: awaits the scan_some result and raises
+ * end_of_file through the channel when args remain unscanned */
+template <typename async_scheduler_type, typename instmtype, typename... Args>
+inline ::fast_io::io_async_task<
+	void, ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>>
+async_scan_decay(async_scheduler_type sched,
+				 ::fast_io::posix_statx_timestamp_opt timeout, instmtype &&instm,
+				 Args &&...args) throws
+{
+	if (!co_await ::fast_io::operations::async_scan_some_freestanding(
+			sched, timeout, ::std::forward<instmtype>(instm), ::std::forward<Args>(args)...))
+	{
+		::fast_io::herbceptions::throws_parse_errc(
+			::fast_io::freestanding::parse_errc::end_of_file);
+	}
+}
+
+} // namespace fast_io::operations::decay
 
 namespace fast_io
 {
@@ -294,21 +536,26 @@ inline auto async_scan_some(async_scheduler_type &&scheduler,
 
 /*
  * async_scan(sched, timeout, instm, args...) — like sync scan: awaits the
- * async_scan_some task and raises end_of_file through the herbception
- * channel when fewer than all args could be scanned.
+ * async_scan_some awaiter/task and raises end_of_file through the
+ * herbception channel when fewer than all args could be scanned.
  */
 template <typename async_scheduler_type, typename instmtype, typename... Args>
-inline ::fast_io::io_async_task<
-	void, ::fast_io::details::async_scheduler_allocator_t<async_scheduler_type>>
-async_scan(async_scheduler_type scheduler,
-		   ::fast_io::posix_statx_timestamp_opt timeout, instmtype &&instm, Args &&...args) throws
+inline auto async_scan(async_scheduler_type scheduler,
+					   ::fast_io::posix_statx_timestamp_opt timeout, instmtype &&instm,
+					   Args &&...args)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (!co_await ::fast_io::operations::async_scan_some_freestanding(
-			::std::move(scheduler), timeout,
-			::std::forward<instmtype>(instm), ::std::forward<Args>(args)...))
+	if constexpr (sizeof...(Args) == 1)
 	{
-		::fast_io::herbceptions::throws_parse_errc(
-			::fast_io::freestanding::parse_errc::end_of_file);
+		return ::fast_io::operations::async_scan_some_freestanding<true>(
+			::std::move(scheduler), timeout, ::std::forward<instmtype>(instm),
+			::std::forward<Args>(args)...);
+	}
+	else
+	{
+		return ::fast_io::operations::decay::async_scan_decay(
+			::std::move(scheduler), timeout, ::std::forward<instmtype>(instm),
+			::std::forward<Args>(args)...);
 	}
 }
 

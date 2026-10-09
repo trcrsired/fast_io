@@ -32,6 +32,23 @@ inline constexpr bool async_print_is_iobuf_ref{false};
 template <typename T>
 inline constexpr bool async_print_is_iobuf_ref<::fast_io::basic_io_buffer_ref<T>>{true};
 
+/* detached pending-buffer guard for a stream ref: the define's return
+ * type when the stream can detach, empty when it cannot */
+template <typename outstmtype,
+		  bool = ::fast_io::operations::decay::defines::
+			  has_output_stream_buffer_detach_define<outstmtype>>
+struct async_print_detached_type
+{
+	using type = ::fast_io::details::empty;
+};
+
+template <typename outstmtype>
+struct async_print_detached_type<outstmtype, true>
+{
+	using type = decltype(output_stream_buffer_detach_define(
+		::std::declval<outstmtype>()));
+};
+
 /*
  * Handle-carrying strlike payload for streams whose allocator has
  * status: containers::basic_string stores no allocator handle, so a
@@ -189,10 +206,10 @@ async_print_detached_pending(::fast_io::details::empty const &) noexcept
 	return {nullptr, 0};
 }
 
-template <typename iobuffertraits>
+template <typename detachedtype>
+	requires requires(detachedtype const &d) { d.pending_bytes(); }
 inline constexpr ::std::pair<::std::byte const *, ::std::size_t>
-async_print_detached_pending(
-	::fast_io::details::io_buffer::io_detached_output_buffer<iobuffertraits> const &detached) noexcept
+async_print_detached_pending(detachedtype const &detached) noexcept
 {
 	return detached.pending_bytes();
 }
@@ -257,37 +274,83 @@ inline constexpr char_type *async_print_format_one(char_type *curr, T &&arg)
  * through the herbception channel. A fully buffered print leaves nothing
  * to submit, so await_ready skips the suspend entirely.
  */
+/* The bytes an async print actually submits — detached pending buffer,
+ * formatted payload and the scatter table referencing both — live in a
+ * state object allocated through the scheduler's allocator, created only
+ * when a call really has work to submit. The scatter submission retains
+ * the array by pointer, so it must live here, not in the awaiter. */
+template <typename scheduler, typename detachedtype, typename stringtype>
+struct async_print_work_state
+{
+	using allocator_type = async_scheduler_allocator_t<scheduler>;
+	static inline constexpr bool alloc_with_status{allocator_type::has_status};
+	detachedtype detached{};
+	stringtype payload{};
+	::fast_io::io_scatter_t scatters[2]{};
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
+												   typename allocator_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+/*
+ * The co_await face of async_print: formatting ran eagerly at call time,
+ * so the awaiter carries only the submission parameters plus a work
+ * pointer — nullptr when the formatted text landed in the stream's
+ * buffer and nothing needs the device, which makes the common buffered
+ * case a trivially-ready await on a small object.
+ */
 template <typename scheduler, typename outstmtype, typename detachedtype, typename stringtype>
 struct async_print_awaiter : async_awaiter_result<void>
 {
 	using char_type = typename stringtype::char_type;
+	using work_state_type = async_print_work_state<scheduler, detachedtype, stringtype>;
 	scheduler sched;
 	outstmtype outstm;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	stringtype payload;
-	detachedtype detached{};
-	::fast_io::io_scatter_t scatters[2]{};
-	bool has_work{};
+	work_state_type *work{};
+
+	inline constexpr async_print_awaiter() noexcept = default;
+	async_print_awaiter(async_print_awaiter const &) = delete;
+	async_print_awaiter &operator=(async_print_awaiter const &) = delete;
+	/* the work pointer is owned — move transfers it, never copies */
+	inline constexpr async_print_awaiter(async_print_awaiter &&other) noexcept
+		: sched{other.sched}, outstm{other.outstm}, timeout{other.timeout}, work{other.work}
+	{
+		other.work = nullptr;
+	}
+
+	/* a never-co_awaited awaiter still owns its unsubmitted state */
+	inline ~async_print_awaiter()
+	{
+		if (work != nullptr)
+		{
+			::fast_io::details::async_delete_state(work);
+		}
+	}
 
 	inline constexpr bool await_ready() const noexcept
 	{
-		return !has_work;
+		return work == nullptr;
 	}
 	inline bool await_suspend(::std::coroutine_handle<> h) noexcept
 	{
 		this->coro = h;
-		auto [pfirst, pcount]{async_print_detached_pending(detached)};
+		auto *w{this->work};
+		this->work = nullptr;
 		::std::size_t nsc{};
+		auto [pfirst, pcount]{async_print_detached_pending(w->detached)};
 		if (pcount != 0)
 		{
-			scatters[nsc++] = {pfirst, pcount};
+			w->scatters[nsc++] = {pfirst, pcount};
 		}
-		if (::std::size_t const scount{payload.size() * sizeof(char_type)}; scount != 0)
+		if (::std::size_t const scount{w->payload.size() * sizeof(char_type)}; scount != 0)
 		{
-			scatters[nsc++] = {payload.data(), scount};
+			w->scatters[nsc++] = {w->payload.data(), scount};
 		}
-		auto callback{[this](::std::cxx_std_error e) noexcept {
+		auto callback{[this, w](::std::cxx_std_error e) noexcept {
 			this->err = e;
+			::fast_io::details::async_delete_state(w);
 			if (this->suspended)
 			{
 				this->coro.resume();
@@ -300,13 +363,13 @@ struct async_print_awaiter : async_awaiter_result<void>
 		if (nsc == 1)
 		{
 			::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
-				sched, outstm, static_cast<::std::byte const *>(scatters[0].base),
-				scatters[0].len, ::fast_io::intfpos_opt{}, timeout, callback);
+				sched, outstm, static_cast<::std::byte const *>(w->scatters[0].base),
+				w->scatters[0].len, ::fast_io::intfpos_opt{}, timeout, callback);
 		}
 		else
 		{
 			::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay_callback(
-				sched, outstm, scatters, nsc, ::fast_io::intfpos_opt{}, timeout,
+				sched, outstm, w->scatters, nsc, ::fast_io::intfpos_opt{}, timeout,
 				callback);
 		}
 		return this->async_suspend_done();
@@ -356,7 +419,11 @@ inline auto async_print_decay(async_scheduler_type sched,
 	{
 		using iobuf_type = typename outstmtype::io_buffer_type;
 		using traits_type = typename iobuf_type::traits_type;
-		using detached_type = typename iobuf_type::detached_output_buffer_type;
+		constexpr bool can_detach{
+			::fast_io::operations::decay::defines::
+				has_output_stream_buffer_detach_define<outstmtype>};
+		using detached_type =
+			typename ::fast_io::details::async_print_detached_type<outstmtype>::type;
 		constexpr ::std::size_t bufsize{traits_type::output_buffer_size};
 		/* payload buffers follow the device's allocator — the iobuf's own
 		 * allocator here — else the fail-fast native_global_allocator.
@@ -377,7 +444,11 @@ inline auto async_print_decay(async_scheduler_type sched,
 		auto handle_ref{::fast_io::operations::output_stream_ref(outstm.iobptr->handle)};
 		using ret_awaiter = ::fast_io::details::async_print_awaiter<
 			async_scheduler_type, decltype(handle_ref), detached_type, payload_string_type>;
+		using work_state_type = typename ret_awaiter::work_state_type;
 		auto &obuffer{outstm.iobptr->output_buffer};
+		auto make_work{[&]() FAST_IO_HERBCEPTIONS_THROWS {
+			return ::fast_io::details::async_new_state_plain<work_state_type>(sched);
+		}};
 		auto alloc_buffer{[&]() FAST_IO_HERBCEPTIONS_THROWS_IF(
 							  ::fast_io::typed_generic_allocator_adapter<typename traits_type::allocator_type,
 																		 char_type>::throws_on_allocation_failure) {
@@ -465,12 +536,15 @@ inline auto async_print_decay(async_scheduler_type sched,
 				{
 					/* pending bytes would have to drain before the buffer can
 					 * take this print — detach them so they ride the submission
-					 * zero-copy and format into the fresh buffer right away */
+					 * zero-copy and format into a fresh buffer right away */
 					ret_awaiter ret;
 					ret.sched = sched;
 					ret.outstm = handle_ref;
 					ret.timeout = timeout;
-					ret.detached = outstm.iobptr->detach_output_buffer();
+					ret.work = make_work();
+					ret.work->detached = output_stream_buffer_detach_define(outstm);
+					/* detach leaves the buffer null — allocate a fresh one */
+					alloc_buffer();
 					auto *curr{obuffer.buffer_curr};
 					template for (constexpr auto i :
 								  ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
@@ -484,7 +558,6 @@ inline auto async_print_decay(async_scheduler_type sched,
 						++curr;
 					}
 					obuffer.buffer_curr = curr;
-					ret.has_work = true;
 					return ret;
 				}
 				auto *curr{obuffer.buffer_curr};
@@ -536,7 +609,8 @@ inline auto async_print_decay(async_scheduler_type sched,
 			/* pending bytes must reach the device before the payload —
 			 * detach them so the submission carries them zero-copy and the
 			 * fresh buffer can take what fits */
-			ret.detached = outstm.iobptr->detach_output_buffer();
+			ret.work = make_work();
+			ret.work->detached = output_stream_buffer_detach_define(outstm);
 		}
 		if (obuffer.buffer_begin == nullptr &&
 			payload.size() <= bufsize)
@@ -554,16 +628,19 @@ inline auto async_print_decay(async_scheduler_type sched,
 		}
 		else
 		{
-			ret.payload = ::std::move(payload);
+			if (ret.work == nullptr)
+			{
+				ret.work = make_work();
+			}
+			ret.work->payload = ::std::move(payload);
 		}
-		if (ret.detached.buffer_begin == nullptr && ret.payload.empty())
+		if (ret.work == nullptr)
 		{
 			return ret_awaiter{};
 		}
 		ret.sched = sched;
 		ret.outstm = handle_ref;
 		ret.timeout = timeout;
-		ret.has_work = true;
 		return ret;
 	}
 	else
@@ -618,10 +695,16 @@ inline auto async_print_decay(async_scheduler_type sched,
 		payload_string_type payload{
 			::fast_io::details::basic_general_concat_phase1_decay1_impl<
 				line, char_type, payload_string_type>(args...)};
-		return ::fast_io::details::async_print_awaiter<async_scheduler_type, outstmtype,
-													   ::fast_io::details::empty,
-													   payload_string_type>{
-			{}, sched, outstm, timeout, ::std::move(payload), {}, {}, true};
+		using ret_awaiter = ::fast_io::details::async_print_awaiter<
+			async_scheduler_type, outstmtype, ::fast_io::details::empty, payload_string_type>;
+		ret_awaiter ret;
+		ret.sched = sched;
+		ret.outstm = outstm;
+		ret.timeout = timeout;
+		ret.work = ::fast_io::details::async_new_state_plain<
+			typename ret_awaiter::work_state_type>(sched);
+		ret.work->payload = ::std::move(payload);
+		return ret;
 	}
 }
 

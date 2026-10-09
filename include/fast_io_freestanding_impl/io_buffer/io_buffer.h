@@ -281,32 +281,22 @@ public:
 	using detached_output_buffer_type =
 		::fast_io::details::io_buffer::io_detached_output_buffer<traits_type>;
 	/* Hands the pending output buffer allocation to the returned RAII
-	 * guard and installs a fresh output_buffer_size allocation, so an
-	 * async writer can send the detached bytes while this stream keeps
-	 * buffering — the pending bytes are never copied. When no output
-	 * buffer was ever allocated the guard is empty and nothing is
-	 * allocated; the next buffered write allocates lazily. */
-	[[nodiscard]] inline detached_output_buffer_type detach_output_buffer()
-		FAST_IO_HERBCEPTIONS_THROWS_IF(
-			::fast_io::typed_generic_allocator_adapter<allocator_type,
-													   output_char_type>::throws_on_allocation_failure)
+	 * guard, so an async writer can send the detached bytes while this
+	 * stream keeps buffering — the pending bytes are never copied. The
+	 * stream's buffer pointers are reset to nullptr; the next buffered
+	 * write allocates lazily, the same as a never-allocated buffer. */
+	[[nodiscard]] inline constexpr detached_output_buffer_type detach_output_buffer() noexcept
 		requires((traits_type::mode & ::fast_io::buffer_mode::out) ==
 				 ::fast_io::buffer_mode::out)
 	{
 		detached_output_buffer_type detached;
-		if (output_buffer.buffer_begin != nullptr)
-		{
-			detached.allocator_handle = allocator_handle;
-			detached.buffer_begin = output_buffer.buffer_begin;
-			detached.buffer_curr = output_buffer.buffer_curr;
-			detached.buffer_end = output_buffer.buffer_end;
-			output_char_type *fresh{
-				::fast_io::details::io_buffer::iobuffer_allocate<output_char_type, allocator_type>(
-					allocator_handle, traits_type::output_buffer_size)};
-			output_buffer.buffer_begin = fresh;
-			output_buffer.buffer_curr = fresh;
-			output_buffer.buffer_end = fresh + traits_type::output_buffer_size;
-		}
+		detached.allocator_handle = allocator_handle;
+		detached.buffer_begin = output_buffer.buffer_begin;
+		detached.buffer_curr = output_buffer.buffer_curr;
+		detached.buffer_end = output_buffer.buffer_end;
+		output_buffer.buffer_begin = nullptr;
+		output_buffer.buffer_curr = nullptr;
+		output_buffer.buffer_end = nullptr;
 		return detached;
 	}
 
