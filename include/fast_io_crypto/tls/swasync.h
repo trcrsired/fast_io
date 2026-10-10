@@ -501,11 +501,6 @@ inline void tls_win32_pool_handshake_run(::fast_io::details::win32_thread_pool_n
 	{
 		self->err = e.release();
 	}
-	catch (...)
-	{
-		self->err =
-			::fast_io::details::async_make_error(::std::errc::protocol_error);
-	}
 }
 
 template <typename client_t, typename func>
@@ -583,11 +578,6 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_handshake_work(void *
 	catch throws(::std::error e)
 	{
 		cookie->base.result = e.release();
-	}
-	catch (...)
-	{
-		cookie->base.result =
-			::fast_io::details::async_make_error(::std::errc::protocol_error);
 	}
 	if (!::fast_io::details::win32_ioring_ferry_completion(
 			__builtin_addressof(cookie->base))) [[unlikely]]

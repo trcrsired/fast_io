@@ -294,14 +294,6 @@ inline void io_uring_tls_recv_deliver(void *self) noexcept
 					io_uring_tls_recv_finish(cookie, e.release());
 					return;
 				}
-				catch (...)
-				{
-					io_uring_tls_recv_finish(
-						cookie,
-						::fast_io::details::async_make_error(
-							::std::errc::protocol_error));
-					return;
-				}
 			}
 			off += 4 + mlen;
 		}
@@ -320,11 +312,6 @@ inline void io_uring_tls_recv_deliver(void *self) noexcept
 	catch throws(::std::error e)
 	{
 		io_uring_tls_recv_finish(cookie, e.release());
-	}
-	catch (...)
-	{
-		io_uring_tls_recv_finish(
-			cookie, ::fast_io::details::async_make_error(::std::errc::protocol_error));
 	}
 }
 
@@ -373,21 +360,6 @@ inline void io_uring_tls_recv_submit(
 		else
 		{
 			callback(err, ::std::size_t{});
-		}
-	}
-	catch (...)
-	{
-		if constexpr (::std::is_invocable_v<::std::remove_cvref_t<func>,
-											::std::cxx_std_error,
-											::fast_io::io_scatter_status_t>)
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::fast_io::io_scatter_status_t{});
-		}
-		else
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::std::size_t{});
 		}
 	}
 }
@@ -592,12 +564,6 @@ inline void io_uring_tls_sw_recv_deliver(void *self) noexcept
 			io_uring_tls_sw_recv_finish(cookie, err);
 			return;
 		}
-		catch (...)
-		{
-			io_uring_tls_sw_recv_finish(
-				cookie, ::fast_io::details::async_make_error(::std::errc::protocol_error));
-			return;
-		}
 	}
 	/* need more wire bytes -- resubmit a fresh round on this cookie */
 	try
@@ -610,11 +576,6 @@ inline void io_uring_tls_sw_recv_deliver(void *self) noexcept
 	{
 		auto err{e.release()};
 		io_uring_tls_sw_recv_finish(cookie, err);
-	}
-	catch (...)
-	{
-		io_uring_tls_sw_recv_finish(
-			cookie, ::fast_io::details::async_make_error(::std::errc::protocol_error));
 	}
 }
 
@@ -688,21 +649,6 @@ inline void io_uring_tls_sw_recv_submit(
 		else
 		{
 			callback(err, ::std::size_t{});
-		}
-	}
-	catch (...)
-	{
-		if constexpr (::std::is_invocable_v<::std::remove_cvref_t<func>,
-											::std::cxx_std_error,
-											::fast_io::io_scatter_status_t>)
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::fast_io::io_scatter_status_t{});
-		}
-		else
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::std::size_t{});
 		}
 	}
 }
@@ -821,11 +767,6 @@ inline void io_uring_tls_sw_write_deliver(void *self) noexcept
 		auto err{e.release()};
 		io_uring_tls_sw_write_finish(cookie, err);
 	}
-	catch (...)
-	{
-		io_uring_tls_sw_write_finish(
-			cookie, ::fast_io::details::async_make_error(::std::errc::protocol_error));
-	}
 }
 
 template <typename client_t, typename func>
@@ -879,21 +820,6 @@ inline void io_uring_tls_sw_write_submit(
 		else
 		{
 			callback(err, ::std::size_t{});
-		}
-	}
-	catch (...)
-	{
-		if constexpr (::std::is_invocable_v<::std::remove_cvref_t<func>,
-											::std::cxx_std_error,
-											::fast_io::io_scatter_status_t>)
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::fast_io::io_scatter_status_t{});
-		}
-		else
-		{
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error),
-					 ::std::size_t{});
 		}
 	}
 }
@@ -1021,13 +947,6 @@ inline void io_uring_tls_close_deliver(void *self) noexcept
 			::fast_io::details::async_delete_state(cookie);
 			callback(err);
 		}
-		catch (...)
-		{
-			::fast_io::details::sys_close(cookie->client->sock_.fd);
-			auto callback{::std::move(cookie->callback)};
-			::fast_io::details::async_delete_state(cookie);
-			callback(::fast_io::details::async_make_error(::std::errc::protocol_error));
-		}
 		return;
 	}
 	auto callback{::std::move(cookie->callback)};
@@ -1090,11 +1009,6 @@ inline void io_uring_tls_close_submit(
 		   inline so it cannot leak */
 		::fast_io::details::sys_close(fd);
 		callback(e.release());
-	}
-	catch (...)
-	{
-		::fast_io::details::sys_close(fd);
-		callback(::fast_io::details::async_make_error(::std::errc::protocol_error));
 	}
 }
 
@@ -1376,10 +1290,6 @@ inline void posix_thread_pool_tls_handshake_run(
 	catch throws(::std::error e)
 	{
 		self->err = e.release();
-	}
-	catch (...)
-	{
-		self->err = ::fast_io::details::async_make_error(::std::errc::protocol_error);
 	}
 }
 
