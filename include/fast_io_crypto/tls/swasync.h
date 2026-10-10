@@ -184,15 +184,8 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 			tls_sw_recv_finish(st, ::std::cxx_std_error{}, drained);
 			return;
 		}
-		if (st->ct_have < record_header_size)
-		{
-			tls_sw_recv_round(st);
-			return;
-		}
-		::std::size_t const clen{
-			(static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(st->ct[3])) << 8) |
-			static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(st->ct[4]))};
-		if (clen == 0 || clen > tls_max_ciphertext)
+		::std::size_t const reclen{tls_record_frame(st->ct, st->ct_have)};
+		if (reclen == ~static_cast<::std::size_t>(0))
 		{
 			tls_sw_recv_finish(
 				st,
@@ -202,8 +195,7 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 				0);
 			return;
 		}
-		::std::size_t const reclen{record_header_size + clen};
-		if (st->ct_have < reclen)
+		if (reclen == 0)
 		{
 			tls_sw_recv_round(st);
 			return;

@@ -1111,4 +1111,27 @@ inline constexpr x509_verify_result tls_certificate_verify(
 	}
 }
 
+/* parse every DER blob of a stored peer chain -- false on the first
+   unparseable entry */
+inline bool x509_certificate_parse_all(x509_certificate *out,
+									   ::std::size_t cap,
+									   ::std::byte const *storage,
+									   ::std::size_t const *offsets,
+									   ::std::size_t const *sizes,
+									   ::std::size_t count) noexcept
+{
+	if (count > cap)
+	{
+		return false;
+	}
+	for (::std::size_t i{}; i != count; ++i)
+	{
+		if (!x509_certificate_parse(out[i], storage + offsets[i], sizes[i]))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 } // namespace fast_io::tls::details

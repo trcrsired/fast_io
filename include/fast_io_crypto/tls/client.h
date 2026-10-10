@@ -74,6 +74,51 @@ struct app_traffic_key_iv
 inline constexpr ::std::size_t tls_max_ciphertext{(1u << 14u) + 256u};
 inline constexpr ::std::size_t tls_max_record{5 + tls_max_ciphertext};
 
+/* decode a record header's payload length; ~size_t{0} on malformed
+   (empty or over the TLS cap) */
+inline constexpr ::std::size_t tls_record_payload_size(::std::byte const *hdr) noexcept
+{
+	::std::size_t const clen{
+		(static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(hdr[3])) << 8) |
+		static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(hdr[4]))};
+	if (clen == 0 || clen > tls_max_ciphertext)
+	{
+		return ~static_cast<::std::size_t>(0);
+	}
+	return clen;
+}
+
+/* frame one buffered ciphertext record: returns its total wire size
+   (header + payload) when complete, 0 when more bytes are needed, and
+   ~size_t{0} when the length field is malformed. Shared by the sync sw
+   read path and every async accumulator. */
+inline constexpr ::std::size_t tls_record_frame(::std::byte const *ct,
+												::std::size_t have) noexcept
+{
+	if (have < 5)
+	{
+		return 0;
+	}
+	::std::size_t const clen{tls_record_payload_size(ct)};
+	if (clen == ~static_cast<::std::size_t>(0))
+	{
+		return clen;
+	}
+	return have >= 5 + clen ? 5 + clen : 0;
+}
+
+/* constant-time-ish all-zero test -- the X25519 all-zero shared-secret
+   check (rfc8446 4.2.8.1) */
+inline constexpr bool tls_all_zero(::std::byte const *p, ::std::size_t n) noexcept
+{
+	::std::byte acc{};
+	for (::std::size_t i{}; i != n; ++i)
+	{
+		acc |= p[i];
+	}
+	return acc == ::std::byte{};
+}
+
 /* SOL_TLS direction selectors -- used only inside __linux__ offload
    paths, defined unconditionally so the shims compile everywhere */
 inline constexpr int tls_tx{1};
@@ -831,50 +876,28 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 				{
 					details::tls_fail(sock, alert_description::unexpected_message, false);
 				}
+				switch (details::ee_body_check(body, body_size))
 				{
-					wire_reader ee{body, body + body_size};
-					wire_reader exts;
-					if (!ee.take_sub16(exts) || !ee.empty())
-					{
-						details::tls_fail(sock, alert_description::decode_error, false);
-					}
-					while (!exts.empty())
-					{
-						::std::uint_least16_t et;
-						::std::byte const *ep;
-						::std::size_t en;
-						if (!exts.take_u16(et) || !exts.take_vector16(ep, en))
-						{
-							details::tls_fail(sock, alert_description::decode_error, false);
-						}
-						/* these are SH-only extensions (rfc8446 4.2) */
-						if (et == static_cast<::std::uint_least16_t>(extension_type::key_share) ||
-							et == static_cast<::std::uint_least16_t>(extension_type::supported_versions) ||
-							et == static_cast<::std::uint_least16_t>(extension_type::pre_shared_key))
-						{
-							details::tls_fail(sock, alert_description::illegal_parameter, false);
-						}
-					}
-					state = want_cert_or_cr;
+				case details::ee_check::ok:
+					break;
+				case details::ee_check::forbidden_extension:
+					details::tls_fail(sock, alert_description::illegal_parameter, false);
+				default:
+					details::tls_fail(sock, alert_description::decode_error, false);
 				}
+				state = want_cert_or_cr;
 				break;
 			case handshake_type::certificate_request:
 				if (state != want_cert_or_cr)
 				{
 					details::tls_fail(sock, alert_description::unexpected_message, false);
 				}
+				if (!details::cr_context_copy(body, body_size, cr_context,
+											 __builtin_addressof(cr_context_size)))
 				{
-					wire_reader cr{body, body + body_size};
-					::std::byte const *ctx;
-					::std::size_t ctx_size;
-					if (!cr.take_vector8(ctx, ctx_size))
-					{
-						details::tls_fail(sock, alert_description::decode_error, false);
-					}
-					::fast_io::freestanding::non_overlapped_copy_n(ctx, ctx_size, cr_context);
-					cr_context_size = ctx_size;
-					cert_request_seen = true;
+					details::tls_fail(sock, alert_description::decode_error, false);
 				}
+				cert_request_seen = true;
 				break;
 			case handshake_type::certificate:
 				if (state != want_cert_or_cr)
@@ -978,13 +1001,11 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 
 	/* ---- verify the certificate chain + leaf hostname ---- */
 	::fast_io::tls::details::x509_certificate presented[16];
-	for (::std::size_t i{}; i != peer->count; ++i)
+	if (!::fast_io::tls::details::x509_certificate_parse_all(
+			presented, 16, peer->storage.data(), peer->offsets, peer->sizes,
+			peer->count))
 	{
-		if (!::fast_io::tls::details::x509_certificate_parse(
-				presented[i], peer->storage.data() + peer->offsets[i], peer->sizes[i]))
-		{
-			details::tls_fail(sock, alert_description::bad_certificate, false);
-		}
+		details::tls_fail(sock, alert_description::bad_certificate, false);
 	}
 	if (cfg->check_chain)
 	{
@@ -1067,19 +1088,15 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	::std::byte *fp{flight};
 	if (cert_request_seen)
 	{
-		/* empty Certificate echoing the request_context */
-		fp = details::handshake_header_write(fp, handshake_type::certificate,
-											 static_cast<::std::uint_least32_t>(1 + cr_context_size + 3));
-		*fp++ = static_cast<::std::byte>(cr_context_size);
-		fp = wire_put_bytes(fp, cr_context, cr_context_size);
-		fp = wire_put_u24(fp, 0); /* empty certificate_list */
+		/* empty Certificate echoing the request_context; it is
+		   transcripted before the Finished MAC is keyed */
+		fp = details::client_cert_echo_write(fp, cr_context, cr_context_size);
 		transcript.update(flight, fp);
 	}
 	::std::byte fin[64];
 	::fast_io::tls::details::finished_verify_data_to_ptr<crypto>(md, fin, c_hs, transcript);
-	::std::byte *const fin_start{fp};
-	fp = details::handshake_header_write(fp, handshake_type::finished, digest_size);
-	fp = wire_put_bytes(fp, fin, digest_size);
+	::std::byte const *const fin_start{fp};
+	fp = details::finished_message_write(fp, fin, digest_size);
 	{
 		::std::byte sealed[1024];
 		::std::size_t const sealed_size{crypto::record_seal(
@@ -1181,20 +1198,16 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 	params.x25519_public_key = pk;
 
 	::std::byte ch[2048];
-	::std::size_t const body_size{::fast_io::tls::details::client_hello_size(params)};
-	if (body_size + 9 > sizeof(ch))
+	::std::byte const *msg{};
+	::std::size_t ch_msg_size{};
+	::std::size_t const rec_size{
+		::fast_io::tls::details::client_hello_record_write(
+			ch, sizeof(ch), params, __builtin_addressof(msg),
+			__builtin_addressof(ch_msg_size))};
+	if (rec_size == 0)
 	{
 		details::tls_throw_alert(alert_description::internal_error);
 	}
-	::std::byte *const msg{ch + 5};
-	::std::byte *const body{::fast_io::tls::details::handshake_header_write(
-		msg, handshake_type::client_hello, static_cast<::std::uint_least32_t>(body_size))};
-	::std::byte *const endp{::fast_io::tls::details::client_hello_write_body(body, params)};
-	::std::size_t const ch_msg_size{static_cast<::std::size_t>(endp - msg)};
-	::std::byte *hdr{ch};
-	hdr = ::fast_io::tls::details::record_header_write(hdr, content_type::handshake,
-													   static_cast<::std::uint_least16_t>(ch_msg_size));
-	::std::size_t const rec_size{static_cast<::std::size_t>(hdr - ch) + ch_msg_size};
 	FAST_IO_HERBCEPTIONS_TRY
 	{
 		details::tls_write_full(client->sock_, ch, rec_size);
@@ -1246,47 +1259,27 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 	{
 		details::tls_fail(client->sock_, alert_description::decode_error, false);
 	}
-	if (shi.is_hello_retry_request || shi.has_pre_shared_key)
+	switch (::fast_io::tls::details::server_hello_validate(shi))
 	{
-		/* we only offer x25519 -- nothing to retry with */
+	case ::fast_io::tls::details::server_hello_check::ok:
+		break;
+	case ::fast_io::tls::details::server_hello_check::hello_retry:
+	case ::fast_io::tls::details::server_hello_check::bad_cipher_suite:
 		details::tls_fail(client->sock_, alert_description::handshake_failure, false);
-	}
-	if (!shi.supported_versions_tls13 || shi.downgrade_sentinel_seen)
-	{
-		/* absolutely no downgrade: not 1.2, not anything else */
+	case ::fast_io::tls::details::server_hello_check::downgrade:
 		details::tls_fail(client->sock_, alert_description::protocol_version, false);
-	}
-	if (!shi.session_id_echo_match)
-	{
+	default:
 		details::tls_fail(client->sock_, alert_description::illegal_parameter, false);
 	}
 	cipher_suite const suite{static_cast<cipher_suite>(shi.cipher_suite)};
-	if (suite != cipher_suite::aes_128_gcm_sha256 &&
-		suite != cipher_suite::aes_256_gcm_sha384 &&
-		suite != cipher_suite::chacha20_poly1305_sha256)
-	{
-		details::tls_fail(client->sock_, alert_description::handshake_failure, false);
-	}
-	if (shi.key_share_group != named_group::x25519 ||
-		shi.key_share_public_key_size != 32)
-	{
-		details::tls_fail(client->sock_, alert_description::illegal_parameter, false);
-	}
 
 	::std::byte shared[32];
 	crypto::x25519_shared_secret(shared, shi.key_share_public_key, sk);
 	::fast_io::secure_clear(sk, sizeof(sk));
+	if (details::tls_all_zero(shared, 32))
 	{
 		/* rfc8446 4.2.8.1: all-zero X25519 result aborts */
-		::std::byte acc{};
-		for (::std::size_t i{}; i != 32; ++i)
-		{
-			acc |= shared[i];
-		}
-		if (acc == ::std::byte{})
-		{
-			details::tls_fail(client->sock_, alert_description::illegal_parameter, false);
-		}
+		details::tls_fail(client->sock_, alert_description::illegal_parameter, false);
 	}
 
 	auto peer{tls_alloc_construct<basic_peer_certificates<allocator_type>, allocator_type>(client->allocator_handle)};
@@ -1404,10 +1397,8 @@ inline ::std::size_t tls_client_sw_read_some(basic_tls_client<allocator_type, so
 		}
 		::std::byte rec[details::tls_max_record];
 		details::tls_read_full(client->sock_, rec, details::record_header_size);
-		::std::size_t const clen{
-			(static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(rec[3])) << 8) |
-			static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(rec[4]))};
-		if (clen == 0 || clen > details::tls_max_ciphertext)
+		::std::size_t const clen{details::tls_record_payload_size(rec)};
+		if (clen == ~static_cast<::std::size_t>(0))
 		{
 			tls_client_fail(client, alert_description::record_overflow);
 		}

@@ -596,16 +596,9 @@ inline void io_uring_tls_sw_recv_deliver(void *self) noexcept
 	for (;;)
 	{
 		/* frame one record */
-		if (cookie->ct_have < ::fast_io::tls::details::record_header_size)
-		{
-			break;
-		}
-		::std::size_t const clen{
-			(static_cast<::std::size_t>(
-				 static_cast<::std::uint_least8_t>(cookie->ct[3]))
-			 << 8) |
-			static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(cookie->ct[4]))};
-		if (clen == 0 || clen > ::fast_io::tls::details::tls_max_ciphertext)
+		::std::size_t const reclen{
+			::fast_io::tls::details::tls_record_frame(cookie->ct, cookie->ct_have)};
+		if (reclen == ~static_cast<::std::size_t>(0))
 		{
 			io_uring_tls_sw_recv_finish(
 				cookie, ::fast_io::tls::details::tls_alert_error(
@@ -613,8 +606,7 @@ inline void io_uring_tls_sw_recv_deliver(void *self) noexcept
 								   ::fast_io::tls::alert_description::record_overflow)));
 			return;
 		}
-		::std::size_t const reclen{::fast_io::tls::details::record_header_size + clen};
-		if (cookie->ct_have < reclen)
+		if (reclen == 0)
 		{
 			break;
 		}

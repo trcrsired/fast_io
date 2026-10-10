@@ -181,6 +181,31 @@ inline constexpr ::std::byte *client_hello_write_body(::std::byte *p, client_hel
 	return p;
 }
 
+/* assemble the whole ClientHello record (record header + handshake
+   header + body) into rec. Returns the wire size, 0 when cap cannot
+   hold it; msg_out/msg_size_out report the handshake-message span for
+   the transcript. */
+inline ::std::size_t client_hello_record_write(
+	::std::byte *rec, ::std::size_t cap, client_hello_params const &params,
+	::std::byte const **msg_out, ::std::size_t *msg_size_out) noexcept
+{
+	::std::size_t const body_size{client_hello_size(params)};
+	if (body_size + 9 > cap) /* 5 record hdr + 4 handshake hdr */
+	{
+		return 0;
+	}
+	::std::byte *const msg{rec + record_header_size};
+	::std::byte *const body{handshake_header_write(
+		msg, handshake_type::client_hello, static_cast<::std::uint_least32_t>(body_size))};
+	::std::byte *const endp{client_hello_write_body(body, params)};
+	::std::size_t const msg_size{static_cast<::std::size_t>(endp - msg)};
+	::std::byte *const hdr_end{record_header_write(
+		rec, content_type::handshake, static_cast<::std::uint_least16_t>(msg_size))};
+	*msg_out = msg;
+	*msg_size_out = msg_size;
+	return static_cast<::std::size_t>(hdr_end - rec) + msg_size;
+}
+
 struct server_hello_info
 {
 	::std::uint_least16_t cipher_suite{};
@@ -307,6 +332,52 @@ inline constexpr bool server_hello_parse(server_hello_info &info,
 	return true;
 }
 
+/* the client's verdict on a parsed ServerHello: which rejection applies,
+   or ok -- the alert mapping stays with the caller (it owns the socket) */
+enum class server_hello_check : ::std::uint_least8_t
+{
+	ok,
+	hello_retry,
+	downgrade,
+	session_id_mismatch,
+	bad_cipher_suite,
+	bad_key_share
+};
+
+inline constexpr server_hello_check
+server_hello_validate(server_hello_info const &shi) noexcept
+{
+	if (shi.is_hello_retry_request || shi.has_pre_shared_key)
+	{
+		/* we only offer x25519 -- nothing to retry with */
+		return server_hello_check::hello_retry;
+	}
+	if (!shi.supported_versions_tls13 || shi.downgrade_sentinel_seen)
+	{
+		/* absolutely no downgrade: not 1.2, not anything else */
+		return server_hello_check::downgrade;
+	}
+	if (!shi.session_id_echo_match)
+	{
+		return server_hello_check::session_id_mismatch;
+	}
+	if (shi.cipher_suite !=
+			static_cast<::std::uint_least16_t>(cipher_suite::aes_128_gcm_sha256) &&
+		shi.cipher_suite !=
+			static_cast<::std::uint_least16_t>(cipher_suite::aes_256_gcm_sha384) &&
+		shi.cipher_suite !=
+			static_cast<::std::uint_least16_t>(cipher_suite::chacha20_poly1305_sha256))
+	{
+		return server_hello_check::bad_cipher_suite;
+	}
+	if (shi.key_share_group != named_group::x25519 ||
+		shi.key_share_public_key_size != 32)
+	{
+		return server_hello_check::bad_key_share;
+	}
+	return server_hello_check::ok;
+}
+
 struct certificate_verify_info
 {
 	signature_scheme scheme{};
@@ -344,6 +415,87 @@ inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::
 	::fast_io::details::non_overlapped_copy_n(ctx_str, 33, reinterpret_cast<char8_t *>(out + 64));
 	out[97] = ::std::byte{0};
 	::fast_io::details::non_overlapped_copy_n(transcript_digest, digest_size, out + 98);
+}
+
+/* an EncryptedExtensions body's extension whitelist -- the SH-only
+   extensions (key_share, supported_versions, pre_shared_key) are
+   forbidden here (rfc8446 4.2). Returns the failing check so the
+   caller picks its alert. */
+enum class ee_check : ::std::uint_least8_t
+{
+	ok,
+	malformed,
+	forbidden_extension
+};
+
+inline constexpr ee_check ee_body_check(::std::byte const *body,
+										::std::size_t body_size) noexcept
+{
+	wire_reader ee{body, body + body_size};
+	wire_reader exts;
+	if (!ee.take_sub16(exts) || !ee.empty())
+	{
+		return ee_check::malformed;
+	}
+	while (!exts.empty())
+	{
+		::std::uint_least16_t et;
+		::std::byte const *ep;
+		::std::size_t en;
+		if (!exts.take_u16(et) || !exts.take_vector16(ep, en))
+		{
+			return ee_check::malformed;
+		}
+		if (et == static_cast<::std::uint_least16_t>(extension_type::key_share) ||
+			et == static_cast<::std::uint_least16_t>(extension_type::supported_versions) ||
+			et == static_cast<::std::uint_least16_t>(extension_type::pre_shared_key))
+		{
+			return ee_check::forbidden_extension;
+		}
+	}
+	return ee_check::ok;
+}
+
+/* copy a CertificateRequest's certificate_request_context (u8 vector,
+   at most 255 by wire) into ctx_out. Returns false on malformed. */
+inline bool cr_context_copy(::std::byte const *body, ::std::size_t body_size,
+							::std::byte *ctx_out, ::std::size_t *ctx_size_out) noexcept
+{
+	wire_reader cr{body, body + body_size};
+	::std::byte const *ctx;
+	::std::size_t ctx_size;
+	if (!cr.take_vector8(ctx, ctx_size))
+	{
+		return false;
+	}
+	::fast_io::freestanding::non_overlapped_copy_n(ctx, ctx_size, ctx_out);
+	*ctx_size_out = ctx_size;
+	return true;
+}
+
+/* an empty Certificate echoing the request_context -- written when the
+   server asked for client auth. The caller folds [msg_start, ret) into
+   the transcript before keying the Finished MAC. */
+inline ::std::byte *client_cert_echo_write(::std::byte *p,
+										   ::std::byte const *cr_ctx,
+										   ::std::size_t cr_ctx_size) noexcept
+{
+	p = handshake_header_write(p, handshake_type::certificate,
+							   static_cast<::std::uint_least32_t>(1 + cr_ctx_size + 3));
+	*p++ = static_cast<::std::byte>(cr_ctx_size);
+	p = wire_put_bytes(p, cr_ctx, cr_ctx_size);
+	return wire_put_u24(p, 0); /* empty certificate_list */
+}
+
+/* handshake header + Finished body. The caller transcripts [msg_start,
+   ret) after the record ships (post-Finished traffic keys need it). */
+inline ::std::byte *finished_message_write(::std::byte *p,
+										   ::std::byte const *fin_data,
+										   ::std::size_t fin_size) noexcept
+{
+	p = handshake_header_write(p, handshake_type::finished,
+							   static_cast<::std::uint_least32_t>(fin_size));
+	return wire_put_bytes(p, fin_data, fin_size);
 }
 
 } // namespace fast_io::tls::details
