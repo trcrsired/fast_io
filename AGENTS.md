@@ -194,3 +194,13 @@ void bar() { baz(...); }
   parameterize the differing constants/branches instead.
 - The extracted function is `details::` or file-local; call sites keep
   their own names.
+
+## Debugging internals
+
+Use `__builtin_printf`/`__builtin_write` to debug fast_io's own code --
+the library cannot print through itself while it is the thing being
+debugged (chicken-and-egg). `perrln`/`debug_perrln` allocate, run the
+format machinery, and may themselves be part of the bug; a raw
+`__builtin_printf("%p %zu\n", ptr, n)` touches none of it. Strip the
+probes before committing.
+

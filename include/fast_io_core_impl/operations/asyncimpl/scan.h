@@ -129,15 +129,6 @@ struct async_scan_arg_awaiter
 											argtype a) noexcept
 		: sched{s}, instm{i}, timeout{t}, arg{::std::move(a)}, state{}
 	{
-		refill.result = this;
-		refill.awaiter = this;
-		refill.resume_pump = [](void *a) noexcept {
-			auto *self{static_cast<async_scan_arg_awaiter *>(a)};
-			if (self->pump())
-			{
-				self->coro.resume();
-			}
-		};
 	}
 
 	/* commit the consumed cursor — the iterator may differ in type from
@@ -286,6 +277,18 @@ struct async_scan_arg_awaiter
 	 * async completions re-enter through the callback */
 	inline void submit() noexcept
 	{
+		/* the back-pointers track THIS live awaiter -- wiring them in the
+		   ctor would capture a pre-materialization prvalue that dies when
+		   the awaiter lands in the coroutine frame */
+		refill.result = this;
+		refill.awaiter = this;
+		refill.resume_pump = [](void *a) noexcept {
+			auto *self{static_cast<async_scan_arg_awaiter *>(a)};
+			if (self->pump())
+			{
+				self->coro.resume();
+			}
+		};
 		refill.refill_ready = false;
 		if (awaiting_pread)
 		{
