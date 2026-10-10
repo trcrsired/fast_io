@@ -14,7 +14,7 @@ namespace fast_io::tls
 
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator,
 		  typename socket_observer_type = ::fast_io::native_socket_io_observer,
-		  typename crypto = fast_io_crypto_backend>
+		  typename crypto = tls_default_crypto>
 struct basic_tls_io_observer
 {
 	using char_type = ch_type;

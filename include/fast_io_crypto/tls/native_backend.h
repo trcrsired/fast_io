@@ -9,12 +9,9 @@ backend-agnostic.
 
 -D FAST_IO_TLS_FORCE_FAST_IO=1 pins the aliases to the fast_io userspace
 backend even where a platform backend exists -- e.g. wine's schannel
-still shells out to gnutls, which a wine user may not provide.
+still shells out to gnutls, which a wine user may not provide. The macro
+itself is defined in defs.h since the crypto backend also reads it.
 */
-
-#if !defined(FAST_IO_TLS_FORCE_FAST_IO)
-#define FAST_IO_TLS_FORCE_FAST_IO 0
-#endif
 
 namespace fast_io::tls
 {

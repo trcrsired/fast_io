@@ -23,7 +23,6 @@
 #include "openssl_driver/error.h"
 #include "openssl_driver/bio.h"
 #include "openssl_driver/tls.h"
-#include "openssl_driver/tls_crypto.h"
 #if 0
 #include "openssl_driver/ossl_lib_context.h"
 #include "openssl_driver/context.h"

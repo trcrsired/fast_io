@@ -15,3 +15,28 @@ the kTLS socket glue lives in <fast_io_tls.h> (hosted, Linux).
 #include "x509.h"
 #include "pem.h"
 #include "crypto_backend.h"
+#include "ossl_backend.h"
+
+/*
+default crypto backend for basic_tls::crypto: openssl's primitives
+where the EVP headers are visible on non-windows platforms (-lcrypto
+at link time); the builtin fast_io algorithms on windows and under
+FAST_IO_TLS_FORCE_FAST_IO. gnutls is the next provider in the same
+slot. FAST_IO_TLS_CRYPTO overrides with a user-chosen backend type.
+*/
+namespace fast_io::tls
+{
+
+#if !defined(FAST_IO_TLS_CRYPTO)
+#if FAST_IO_TLS_FORCE_FAST_IO || (defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__))
+using tls_default_crypto = fast_io_crypto_backend;
+#elif FAST_IO_TLS_HAS_OSSL_CRYPTO
+using tls_default_crypto = ossl_crypto_backend;
+#else
+using tls_default_crypto = fast_io_crypto_backend;
+#endif
+#else
+using tls_default_crypto = FAST_IO_TLS_CRYPTO;
+#endif
+
+} // namespace fast_io::tls

@@ -17,7 +17,7 @@ namespace fast_io::tls
 {
 
 template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator,
-		  typename crypto = fast_io_crypto_backend>
+		  typename crypto = tls_default_crypto>
 struct basic_tls
 {
 	using char_type = typename socket_type::char_type;

@@ -15,6 +15,16 @@ fast_io parser for now -- the ops that matter for throughput (record
 AEAD) and state size (X25519) are the EVP ones.
 */
 
+#if !defined(FAST_IO_TLS_HAS_OSSL_CRYPTO)
+#if __has_include(<openssl/evp.h>)
+#define FAST_IO_TLS_HAS_OSSL_CRYPTO 1
+#else
+#define FAST_IO_TLS_HAS_OSSL_CRYPTO 0
+#endif
+#endif
+
+#if FAST_IO_TLS_HAS_OSSL_CRYPTO
+
 #include <openssl/evp.h>
 
 namespace fast_io::tls
@@ -230,3 +240,5 @@ public:
 };
 
 } // namespace fast_io::tls
+
+#endif /* FAST_IO_TLS_HAS_OSSL_CRYPTO */

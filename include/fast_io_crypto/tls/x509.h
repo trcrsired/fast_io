@@ -988,7 +988,7 @@ inline constexpr x509_chain_result x509_chain_verify(
 				return x509_chain_result::not_ca;
 			}
 			x509_verify_result const vr{crypto::cert_sig_verify(cur, presented[i].spki_algorithm,
-															  presented[i].public_key, presented[i].public_key_size)};
+																presented[i].public_key, presented[i].public_key_size)};
 			if (vr == x509_verify_result::ok)
 			{
 				next_idx = i;

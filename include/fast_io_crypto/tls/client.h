@@ -354,7 +354,7 @@ struct sw_seal_result
 
 template <typename allocator_type = ::fast_io::native_global_allocator,
 		  typename socket_observer_type = ::fast_io::native_socket_io_observer,
-		  typename crypto = fast_io_crypto_backend>
+		  typename crypto = tls_default_crypto>
 struct basic_tls_client
 {
 	using allocator_handle_type = typename allocator_type::handle_type;
@@ -587,7 +587,7 @@ inline bool tls13_recv_flight_record(stmtype sock, ::std::byte *buf, ::std::size
 	if (static_cast<content_type>(t) == content_type::application_data)
 	{
 		if (!crypto::record_open(buf, *inner_size, *inner_type, hdr, buf, len,
-							   suite, key, iv, seq))
+								 suite, key, iv, seq))
 		{
 			return false;
 		}
@@ -943,7 +943,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		content_type inner{};
 		::std::size_t inner_size{};
 		if (!details::tls13_recv_flight_record<crypto>(sock, recbuf, sizeof(recbuf), __builtin_addressof(inner), __builtin_addressof(inner_size),
-											   suite, hs_rx_key, hs_rx_iv, hs_rx_seq))
+													   suite, hs_rx_key, hs_rx_iv, hs_rx_seq))
 		{
 			details::tls13_fail(sock, alert_description::bad_record_mac, false);
 		}
@@ -1145,16 +1145,16 @@ inline void ktls_handshake_dispatch(stmtype sock, cipher_suite suite,
 	if (suite == cipher_suite::aes_256_gcm_sha384)
 	{
 		ktls_handshake_flight2<typename crypto::sha384, crypto>(sock, suite, shared_secret,
-														  ch_msg, ch_msg_size, sh_msg, sh_msg_size,
-														  cfg, peer, alloc, offload, tx_key_iv_out,
-														  rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
+																ch_msg, ch_msg_size, sh_msg, sh_msg_size,
+																cfg, peer, alloc, offload, tx_key_iv_out,
+																rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
 	}
 	else
 	{
 		ktls_handshake_flight2<typename crypto::sha256, crypto>(sock, suite, shared_secret,
-														  ch_msg, ch_msg_size, sh_msg, sh_msg_size,
-														  cfg, peer, alloc, offload, tx_key_iv_out,
-														  rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
+																ch_msg, ch_msg_size, sh_msg, sh_msg_size,
+																cfg, peer, alloc, offload, tx_key_iv_out,
+																rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
 	}
 }
 
@@ -1304,10 +1304,10 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 	::std::size_t secret_size{};
 	details::app_traffic_key_iv tx_ki{}, rx_ki{};
 	details::ktls_handshake_dispatch<crypto>(client->sock_, suite, shared,
-									 msg, ch_msg_size, sh_msg, sh_msg_size,
-									 cfg, __builtin_addressof(peer), client->allocator_handle, offload,
-									 __builtin_addressof(tx_ki), __builtin_addressof(rx_ki), tx_secret, rx_secret,
-									 __builtin_addressof(secret_size));
+											 msg, ch_msg_size, sh_msg, sh_msg_size,
+											 cfg, __builtin_addressof(peer), client->allocator_handle, offload,
+											 __builtin_addressof(tx_ki), __builtin_addressof(rx_ki), tx_secret, rx_secret,
+											 __builtin_addressof(secret_size));
 	::fast_io::secure_clear(shared, sizeof(shared));
 	tls_client_set_established(client, suite, tx_secret, rx_secret, secret_size, offload, tx_ki, rx_ki);
 	::fast_io::secure_clear(tx_secret, sizeof(tx_secret));
@@ -1522,8 +1522,8 @@ inline sw_record_result tls_client_sw_open_record(basic_tls_client<allocator_typ
 		tls_client_fail(client, alert_description::unexpected_message);
 	}
 	if (!crypto::record_open(innerbuf, rr.plaintext_size, rr.inner, rec,
-									rec + details::record_header_size, clen,
-									client->suite_, client->rx_key_, client->rx_iv_, client->rx_seq_))
+							 rec + details::record_header_size, clen,
+							 client->suite_, client->rx_key_, client->rx_iv_, client->rx_seq_))
 	{
 		tls_client_fail(client, alert_description::bad_record_mac);
 	}
@@ -1564,7 +1564,7 @@ inline sw_seal_result tls_client_sw_seal_appdata(basic_tls_client<allocator_type
 	}
 	inner[got] = static_cast<::std::byte>(content_type::application_data);
 	return {crypto::record_seal_inner(out, inner, got + 1, client->suite_,
-											 client->tx_key_, client->tx_iv_, client->tx_seq_++),
+									  client->tx_key_, client->tx_iv_, client->tx_seq_++),
 			got};
 }
 
@@ -1728,7 +1728,7 @@ inline ::std::size_t tls_client_sw_seal_alert(basic_tls_client<allocator_type, s
 								: ::std::byte{2}};
 	::std::byte const body[2]{level, static_cast<::std::byte>(desc)};
 	return crypto::record_seal(out, content_type::alert, body, 2, client->suite_,
-									  client->tx_key_, client->tx_iv_, client->tx_seq_++);
+							   client->tx_key_, client->tx_iv_, client->tx_seq_++);
 }
 
 /* filled by handshake internals; keys are the expanded traffic

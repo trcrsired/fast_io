@@ -7,6 +7,17 @@ version downgrade is permitted anywhere in this module.
 
 #include "cipher_suite.h"
 
+/*
+-D FAST_IO_TLS_FORCE_FAST_IO=1 pins everything to the fast_io userspace
+implementations: the native backend ignores schannel, and the crypto
+backend ignores provider libraries (openssl/gnutls) even where their
+headers are visible -- e.g. wine's schannel still shells out to gnutls,
+which a wine user may not provide.
+*/
+#if !defined(FAST_IO_TLS_FORCE_FAST_IO)
+#define FAST_IO_TLS_FORCE_FAST_IO 0
+#endif
+
 namespace fast_io::tls
 {
 
