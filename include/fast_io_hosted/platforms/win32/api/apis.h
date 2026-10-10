@@ -31,6 +31,7 @@ FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL GetModuleHandleW(char16_t const *) no
 FAST_IO_DLLIMPORT ::std::uint_least32_t FAST_IO_WINSTDCALL WaitForSingleObject(void *, ::std::uint_least32_t) noexcept FAST_IO_WINSTDCALL_RENAME(WaitForSingleObject, 8);
 FAST_IO_DLLIMPORT void *FAST_IO_WINSTDCALL CreateEventW(void *, int, int, char16_t const *) noexcept FAST_IO_WINSTDCALL_RENAME(CreateEventW, 16);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL ResetEvent(void *) noexcept FAST_IO_WINSTDCALL_RENAME(ResetEvent, 4);
+FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL SetEvent(void *) noexcept FAST_IO_WINSTDCALL_RENAME(SetEvent, 4);
 FAST_IO_DLLIMPORT ::std::uint_least32_t FAST_IO_WINSTDCALL CancelIo(void *) noexcept FAST_IO_WINSTDCALL_RENAME(CancelIo, 4);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetFileInformationByHandle(void *__restrict, ::fast_io::win32::by_handle_file_information *__restrict) noexcept FAST_IO_WINSTDCALL_RENAME(GetFileInformationByHandle, 8);
 FAST_IO_DLLIMPORT int FAST_IO_WINSTDCALL GetUserDefaultLocaleName(char16_t *, int) noexcept FAST_IO_WINSTDCALL_RENAME(GetUserDefaultLocaleName, 8);

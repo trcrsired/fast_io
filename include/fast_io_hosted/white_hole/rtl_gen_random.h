@@ -54,7 +54,7 @@ inline ::std::byte *rtl_gen_random_some_impl(::std::byte *first, ::std::size_t c
 			}
 			first += toreadthisround;
 		}
-		return first + count;
+		return first;
 	}
 }
 

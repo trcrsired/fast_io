@@ -20,6 +20,10 @@ inline constexpr ::std::uint_least32_t win32_stderr_number(static_cast<::std::ui
 #include "win32_network/win32.h"
 #if defined(__HERBCEPTIONS__)
 #include "win32_iocp.h"
+/* thread-pool backend: OS default pool (QueueUserWorkItem) runs the
+ * synchronous ops off the submission thread; the completion queue is a
+ * critical-section list signalled by a manual-reset event */
+#include "win32_thread_pool.h"
 /* Windows 11 IoRing backend — opt-in, never the io_async default:
  * resolved at runtime, absent on Win10 and wine */
 #include "win32_ioring.h"

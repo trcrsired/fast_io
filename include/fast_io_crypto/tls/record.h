@@ -106,6 +106,64 @@ inline bool tls13_record_open(::std::byte *out, ::std::size_t &out_size, content
 }
 
 /*
+seal a precomposed inner plaintext (content || content_type already
+appended by the caller) into a ciphertext record. Writes hdr(5)+ct into
+out; returns total bytes written.
+*/
+inline ::std::size_t tls13_record_seal_inner(::std::byte *out,
+											 ::std::byte const *inner, ::std::size_t inner_size,
+											 cipher_suite suite,
+											 ::std::byte const *key, ::std::byte const *iv,
+											 ::std::uint_least64_t seq) noexcept
+{
+	::std::byte nonce[12];
+	tls13_nonce_to_ptr(nonce, iv, seq);
+	::std::byte *p{record_header_write(out, content_type::application_data,
+									   static_cast<::std::uint_least16_t>(inner_size + 16))};
+	::std::byte *const hdr{out};
+	::std::byte tag[16];
+	switch (suite)
+	{
+	case cipher_suite::aes_128_gcm_sha256:
+	{
+		::std::byte k[16];
+		for (::std::size_t i{}; i != 16; ++i)
+		{
+			k[i] = key[i];
+		}
+		::fast_io::aes_gcm_seal_to_ptr<16>(p, tag, k, nonce, hdr, 5, inner, inner_size);
+		break;
+	}
+	case cipher_suite::aes_256_gcm_sha384:
+	{
+		::std::byte k[32];
+		for (::std::size_t i{}; i != 32; ++i)
+		{
+			k[i] = key[i];
+		}
+		::fast_io::aes_gcm_seal_to_ptr<32>(p, tag, k, nonce, hdr, 5, inner, inner_size);
+		break;
+	}
+	default:
+	{
+		::std::byte k[32];
+		for (::std::size_t i{}; i != 32; ++i)
+		{
+			k[i] = key[i];
+		}
+		::fast_io::chacha20_poly1305_seal_to_ptr(p, tag, k, nonce, hdr, 5, inner, inner_size);
+		break;
+	}
+	}
+	p += inner_size;
+	for (::std::size_t i{}; i != 16; ++i)
+	{
+		p[i] = tag[i];
+	}
+	return static_cast<::std::size_t>((p + 16) - out);
+}
+
+/*
 seal inner plaintext into a ciphertext record. Writes hdr(5)+ct into
 out; returns total bytes written.
 */
@@ -125,51 +183,7 @@ inline ::std::size_t tls13_record_seal(::std::byte *out,
 		inner[i] = pt[i];
 	}
 	inner[pt_size] = static_cast<::std::byte>(inner_type);
-	::std::byte nonce[12];
-	tls13_nonce_to_ptr(nonce, iv, seq);
-	::std::byte *p{record_header_write(out, content_type::application_data,
-									   static_cast<::std::uint_least16_t>(pt_size + 17))};
-	::std::byte *const hdr{out};
-	::std::byte tag[16];
-	switch (suite)
-	{
-	case cipher_suite::aes_128_gcm_sha256:
-	{
-		::std::byte k[16];
-		for (::std::size_t i{}; i != 16; ++i)
-		{
-			k[i] = key[i];
-		}
-		::fast_io::aes_gcm_seal_to_ptr<16>(p, tag, k, nonce, hdr, 5, inner, pt_size + 1);
-		break;
-	}
-	case cipher_suite::aes_256_gcm_sha384:
-	{
-		::std::byte k[32];
-		for (::std::size_t i{}; i != 32; ++i)
-		{
-			k[i] = key[i];
-		}
-		::fast_io::aes_gcm_seal_to_ptr<32>(p, tag, k, nonce, hdr, 5, inner, pt_size + 1);
-		break;
-	}
-	default:
-	{
-		::std::byte k[32];
-		for (::std::size_t i{}; i != 32; ++i)
-		{
-			k[i] = key[i];
-		}
-		::fast_io::chacha20_poly1305_seal_to_ptr(p, tag, k, nonce, hdr, 5, inner, pt_size + 1);
-		break;
-	}
-	}
-	p += pt_size + 1;
-	for (::std::size_t i{}; i != 16; ++i)
-	{
-		p[i] = tag[i];
-	}
-	return static_cast<::std::size_t>((p + 16) - out);
+	return tls13_record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 }
 
 } // namespace fast_io::tls::details

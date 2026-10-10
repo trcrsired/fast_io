@@ -18,8 +18,6 @@ namespace fast_io::tls::details
 {
 
 inline constexpr int sol_tls{282};
-inline constexpr int tls_tx{1};
-inline constexpr int tls_rx{2};
 inline constexpr int ipproto_tcp{6};
 inline constexpr int tcp_ulp{31};
 inline constexpr int tls_set_record_type{1};
@@ -250,6 +248,30 @@ inline ktls_recv_result ktls_recv_record(int fd, ::std::byte *buf, ::std::size_t
 }
 
 /*
+fill a sendmsg msghdr carrying a TLS_SET_RECORD_TYPE cmsg; control must
+point at ktls_cmsg_space bytes. Shared by the synchronous send path and
+the io_uring async op, whose msghdr must outlive submission.
+*/
+inline void ktls_fill_send_msghdr(ktls_msghdr &msg, ktls_iovec &iov, void *control,
+								  content_type ctype, ::std::byte const *data,
+								  ::std::size_t data_size) noexcept
+{
+	auto &cmsg{*reinterpret_cast<ktls_cmsghdr *>(control)};
+	cmsg.len = ktls_cmsg_len;
+	cmsg.level = sol_tls;
+	cmsg.type = tls_set_record_type;
+	*reinterpret_cast<::std::uint_least8_t *>(static_cast<::std::byte *>(control) +
+											  sizeof(ktls_cmsghdr)) =
+		static_cast<::std::uint_least8_t>(ctype);
+	iov = {const_cast<void *>(static_cast<void const *>(data)), data_size};
+	msg = {};
+	msg.iov = __builtin_addressof(iov);
+	msg.iovlen = 1;
+	msg.control = control;
+	msg.controllen = ktls_cmsg_space;
+}
+
+/*
 send one record with an explicit inner content type (handshake, alert).
 Without the cmsg the kernel tags the record as application_data.
 */
@@ -257,17 +279,9 @@ inline void ktls_send_record(int fd, content_type ctype,
 							 ::std::byte const *data, ::std::size_t data_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	alignas(::std::size_t)::std::byte control[ktls_cmsg_space];
-	auto &cmsg{*reinterpret_cast<ktls_cmsghdr *>(control)};
-	cmsg.len = ktls_cmsg_len;
-	cmsg.level = sol_tls;
-	cmsg.type = tls_set_record_type;
-	*reinterpret_cast<::std::uint_least8_t *>(control + sizeof(ktls_cmsghdr)) = static_cast<::std::uint_least8_t>(ctype);
-	ktls_iovec iov{const_cast<void *>(static_cast<void const *>(data)), data_size};
+	ktls_iovec iov{};
 	ktls_msghdr msg{};
-	msg.iov = &iov;
-	msg.iovlen = 1;
-	msg.control = control;
-	msg.controllen = ktls_cmsg_space;
+	ktls_fill_send_msghdr(msg, iov, control, ctype, data, data_size);
 	::std::ptrdiff_t ret;
 #if defined(__NR_sendmsg)
 	ret = system_call<__NR_sendmsg, ::std::ptrdiff_t>(fd, &msg, 0);
@@ -287,56 +301,6 @@ inline void ktls_send_record(int fd, content_type ctype,
 	if (ret <= 0)
 	{
 		::fast_io::throw_posix_error(EPIPE);
-	}
-}
-
-/* plaintext-phase helpers (pre-offload): whole-record read/write */
-inline void tls_read_full(int fd, ::std::byte *buf, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
-{
-	while (n != 0)
-	{
-		::std::byte *const done{::fast_io::details::posix_read_bytes_impl(fd, buf, n)};
-		::std::size_t const got{static_cast<::std::size_t>(done - buf)};
-		if (got == 0)
-		{
-			::fast_io::throw_posix_error(EPIPE);
-		}
-		buf = done;
-		n -= got;
-	}
-}
-
-inline void tls_write_full(int fd, ::std::byte const *buf, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
-{
-	while (n != 0)
-	{
-		::std::byte const *const done{::fast_io::details::posix_write_bytes_impl(fd, buf, n)};
-		::std::size_t const put{static_cast<::std::size_t>(done - buf)};
-		if (put == 0)
-		{
-			::fast_io::throw_posix_error(EPIPE);
-		}
-		buf = done;
-		n -= put;
-	}
-}
-
-inline void tls_fill_random(::std::byte *out, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
-{
-	while (n != 0)
-	{
-#if defined(__NR_getrandom)
-		auto ret{system_call<__NR_getrandom, ::std::ptrdiff_t>(out, n, 0)};
-		system_call_throw_error(ret);
-#else
-		auto ret{::fast_io::noexcept_call(::getrandom, out, n, 0)};
-		if (ret < 0)
-		{
-			::fast_io::throw_posix_error();
-		}
-#endif
-		out += ret;
-		n -= static_cast<::std::size_t>(ret);
 	}
 }
 

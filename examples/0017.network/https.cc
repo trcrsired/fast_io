@@ -25,11 +25,9 @@ int main(int argc, char const **argv)
 			::fast_io::mnp::os_c_str(reinterpret_cast<char8_t const *>(argv[1]))};
 
 		::fast_io::net_service service;
-		::fast_io::native_socket_file socket{
+		::fast_io::tls::tls_socket_file tls{
 			::fast_io::tcp_connect(::fast_io::to_ip(::fast_io::native_dns_file{::fast_io::mnp::os_c_str(argv[1])}, 443))};
-
-		::fast_io::tls::tls_file tls{socket};
-		tls.handshake(host);
+		tls.client.handshake(host);
 
 		char8_t const req_head[]{u8"GET / HTTP/1.1\r\nHost: "};
 		char8_t const req_tail[]{u8"\r\nUser-agent:fast_io\r\n"
@@ -41,7 +39,7 @@ int main(int argc, char const **argv)
 
 		/* Connection: close -- transmit until the peer's close_notify (eof) */
 		::fast_io::operations::transmit_all_bytes(::fast_io::out(), {}, tls, {}, {});
-		tls.send_close_notify();
+		tls.client.send_close_notify();
 	}
 	catch throws(::std::error e)
 	{

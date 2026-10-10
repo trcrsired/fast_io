@@ -6,20 +6,35 @@ into DER and presents them in the flat array form tls13_client_config
 wants. Hosted only (reads files via native_file_loader).
 */
 
-#if defined(__linux__)
 
 #include <cstdlib>
 
 namespace fast_io::tls
 {
 
-class root_store
+template <typename allocator_type = ::fast_io::native_global_allocator>
+class basic_root_store
 {
-	::fast_io::vector<::std::byte> der_data{};
-	::fast_io::vector<::std::byte const *> ptrs{};
-	::fast_io::vector<::std::size_t> sizes{};
+public:
+	using allocator_handle_type = typename allocator_type::handle_type;
+	static inline constexpr bool alloc_with_status{
+		allocator_type::has_status};
+
+private:
+	::fast_io::vector<::std::byte, allocator_type> der_data;
+	::fast_io::vector<::std::byte const *, allocator_type> ptrs;
+	::fast_io::vector<::std::size_t, allocator_type> sizes;
 
 public:
+	inline constexpr basic_root_store() noexcept
+		requires(!alloc_with_status)
+	= default;
+	inline explicit constexpr basic_root_store(allocator_handle_type hdl) noexcept
+		requires(alloc_with_status)
+		: der_data{hdl}, ptrs{hdl}, sizes{hdl}
+	{
+	}
+
 	/* append every CERTIFICATE pem block from pem */
 	inline void load_pem_text(::fast_io::u8string_view pem) FAST_IO_HERBCEPTIONS_THROWS
 	{
@@ -65,11 +80,36 @@ public:
 	*/
 	inline void load_system() FAST_IO_HERBCEPTIONS_THROWS
 	{
+#if defined(_WIN32)
+		if constexpr (::fast_io::win32_family::native == ::fast_io::win32_family::ansi_9x)
+		{
+			char envbuf[32767];
+			::std::uint_least32_t const n{::fast_io::win32::GetEnvironmentVariableA(
+				"SSL_CERT_FILE", envbuf, sizeof(envbuf))};
+			if (n != 0 && n < sizeof(envbuf))
+			{
+				load_pem_file(::fast_io::mnp::os_c_str_with_known_size(envbuf, n));
+				return;
+			}
+		}
+		else
+		{
+			char16_t envbuf[32767];
+			::std::uint_least32_t const n{::fast_io::win32::GetEnvironmentVariableW(
+				u"SSL_CERT_FILE", envbuf, 32767)};
+			if (n != 0 && n < 32767)
+			{
+				load_pem_file(::fast_io::mnp::os_c_str_with_known_size(envbuf, n));
+				return;
+			}
+		}
+#else
 		if (char const *env{::std::getenv("SSL_CERT_FILE")}; env != nullptr && *env != 0)
 		{
 			load_pem_file(::fast_io::mnp::os_c_str(env));
 			return;
 		}
+#endif
 		constexpr char const *paths[]{
 			"/etc/ssl/certs/ca-certificates.crt",                /* debian/ubuntu/arch */
 			"/etc/pki/tls/certs/ca-bundle.crt",                  /* fedora/rhel */
@@ -117,9 +157,12 @@ public:
 	}
 };
 
-inline void tls_client::handshake(::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
+using root_store = basic_root_store<>;
+
+template <typename allocator_type, typename socket_observer_type>
+inline void basic_tls_client<allocator_type, socket_observer_type>::handshake(::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
-	root_store store{};
+	auto store{tls_alloc_construct<basic_root_store<allocator_type>, allocator_type>(allocator_handle)};
 	store.load_system();
 	tls13_client_config cfg{};
 	cfg.hostname = hostname;
@@ -130,5 +173,3 @@ inline void tls_client::handshake(::fast_io::u8cstring_view hostname) FAST_IO_HE
 }
 
 } // namespace fast_io::tls
-
-#endif

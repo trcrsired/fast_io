@@ -71,7 +71,7 @@ freestanding ones.
 
 #include "fast_io_hosted/io_file.h"
 
-#if defined(__linux__)
+#if defined(_WIN32) || (__has_include(<sys/socket.h>) && __has_include(<netinet/in.h>) && !defined(__wasi__))
 #include "fast_io_hosted/tls/impl.h"
 #endif
 

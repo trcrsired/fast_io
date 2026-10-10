@@ -527,6 +527,28 @@ struct win32_ioring_close_cookie
 		alloc_handle{};
 };
 
+/*
+ * Push an internal sqe whose cqe carries the cookie back to the pump
+ * thread: a cancel-request whose opToCancel (userData 1) matches no
+ * live op completes instantly. Workers that finished a synchronous op
+ * off-thread call this so the callback lands on the pump like a real
+ * op's. Returns false when the api surface is gone.
+ */
+inline bool win32_ioring_ferry_completion(win32_ioring_state_base *state) noexcept
+{
+	auto const *api{win32_ioring_api()};
+	if (api == nullptr) [[unlikely]]
+	{
+		return false;
+	}
+	win32_ioring_handle_ref file{};
+	file.kind = 0;
+	file.data.handle = state->file_handle;
+	return api->build_cancel(state->ring, file, 1u /* opToCancel */,
+							 reinterpret_cast<::std::uintptr_t>(state)) >= 0 &&
+		   api->submit(state->ring, 0u, 0u, nullptr) >= 0;
+}
+
 /* pool worker: run the synchronous close, then ferry the cookie through
  * the ring so the callback lands on the pump thread like a real op's */
 inline ::std::uint_least32_t FAST_IO_WINSTDCALL win32_ioring_close_work(void *context) noexcept
@@ -534,17 +556,7 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL win32_ioring_close_work(void *co
 	auto *state{static_cast<win32_ioring_close_state_base *>(context)};
 	state->result = ::fast_io::details::win32_close_handle_now(state->file_handle,
 															   state->close_kind);
-	bool ferried{};
-	if (auto const *api{win32_ioring_api()}; api != nullptr) [[likely]]
-	{
-		win32_ioring_handle_ref file{};
-		file.kind = 0;
-		file.data.handle = state->file_handle;
-		ferried = api->build_cancel(state->ring, file, 1u /* opToCancel */,
-									reinterpret_cast<::std::uintptr_t>(state)) >= 0 &&
-				  api->submit(state->ring, 0u, 0u, nullptr) >= 0;
-	}
-	if (!ferried) [[unlikely]]
+	if (!win32_ioring_ferry_completion(state)) [[unlikely]]
 	{
 		/* no ferry available — deliver on this worker rather than
 		 * lose the callback */
@@ -601,6 +613,150 @@ inline void win32_ioring_close_submit(sched_type sched, void *ring, void *handle
 											0x00000010u) == 0) [[unlikely]]
 	{
 		win32_ioring_close_work(cookie);
+	}
+}
+
+/* ======================= sockets ======================= */
+
+/*
+ * IoRing's public op enum has no socket requests, so read/write on a
+ * socket observer are emulated exactly like close: the synchronous
+ * WSARecv/WSASend runs on a default-pool worker and the completion is
+ * ferried through the ring — the callback still lands on the pump
+ * thread. Same honest limitation as win32_thread_pool: a recv on an
+ * empty socket parks an OS worker for its duration, and a deadline
+ * applies only until the work item dequeues — a running syscall cannot
+ * be preempted.
+ */
+struct win32_ioring_sock_rw_state_base : win32_ioring_state_base
+{
+	::std::size_t hsocket{};
+	::std::byte *buf{};
+	::std::uint_least32_t count{};
+	::std::uint_least64_t deadline{};
+	::std::cxx_std_error result{};
+	::std::size_t transferred{};
+	bool is_write{};
+};
+
+template <typename alloc_type, typename T>
+struct win32_ioring_sock_rw_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{alloc_type::has_status};
+	win32_ioring_sock_rw_state_base base;
+	T callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+template <typename alloc_type, typename T>
+inline void win32_ioring_sock_rw_deliver(void *self, ::std::uintptr_t,
+										 ::std::uint_least32_t) noexcept
+{
+	using cookie_type = win32_ioring_sock_rw_cookie<alloc_type, T>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	auto err{cookie->base.result};
+	auto const transferred{cookie->base.transferred};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err, transferred);
+}
+
+/* pool worker: blocking WSARecv/WSASend, then the ring ferry */
+inline ::std::uint_least32_t FAST_IO_WINSTDCALL win32_ioring_sock_rw_work(void *context) noexcept
+{
+	auto *state{static_cast<win32_ioring_sock_rw_state_base *>(context)};
+	if (win32_thread_pool_expired(state->deadline))
+	{
+		state->result = ::fast_io::details::async_make_error(::std::errc::timed_out);
+	}
+	else
+	{
+		::fast_io::win32::wsabuf w{};
+		w.buf = reinterpret_cast<char *>(state->buf);
+		w.len = state->count;
+		::std::uint_least32_t got{};
+		int rc;
+		if (state->is_write)
+		{
+			rc = ::fast_io::win32::WSASend(state->hsocket, __builtin_addressof(w), 1,
+										   __builtin_addressof(got), 0, nullptr, nullptr);
+		}
+		else
+		{
+			::std::uint_least32_t flags{};
+			rc = ::fast_io::win32::WSARecv(state->hsocket, __builtin_addressof(w), 1,
+										   __builtin_addressof(got), __builtin_addressof(flags),
+										   nullptr, nullptr);
+		}
+		if (rc != 0)
+		{
+			state->result = ::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(
+					static_cast<::std::uint_least32_t>(::fast_io::win32::WSAGetLastError())));
+		}
+		else
+		{
+			state->transferred = static_cast<::std::size_t>(got);
+		}
+	}
+	if (!win32_ioring_ferry_completion(state)) [[unlikely]]
+	{
+		state->invoke(state, 0, 0);
+	}
+	return 0;
+}
+
+/*
+ * One emulated socket read/write: allocate the cookie, then queue the
+ * worker. A WSARecv can block indefinitely, so a rejected work item is
+ * reported through the callback rather than run inline — unlike close,
+ * running it on the submission thread could hang it.
+ */
+template <bool is_write, typename sched_type, typename stream_type, typename T>
+inline void win32_ioring_sock_rw_submit(sched_type sched, stream_type stream, void *first,
+										::std::size_t count,
+										::fast_io::posix_statx_timestamp_opt timeout,
+										T &&callback) noexcept
+{
+	using callback_type = ::std::remove_cvref_t<T>;
+	using alloc_type = ::fast_io::details::async_scheduler_allocator_t<sched_type>;
+	using cookie_type = win32_ioring_sock_rw_cookie<alloc_type, callback_type>;
+	cookie_type *cookie;
+	try
+	{
+		cookie = ::fast_io::details::async_new_state_plain<cookie_type>(
+			sched,
+			win32_ioring_sock_rw_state_base{
+				{&win32_ioring_sock_rw_deliver<alloc_type, callback_type>,
+				 sched.native_handle(), reinterpret_cast<void *>(stream.hsocket)},
+				stream.hsocket,
+				static_cast<::std::byte *>(first),
+				::fast_io::details::read_write_bytes_compute<::std::uint_least32_t>(
+					static_cast<::std::byte *>(first), count),
+				timeout.has_opt ? win32_thread_pool_deadline(timeout.opt) : 0u,
+				{},
+				{},
+				is_write},
+			callback_type{::std::forward<T>(callback)});
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release(), 0zu);
+		return;
+	}
+	/* WT_EXECUTELONGFUNCTION: the sync socket call may block */
+	if (::fast_io::win32::QueueUserWorkItem(&win32_ioring_sock_rw_work, cookie,
+											0x00000010u) == 0) [[unlikely]]
+	{
+		auto cb{::std::move(cookie->callback)};
+		::fast_io::details::async_delete_state(cookie);
+		cb(::fast_io::details::async_make_error(
+			   static_cast<::fast_io::freestanding::win32_errc>(
+				   static_cast<::std::uint_least32_t>(::fast_io::win32::GetLastError()))),
+		   0zu);
 	}
 }
 
@@ -747,6 +903,10 @@ async_scheduler_ref_define(win32_ioring &ring) noexcept
 inline void io_async_wait(win32_ioring_observer sched) throws
 {
 	auto const *api{details::win32_ioring_api()};
+	if (api == nullptr) [[unlikely]]
+	{
+		throw_win32_error(126u /* ERROR_MOD_NOT_FOUND */);
+	}
 	for (;;)
 	{
 		auto const hr{api->submit(sched.native_handle(), 0u, 0u, nullptr)};
@@ -802,6 +962,10 @@ inline void io_async_wait(win32_ioring_observer sched) throws
 inline bool io_async_peek(win32_ioring_observer sched) throws
 {
 	auto const *api{details::win32_ioring_api()};
+	if (api == nullptr) [[unlikely]]
+	{
+		throw_win32_error(126u /* ERROR_MOD_NOT_FOUND */);
+	}
 	auto const hr{api->submit(sched.native_handle(), 0u, 0u, nullptr)};
 	if (hr < 0) [[unlikely]]
 	{
@@ -841,6 +1005,10 @@ inline bool io_async_wait_timeout(win32_ioring_observer sched,
 		ms = 0xFFFFFFFEu;
 	}
 	auto const *api{details::win32_ioring_api()};
+	if (api == nullptr) [[unlikely]]
+	{
+		throw_win32_error(126u /* ERROR_MOD_NOT_FOUND */);
+	}
 	auto const hr{api->submit(sched.native_handle(), 0u, 0u, nullptr)};
 	if (hr < 0) [[unlikely]]
 	{
@@ -938,6 +1106,46 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::details::win32_ioring_rw_submit<true>(
 		sched, wiob, const_cast<::std::byte *>(first), count, off, timeout,
 		::std::move(callback));
+}
+
+/*
+ * Socket read/write: emulated — the blocking WSARecv/WSASend runs on a
+ * default-pool worker and the completion is ferried through the ring.
+ * Sockets have no positional I/O: a non-empty off reports invalid_seek.
+ */
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_pread_some_bytes_underflow_callback_define(
+	::fast_io::win32_ioring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob, ::std::byte *first,
+	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
+{
+	if (off.has_opt) [[unlikely]]
+	{
+		callback(::fast_io::details::async_make_error(::std::errc::invalid_seek), 0zu);
+		return;
+	}
+	::fast_io::details::win32_ioring_sock_rw_submit<false>(
+		sched, wsiob, first, count, timeout, ::std::move(callback));
+}
+
+template <win32_family family, ::std::integral char_type, typename func>
+	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_pwrite_some_bytes_overflow_callback_define(
+	::fast_io::win32_ioring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::basic_win32_family_socket_io_observer<family, char_type> wsiob,
+	::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_opt off,
+	func callback) noexcept
+{
+	if (off.has_opt) [[unlikely]]
+	{
+		callback(::fast_io::details::async_make_error(::std::errc::invalid_seek), 0zu);
+		return;
+	}
+	::fast_io::details::win32_ioring_sock_rw_submit<true>(
+		sched, wsiob, const_cast<::std::byte *>(first), count, timeout, ::std::move(callback));
 }
 
 /*

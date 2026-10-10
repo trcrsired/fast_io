@@ -1,101 +1,137 @@
 #pragma once
 
 /*
-basic_tls_file<ch_type> -- owns a tls_client and satisfies the io stream
-concepts. The socket fd inside is BORROWED: destruction does not close it
-(the caller's socket object owns it) and does not send close_notify --
-call send_close_notify() explicitly when the peer cares about truncation.
-*/
+basic_tls<socket_type, allocator_type> -- a plain aggregate-style bundle
+of a socket (the transport) and a basic_tls_client (the TLS state). The
+socket member OWNS whatever socket_type owns: basic_tls<native_socket_file>
+owns the fd; basic_tls<native_socket_io_observer> borrows it.
 
-#if defined(__linux__)
+Constructors forward to socket_type, mirroring basic_io_buffer's
+forwarding to its handle; the client binds the socket's fd during
+construction. No other member functions -- handshake() and
+send_close_notify() live on the client member.
+*/
 
 namespace fast_io::tls
 {
 
-template <::std::integral ch_type>
-class basic_tls_file : public basic_tls_io_observer<ch_type>
+template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator>
+struct basic_tls
 {
-	tls_client client_{};
+	using char_type = typename socket_type::char_type;
+	using input_char_type = char_type;
+	using output_char_type = char_type;
+	/* the transport observer -- whatever the socket's stream ref yields
+	   (posix fd observer, win32 socket observer, ...) */
+	using socket_observer_type =
+		decltype(::fast_io::io_stream_ref_define(::std::declval<socket_type &>()));
+	using client_type = basic_tls_client<allocator_type, socket_observer_type>;
+	using allocator_handle_type = typename client_type::allocator_handle_type;
+	static inline constexpr bool alloc_with_status{client_type::alloc_with_status};
 
-public:
-	using typename basic_tls_io_observer<ch_type>::char_type;
-	using typename basic_tls_io_observer<ch_type>::input_char_type;
-	using typename basic_tls_io_observer<ch_type>::output_char_type;
-	using typename basic_tls_io_observer<ch_type>::native_handle_type;
-	using basic_tls_io_observer<ch_type>::native_handle;
+	socket_type socket;
+	client_type client;
 
-	inline constexpr basic_tls_file() noexcept
+	inline constexpr basic_tls() noexcept
+		requires(!alloc_with_status && ::std::is_default_constructible_v<socket_type>)
+	= default;
+
+	template <typename... Args>
+		requires(!alloc_with_status && ::std::constructible_from<socket_type, Args...>)
+	inline explicit constexpr basic_tls(Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(socket_type(::std::forward<Args>(args)...))
+		: socket(::std::forward<Args>(args)...), client{::fast_io::io_stream_ref_define(socket)}
 	{
-		this->handle = __builtin_addressof(client_);
 	}
-	/* borrow an established TCP socket (kernel ULP+keys are installed by handshake) */
-	template <::std::integral sch_type>
-	inline explicit constexpr basic_tls_file(::fast_io::basic_native_socket_io_observer<sch_type> sock) noexcept
-		: client_{sock}
-	{
-		this->handle = __builtin_addressof(client_);
-	}
-	inline constexpr basic_tls_file(decltype(nullptr)) noexcept = delete;
 
-	basic_tls_file(basic_tls_file const &) = delete;
-	basic_tls_file &operator=(basic_tls_file const &) = delete;
-
-	inline basic_tls_file(basic_tls_file &&other) noexcept
-		: client_{other.client_}
+	inline explicit constexpr basic_tls(allocator_handle_type hdl)
+		requires(alloc_with_status && ::std::is_default_constructible_v<socket_type>)
+		: socket(), client{socket, hdl}
 	{
-		this->handle = __builtin_addressof(client_);
-		/* the moved-from object keeps no key copies */
-		::fast_io::secure_clear(__builtin_addressof(other.client_), sizeof(other.client_));
 	}
-	inline basic_tls_file &operator=(basic_tls_file &&other) noexcept
+	template <typename... Args>
+		requires(alloc_with_status && ::std::constructible_from<socket_type, Args...>)
+	inline constexpr basic_tls(allocator_handle_type hdl, Args &&...args)
+		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(socket_type(::std::forward<Args>(args)...))
+		: socket(::std::forward<Args>(args)...), client{socket, hdl}
+	{
+	}
+
+	basic_tls(basic_tls const &) = delete;
+	basic_tls &operator=(basic_tls const &) = delete;
+
+	inline basic_tls(basic_tls &&other) noexcept
+		: socket(::std::move(other.socket)), client(::std::move(other.client))
+	{
+	}
+	inline basic_tls &operator=(basic_tls &&other) noexcept
 	{
 		if (__builtin_addressof(other) == this)
 		{
 			return *this;
 		}
-		::fast_io::secure_clear(__builtin_addressof(client_), sizeof(client_));
-		client_ = other.client_;
-		this->handle = __builtin_addressof(client_);
-		::fast_io::secure_clear(__builtin_addressof(other.client_), sizeof(other.client_));
+		socket = ::std::move(other.socket);
+		client = ::std::move(other.client);
 		return *this;
 	}
 
-	inline constexpr tls_client &client() noexcept
+	/* detach ownership: the socket member releases the fd (so the
+	   destructor cannot close it again -- the op consumes it) and the
+	   stream's non-owning observer is returned -- the same role
+	   posix_file::release()'s fd plays for posix_io_observer */
+	inline constexpr basic_tls_io_observer<char_type, allocator_type, socket_observer_type> release() noexcept
+		requires requires { socket.release(); }
 	{
-		return client_;
-	}
-	inline constexpr tls_client const &client() const noexcept
-	{
-		return client_;
-	}
-
-	inline void handshake(tls13_client_config const &cfg) FAST_IO_HERBCEPTIONS_THROWS
-	{
-		client_.handshake(cfg);
-	}
-	/* system trust bundle + hostname check; defined in roots.h */
-	inline void handshake(::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
-	{
-		client_.handshake(hostname);
-	}
-	inline void send_close_notify() noexcept
-	{
-		client_.send_close_notify();
+		socket.release();
+		return {__builtin_addressof(client)};
 	}
 };
 
-using tls_io_observer = basic_tls_io_observer<char>;
-using wtls_io_observer = basic_tls_io_observer<wchar_t>;
-using u8tls_io_observer = basic_tls_io_observer<char8_t>;
-using u16tls_io_observer = basic_tls_io_observer<char16_t>;
-using u32tls_io_observer = basic_tls_io_observer<char32_t>;
+template <typename socket_type, typename allocator_type>
+inline constexpr basic_tls_io_observer<typename socket_type::char_type, allocator_type,
+									   typename basic_tls<socket_type, allocator_type>::socket_observer_type>
+io_stream_ref_define(basic_tls<socket_type, allocator_type> &t) noexcept
+{
+	return {__builtin_addressof(t.client)};
+}
 
-using tls_file = basic_tls_file<char>;
-using wtls_file = basic_tls_file<wchar_t>;
-using u8tls_file = basic_tls_file<char8_t>;
-using u16tls_file = basic_tls_file<char16_t>;
-using u32tls_file = basic_tls_file<char32_t>;
+template <typename socket_type, typename allocator_type>
+inline constexpr basic_tls_io_observer<char, allocator_type,
+									   typename basic_tls<socket_type, allocator_type>::socket_observer_type>
+io_bytes_stream_ref_define(basic_tls<socket_type, allocator_type> &t) noexcept
+{
+	return {__builtin_addressof(t.client)};
+}
+
+/* owning variants: the socket member is a native socket file */
+template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
+using basic_tls_socket_file = basic_tls<basic_native_socket_file<ch_type>, allocator_type>;
+
+using tls_socket_file = basic_tls_socket_file<char>;
+using wtls_socket_file = basic_tls_socket_file<wchar_t>;
+using u8tls_socket_file = basic_tls_socket_file<char8_t>;
+using u16tls_socket_file = basic_tls_socket_file<char16_t>;
+using u32tls_socket_file = basic_tls_socket_file<char32_t>;
+
+/* non-owning variants: the socket member is a native socket observer */
+template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
+using basic_tls_socket = basic_tls<basic_native_socket_io_observer<ch_type>, allocator_type>;
+
+using tls_socket = basic_tls_socket<char>;
+using wtls_socket = basic_tls_socket<wchar_t>;
+using u8tls_socket = basic_tls_socket<char8_t>;
+using u16tls_socket = basic_tls_socket<char16_t>;
+using u32tls_socket = basic_tls_socket<char32_t>;
+
+/* buffered variants: basic_iobuf<basic_tls<socket_type>> */
+template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
+using basic_iobuf_tls_socket_file =
+	basic_iobuf<basic_tls_socket_file<ch_type, allocator_type>, allocator_type>;
+
+using iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char>;
+using wiobuf_tls_socket_file = basic_iobuf_tls_socket_file<wchar_t>;
+using u8iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char8_t>;
+using u16iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char16_t>;
+using u32iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char32_t>;
 
 } // namespace fast_io::tls
-
-#endif
