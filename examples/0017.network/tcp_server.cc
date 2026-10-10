@@ -15,7 +15,7 @@ int main()
 			println(file, utc(fast_io::posix_clock_gettime(fast_io::posix_clock_id::realtime)));
 			file.close();
 		}
-		catch (...)
+		catch throws(::std::error e)
 		{
 		}
 	}
