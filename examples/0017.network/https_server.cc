@@ -8,6 +8,9 @@ curl, or the fast_io https client.
 */
 #include <fast_io.h>
 #include <fast_io_hosted_crypto.h>
+#if !defined(_WIN32)
+#include <signal.h>
+#endif
 
 int main(int argc, char const **argv)
 {
@@ -18,11 +21,15 @@ int main(int argc, char const **argv)
 		{
 			return 1;
 		}
-		perr("Usage: ", ::fast_io::mnp::os_c_str(*argv), " <cert.pem> <key.pem> [port]\n");
+		perr("Usage: ", ::fast_io::mnp::os_c_str(*argv), " <cert.pem> <key.pem> [client_ca.pem]\n");
 		return 1;
 	}
 	try
 	{
+#if !defined(_WIN32)
+		/* a peer RST mid-write would otherwise SIGPIPE the process */
+		::signal(SIGPIPE, SIG_IGN);
+#endif
 		/* cert chain (leaf first) -- reuses the trust-store PEM loader */
 		::fast_io::tls::root_store certs;
 		::fast_io::tls::details::root_store_load_pem_file(
@@ -59,12 +66,29 @@ int main(int argc, char const **argv)
 		cfg.cert_count = certs.sizes.size();
 		cfg.private_key_der = key_der;
 		cfg.private_key_size = key_size;
+		/* resumption: a per-process ticket key seals NewSessionTickets --
+		   restart rotates it, so old tickets simply stop decrypting */
+		::std::byte ticket_key[16];
+		::fast_io::tls::details::tls_fill_random(ticket_key, 16);
+		cfg.ticket_key = &ticket_key;
+		/* optional client-CA bundle: requires + verifies a client cert */
+		::fast_io::tls::root_store client_ca;
+		::fast_io::tls::peer_certificates peer_chain;
+		if (argc > 3)
+		{
+			::fast_io::tls::details::root_store_load_pem_file(
+				__builtin_addressof(client_ca), ::fast_io::mnp::os_c_str(argv[3]));
+			cfg.request_client_cert = true;
+			cfg.require_client_cert = true;
+			cfg.client_roots_der = client_ca.ptrs.data();
+			cfg.client_root_sizes = client_ca.sizes.data();
+			cfg.client_root_count = client_ca.sizes.size();
+			cfg.peer_out = __builtin_addressof(peer_chain);
+		}
 
 		::fast_io::net_service service;
 		::fast_io::native_socket_file socket(
-			::fast_io::tcp_listen(argc < 4 ? 4433 : static_cast<::std::uint_least16_t>(
-												  ::fast_io::to<::std::uint_least16_t>(
-													  ::fast_io::mnp::os_c_str(argv[3])))));
+			::fast_io::tcp_listen(4433));
 		perrln("listening -- connect with: openssl s_client -connect localhost:4433 -tls1_3");
 		for (;;)
 		{

@@ -400,18 +400,21 @@ inline constexpr bool certificate_verify_parse(certificate_verify_info &info,
 
 /*
 the covered content the CertificateVerify signature signs:
-64 x 0x20 || "TLS 1.3, server CertificateVerify" || 0x00 || transcript
+64 x 0x20 || "TLS 1.3, <server|client> CertificateVerify" || 0x00 ||
+transcript -- both context strings are 33 bytes, so the prefix size is
+identical either way
 */
 inline constexpr ::std::size_t certificate_verify_content_prefix_size{98};
 
 inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::byte const *transcript_digest,
-													   ::std::size_t digest_size) noexcept
+													   ::std::size_t digest_size, bool client_side = false) noexcept
 {
 	for (::std::size_t i{}; i != 64; ++i)
 	{
 		out[i] = ::std::byte{0x20};
 	}
-	char8_t const *ctx_str{u8"TLS 1.3, server CertificateVerify"};
+	char8_t const *ctx_str{client_side ? u8"TLS 1.3, client CertificateVerify"
+									   : u8"TLS 1.3, server CertificateVerify"};
 	::fast_io::details::non_overlapped_copy_n(ctx_str, 33, reinterpret_cast<char8_t *>(out + 64));
 	out[97] = ::std::byte{0};
 	::fast_io::details::non_overlapped_copy_n(transcript_digest, digest_size, out + 98);

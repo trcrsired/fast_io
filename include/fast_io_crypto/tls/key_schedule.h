@@ -236,6 +236,13 @@ public:
 		crypto::hkdf_extract(md_, secret, nullptr, 0, zero, crypto::md_digest_size(md_));
 	}
 
+	/* PSK handshakes seed the early secret with the psk itself instead
+	   of zeros (rfc8446 7.1, resumption) */
+	inline constexpr void init_early_with(::std::byte const *ikm, ::std::size_t ikm_size) noexcept
+	{
+		crypto::hkdf_extract(md_, secret, nullptr, 0, ikm, ikm_size);
+	}
+
 	inline constexpr void derive_empty() noexcept
 	{
 		::std::byte empty_digest[64];
