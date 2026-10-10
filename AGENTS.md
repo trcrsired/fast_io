@@ -44,3 +44,20 @@ facilities anywhere in include/.
   `::std`.
 - No `iostream`, `fstream`, `sstream`, `algorithm` heap helpers, or
   any other hosted-only standard header.
+## Herbceptions
+
+All error handling uses Herbceptions, not legacy C++ exceptions.
+
+- `throw throws(::std::error{...})` to raise; `try {}` +
+  `catch throws(::std::error e) {}` to handle.
+- When a handler cannot call throws-marked code inside its body, the
+  empty handler form is correct: `catch throws(::std::error){}`.
+- `catch(...)` is forbidden everywhere -- it is legacy-EH-only, catches
+  nothing that can exist under `-fherbceptions`, and lies that an
+  unknown C++ exception means a protocol error.
+- `FAST_IO_HERBCEPTIONS_TRY`/`FAST_IO_HERBCEPTIONS_CATCH`/`FAST_IO_-
+  HERBCEPTIONS_CATCH_ALL` expand to the right form per build config;
+  `FAST_IO_HERBCEPTIONS_CATCH_ALL` is the only sanctioned catch-all
+  and is for C-ABI / thread-entry boundaries only.
+- Throwing functions are marked `FAST_IO_HERBCEPTIONS_THROWS`
+  (or the explicit `throws` spec); noexcept helpers stay noexcept.
