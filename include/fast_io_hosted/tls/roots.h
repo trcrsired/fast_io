@@ -81,49 +81,45 @@ public:
 	inline void load_system() FAST_IO_HERBCEPTIONS_THROWS
 	{
 #if defined(_WIN32)
+		constexpr ::std::size_t pathmax{32767};
+		native_char_type envbuf[pathmax];
+		::std::uint_least32_t n{};
 		if constexpr (::fast_io::win32_family::native == ::fast_io::win32_family::ansi_9x)
 		{
-			char envbuf[32767];
-			::std::uint_least32_t const n{::fast_io::win32::GetEnvironmentVariableA(
-				"SSL_CERT_FILE", envbuf, sizeof(envbuf))};
-			if (n != 0 && n < sizeof(envbuf))
-			{
-				load_pem_file(::fast_io::mnp::os_c_str_with_known_size(envbuf, n));
-				return;
-			}
+			n = ::fast_io::win32::GetEnvironmentVariableA(
+				reinterpret_cast<char const*>(u8"SSL_CERT_FILE"), reinterpret_cast<char *>(envbuf), pathmax);
 		}
 		else
 		{
-			char16_t envbuf[32767];
-			::std::uint_least32_t const n{::fast_io::win32::GetEnvironmentVariableW(
-				u"SSL_CERT_FILE", envbuf, 32767)};
-			if (n != 0 && n < 32767)
-			{
-				load_pem_file(::fast_io::mnp::os_c_str_with_known_size(envbuf, n));
-				return;
-			}
+			n = ::fast_io::win32::GetEnvironmentVariableW(
+				u"SSL_CERT_FILE", reinterpret_cast<char16_t *>(envbuf), pathmax);
+		}
+		if (n != 0 && n < pathmax)
+		{
+			load_pem_file(::fast_io::mnp::os_c_str_with_known_size(envbuf, n));
+			return;
 		}
 #else
-		if (char const *env{::std::getenv("SSL_CERT_FILE")}; env != nullptr && *env != 0)
+		if (char const *env{::std::getenv(reinterpret_cast<char const*>(u8"SSL_CERT_FILE"))}; env != nullptr && *env != 0)
 		{
 			load_pem_file(::fast_io::mnp::os_c_str(env));
 			return;
 		}
 #endif
-		constexpr char const *paths[]{
-			"/etc/ssl/certs/ca-certificates.crt",                /* debian/ubuntu/arch */
-			"/etc/pki/tls/certs/ca-bundle.crt",                  /* fedora/rhel */
-			"/etc/ssl/ca-bundle.pem",                            /* opensuse */
-			"/etc/pki/tls/cacert.pem",                           /* openelec */
-			"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", /* centos/rhel p11-kit */
-			"/etc/ca-certificates/extracted/tls-ca-bundle.pem",  /* fedora ca-certificates-ng */
-			"/etc/ssl/cert.pem",                                 /* alpine/macos-ish */
+		constexpr ::fast_io::basic_cstring_view<char8_t> paths[]{
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/ssl/certs/ca-certificates.crt"),                /* debian/ubuntu/arch */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/pki/tls/certs/ca-bundle.crt"),                 /* fedora/rhel */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/ssl/ca-bundle.pem"),                            /* opensuse */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/pki/tls/cacert.pem"),                           /* openelec */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"), /* centos/rhel p11-kit */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/ca-certificates/extracted/tls-ca-bundle.pem"),  /* fedora ca-certificates-ng */
+			::fast_io::basic_cstring_view<char8_t>(u8"/etc/ssl/cert.pem"),                                 /* alpine/macos-ish */
 		};
-		for (char const *p : paths)
+		for (auto const p : paths)
 		{
 			FAST_IO_HERBCEPTIONS_TRY
 			{
-				load_pem_file(::fast_io::mnp::os_c_str(p));
+				load_pem_file(p);
 				return;
 			}
 			FAST_IO_HERBCEPTIONS_CATCH_ALL
