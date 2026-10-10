@@ -836,6 +836,12 @@ inline ::fast_io::l10n::lc_locale const *load_blob_impl(::fast_io::u8string_view
 				auto const *fb{reinterpret_cast<unsigned char const *>(loc)};
 				entry->img.resize(bv.size());
 				::fast_io::details::my_memcpy(entry->img.data(), fb, bv.size());
+				/* every appended override lands past the copy — reserve
+				 * headroom NOW so the appends can never reallocate:
+				 * patch_user_section holds basic_lc_all* and scatter
+				 * refs INTO img — a move would dangle them mid-call and
+				 * the rva writes would land in freed memory */
+				entry->img.reserve(bv.size() + 16384);
 				user_blob_builder b{entry->img};
 				intl_key ik{};
 				// patch each present section in its own charset. The
