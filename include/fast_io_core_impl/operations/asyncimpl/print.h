@@ -22,17 +22,9 @@
  *  - unbuffered streams format into a string and write it out.
  */
 
-#include "../fast_io_dsal/string.h"
 
 namespace fast_io::details
 {
-
-/* is the decayed stream ref a basic_io_buffer_ref? */
-template <typename>
-inline constexpr bool async_print_is_iobuf_ref{false};
-
-template <typename T>
-inline constexpr bool async_print_is_iobuf_ref<::fast_io::basic_io_buffer_ref<T>>{true};
 
 /* detached pending-buffer guard for a stream ref: the define's return
  * type when the stream can detach, empty when it cannot */
@@ -57,10 +49,44 @@ struct async_print_detached_type<outstmtype, true>
  * handle-based allocator cannot back it. This buffer keeps the handle
  * alongside the pointers, and its strlike defines let the ordinary
  * print machinery format into it — including print_define arguments.
+ * It doubles as the generic async-print payload for non-status
+ * allocators: the handle sits empty, the calls dispatch to the plain
+ * entry points.
  */
+template <typename typed_allocator_type>
+inline constexpr auto async_print_strlike_alloc(
+	typename typed_allocator_type::handle_type hdl, ::std::size_t n)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(typed_allocator_type::throws_on_allocation_failure)
+{
+	if constexpr (typed_allocator_type::has_status)
+	{
+		return typed_allocator_type::handle_allocate_at_least(hdl, n);
+	}
+	else
+	{
+		return typed_allocator_type::allocate_at_least(n);
+	}
+}
+
+template <typename typed_allocator_type, ::std::integral char_type>
+inline constexpr void async_print_strlike_dealloc(
+	typename typed_allocator_type::handle_type hdl,
+	char_type *p, ::std::size_t n) noexcept
+{
+	if constexpr (typed_allocator_type::has_status)
+	{
+		typed_allocator_type::handle_deallocate_n(hdl, p, n);
+	}
+	else
+	{
+		typed_allocator_type::deallocate_n(p, n);
+	}
+}
+
 template <::std::integral char_type, typename allocator_type>
 struct async_print_strlike_buffer
 {
+	using value_type = char_type;
 	using typed_allocator_type =
 		::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;
 	using handle_type = typename typed_allocator_type::handle_type;
@@ -95,7 +121,7 @@ struct async_print_strlike_buffer
 		}
 		if (begin_ptr != nullptr)
 		{
-			typed_allocator_type::handle_deallocate_n(
+			async_print_strlike_dealloc<typed_allocator_type, char_type>(
 				allochdl, begin_ptr,
 				static_cast<::std::size_t>(end_ptr - begin_ptr));
 		}
@@ -112,7 +138,7 @@ struct async_print_strlike_buffer
 	{
 		if (begin_ptr != nullptr)
 		{
-			typed_allocator_type::handle_deallocate_n(
+			async_print_strlike_dealloc<typed_allocator_type, char_type>(
 				allochdl, begin_ptr,
 				static_cast<::std::size_t>(end_ptr - begin_ptr));
 		}
@@ -168,7 +194,7 @@ inline void
 strlike_reserve(::fast_io::io_strlike_type_t<char_type, async_print_strlike_buffer<char_type, allocator_type>>,
 				async_print_strlike_buffer<char_type, allocator_type> &str, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
-		::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>)
+		(::fast_io::details::adapter_flags_or_default<allocator_type>() & ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) != ::fast_io::allocator_adapter_flags::none)
 {
 	using typed_allocator_type =
 		typename async_print_strlike_buffer<char_type, allocator_type>::typed_allocator_type;
@@ -178,14 +204,14 @@ strlike_reserve(::fast_io::io_strlike_type_t<char_type, async_print_strlike_buff
 		return;
 	}
 	::std::size_t const used{static_cast<::std::size_t>(str.curr_ptr - str.begin_ptr)};
-	auto [newptr, newcap]{typed_allocator_type::handle_allocate_at_least(str.allochdl, n)};
+	auto [newptr, newcap]{async_print_strlike_alloc<typed_allocator_type>(str.allochdl, n)};
 	if (used != 0)
 	{
 		::fast_io::details::non_overlapped_copy_n(str.begin_ptr, used, newptr);
 	}
 	if (str.begin_ptr != nullptr)
 	{
-		typed_allocator_type::handle_deallocate_n(str.allochdl, str.begin_ptr, capacity);
+		async_print_strlike_dealloc<typed_allocator_type, char_type>(str.allochdl, str.begin_ptr, capacity);
 	}
 	str.begin_ptr = newptr;
 	str.curr_ptr = newptr + used;
@@ -198,6 +224,45 @@ io_strlike_ref(::fast_io::io_alias_t,
 			   async_print_strlike_buffer<char_type, allocator_type> &str) noexcept
 {
 	return {__builtin_addressof(str)};
+}
+
+template <::std::integral char_type, typename allocator_type>
+inline constexpr auto strlike_construct_define(
+	io_strlike_type_t<char_type, async_print_strlike_buffer<char_type, allocator_type>>,
+	char_type const *first, char_type const *last)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		(::fast_io::details::adapter_flags_or_default<allocator_type>() &
+		 ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) !=
+		::fast_io::allocator_adapter_flags::none)
+{
+	using buffer_type = async_print_strlike_buffer<char_type, allocator_type>;
+	buffer_type str;
+	auto const n{static_cast<::std::size_t>(last - first)};
+	if (n != 0)
+	{
+		using typed_allocator_type = typename buffer_type::typed_allocator_type;
+		auto [newptr, newcap]{
+			async_print_strlike_alloc<typed_allocator_type>(str.allochdl, n)};
+		str.begin_ptr = newptr;
+		str.curr_ptr = ::fast_io::details::non_overlapped_copy_n(first, n, newptr);
+		str.end_ptr = newptr + static_cast<::std::size_t>(newcap);
+	}
+	return str;
+}
+
+template <::std::integral char_type, typename allocator_type>
+inline constexpr auto strlike_construct_single_character_define(
+	io_strlike_type_t<char_type, async_print_strlike_buffer<char_type, allocator_type>>,
+	char_type ch)
+	FAST_IO_HERBCEPTIONS_THROWS_IF(
+		(::fast_io::details::adapter_flags_or_default<allocator_type>() &
+		 ::fast_io::allocator_adapter_flags::throws_on_allocation_failure) !=
+		::fast_io::allocator_adapter_flags::none)
+{
+	return strlike_construct_define(
+		::fast_io::io_strlike_type<char_type,
+								 async_print_strlike_buffer<char_type, allocator_type>>,
+		__builtin_addressof(ch), __builtin_addressof(ch) + 1);
 }
 
 /* pending byte range owned by a detached output buffer; the empty
@@ -305,7 +370,7 @@ struct async_print_work_state
 template <typename scheduler, typename outstmtype, typename detachedtype, typename stringtype>
 struct async_print_awaiter : async_awaiter_result<void>
 {
-	using char_type = typename stringtype::char_type;
+	using char_type = typename stringtype::value_type;
 	using work_state_type = async_print_work_state<scheduler, detachedtype, stringtype>;
 	scheduler sched;
 	outstmtype outstm;
@@ -423,237 +488,21 @@ inline auto async_print_decay(async_scheduler_type sched,
 		print_freestanding_decay<line>(outstm, ::std::forward<Args>(args)...);
 		return ::fast_io::details::async_print_awaiter<
 			async_scheduler_type, outstmtype, ::fast_io::details::empty,
-			::fast_io::containers::basic_string<char_type,
+			::fast_io::details::async_print_strlike_buffer<char_type,
 												::fast_io::native_global_allocator>>{};
 	}
-	else if constexpr (::fast_io::details::async_print_is_iobuf_ref<outstmtype>)
+	else if constexpr (requires {
+							  async_iobuffer_print_decay<line>(
+								  sched, timeout, outstm, ::std::forward<Args>(args)...);
+					  })
 	{
-		using iobuf_type = typename outstmtype::io_buffer_type;
-		using traits_type = typename iobuf_type::traits_type;
-		constexpr bool can_detach{
-			::fast_io::operations::decay::defines::
-				has_output_stream_buffer_detach_define<outstmtype>};
-		using detached_type =
-			typename ::fast_io::details::async_print_detached_type<outstmtype>::type;
-		constexpr ::std::size_t bufsize{traits_type::output_buffer_size};
-		/* payload buffers follow the device's allocator — the iobuf's own
-		 * allocator here — else the fail-fast native_global_allocator.
-		 * A status allocator carries its handle, so the payload is the
-		 * handle-owning strlike buffer rather than basic_string */
-		using payload_alloc_type =
-			::fast_io::operations::decay::output_stream_allocator_t<
-				outstmtype, ::fast_io::native_global_allocator>;
-		using payload_typed_alloc_type =
-			::fast_io::typed_generic_allocator_adapter<payload_alloc_type, char_type>;
-		constexpr bool payload_status{payload_typed_alloc_type::has_status};
-		using payload_string_type =
-			::std::conditional_t<payload_status,
-								 ::fast_io::details::async_print_strlike_buffer<char_type,
-																				payload_alloc_type>,
-								 ::fast_io::containers::basic_string<char_type,
-																	 payload_alloc_type>>;
-		auto handle_ref{::fast_io::operations::output_stream_ref(outstm.iobptr->handle)};
-		using ret_awaiter = ::fast_io::details::async_print_awaiter<
-			async_scheduler_type, decltype(handle_ref), detached_type, payload_string_type>;
-		using work_state_type = typename ret_awaiter::work_state_type;
-		auto &obuffer{outstm.iobptr->output_buffer};
-		auto make_work{[&]() FAST_IO_HERBCEPTIONS_THROWS {
-			return ::fast_io::details::async_new_state_plain<work_state_type>(sched);
-		}};
-		auto alloc_buffer{[&]() FAST_IO_HERBCEPTIONS_THROWS_IF(
-							  ::fast_io::typed_generic_allocator_adapter<typename traits_type::allocator_type,
-																		 char_type>::throws_on_allocation_failure) {
-			auto *begin{::fast_io::details::io_buffer::iobuffer_allocate<
-				char_type, typename traits_type::allocator_type>(
-				outstm.iobptr->allocator_handle, bufsize)};
-			obuffer.buffer_begin = begin;
-			obuffer.buffer_curr = begin;
-			obuffer.buffer_end = begin + bufsize;
-		}};
-
-		/* every argument formattable into raw buffer space: reserve,
-		 * dynamic_reserve, scatter_printable or a ready-made scatter */
-		constexpr bool all_direct{
-			((::fast_io::reserve_printable<char_type, ::std::remove_cvref_t<Args>> ||
-			  ::fast_io::dynamic_reserve_printable<char_type, ::std::remove_cvref_t<Args>> ||
-			  ::fast_io::scatter_printable<char_type, ::std::remove_cvref_t<Args>> ||
-			  ::std::same_as<::std::remove_cvref_t<Args>,
-							 ::fast_io::basic_io_scatter_t<char_type>>) &&
-			 ...)};
-
-		if constexpr (all_direct)
-		{
-			/* total size: the constexpr reserve sum plus runtime sizes of
-			 * scatter/dynamic args */
-			::std::size_t needed{
-				::fast_io::details::compute_total_normal_reserved_size<char_type, line,
-																	   Args...>()};
-			template for (constexpr auto i :
-						  ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
-			{
-				using arg_type = ::std::remove_cvref_t<Args...[i]>;
-				if constexpr (::std::same_as<arg_type,
-											 ::fast_io::basic_io_scatter_t<char_type>>)
-				{
-					needed += args...[i].len;
-				}
-				else if constexpr (::fast_io::scatter_printable<char_type, arg_type>)
-				{
-					needed += print_reserve_size(
-								  ::fast_io::io_reserve_type<char_type, arg_type>, args...[i])
-								  .len;
-				}
-				else if constexpr (::fast_io::dynamic_reserve_printable<char_type,
-																		arg_type>)
-				{
-					needed += print_reserve_size(
-						::fast_io::io_reserve_type<char_type, arg_type>, args...[i]);
-				}
-			}
-			if (obuffer.buffer_begin != nullptr &&
-				needed <= static_cast<::std::size_t>(obuffer.buffer_end -
-													 obuffer.buffer_curr))
-			{
-				/* buffer has room: format straight into it — the sync print
-				 * fast path; nothing is submitted. Pending bytes ahead are
-				 * untouched — appending behind them preserves order */
-				auto *curr{obuffer.buffer_curr};
-				template for (constexpr auto i :
-							  ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
-				{
-					curr = ::fast_io::details::async_print_format_one<char_type>(
-						curr, args...[i]);
-				}
-				if constexpr (line)
-				{
-					*curr = ::fast_io::char_literal_v<u8'\n', char_type>;
-					++curr;
-				}
-				obuffer.buffer_curr = curr;
-				return ret_awaiter{};
-			}
-			if (needed <= bufsize)
-			{
-				if (obuffer.buffer_curr == obuffer.buffer_begin)
-				{
-					/* empty or never-allocated buffer: ensure storage and
-					 * format into it — still no I/O */
-					if (obuffer.buffer_begin == nullptr)
-					{
-						alloc_buffer();
-					}
-				}
-				else
-				{
-					/* pending bytes would have to drain before the buffer can
-					 * take this print — detach them so they ride the submission
-					 * zero-copy and format into a fresh buffer right away */
-					ret_awaiter ret;
-					ret.sched = sched;
-					ret.outstm = handle_ref;
-					ret.timeout = timeout;
-					ret.work = make_work();
-					ret.work->detached = output_stream_buffer_detach_define(outstm);
-					/* detach leaves the buffer null — allocate a fresh one */
-					alloc_buffer();
-					auto *curr{obuffer.buffer_curr};
-					template for (constexpr auto i :
-								  ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
-					{
-						curr = ::fast_io::details::async_print_format_one<char_type>(
-							curr, args...[i]);
-					}
-					if constexpr (line)
-					{
-						*curr = ::fast_io::char_literal_v<u8'\n', char_type>;
-						++curr;
-					}
-					obuffer.buffer_curr = curr;
-					return ret;
-				}
-				auto *curr{obuffer.buffer_curr};
-				template for (constexpr auto i :
-							  ::fast_io::details::index_array_range<0zu, sizeof...(Args)>)
-				{
-					curr = ::fast_io::details::async_print_format_one<char_type>(
-						curr, args...[i]);
-				}
-				if constexpr (line)
-				{
-					*curr = ::fast_io::char_literal_v<u8'\n', char_type>;
-					++curr;
-				}
-				obuffer.buffer_curr = curr;
-				return ret_awaiter{};
-			}
-		}
-		/* oversized or non-direct arguments: format into the payload
-		 * first, then decide where the bytes go. The strlike payload
-		 * goes through the ordinary print machinery, so print_define
-		 * arguments work here too */
-		payload_string_type payload = [&]() FAST_IO_HERBCEPTIONS_THROWS -> payload_string_type {
-			payload_string_type str;
-			if constexpr (payload_status)
-			{
-				str = payload_string_type{::fast_io::details::
-											  print_output_stream_allocator_handle<outstmtype,
-																				   payload_typed_alloc_type>(
-												  outstm)};
-			}
-			::fast_io::operations::decay::print_freestanding_decay<line>(
-				io_strlike_ref(::fast_io::io_alias, str), args...);
-			return str;
-		}();
-		if (obuffer.buffer_begin != nullptr &&
-			payload.size() <= static_cast<::std::size_t>(obuffer.buffer_end - obuffer.buffer_curr))
-		{
-			/* fits in the buffer (behind any pending bytes — order kept):
-			 * pure append, nothing submitted */
-			::fast_io::details::non_overlapped_copy_n(
-				payload.data(), payload.size(), obuffer.buffer_curr);
-			obuffer.buffer_curr += payload.size();
-			return ret_awaiter{};
-		}
-		ret_awaiter ret;
-		if (obuffer.buffer_curr != obuffer.buffer_begin)
-		{
-			/* pending bytes must reach the device before the payload —
-			 * detach them so the submission carries them zero-copy and the
-			 * fresh buffer can take what fits */
-			ret.work = make_work();
-			ret.work->detached = output_stream_buffer_detach_define(outstm);
-		}
-		if (obuffer.buffer_begin == nullptr &&
-			payload.size() <= bufsize)
-		{
-			alloc_buffer();
-		}
-		if (obuffer.buffer_begin != nullptr &&
-			payload.size() <= static_cast<::std::size_t>(obuffer.buffer_end - obuffer.buffer_curr))
-		{
-			/* fits the (fresh) buffer: only the detached pending bytes
-			 * need a submission, or nothing at all */
-			::fast_io::details::non_overlapped_copy_n(
-				payload.data(), payload.size(), obuffer.buffer_curr);
-			obuffer.buffer_curr += payload.size();
-		}
-		else
-		{
-			if (ret.work == nullptr)
-			{
-				ret.work = make_work();
-			}
-			ret.work->payload = ::std::move(payload);
-		}
-		if (ret.work == nullptr)
-		{
-			return ret_awaiter{};
-		}
-		ret.sched = sched;
-		ret.outstm = handle_ref;
-		ret.timeout = timeout;
-		return ret;
+		/* basic_io_buffer_ref streams: the buffer-aware path lives with
+		 * the io_buffer layer — found by ADL, no freestanding dependency
+		 * here (same boundary async_ibuffer_underflow uses) */
+		return async_iobuffer_print_decay<line>(sched, timeout, outstm,
+												::std::forward<Args>(args)...);
 	}
+
 	else
 	{
 		using payload_alloc_type =
@@ -663,11 +512,7 @@ inline auto async_print_decay(async_scheduler_type sched,
 			::fast_io::typed_generic_allocator_adapter<payload_alloc_type, char_type>;
 		constexpr bool payload_status{payload_typed_alloc_type::has_status};
 		using payload_string_type =
-			::std::conditional_t<payload_status,
-								 ::fast_io::details::async_print_strlike_buffer<char_type,
-																				payload_alloc_type>,
-								 ::fast_io::containers::basic_string<char_type,
-																	 payload_alloc_type>>;
+			::fast_io::details::async_print_strlike_buffer<char_type, payload_alloc_type>;
 		constexpr bool is_buffered{
 			::fast_io::operations::decay::defines::has_obuffer_basic_operations<outstmtype>};
 		if constexpr (all_reserve && is_buffered)

@@ -9,6 +9,7 @@
 #include "input_async.h"
 #include "output_async.h"
 #include "close_async.h"
+#include "print_async.h"
 #endif
 #include "destroy.h"
 
