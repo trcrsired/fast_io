@@ -243,7 +243,11 @@ inline constexpr void limbs_to_bytes_be(::std::byte *p, value_type const *z, ::s
 	if (::std::size_t const rem{plen % limb_bytes})
 	{
 		value_type const v{i < nl ? z[i] : static_cast<value_type>(0)};
-		for (::std::size_t j{rem}; j--;)
+		/*
+		the top limb's trailing rem bytes, most significant first:
+		p[rem-1] takes v's low byte, p[0] its high one
+		*/
+		for (::std::size_t j{}; j != rem; ++j)
 		{
 			*--q = static_cast<::std::byte>(v >> (j * 8u));
 		}
