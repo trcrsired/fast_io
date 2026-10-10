@@ -1026,8 +1026,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		::std::byte covered[covered_size];
 		::fast_io::tls::details::certificate_verify_content_write<hash_ctx>(covered, cv_transcript);
 		switch (crypto::cert_cv_verify(
-			cv_scheme, covered, covered_size, cv_sig.data(), cv_sig.size(),
-			presented[0].spki_algorithm, presented[0].public_key, presented[0].public_key_size))
+			cv_scheme, covered, covered_size, cv_sig.data(), cv_sig.size(), presented[0]))
 		{
 		case ::fast_io::tls::details::x509_verify_result::ok:
 			break;

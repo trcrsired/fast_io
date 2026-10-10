@@ -20,10 +20,12 @@ A backend supplies:
 						   checks the all-zero result
 	record_open/seal       suite-dispatched AEAD on TLS 1.3 records
 	cert_sig_verify        cert.signature over cert.tbs under the
-						   issuer SPKI -- DER parsing stays ours,
-						   only the signature math delegates
+						   issuer's SPKI -- DER parsing stays ours,
+						   only the signature math delegates; the
+						   issuer cert is passed whole so providers
+						   can import its spki_der directly
 	cert_cv_verify         the CertificateVerify signature over the
-						   transcript
+						   transcript, leaf cert passed whole
 */
 
 namespace fast_io::tls
@@ -76,24 +78,21 @@ struct fast_io_crypto_backend
 
 	static inline details::x509_verify_result
 	cert_sig_verify(details::x509_certificate const &cert,
-					details::algorithm_identifier const &issuer_alg,
-					::std::byte const *issuer_public_key,
-					::std::size_t issuer_public_key_size) noexcept
+					details::x509_certificate const &issuer) noexcept
 	{
-		return details::x509_verify_signature(cert, issuer_alg, issuer_public_key,
-											  issuer_public_key_size);
+		return details::x509_verify_signature(cert, issuer.spki_algorithm, issuer.public_key,
+											  issuer.public_key_size);
 	}
 
 	static inline details::x509_verify_result
 	cert_cv_verify(signature_scheme scheme, ::std::byte const *covered,
 				   ::std::size_t covered_size, ::std::byte const *signature,
 				   ::std::size_t signature_size,
-				   details::algorithm_identifier const &leaf_alg,
-				   ::std::byte const *leaf_key, ::std::size_t leaf_key_size) noexcept
+				   details::x509_certificate const &leaf) noexcept
 	{
 		return details::tls_certificate_verify(scheme, covered, covered_size, signature,
-											   signature_size, leaf_alg, leaf_key,
-											   leaf_key_size);
+											   signature_size, leaf.spki_algorithm, leaf.public_key,
+											   leaf.public_key_size);
 	}
 };
 

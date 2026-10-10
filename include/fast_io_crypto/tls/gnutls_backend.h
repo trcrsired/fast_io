@@ -25,15 +25,94 @@ stays on the fast_io parser for now.
 #if FAST_IO_TLS_HAS_GNUTLS_CRYPTO
 
 #include <gnutls/crypto.h>
+#include <gnutls/abstract.h>
 #include <nettle/curve25519.h>
+
+namespace fast_io::tls::details
+{
+
+/* gnutls_digest context in the basic_md5_sha_context_impl shape --
+   update / do_final / digest_to_byte_ptr / reset / copy. The handle is
+   a heap object; allocation failure is OOM and terminates. Copies go
+   through gnutls_hash_copy so transcript snapshots work. */
+template <gnutls_digest_algorithm_t algo, ::std::size_t digest_size_,
+		  ::std::size_t block_size_>
+struct gnutls_evp_hash_ctx
+{
+	static inline constexpr ::std::size_t digest_size{digest_size_};
+	static inline constexpr ::std::size_t block_size{block_size_};
+
+	gnutls_hash_hd_t ctx{};
+	::std::byte digest[64]{};
+
+	inline gnutls_evp_hash_ctx() noexcept = default;
+	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx const &o) noexcept
+	{
+		if (o.ctx != nullptr)
+		{
+			ctx = gnutls_hash_copy(o.ctx);
+			if (ctx == nullptr)
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+	}
+	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx &&o) noexcept : ctx{o.ctx}
+	{
+		o.ctx = nullptr;
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+	}
+	inline ~gnutls_evp_hash_ctx()
+	{
+		if (ctx != nullptr)
+		{
+			gnutls_hash_deinit(ctx, nullptr);
+		}
+	}
+	inline void ensure() noexcept
+	{
+		if (ctx == nullptr && gnutls_hash_init(__builtin_addressof(ctx), algo) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	inline void update(::std::byte const *first, ::std::byte const *last) noexcept
+	{
+		this->ensure();
+		if (gnutls_hash(ctx, first, static_cast<::std::size_t>(last - first)) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	inline void reset() noexcept
+	{
+		if (ctx != nullptr)
+		{
+			gnutls_hash_deinit(ctx, nullptr);
+			ctx = nullptr;
+		}
+	}
+	inline void do_final() noexcept
+	{
+		this->ensure();
+		gnutls_hash_output(ctx, digest);
+	}
+	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
+	{
+		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size, ptr);
+	}
+};
+
+} // namespace fast_io::tls::details
 
 namespace fast_io::tls
 {
 
 struct gnutls_crypto_backend
 {
-	using sha256 = ::fast_io::sha256_context;
-	using sha384 = ::fast_io::sha384_context;
+	using sha256 = details::gnutls_evp_hash_ctx<GNUTLS_DIG_SHA256, 32, 64>;
+	using sha384 = details::gnutls_evp_hash_ctx<GNUTLS_DIG_SHA384, 48, 128>;
 
 	static inline void x25519_keypair(::std::byte *pk, ::std::byte *sk) noexcept
 	{
@@ -154,29 +233,208 @@ public:
 		return record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 	}
 
-	/* DER parsing, chain walk and SAN checks stay in fast_io -- the
-	   signature math forwards to the fast_io verifier until a provider
-	   verify op is wired in */
+private:
+	static inline gnutls_pubkey_t gnutls_tls_spki_pkey(::std::byte const *spki_der,
+													   ::std::size_t spki_der_size) noexcept
+	{
+		gnutls_pubkey_t pk{};
+		if (gnutls_pubkey_init(__builtin_addressof(pk)) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+		gnutls_datum_t const spki{const_cast<char unsigned *>(
+									  reinterpret_cast<char unsigned const *>(spki_der)),
+								  static_cast<unsigned>(spki_der_size)};
+		if (gnutls_pubkey_import(pk, __builtin_addressof(spki), GNUTLS_X509_FMT_DER) != 0)
+		{
+			gnutls_pubkey_deinit(pk);
+			return nullptr;
+		}
+		return pk;
+	}
+
+	static inline details::x509_verify_result
+	gnutls_tls_run_verify(gnutls_pubkey_t pk, gnutls_sign_algorithm_t algo,
+						  ::std::byte const *signature, ::std::size_t signature_size,
+						  ::std::byte const *data, ::std::size_t data_size) noexcept
+	{
+		gnutls_datum_t const sig{const_cast<char unsigned *>(
+									 reinterpret_cast<char unsigned const *>(signature)),
+								 static_cast<unsigned>(signature_size)};
+		gnutls_datum_t const dat{const_cast<char unsigned *>(
+									 reinterpret_cast<char unsigned const *>(data)),
+								 static_cast<unsigned>(data_size)};
+		int const ret{gnutls_pubkey_verify_data2(pk, algo, 0, __builtin_addressof(dat),
+												 __builtin_addressof(sig))};
+		return ret == 0                               ? details::x509_verify_result::ok
+			   : ret == GNUTLS_E_PK_SIG_VERIFY_FAILED ? details::x509_verify_result::bad_signature
+													  : details::x509_verify_result::malformed;
+	}
+
+	static inline details::x509_verify_result
+	gnutls_tls_cert_sig_algo(details::x509_certificate const &cert,
+							 gnutls_sign_algorithm_t &algo) noexcept
+	{
+		using details::der_oid_eq;
+		if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha256_with_rsa))
+		{
+			algo = GNUTLS_SIGN_RSA_SHA256;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha384_with_rsa))
+		{
+			algo = GNUTLS_SIGN_RSA_SHA384;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha512_with_rsa))
+		{
+			algo = GNUTLS_SIGN_RSA_SHA512;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha224_with_rsa))
+		{
+			algo = GNUTLS_SIGN_RSA_SHA224;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha256))
+		{
+			algo = GNUTLS_SIGN_ECDSA_SHA256;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha384))
+		{
+			algo = GNUTLS_SIGN_ECDSA_SHA384;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha512))
+		{
+			algo = GNUTLS_SIGN_ECDSA_SHA512;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ed25519))
+		{
+			algo = GNUTLS_SIGN_EDDSA_ED25519;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::rsassa_pss))
+		{
+			if (!cert.signature_algorithm_has_params)
+			{
+				return details::x509_verify_result::malformed;
+			}
+			details::rsassa_pss_params pp;
+			if (!details::rsassa_pss_params_parse(cert.signature_algorithm_params, pp) ||
+				!pp.has_hash || !pp.has_mgf_hash || !pp.has_salt ||
+				pp.mgf_hash_oid.value_size != pp.hash_oid.value_size ||
+				__builtin_memcmp(pp.mgf_hash_oid.value, pp.hash_oid.value,
+								 pp.hash_oid.value_size) != 0)
+			{
+				return details::x509_verify_result::unsupported_algorithm;
+			}
+			if (der_oid_eq(pp.hash_oid, details::oid::sha256))
+			{
+				algo = GNUTLS_SIGN_RSA_PSS_SHA256;
+			}
+			else if (der_oid_eq(pp.hash_oid, details::oid::sha384))
+			{
+				algo = GNUTLS_SIGN_RSA_PSS_SHA384;
+			}
+			else if (der_oid_eq(pp.hash_oid, details::oid::sha512))
+			{
+				algo = GNUTLS_SIGN_RSA_PSS_SHA512;
+			}
+			else
+			{
+				return details::x509_verify_result::unsupported_algorithm;
+			}
+		}
+		else
+		{
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		return details::x509_verify_result::ok;
+	}
+
+	static inline details::x509_verify_result
+	gnutls_tls_scheme_algo(signature_scheme scheme, gnutls_sign_algorithm_t &algo) noexcept
+	{
+		switch (scheme)
+		{
+		case signature_scheme::rsa_pss_rsae_sha256:
+			algo = GNUTLS_SIGN_RSA_PSS_RSAE_SHA256;
+			break;
+		case signature_scheme::rsa_pss_rsae_sha384:
+			algo = GNUTLS_SIGN_RSA_PSS_RSAE_SHA384;
+			break;
+		case signature_scheme::rsa_pss_rsae_sha512:
+			algo = GNUTLS_SIGN_RSA_PSS_RSAE_SHA512;
+			break;
+		case signature_scheme::rsa_pss_pss_sha256:
+			algo = GNUTLS_SIGN_RSA_PSS_SHA256;
+			break;
+		case signature_scheme::rsa_pss_pss_sha384:
+			algo = GNUTLS_SIGN_RSA_PSS_SHA384;
+			break;
+		case signature_scheme::rsa_pss_pss_sha512:
+			algo = GNUTLS_SIGN_RSA_PSS_SHA512;
+			break;
+		case signature_scheme::ecdsa_secp256r1_sha256:
+			algo = GNUTLS_SIGN_ECDSA_SECP256R1_SHA256;
+			break;
+		case signature_scheme::ecdsa_secp384r1_sha384:
+			algo = GNUTLS_SIGN_ECDSA_SECP384R1_SHA384;
+			break;
+		case signature_scheme::ed25519:
+			algo = GNUTLS_SIGN_EDDSA_ED25519;
+			break;
+		case signature_scheme::rsa_pkcs1_sha256:
+			algo = GNUTLS_SIGN_RSA_SHA256;
+			break;
+		case signature_scheme::rsa_pkcs1_sha384:
+			algo = GNUTLS_SIGN_RSA_SHA384;
+			break;
+		case signature_scheme::rsa_pkcs1_sha512:
+			algo = GNUTLS_SIGN_RSA_SHA512;
+			break;
+		default:
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		return details::x509_verify_result::ok;
+	}
+
+public:
 	static inline details::x509_verify_result
 	cert_sig_verify(details::x509_certificate const &cert,
-					details::algorithm_identifier const &issuer_alg,
-					::std::byte const *issuer_public_key,
-					::std::size_t issuer_public_key_size) noexcept
+					details::x509_certificate const &issuer) noexcept
 	{
-		return details::x509_verify_signature(cert, issuer_alg, issuer_public_key,
-											  issuer_public_key_size);
+		gnutls_pubkey_t pk{gnutls_tls_spki_pkey(issuer.spki_der, issuer.spki_der_size)};
+		if (pk == nullptr)
+		{
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		gnutls_sign_algorithm_t algo{};
+		details::x509_verify_result res{gnutls_tls_cert_sig_algo(cert, algo)};
+		if (res == details::x509_verify_result::ok)
+		{
+			res = gnutls_tls_run_verify(pk, algo, cert.signature, cert.signature_size,
+										cert.tbs, cert.tbs_size);
+		}
+		gnutls_pubkey_deinit(pk);
+		return res;
 	}
 
 	static inline details::x509_verify_result
 	cert_cv_verify(signature_scheme scheme, ::std::byte const *covered,
 				   ::std::size_t covered_size, ::std::byte const *signature,
 				   ::std::size_t signature_size,
-				   details::algorithm_identifier const &leaf_alg,
-				   ::std::byte const *leaf_key, ::std::size_t leaf_key_size) noexcept
+				   details::x509_certificate const &leaf) noexcept
 	{
-		return details::tls_certificate_verify(scheme, covered, covered_size, signature,
-											   signature_size, leaf_alg, leaf_key,
-											   leaf_key_size);
+		gnutls_pubkey_t pk{gnutls_tls_spki_pkey(leaf.spki_der, leaf.spki_der_size)};
+		if (pk == nullptr)
+		{
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		gnutls_sign_algorithm_t algo{};
+		details::x509_verify_result res{gnutls_tls_scheme_algo(scheme, algo)};
+		if (res == details::x509_verify_result::ok)
+		{
+			res = gnutls_tls_run_verify(pk, algo, signature, signature_size, covered,
+										covered_size);
+		}
+		gnutls_pubkey_deinit(pk);
+		return res;
 	}
 };
 

@@ -175,6 +175,10 @@ struct x509_certificate
 	::std::int_least64_t not_after{};
 
 	algorithm_identifier spki_algorithm{};
+	::std::byte const *spki_der{}; /* whole SubjectPublicKeyInfo TLV -- the
+									   form provider backends feed their key
+									   importers (d2i_PUBKEY, gnutls_pubkey) */
+	::std::size_t spki_der_size{};
 	::std::byte const *public_key{}; /* bit string content */
 	::std::size_t public_key_size{};
 
@@ -318,11 +322,14 @@ inline constexpr bool x509_tbs_parse(x509_certificate &cert, wire_reader &tbs) n
 	}
 	{
 		/* subjectPublicKeyInfo */
+		::std::byte const *mark{tbs.cur};
 		der_tlv spki;
 		if (!der_expect_tag(tbs, 0x30, spki))
 		{
 			return false;
 		}
+		cert.spki_der = mark;
+		cert.spki_der_size = static_cast<::std::size_t>(tbs.cur - mark);
 		wire_reader s{der_sub(spki)};
 		if (!algorithm_identifier_parse(s, cert.spki_algorithm) ||
 			!der_read_tlv(s, tlv) ||
@@ -965,7 +972,7 @@ inline constexpr x509_chain_result x509_chain_verify(
 				continue;
 			}
 			root_name_matched = true;
-			if (crypto::cert_sig_verify(cur, r.spki_algorithm, r.public_key, r.public_key_size) ==
+			if (crypto::cert_sig_verify(cur, r) ==
 				x509_verify_result::ok)
 			{
 				return x509_chain_result::ok;
@@ -987,8 +994,7 @@ inline constexpr x509_chain_result x509_chain_verify(
 			{
 				return x509_chain_result::not_ca;
 			}
-			x509_verify_result const vr{crypto::cert_sig_verify(cur, presented[i].spki_algorithm,
-																presented[i].public_key, presented[i].public_key_size)};
+			x509_verify_result const vr{crypto::cert_sig_verify(cur, presented[i])};
 			if (vr == x509_verify_result::ok)
 			{
 				next_idx = i;

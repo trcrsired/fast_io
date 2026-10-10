@@ -26,16 +26,111 @@ AEAD) and state size (X25519) are the EVP ones.
 #if FAST_IO_TLS_HAS_OSSL_CRYPTO
 
 #include <openssl/evp.h>
+#include <openssl/x509.h>
+#include <openssl/rsa.h>
+
+namespace fast_io::tls::details
+{
+
+/* EVP message-digest context in the basic_md5_sha_context_impl shape:
+   update / do_final / digest_to_byte_ptr / reset / copy. The ctx is a
+   heap object -- allocation failure is OOM, which terminates. Copies
+   go through EVP_MD_CTX_copy_ex so transcript snapshots work. */
+template <EVP_MD const *(*md_fn)(), ::std::size_t digest_size_, ::std::size_t block_size_>
+struct ossl_evp_hash_ctx
+{
+	static inline constexpr ::std::size_t digest_size{digest_size_};
+	static inline constexpr ::std::size_t block_size{block_size_};
+
+	EVP_MD_CTX *ctx{};
+	::std::byte digest[64]{};
+
+	inline ossl_evp_hash_ctx() noexcept = default;
+	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx const &o) noexcept
+	{
+		if (o.ctx != nullptr)
+		{
+			ctx = EVP_MD_CTX_new();
+			if (ctx == nullptr)
+			{
+				::fast_io::fast_terminate();
+			}
+			if (EVP_MD_CTX_copy_ex(ctx, o.ctx) != 1)
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+	}
+	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx &&o) noexcept : ctx{o.ctx}
+	{
+		o.ctx = nullptr;
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+	}
+	inline ~ossl_evp_hash_ctx()
+	{
+		EVP_MD_CTX_free(ctx);
+	}
+	inline void ensure() noexcept
+	{
+		if (ctx == nullptr)
+		{
+			ctx = EVP_MD_CTX_new();
+			if (ctx == nullptr)
+			{
+				::fast_io::fast_terminate();
+			}
+			if (EVP_DigestInit_ex(ctx, md_fn(), nullptr) != 1)
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+	}
+	inline void update(::std::byte const *first, ::std::byte const *last) noexcept
+	{
+		this->ensure();
+		if (EVP_DigestUpdate(ctx, first, static_cast<::std::size_t>(last - first)) != 1)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+	inline void reset() noexcept
+	{
+		if (ctx != nullptr)
+		{
+			EVP_MD_CTX_reset(ctx);
+			if (EVP_DigestInit_ex(ctx, md_fn(), nullptr) != 1)
+			{
+				::fast_io::fast_terminate();
+			}
+		}
+	}
+	inline void do_final() noexcept
+	{
+		this->ensure();
+		char unsigned out[EVP_MAX_MD_SIZE];
+		if (EVP_DigestFinal_ex(ctx, out, nullptr) != 1)
+		{
+			::fast_io::fast_terminate();
+		}
+		::fast_io::freestanding::non_overlapped_copy_n(
+			reinterpret_cast<::std::byte *>(out), digest_size, digest);
+	}
+	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
+	{
+		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size, ptr);
+	}
+};
+
+} // namespace fast_io::tls::details
 
 namespace fast_io::tls
 {
 
 struct ossl_crypto_backend
 {
-	/* small constexpr contexts -- EVP digest handles cannot live in the
-	   key schedule's noexcept machinery */
-	using sha256 = ::fast_io::sha256_context;
-	using sha384 = ::fast_io::sha384_context;
+	using sha256 = details::ossl_evp_hash_ctx<EVP_sha256, 32, 64>;
+	using sha384 = details::ossl_evp_hash_ctx<EVP_sha384, 48, 128>;
 
 	static inline void x25519_keypair(::std::byte *pk, ::std::byte *sk) noexcept
 	{
@@ -214,29 +309,255 @@ public:
 		return record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 	}
 
-	/* DER parsing, chain walk and SAN checks stay in fast_io -- the
-	   signature math forwards to the fast_io verifier until the EVP
-	   verify ops are wired in */
+private:
+	static inline EVP_PKEY *ossl_tls_spki_pkey(::std::byte const *spki_der,
+											   ::std::size_t spki_der_size) noexcept
+	{
+		char unsigned const *d{reinterpret_cast<char unsigned const *>(spki_der)};
+		return d2i_PUBKEY(nullptr, __builtin_addressof(d),
+						  static_cast<long>(spki_der_size));
+	}
+
+	/* hash oid -> EVP_MD; unsupported digests return nullptr */
+	static inline EVP_MD const *ossl_tls_hash_oid(details::der_tlv const &oid) noexcept
+	{
+		using details::der_oid_eq;
+		if (der_oid_eq(oid, details::oid::sha256))
+		{
+			return EVP_sha256();
+		}
+		if (der_oid_eq(oid, details::oid::sha384))
+		{
+			return EVP_sha384();
+		}
+		if (der_oid_eq(oid, details::oid::sha512))
+		{
+			return EVP_sha512();
+		}
+		if (der_oid_eq(oid, details::oid::sha224))
+		{
+			return EVP_sha224();
+		}
+		return nullptr;
+	}
+
+	static inline EVP_MD const *ossl_tls_scheme_md(signature_scheme scheme) noexcept
+	{
+		switch (scheme)
+		{
+		case signature_scheme::rsa_pkcs1_sha256:
+		case signature_scheme::rsa_pss_rsae_sha256:
+		case signature_scheme::rsa_pss_pss_sha256:
+		case signature_scheme::ecdsa_secp256r1_sha256:
+			return EVP_sha256();
+		case signature_scheme::rsa_pkcs1_sha384:
+		case signature_scheme::rsa_pss_rsae_sha384:
+		case signature_scheme::rsa_pss_pss_sha384:
+		case signature_scheme::ecdsa_secp384r1_sha384:
+			return EVP_sha384();
+		case signature_scheme::rsa_pkcs1_sha512:
+		case signature_scheme::rsa_pss_rsae_sha512:
+		case signature_scheme::rsa_pss_pss_sha512:
+			return EVP_sha512();
+		default:
+			return nullptr;
+		}
+	}
+
+	static inline details::x509_verify_result
+	ossl_tls_run_verify(EVP_PKEY *pk, EVP_MD const *md, bool pss, int saltlen,
+						::std::byte const *signature, ::std::size_t signature_size,
+						::std::byte const *data, ::std::size_t data_size) noexcept
+	{
+		EVP_MD_CTX *c{EVP_MD_CTX_new()};
+		if (c == nullptr)
+		{
+			::fast_io::fast_terminate();
+		}
+		EVP_PKEY_CTX *pctx{};
+		int init{EVP_DigestVerifyInit(c, __builtin_addressof(pctx), md, nullptr, pk)};
+		int ret{-1};
+		if (init == 1)
+		{
+			bool params_ok{true};
+			if (pss)
+			{
+				params_ok = EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0 &&
+							EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, saltlen) > 0 &&
+							EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, md) > 0;
+			}
+			if (params_ok)
+			{
+				ret = EVP_DigestVerify(c,
+									   reinterpret_cast<char unsigned const *>(signature),
+									   signature_size,
+									   reinterpret_cast<char unsigned const *>(data),
+									   data_size);
+			}
+		}
+		EVP_MD_CTX_free(c);
+		if (ret == 1)
+		{
+			return details::x509_verify_result::ok;
+		}
+		if (ret == 0)
+		{
+			return details::x509_verify_result::bad_signature;
+		}
+		return details::x509_verify_result::malformed;
+	}
+
+	static inline details::x509_verify_result
+	ossl_tls_run_oneshot(EVP_PKEY *pk, ::std::byte const *signature,
+						 ::std::size_t signature_size, ::std::byte const *data,
+						 ::std::size_t data_size) noexcept
+	{
+		/* Ed25519/Ed448 style: no digest, message signed whole */
+		EVP_MD_CTX *c{EVP_MD_CTX_new()};
+		if (c == nullptr)
+		{
+			::fast_io::fast_terminate();
+		}
+		int ret{EVP_DigestVerifyInit(c, nullptr, nullptr, nullptr, pk)};
+		if (ret == 1)
+		{
+			ret = EVP_DigestVerify(c, reinterpret_cast<char unsigned const *>(signature),
+								   signature_size, reinterpret_cast<char unsigned const *>(data),
+								   data_size);
+		}
+		EVP_MD_CTX_free(c);
+		return ret == 1   ? details::x509_verify_result::ok
+			   : ret == 0 ? details::x509_verify_result::bad_signature
+						  : details::x509_verify_result::malformed;
+	}
+
+public:
 	static inline details::x509_verify_result
 	cert_sig_verify(details::x509_certificate const &cert,
-					details::algorithm_identifier const &issuer_alg,
-					::std::byte const *issuer_public_key,
-					::std::size_t issuer_public_key_size) noexcept
+					details::x509_certificate const &issuer) noexcept
 	{
-		return details::x509_verify_signature(cert, issuer_alg, issuer_public_key,
-											  issuer_public_key_size);
+		EVP_PKEY *pk{ossl_tls_spki_pkey(issuer.spki_der, issuer.spki_der_size)};
+		if (pk == nullptr)
+		{
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		using details::der_oid_eq;
+		details::x509_verify_result res;
+		if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ed25519))
+		{
+			res = ossl_tls_run_oneshot(pk, cert.signature, cert.signature_size, cert.tbs,
+									   cert.tbs_size);
+		}
+		else
+		{
+			EVP_MD const *md{};
+			bool pss{};
+			int saltlen{0};
+			if (der_oid_eq(cert.signature_algorithm_oid, details::oid::rsassa_pss))
+			{
+				if (!cert.signature_algorithm_has_params)
+				{
+					EVP_PKEY_free(pk);
+					return details::x509_verify_result::malformed;
+				}
+				details::rsassa_pss_params pp;
+				if (!details::rsassa_pss_params_parse(cert.signature_algorithm_params, pp) ||
+					!pp.has_hash || !pp.has_mgf_hash || !pp.has_salt)
+				{
+					EVP_PKEY_free(pk);
+					return details::x509_verify_result::malformed;
+				}
+				md = ossl_tls_hash_oid(pp.hash_oid);
+				saltlen = static_cast<int>(pp.salt_size);
+				pss = true;
+				/* mgf1 hash must equal the hash oid (checked the fast_io
+				   way -- providers do not support mixed mgf) */
+				if (pp.mgf_hash_oid.value_size != pp.hash_oid.value_size ||
+					__builtin_memcmp(pp.mgf_hash_oid.value, pp.hash_oid.value,
+									 pp.hash_oid.value_size) != 0)
+				{
+					EVP_PKEY_free(pk);
+					return details::x509_verify_result::unsupported_algorithm;
+				}
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha256_with_rsa))
+			{
+				md = EVP_sha256();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha384_with_rsa))
+			{
+				md = EVP_sha384();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha512_with_rsa))
+			{
+				md = EVP_sha512();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::sha224_with_rsa))
+			{
+				md = EVP_sha224();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha256))
+			{
+				md = EVP_sha256();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha384))
+			{
+				md = EVP_sha384();
+			}
+			else if (der_oid_eq(cert.signature_algorithm_oid, details::oid::ecdsa_with_sha512))
+			{
+				md = EVP_sha512();
+			}
+			if (md == nullptr)
+			{
+				EVP_PKEY_free(pk);
+				return details::x509_verify_result::unsupported_algorithm;
+			}
+			res = ossl_tls_run_verify(pk, md, pss, saltlen, cert.signature,
+									  cert.signature_size, cert.tbs, cert.tbs_size);
+		}
+		EVP_PKEY_free(pk);
+		return res;
 	}
 
 	static inline details::x509_verify_result
 	cert_cv_verify(signature_scheme scheme, ::std::byte const *covered,
 				   ::std::size_t covered_size, ::std::byte const *signature,
 				   ::std::size_t signature_size,
-				   details::algorithm_identifier const &leaf_alg,
-				   ::std::byte const *leaf_key, ::std::size_t leaf_key_size) noexcept
+				   details::x509_certificate const &leaf) noexcept
 	{
-		return details::tls_certificate_verify(scheme, covered, covered_size, signature,
-											   signature_size, leaf_alg, leaf_key,
-											   leaf_key_size);
+		EVP_PKEY *pk{ossl_tls_spki_pkey(leaf.spki_der, leaf.spki_der_size)};
+		if (pk == nullptr)
+		{
+			return details::x509_verify_result::unsupported_algorithm;
+		}
+		details::x509_verify_result res;
+		if (scheme == signature_scheme::ed25519)
+		{
+			res = ossl_tls_run_oneshot(pk, signature, signature_size, covered, covered_size);
+		}
+		else
+		{
+			EVP_MD const *md{ossl_tls_scheme_md(scheme)};
+			if (md == nullptr)
+			{
+				EVP_PKEY_free(pk);
+				return details::x509_verify_result::unsupported_algorithm;
+			}
+			bool const pss{scheme == signature_scheme::rsa_pss_rsae_sha256 ||
+						   scheme == signature_scheme::rsa_pss_rsae_sha384 ||
+						   scheme == signature_scheme::rsa_pss_rsae_sha512 ||
+						   scheme == signature_scheme::rsa_pss_pss_sha256 ||
+						   scheme == signature_scheme::rsa_pss_pss_sha384 ||
+						   scheme == signature_scheme::rsa_pss_pss_sha512};
+			/* rfc8446 4.2.3: PSS salt length equals the digest length */
+			res = ossl_tls_run_verify(pk, md, pss,
+									  pss ? static_cast<int>(EVP_MD_size(md))
+										  : RSA_PKCS1_PADDING,
+									  signature, signature_size, covered, covered_size);
+		}
+		EVP_PKEY_free(pk);
+		return res;
 	}
 };
 
