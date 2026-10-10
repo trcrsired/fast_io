@@ -34,19 +34,22 @@ inline ::std::size_t lc_grouped_count(lc_ctx<char_type> const *ctx,
 
 // digits written most-significant-first with the separator inserted at
 // each group boundary (group sizes count from the right). u is the
-// magnitude — the sign, if any, is emitted by the caller. full pads
-// with leading zeros to the type's maximum digit count.
-template <bool full, ::std::integral char_type, ::fast_io::details::my_unsigned_integral T>
+// magnitude — the sign and base prefix, if any, are emitted by the
+// caller. full pads with leading zeros to the type's maximum digit
+// count in the base. Grouping applies to every base — the library has
+// grouped non-decimal output for years.
+template <::std::size_t base, bool upper, bool full, ::std::integral char_type,
+		  ::fast_io::details::my_unsigned_integral T>
 inline char_type *lc_grouped_write(lc_ctx<char_type> const *ctx,
 								   char_type *first, T u) noexcept
 {
 	using int_type = ::std::remove_cv_t<T>;
-	int_type tmp[::fast_io::details::cal_max_int_size<int_type, 10>()];
+	int_type tmp[::fast_io::details::cal_max_int_size<int_type, base>()];
 	int_type *tmpend{tmp};
 	do
 	{
-		*tmpend++ = u % 10u;
-		u /= 10u;
+		*tmpend++ = static_cast<int_type>(u % base);
+		u /= base;
 	} while (u != 0);
 	::std::size_t nd{static_cast<::std::size_t>(tmpend - tmp)};
 	if constexpr (full)
@@ -87,7 +90,7 @@ inline char_type *lc_grouped_write(lc_ctx<char_type> const *ctx,
 	::std::size_t bi{};
 	for (::std::size_t pos{nd}; pos != 0; --pos)
 	{
-		*first++ = ::fast_io::char_literal_add<char_type>(tmp[pos - 1]);
+		*first++ = ::fast_io::details::charliteralofnumber<char_type, upper>(tmp[pos - 1]);
 		if (bi < nb && pos - 1 == bounds[nb - 1 - bi])
 		{
 			::fast_io::details::my_memcpy(first, ctx->sep,
@@ -99,62 +102,75 @@ inline char_type *lc_grouped_write(lc_ctx<char_type> const *ctx,
 	return first;
 }
 
-// full signed-decimal emit with optional showpos sign
-template <bool showpos, bool full, ::std::integral char_type, ::fast_io::details::my_integral T>
-inline char_type *lc_print_int(lc_ctx<char_type> const *ctx,
-							   char_type *first, T t) noexcept
+// full emit: sign for decimal only (non-decimal bases write the
+// unsigned representation, like print_reserve on scalar_manip), the
+// showbase prefix, then grouped or plain digits in the base
+template <::fast_io::manipulators::scalar_flags flags, ::std::integral char_type,
+		  ::fast_io::details::my_integral T>
+inline char_type *lc_print_scalar(lc_ctx<char_type> const *ctx,
+								  char_type *first, T t) noexcept
 {
 	using int_type = ::std::remove_cv_t<T>;
 	using unsigned_type = ::fast_io::details::my_make_unsigned_t<int_type>;
 	unsigned_type u{static_cast<unsigned_type>(t)};
-	if constexpr (showpos)
+	if constexpr (flags.base == 10)
 	{
-		if constexpr (::fast_io::details::my_unsigned_integral<int_type>)
+		if constexpr (flags.showpos)
 		{
-			*first = ::fast_io::char_literal_v<u8'+', char_type>;
+			if constexpr (::fast_io::details::my_unsigned_integral<int_type>)
+			{
+				*first = ::fast_io::char_literal_v<u8'+', char_type>;
+			}
+			else
+			{
+				if (t < 0)
+				{
+					*first = ::fast_io::char_literal_v<u8'-', char_type>;
+					constexpr unsigned_type zero{};
+					u = static_cast<unsigned_type>(zero - u);
+				}
+				else
+				{
+					*first = ::fast_io::char_literal_v<u8'+', char_type>;
+				}
+			}
+			++first;
 		}
-		else
+		else if constexpr (::fast_io::details::my_signed_integral<int_type>)
 		{
 			if (t < 0)
 			{
 				*first = ::fast_io::char_literal_v<u8'-', char_type>;
+				++first;
 				constexpr unsigned_type zero{};
 				u = static_cast<unsigned_type>(zero - u);
 			}
-			else
-			{
-				*first = ::fast_io::char_literal_v<u8'+', char_type>;
-			}
 		}
-		++first;
 	}
-	else if constexpr (::fast_io::details::my_signed_integral<int_type>)
+	if constexpr (flags.showbase)
 	{
-		if (t < 0)
-		{
-			*first = ::fast_io::char_literal_v<u8'-', char_type>;
-			++first;
-			constexpr unsigned_type zero{};
-			u = static_cast<unsigned_type>(zero - u);
-		}
+		first = ::fast_io::details::print_reserve_show_base_impl<flags.base,
+															   flags.uppercase_showbase>(first);
 	}
 	if (ctx->grouping_len != 0 && ctx->sep_len != 0)
 	{
-		return lc_grouped_write<full>(ctx, first, u);
+		return lc_grouped_write<flags.base, flags.uppercase, flags.full>(ctx, first, u);
 	}
-	return ::fast_io::details::print_reserve_integral_withfull_main_impl<full, 10, false>(first, u);
+	return ::fast_io::details::print_reserve_integral_withfull_main_impl<
+		flags.full, flags.base, flags.uppercase>(first, u);
 }
 
 } // namespace details
 
-// scalar_manip_t of an integral, decimal, non-alphabet type — the only
-// case locale grouping applies to (mirrors printf %'d semantics)
+// scalar_manip_t of an integral, non-alphabet type — locale grouping
+// applies to every base (the library has grouped non-decimal output
+// for years)
 template <typename T>
 inline constexpr bool lc_grouped_scalar_v{false};
 
 template <::fast_io::manipulators::scalar_flags flags, typename T>
 inline constexpr bool lc_grouped_scalar_v<::fast_io::manipulators::scalar_manip_t<flags, T>>{
-	::fast_io::details::my_integral<T> && flags.base == 10 && !flags.alphabet &&
+	::fast_io::details::my_integral<T> && !flags.alphabet &&
 	!::std::same_as<::std::remove_cv_t<T>, bool>};
 
 // locale print hooks keyed on lc_ctx — the dynamic_reserve_printable
@@ -170,7 +186,16 @@ print_reserve_size(lc_ctx<char_type> const *ctx,
 	using unsigned_type = ::fast_io::details::my_make_unsigned_t<T>;
 	unsigned_type u{static_cast<unsigned_type>(t.reference)};
 	::std::size_t sign{};
-	if constexpr (flags.showpos)
+	if constexpr (flags.base != 10)
+	{
+		/* non-decimal bases write the unsigned representation — no sign,
+		 * and an unsigned magnitude is always used */
+		if constexpr (::fast_io::details::my_signed_integral<T>)
+		{
+			u = static_cast<unsigned_type>(t.reference);
+		}
+	}
+	else if constexpr (flags.showpos)
 	{
 		sign = 1;
 		if constexpr (::fast_io::details::my_signed_integral<T>)
@@ -191,8 +216,12 @@ print_reserve_size(lc_ctx<char_type> const *ctx,
 			u = static_cast<unsigned_type>(zero - u);
 		}
 	}
-	::std::size_t const nd{flags.full ? ::fast_io::details::cal_max_int_size<T, 10>()
-									  : ::fast_io::details::chars_len<10>(u)};
+	::std::size_t const nd{flags.full ? ::fast_io::details::cal_max_int_size<T, flags.base>()
+									  : ::fast_io::details::chars_len<flags.base>(u)};
+	if constexpr (flags.showbase)
+	{
+		sign += ::fast_io::details::base_prefix_array<char_type, flags.base>.size();
+	}
 	return sign + nd +
 		   ::fast_io::details::lc_grouped_count(ctx, nd) * ctx->sep_len;
 }
@@ -204,7 +233,7 @@ inline constexpr char_type *
 print_reserve_define(lc_ctx<char_type> const *ctx, char_type *iter,
 					 ::fast_io::manipulators::scalar_manip_t<flags, T> t) noexcept
 {
-	return ::fast_io::details::lc_print_int<flags.showpos, flags.full>(ctx, iter, t.reference);
+	return ::fast_io::details::lc_print_scalar<flags>(ctx, iter, t.reference);
 }
 
 } // namespace fast_io
