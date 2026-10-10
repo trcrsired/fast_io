@@ -109,6 +109,21 @@ void foo(T t) noexcept
   line. Factor shared lambda bodies into named functions and pass a
   plain function pointer or a small functor -- one instantiation, not
   one per call site.
+- This is true even for identical bodies. Two copies of the same
+  lambda are two distinct types, hence two instantiations:
+
+```cpp
+::std::ranges::sort(vec, [](auto const &a, auto const &b) { return b < a; });
+::std::ranges::sort(vec, [](auto const &a, auto const &b) { return b < a; });
+/* twice the code -- each lambda is its own closure type */
+
+::std::ranges::sort(vec, ::std::ranges::greater{});
+::std::ranges::sort(vec, ::std::ranges::greater{});
+/* one instantiation */
+```
+
+  Prefer named function objects / function pointers; avoid lambdas
+  whenever the call goes through a template.
 
 ## Dedup near-identical code
 
