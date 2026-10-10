@@ -21,7 +21,7 @@
 // users may also patch rva fields in their own mapping to customize
 // fields without touching the shared image.
 //
-// name "" resolves to the system default locale: FAST_IO_L10N_LANG/LC_ALL/LANG on
+// name "" resolves to the system default locale: L10N/FAST_IO_L10N_LANG/LC_ALL/LANG on
 // POSIX, GetUserDefaultLocaleName + the International registry key on
 // Windows. "C"/"POSIX" are loaded from their blob files like any locale.
 
@@ -640,11 +640,15 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 	if (name.is_empty())
 	{
 #if defined(_WIN32) && !defined(__WINE__) && !defined(__CYGWIN__)
-		// FAST_IO_L10N_LANG then LC_ALL env wins over the OS
+		// L10N then FAST_IO_L10N_LANG then LC_ALL env wins over the OS
 		// default, same as posix; ignore_system_settings only gates
 		// the registry fallback — the GetUserDefaultLocaleName API
 		// is the standard OS lookup
-		raw = env_u8(u"FAST_IO_L10N_LANG", "FAST_IO_L10N_LANG");
+		raw = env_u8(u"L10N", "L10N");
+		if (raw.is_empty())
+		{
+			raw = env_u8(u"FAST_IO_L10N_LANG", "FAST_IO_L10N_LANG");
+		}
 		if (raw.is_empty())
 		{
 			raw = env_u8(u"LC_ALL", "LC_ALL");
@@ -665,7 +669,7 @@ inline void resolve_locale_name(::fast_io::u8string_view name, ::fast_io::u8stri
 		}
 #else
 		char const *env{};
-		for (char const *var : {"FAST_IO_L10N_LANG", "LC_ALL", "LANG"})
+		for (char const *var : {"L10N", "FAST_IO_L10N_LANG", "LC_ALL", "LANG"})
 		{
 			if (char const *v{lc_getenv(var)}; v != nullptr && *v != 0)
 			{
