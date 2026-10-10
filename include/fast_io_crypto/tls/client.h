@@ -236,6 +236,53 @@ inline void tls_write_full(stmtype sock, ::std::byte const *buf, ::std::size_t n
 	}
 }
 
+template <typename stmtype>
+inline ::std::byte const *tls_read_some(stmtype sock, ::std::byte *buf,
+										::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	for (;;)
+	{
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+#endif
+			return ::fast_io::operations::read_some_bytes(sock, buf, n);
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
+		}
+		catch throws(::std::error e)
+		{
+			if (!tls_wait_would_block(e, sock, false))
+			{
+				throw throws e;
+			}
+		}
+#endif
+	}
+}
+
+template <typename stmtype>
+inline ::std::byte const *tls_write_some(stmtype sock, ::std::byte const *buf,
+										 ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+{
+	for (;;)
+	{
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
+		FAST_IO_HERBCEPTIONS_TRY
+		{
+#endif
+			return ::fast_io::operations::write_some_bytes(sock, buf, n);
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
+		}
+		catch throws(::std::error e)
+		{
+			if (!tls_wait_would_block(e, sock, true))
+			{
+				throw throws e;
+			}
+		}
+#endif
+	}
+}
 /* entropy through the platform's white_hole device (getrandom /
    RtlGenRandom / ...), not a per-platform hand roll */
 inline void tls_fill_random(::std::byte *out, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS

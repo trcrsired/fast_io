@@ -42,7 +42,7 @@ static ::fast_io::io_async_task<> fetch(::fast_io::io_async_observer sched,
 			chunked = true;
 		}
 	}
-	fast_io::u8native_file nf(u8"index.html", fast_io::open_mode::out);
+	fast_io::u8native_file nf(u8"index.html", fast_io::open_mode::out | fast_io::open_mode::no_block);
 	if (chunked)
 	{
 		/*

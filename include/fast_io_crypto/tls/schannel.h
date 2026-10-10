@@ -405,7 +405,7 @@ inline void tls_client_handshake(basic_schannel_tls_client<socket_observer_type>
 			schannel_throw(status);
 		}
 
-		auto const e{::fast_io::operations::read_some_bytes(
+		auto const e{details::tls_read_some(
 			client->sock_, inbuf + in_size, sizeof(inbuf) - in_size)};
 		if (e == inbuf + in_size)
 		{
@@ -432,7 +432,7 @@ inline ::std::size_t tls_client_read_some(basic_schannel_tls_client<socket_obser
 	if (!client->established_)
 	{
 		return static_cast<::std::size_t>(
-			::fast_io::operations::read_some_bytes(client->sock_, buf, buf_size) - buf);
+			details::tls_read_some(client->sock_, buf, buf_size) - buf);
 	}
 	for (;;)
 	{
@@ -519,7 +519,7 @@ inline ::std::size_t tls_client_read_some(basic_schannel_tls_client<socket_obser
 		{
 			::fast_io::throw_posix_error(EPROTO); /* record never completes */
 		}
-		auto const e{::fast_io::operations::read_some_bytes(
+		auto const e{details::tls_read_some(
 			client->sock_, client->ct_pending_ + client->ct_pending_size_,
 			sizeof(client->ct_pending_) - client->ct_pending_size_)};
 		if (e == client->ct_pending_ + client->ct_pending_size_)
@@ -537,7 +537,7 @@ inline ::std::size_t tls_client_write_some(basic_schannel_tls_client<socket_obse
 	if (!client->established_)
 	{
 		return static_cast<::std::size_t>(
-			::fast_io::operations::write_some_bytes(client->sock_, buf, buf_size) - buf);
+			details::tls_write_some(client->sock_, buf, buf_size) - buf);
 	}
 	::std::size_t const limit{client->stream_sizes_.maximum_message};
 	::std::size_t const n{buf_size < limit ? buf_size : limit};
