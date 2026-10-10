@@ -50,11 +50,28 @@ All error handling uses Herbceptions, not legacy C++ exceptions.
 
 - `throw throws(::std::error{...})` to raise; `try {}` +
   `catch throws(::std::error e) {}` to handle.
+- The canonical handler in user-facing code and examples reports the
+  error -- it never swallows it silently:
+
+```cpp
+try
+{
+	/* ... */
+}
+catch throws(::std::error e)
+{
+	::fast_io::io::perrln(e);
+	return 1;
+}
+```
+
 - When a handler cannot call throws-marked code inside its body, the
   empty handler form is correct: `catch throws(::std::error){}`.
 - `catch(...)` is forbidden everywhere -- it is legacy-EH-only, catches
   nothing that can exist under `-fherbceptions`, and lies that an
-  unknown C++ exception means a protocol error.
+  unknown C++ exception means a protocol error. NEVER write
+  `catch(...)` or `catch (...) {}` in examples either; use the
+  `catch throws(::std::error e){perrln(e);}` form above.
 - `FAST_IO_HERBCEPTIONS_TRY`/`FAST_IO_HERBCEPTIONS_CATCH`/`FAST_IO_-
   HERBCEPTIONS_CATCH_ALL` expand to the right form per build config;
   `FAST_IO_HERBCEPTIONS_CATCH_ALL` is the only sanctioned catch-all
