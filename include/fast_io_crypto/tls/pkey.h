@@ -7,10 +7,10 @@ CertificateVerify signer understands, plus the sign dispatch itself.
 Accepted key forms:
 
   PKCS#8 PrivateKeyInfo  -- rsaEncryption / rsassaPss (inner PKCS#1),
-                            ed25519 (RFC8410 CurvePrivateKey)
+							ed25519 (RFC8410 CurvePrivateKey)
   PKCS#1 RSAPrivateKey   -- bare "RSA PRIVATE KEY" DER
   raw ed25519            -- 64-byte expanded (seed || public key) or
-                            32-byte seed (expanded internally)
+							32-byte seed (expanded internally)
 
 RSA signs via the private operation m^d mod n over an EMSA-PSS
 encoding -- see the variable-time warning on rsa_private_op_to_ptr.
@@ -346,7 +346,7 @@ inline bool tls_cv_sign(signature_scheme scheme,
 		}
 		::fast_io::rsa::private_context ctx;
 		if (!::fast_io::rsa::private_init_to_ptr(ctx, key.rsa_modulus, key.rsa_modulus_size,
-											   key.rsa_exponent, key.rsa_exponent_size))
+												 key.rsa_exponent, key.rsa_exponent_size))
 		{
 			return false;
 		}
@@ -379,9 +379,9 @@ inline bool tls_cv_sign(signature_scheme scheme,
 		::fast_io::ecc::details::ec_curve const *curve{
 			scheme == signature_scheme::ecdsa_secp256r1_sha256
 				? __builtin_addressof(::fast_io::ecc::secp256r1)
-				: scheme == signature_scheme::ecdsa_secp384r1_sha384
-					  ? __builtin_addressof(::fast_io::ecc::secp384r1)
-					  : __builtin_addressof(::fast_io::ecc::secp521r1)};
+			: scheme == signature_scheme::ecdsa_secp384r1_sha384
+				? __builtin_addressof(::fast_io::ecc::secp384r1)
+				: __builtin_addressof(::fast_io::ecc::secp521r1)};
 		if (key.kind != tls_pkey_kind::ec || key.ec_curve != curve)
 		{
 			return false;

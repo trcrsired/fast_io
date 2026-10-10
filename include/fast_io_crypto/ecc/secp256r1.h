@@ -627,9 +627,9 @@ struct ecdsa_rfc6979_drbg
 
 	inline constexpr ecdsa_rfc6979_drbg() noexcept = default;
 	inline constexpr ecdsa_rfc6979_drbg(details::ec_curve const &c,
-									  ::std::byte const *privkey,
-									  ::std::byte const *digest,
-									  ::std::size_t digest_size) noexcept
+										::std::byte const *privkey,
+										::std::byte const *digest,
+										::std::size_t digest_size) noexcept
 		: curve{__builtin_addressof(c)}
 	{
 		namespace nr = ::fast_io::details::rsa;

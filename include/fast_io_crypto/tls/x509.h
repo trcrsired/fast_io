@@ -1208,15 +1208,16 @@ inline constexpr x509_verify_result tls_certificate_verify(
 		::fast_io::ecc::details::ec_curve const *curve{
 			scheme == signature_scheme::ecdsa_secp256r1_sha256
 				? __builtin_addressof(::fast_io::ecc::secp256r1)
-				: scheme == signature_scheme::ecdsa_secp384r1_sha384
-					  ? __builtin_addressof(::fast_io::ecc::secp384r1)
-					  : __builtin_addressof(::fast_io::ecc::secp521r1)};
+			: scheme == signature_scheme::ecdsa_secp384r1_sha384
+				? __builtin_addressof(::fast_io::ecc::secp384r1)
+				: __builtin_addressof(::fast_io::ecc::secp521r1)};
 		::std::uint_least8_t const *want_oid{curve->nl == 4
 												 ? oid::secp256r1
-												 : curve->nl == 6 ? oid::secp384r1 : oid::secp521r1};
-		::std::size_t const want_oid_size{curve->nl == 4 ? sizeof(oid::secp256r1)
-													   : curve->nl == 6 ? sizeof(oid::secp384r1)
-																	  : sizeof(oid::secp521r1)};
+											 : curve->nl == 6 ? oid::secp384r1
+															  : oid::secp521r1};
+		::std::size_t const want_oid_size{curve->nl == 4   ? sizeof(oid::secp256r1)
+										  : curve->nl == 6 ? sizeof(oid::secp384r1)
+														   : sizeof(oid::secp521r1)};
 		if (!der_oid_eq(leaf_alg.oid, oid::ec_public_key) ||
 			!der_oid_eq_span(leaf_alg.params, want_oid, want_oid_size))
 		{

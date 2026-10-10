@@ -450,8 +450,8 @@ inline constexpr ::std::byte hello_retry_random[32]{
 
 struct server_hello_params
 {
-	::std::byte const *random{};            /* 32 */
-	::std::byte const *session_id{};        /* echo of the client's */
+	::std::byte const *random{};     /* 32 */
+	::std::byte const *session_id{}; /* echo of the client's */
 	::std::size_t session_id_size{};
 	cipher_suite suite{};
 	::std::byte const *x25519_public_key{}; /* our public, 32 */
@@ -606,11 +606,11 @@ tls_server_scheme_pick(der_tlv const &leaf_spki_oid, der_tlv const &leaf_spki_pa
 		::std::uint_least16_t const want{
 			der_oid_eq(leaf_spki_params, oid::secp256r1)
 				? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp256r1_sha256)
-				: der_oid_eq(leaf_spki_params, oid::secp384r1)
-					  ? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp384r1_sha384)
-					  : der_oid_eq(leaf_spki_params, oid::secp521r1)
-							? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp521r1_sha512)
-							: static_cast<::std::uint_least16_t>(0)};
+			: der_oid_eq(leaf_spki_params, oid::secp384r1)
+				? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp384r1_sha384)
+			: der_oid_eq(leaf_spki_params, oid::secp521r1)
+				? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp521r1_sha512)
+				: static_cast<::std::uint_least16_t>(0)};
 		if (want == 0)
 		{
 			return 0;
@@ -657,7 +657,7 @@ under the config's 16-byte ticket key. The blob pins the suite and the
 issue time so a rotated or foreign ticket can never produce a plausible
 psk:
 
-    blob = u16 cipher_suite || u64 issue_unix || psk[64]
+	blob = u16 cipher_suite || u64 issue_unix || psk[64]
 
 74 bytes plaintext -> 102 bytes on the wire.
 */
@@ -681,7 +681,7 @@ inline ::std::size_t tls_ticket_seal(::std::byte *out, ::std::byte const (&key)[
 	details::tls_fill_random(nonce, 12);
 	::fast_io::freestanding::non_overlapped_copy_n(nonce, 12, out);
 	::fast_io::aes_gcm_seal_to_ptr<16>(out + 12, out + 12 + tls_ticket_blob_size,
-									 key, nonce, nullptr, 0, blob, tls_ticket_blob_size);
+									   key, nonce, nullptr, 0, blob, tls_ticket_blob_size);
 	::fast_io::secure_clear(blob, sizeof(blob));
 	return tls_ticket_size;
 }
@@ -701,7 +701,7 @@ inline bool tls_ticket_open(::std::byte *psk_out, cipher_suite *suite_out,
 	::std::byte tag[16];
 	::fast_io::freestanding::non_overlapped_copy_n(ticket + 12 + tls_ticket_blob_size, 16, tag);
 	if (!::fast_io::aes_gcm_open_to_ptr<16>(blob, key, nonce, nullptr, 0,
-										  ticket + 12, tls_ticket_blob_size, tag))
+											ticket + 12, tls_ticket_blob_size, tag))
 	{
 		return false;
 	}
@@ -860,7 +860,7 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 			if (!server_client_hello_parse(cand, ch_body, ch_body_size) ||
 				cand.session_id_size > sizeof(ch1_sid))
 			{
-details::tls_fail(client->sock_, alert_description::decode_error, false);
+				details::tls_fail(client->sock_, alert_description::decode_error, false);
 			}
 			if (hrr_sent)
 			{
@@ -1303,7 +1303,7 @@ details::tls_fail(client->sock_, alert_description::decode_error, false);
 				want_fin
 			};
 			second_flight_state flight_state{cfg->request_client_cert &&
-												 psk_selected == 0xffff
+													 psk_selected == 0xffff
 												 ? second_flight_state::want_cert
 												 : second_flight_state::want_fin};
 			handshake_queue fq{};
@@ -1590,7 +1590,6 @@ details::tls_fail(client->sock_, alert_description::decode_error, false);
 	}
 }
 } // namespace details
-
 
 
 /* fully-configured server handshake: caller supplies the cert chain and
