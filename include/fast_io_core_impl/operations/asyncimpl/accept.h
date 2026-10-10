@@ -44,19 +44,7 @@ struct async_accept_awaiter
 		this->coro = h;
 		::fast_io::operations::decay::async_accept_decay_callback(
 			sched, timeout, listenstm, mode,
-			[this](::std::cxx_std_error e,
-				   typename streamtype::native_handle_type accepted) noexcept {
-				this->err = e;
-				this->value = accepted;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<typename streamtype::native_handle_type>{this});
 		return this->async_suspend_done();
 	}
 	inline file_type await_resume() throws

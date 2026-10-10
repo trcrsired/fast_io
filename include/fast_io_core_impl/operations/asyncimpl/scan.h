@@ -56,6 +56,47 @@ struct async_scan_precise_size<char_type, argtype, true>
  * re-enters pump() which either parses on or submits again — the user
  * coroutine resumes only when the arg is fully resolved.
  */
+/* refill slots shared by both scan-refill completions: one non-template
+   block so the (e) and (e, got) paths are a single callback type and the
+   pread_all/underflow machinery beneath them instantiates once */
+struct async_scan_refill_state
+{
+	async_awaiter_result_base *result{};
+	void *awaiter{};
+	void (*resume_pump)(void *awaiter) noexcept {};
+	::std::cxx_std_error refill_err;
+	::std::size_t refill_got;
+	bool pumping{};
+	bool refill_ready{};
+};
+
+inline void async_scan_refill_fire(async_scan_refill_state *r,
+								   ::std::cxx_std_error e, ::std::size_t got) noexcept
+{
+	r->refill_err = e;
+	r->refill_got = got;
+	r->refill_ready = true;
+	if (r->pumping || !r->result->suspended)
+	{
+		return;
+	}
+	r->resume_pump(r->awaiter);
+}
+
+/* one callable type for both refill submissions */
+struct async_scan_refill_callback
+{
+	async_scan_refill_state *refill;
+	inline void operator()(::std::cxx_std_error e) noexcept
+	{
+		async_scan_refill_fire(refill, e, 0);
+	}
+	inline void operator()(::std::cxx_std_error e, ::std::size_t got) noexcept
+	{
+		async_scan_refill_fire(refill, e, got);
+	}
+};
+
 template <bool require_all, typename scheduler, typename instmtype, typename argtype>
 struct async_scan_arg_awaiter
 	: async_awaiter_result<::fast_io::scan_some_result_t>
@@ -81,16 +122,22 @@ struct async_scan_arg_awaiter
 	bool eof_seen{};
 	bool awaiting_pread{};
 	bool pread_done{};
-	::std::cxx_std_error refill_err;
-	::std::size_t refill_got;
-	bool pumping;
-	bool refill_ready;
+	async_scan_refill_state refill{};
 
 	inline constexpr async_scan_arg_awaiter(scheduler s, instmtype i,
 											::fast_io::posix_statx_timestamp_opt t,
 											argtype a) noexcept
 		: sched{s}, instm{i}, timeout{t}, arg{::std::move(a)}, state{}
 	{
+		refill.result = this;
+		refill.awaiter = this;
+		refill.resume_pump = [](void *a) noexcept {
+			auto *self{static_cast<async_scan_arg_awaiter *>(a)};
+			if (self->pump())
+			{
+				self->coro.resume();
+			}
+		};
 	}
 
 	/* commit the consumed cursor — the iterator may differ in type from
@@ -217,11 +264,11 @@ struct async_scan_arg_awaiter
 
 	inline void consume_refill() noexcept
 	{
-		refill_ready = false;
-		if (refill_err.domain != nullptr)
+		refill.refill_ready = false;
+		if (refill.refill_err.domain != nullptr)
 		{
-			this->err = refill_err;
-			refill_err = {};
+			this->err = refill.refill_err;
+			refill.refill_err = {};
 			return;
 		}
 		if (awaiting_pread)
@@ -229,7 +276,7 @@ struct async_scan_arg_awaiter
 			awaiting_pread = false;
 			pread_done = true;
 		}
-		else if (refill_got == 0)
+		else if (refill.refill_got == 0)
 		{
 			eof_seen = true;
 		}
@@ -239,42 +286,19 @@ struct async_scan_arg_awaiter
 	 * async completions re-enter through the callback */
 	inline void submit() noexcept
 	{
-		refill_ready = false;
+		refill.refill_ready = false;
 		if (awaiting_pread)
 		{
 			::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
 				sched, timeout, instm, reinterpret_cast<::std::byte *>(pread_buffer),
 				precise_n * sizeof(char_type), ::fast_io::intfpos_opt{},
-				[this](::std::cxx_std_error e) noexcept {
-					refill_err = e;
-					refill_ready = true;
-					if (pumping || !this->suspended)
-					{
-						return;
-					}
-					if (pump())
-					{
-						this->coro.resume();
-					}
-				});
+				async_scan_refill_callback{__builtin_addressof(refill)});
 		}
 		else
 		{
 			async_ibuffer_underflow(
 				sched, timeout, instm,
-				[this](::std::cxx_std_error e, ::std::size_t got) noexcept {
-					refill_err = e;
-					refill_got = got;
-					refill_ready = true;
-					if (pumping || !this->suspended)
-					{
-						return;
-					}
-					if (pump())
-					{
-						this->coro.resume();
-					}
-				});
+				async_scan_refill_callback{__builtin_addressof(refill)});
 		}
 	}
 
@@ -286,15 +310,15 @@ struct async_scan_arg_awaiter
 		{
 			return true;
 		}
-		pumping = true;
+		refill.pumping = true;
 		for (;;)
 		{
-			if (refill_ready)
+			if (refill.refill_ready)
 			{
 				consume_refill();
 				if (this->err.domain != nullptr)
 				{
-					pumping = false;
+					refill.pumping = false;
 					return true;
 				}
 			}
@@ -302,23 +326,23 @@ struct async_scan_arg_awaiter
 			{
 				if (step())
 				{
-					pumping = false;
+					refill.pumping = false;
 					return true;
 				}
 			}
 			catch throws(::std::error e)
 			{
 				this->err = e.release();
-				pumping = false;
+				refill.pumping = false;
 				return true;
 			}
 			submit();
-			if (!refill_ready)
+			if (!refill.refill_ready)
 			{
 				break;
 			}
 		}
-		pumping = false;
+		refill.pumping = false;
 		return false;
 	}
 
@@ -332,7 +356,7 @@ struct async_scan_arg_awaiter
 	inline bool await_suspend(::std::coroutine_handle<> h) noexcept
 	{
 		this->coro = h;
-		refill_ready = false;
+		refill.refill_ready = false;
 		if (pump())
 		{
 			return false;

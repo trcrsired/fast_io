@@ -12,17 +12,18 @@ namespace fast_io::details
  * coroutine that has not suspended yet; await_suspend then returns false
  * and await_resume delivers the result directly.
  */
-template <typename T>
-struct async_awaiter_result
+/* the part every coroutine awaiter shares: the coroutine handle, the
+ * delivered error and the done/suspended ordering flags. Non-template --
+ * only the value slot differs per signature, so it lives on the derived */
+struct async_awaiter_result_base
 {
 	::std::coroutine_handle<> coro{};
 	::std::cxx_std_error err{};
-	T value{};
 	bool done{};
 	bool suspended{};
 	/* an awaiter abandoned before resumption still releases a held error
 	 * payload (e.g. the coroutine frame destroyed while suspended) */
-	inline ~async_awaiter_result() noexcept
+	inline ~async_awaiter_result_base() noexcept
 	{
 		async_dispose_error(err);
 	}
@@ -41,37 +42,65 @@ struct async_awaiter_result
 	}
 };
 
-template <>
-struct async_awaiter_result<void>
+template <typename T>
+struct async_awaiter_result : async_awaiter_result_base
 {
-	::std::coroutine_handle<> coro{};
-	::std::cxx_std_error err{};
-	bool done{};
-	bool suspended{};
-	inline ~async_awaiter_result() noexcept
+	T value{};
+};
+
+template <>
+struct async_awaiter_result<void> : async_awaiter_result_base
+{
+};
+
+/* store the delivered error, then resume the suspended coroutine (or
+ * mark done for an inline completion) -- one copy for every awaiter */
+inline void async_awaiter_complete(async_awaiter_result_base *self,
+								   ::std::cxx_std_error e) noexcept
+{
+	self->err = e;
+	if (self->suspended)
 	{
-		async_dispose_error(err);
+		self->coro.resume();
 	}
-	inline constexpr bool await_ready() const noexcept
+	else
 	{
-		return false;
+		self->done = true;
 	}
-	inline bool async_suspend_done() noexcept
+}
+
+/* the shared coroutine completion: one fixed callable per result
+ * signature, so every co_await of the same shape passes the same
+ * callback type -- the define chain underneath instantiates once
+ * instead of once per call-site lambda */
+template <typename T>
+struct async_awaiter_callback
+{
+	async_awaiter_result<T> *self;
+	inline void operator()(::std::cxx_std_error e, T v) noexcept
 	{
-		if (done)
-		{
-			return false;
-		}
-		suspended = true;
-		return true;
+		self->value = ::std::move(v);
+		async_awaiter_complete(self, e);
+	}
+};
+
+template <>
+struct async_awaiter_callback<void>
+{
+	async_awaiter_result<void> *self;
+	inline void operator()(::std::cxx_std_error e) noexcept
+	{
+		async_awaiter_complete(self, e);
 	}
 };
 
 /* Shared state for the async_pread_all_bytes chain: one allocation lives
  * across every partial-read resubmission and is freed when the user's
- * callback is finally invoked. */
-template <typename scheduler, typename instmtype, typename alloc_type, typename T>
-struct async_pread_all_bytes_state
+ * callback is finally invoked. The resubmit loop only ever touches this
+ * base -- the functor type stays on the derived state so one extra
+ * callback type does not re-instantiate the whole chain */
+template <typename scheduler, typename instmtype, typename alloc_type>
+struct async_pread_all_bytes_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -81,13 +110,41 @@ struct async_pread_all_bytes_state
 	::std::size_t remaining;
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
-	/* status allocator handle copied from the scheduler at submission so
-	 * the state can be freed without it; kept last to preserve the
-	 * aggregate initialization order */
+	void (*finish)(async_pread_all_bytes_state_base *state,
+				   ::std::cxx_std_error err) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename scheduler, typename instmtype, typename alloc_type, typename T>
+struct async_pread_all_bytes_state;
+
+template <typename scheduler, typename instmtype, typename alloc_type, typename T>
+inline void async_pread_all_bytes_finish_cb(
+	async_pread_all_bytes_state_base<scheduler, instmtype, alloc_type> *b,
+	::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_pread_all_bytes_state<scheduler, instmtype, alloc_type, T> *>(b)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err);
+}
+
+template <typename scheduler, typename instmtype, typename alloc_type, typename T>
+struct async_pread_all_bytes_state
+	: async_pread_all_bytes_state_base<scheduler, instmtype, alloc_type>
+{
+	using base_type = async_pread_all_bytes_state_base<scheduler, instmtype, alloc_type>;
+	T callback;
+
+	inline async_pread_all_bytes_state(scheduler s, instmtype i, ::std::byte *f,
+									   ::std::size_t rem, ::fast_io::intfpos_opt o,
+									   ::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, i, f, rem, o, tmo}, callback{::std::move(cb)}
+	{
+		this->finish = &async_pread_all_bytes_finish_cb<scheduler, instmtype, alloc_type, T>;
+	}
 };
 
 /*
@@ -99,18 +156,16 @@ struct async_pread_all_bytes_state
  * delivered as parse_errc::end_of_file, matching the sync read_all
  * semantics.
  */
-template <typename scheduler, typename instmtype, typename alloc_type, typename T>
+template <typename scheduler, typename instmtype, typename alloc_type>
 inline void async_pread_all_bytes_submit(
-	async_pread_all_bytes_state<scheduler, instmtype, alloc_type, T> *state) noexcept
+	async_pread_all_bytes_state_base<scheduler, instmtype, alloc_type> *state) noexcept
 {
 	async_pread_some_bytes_underflow_callback_define(
 		state->sched, state->timeout, state->instm, state->first, state->remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t bytesread) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(err);
+				state->finish(state, err);
 				return;
 			}
 			state->first += bytesread;
@@ -122,16 +177,12 @@ inline void async_pread_all_bytes_submit(
 			}
 			if (state->remaining == 0)
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(::std::cxx_std_error{});
+				state->finish(state, {});
 				return;
 			}
 			if (bytesread == 0) [[unlikely]]
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(::fast_io::details::async_make_error(
+				state->finish(state, ::fast_io::details::async_make_error(
 					::fast_io::freestanding::parse_errc::end_of_file));
 				return;
 			}
@@ -248,18 +299,7 @@ struct async_pread_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 		this->coro = h;
 		::fast_io::operations::decay::async_pread_some_bytes_decay_callback(
 			sched, timeout, instm, first, count, off,
-			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
-				this->err = e;
-				this->value = n;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<::std::size_t>{this});
 		return this->async_suspend_done();
 	}
 	inline ::std::size_t await_resume() throws
@@ -289,17 +329,7 @@ struct async_pread_all_bytes_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_pread_all_bytes_decay_callback(
 			sched, timeout, instm, first, count, off,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

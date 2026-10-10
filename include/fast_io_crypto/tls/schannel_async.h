@@ -106,8 +106,8 @@ schannel_tls_decrypt_step(client_type *client, ::std::byte *buf,
 	return -1;
 }
 
-template <typename sched_t, typename client_type, typename alloc_type, typename func>
-struct schannel_tls_recv_state
+template <typename sched_t, typename client_type, typename alloc_type>
+struct schannel_tls_recv_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{allocator_type::has_status};
@@ -117,31 +117,55 @@ struct schannel_tls_recv_state
 	client_type *client;
 	::std::byte *buf{};
 	::std::size_t buf_size{};
-	func callback;
+	void (*finish)(schannel_tls_recv_state_base *st, ::std::cxx_std_error err,
+				   ::std::size_t delivered) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
 												   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+struct schannel_tls_recv_state;
+
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+inline void schannel_tls_recv_finish_cb(
+	schannel_tls_recv_state_base<sched_t, client_type, alloc_type> *st,
+	::std::cxx_std_error err, ::std::size_t delivered) noexcept
+{
+	auto *self{static_cast<schannel_tls_recv_state<sched_t, client_type, alloc_type, func> *>(st)};
+	auto cb{::std::move(self->callback)};
+	::fast_io::details::async_delete_state(self);
+	cb(err, delivered);
+}
+
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+struct schannel_tls_recv_state
+	: schannel_tls_recv_state_base<sched_t, client_type, alloc_type>
+{
+	using base_type = schannel_tls_recv_state_base<sched_t, client_type, alloc_type>;
+	func callback;
 
 	inline schannel_tls_recv_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
 								   client_type *c, ::std::byte *b, ::std::size_t n,
 								   func cb) noexcept
-		: sched{s}, timeout{to}, client{c}, buf{b}, buf_size{n}, callback{::std::move(cb)}
+		: base_type{s, to, c, b, n}, callback{::std::move(cb)}
 	{
+		this->finish = &schannel_tls_recv_finish_cb<sched_t, client_type, alloc_type, func>;
 	}
 };
 
-template <typename state_t>
-inline void schannel_tls_recv_finish(state_t *st, ::std::cxx_std_error err,
-									 ::std::size_t delivered) noexcept
+template <typename sched_t, typename client_type, typename alloc_type>
+inline void schannel_tls_recv_finish(
+	schannel_tls_recv_state_base<sched_t, client_type, alloc_type> *st, ::std::cxx_std_error err,
+	::std::size_t delivered) noexcept
 {
-	auto cb{::std::move(st->callback)};
-	::fast_io::details::async_delete_state(st);
-	cb(err, delivered);
+	st->finish(st, err, delivered);
 }
 
-template <typename state_t>
-inline void schannel_tls_recv_pump(state_t *st) noexcept
+template <typename sched_t, typename client_type, typename alloc_type>
+inline void schannel_tls_recv_pump(
+	schannel_tls_recv_state_base<sched_t, client_type, alloc_type> *st) noexcept
 {
 	::std::ptrdiff_t r{};
 	FAST_IO_HERBCEPTIONS_TRY
@@ -192,8 +216,8 @@ inline void schannel_tls_recv_pump(state_t *st) noexcept
 		});
 }
 
-template <typename sched_t, typename client_type, typename alloc_type, typename func>
-struct schannel_tls_send_state
+template <typename sched_t, typename client_type, typename alloc_type>
+struct schannel_tls_send_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{allocator_type::has_status};
@@ -206,30 +230,54 @@ struct schannel_tls_send_state
 	::std::uint_least32_t piece_size[3]{};
 	::std::uint_least8_t piece_i{};
 	::std::size_t consumed{};
-	func callback;
+	void (*finish)(schannel_tls_send_state_base *st, ::std::cxx_std_error err,
+				   ::std::size_t consumed) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
 												   ::fast_io::details::empty>
 		alloc_handle{};
-
-	inline schannel_tls_send_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
-								   client_type *c, ::std::size_t n, func cb) noexcept
-		: sched{s}, timeout{to}, client{c}, consumed{n}, callback{::std::move(cb)}
-	{
-	}
 };
 
-template <typename state_t>
-inline void schannel_tls_send_finish(state_t *st, ::std::cxx_std_error err,
-									 ::std::size_t consumed) noexcept
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+struct schannel_tls_send_state;
+
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+inline void schannel_tls_send_finish_cb(
+	schannel_tls_send_state_base<sched_t, client_type, alloc_type> *st,
+	::std::cxx_std_error err, ::std::size_t consumed) noexcept
 {
-	auto cb{::std::move(st->callback)};
-	::fast_io::details::async_delete_state(st);
+	auto *self{static_cast<schannel_tls_send_state<sched_t, client_type, alloc_type, func> *>(st)};
+	auto cb{::std::move(self->callback)};
+	::fast_io::details::async_delete_state(self);
 	cb(err, consumed);
 }
 
-template <typename state_t>
-inline void schannel_tls_send_piece(state_t *st) noexcept
+template <typename sched_t, typename client_type, typename alloc_type, typename func>
+struct schannel_tls_send_state
+	: schannel_tls_send_state_base<sched_t, client_type, alloc_type>
+{
+	using base_type = schannel_tls_send_state_base<sched_t, client_type, alloc_type>;
+	func callback;
+
+	inline schannel_tls_send_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
+								   client_type *c, ::std::size_t n, func cb) noexcept
+		: base_type{s, to, c}, callback{::std::move(cb)}
+	{
+		this->finish = &schannel_tls_send_finish_cb<sched_t, client_type, alloc_type, func>;
+	}
+};
+
+template <typename sched_t, typename client_type, typename alloc_type>
+inline void schannel_tls_send_finish(
+	schannel_tls_send_state_base<sched_t, client_type, alloc_type> *st, ::std::cxx_std_error err,
+	::std::size_t consumed) noexcept
+{
+	st->finish(st, err, consumed);
+}
+
+template <typename sched_t, typename client_type, typename alloc_type>
+inline void schannel_tls_send_piece(
+	schannel_tls_send_state_base<sched_t, client_type, alloc_type> *st) noexcept
 {
 	if (st->piece_i == 3)
 	{
@@ -251,8 +299,9 @@ inline void schannel_tls_send_piece(state_t *st) noexcept
 		});
 }
 
-template <typename state_t>
-inline void schannel_tls_send_submit(state_t *st, ::std::byte const *first,
+template <typename sched_t, typename client_type, typename alloc_type>
+inline void schannel_tls_send_submit(
+	schannel_tls_send_state_base<sched_t, client_type, alloc_type> *st, ::std::byte const *first,
 									 ::std::size_t count) noexcept
 {
 	auto *client{st->client};

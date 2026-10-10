@@ -16,8 +16,8 @@ namespace fast_io::details
  * io_scatter_status_t{position, position_in_scatter} — position == n
  * means every element was transferred completely.
  */
-template <typename scheduler, typename stmtype, typename alloc_type, typename T>
-struct async_scatter_pread_some_bytes_state
+template <typename scheduler, typename stmtype, typename alloc_type>
+struct async_scatter_pread_some_bytes_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -29,15 +29,56 @@ struct async_scatter_pread_some_bytes_state
 	::std::size_t elem_off;
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* terminal delivery: frees the derived state, invokes the stored
+	 * functor -- the resubmit machinery never sees the callback type */
+	void (*finish)(async_scatter_pread_some_bytes_state_base *state, ::std::cxx_std_error err) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
 template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+struct async_scatter_pread_some_bytes_state;
+
+template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+inline void async_scatter_pread_some_bytes_state_finish_cb(async_scatter_pread_some_bytes_state_base<scheduler, stmtype, alloc_type> *b,
+							::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_scatter_pread_some_bytes_state<scheduler, stmtype, alloc_type, T> *>(b)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::io_scatter_status_t const status{state->index, state->elem_off};
+	::fast_io::details::async_delete_state(state);
+	if constexpr (::std::is_invocable_v<T, ::std::cxx_std_error,
+									 ::fast_io::io_scatter_status_t>)
+	{
+		callback(err, status);
+	}
+	else
+	{
+		callback(err);
+	}
+}
+
+template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+struct async_scatter_pread_some_bytes_state : async_scatter_pread_some_bytes_state_base<scheduler, stmtype, alloc_type>
+{
+	using base_type = async_scatter_pread_some_bytes_state_base<scheduler, stmtype, alloc_type>;
+	T callback;
+
+	inline async_scatter_pread_some_bytes_state(scheduler s, stmtype st, ::fast_io::io_scatter_t const *sc,
+				 ::std::size_t n_, ::std::size_t index, ::std::size_t elem_off,
+				 ::fast_io::intfpos_opt o,
+				 ::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, st, sc, n_, index, elem_off, o, tmo},
+		  callback{::std::move(cb)}
+	{
+		this->finish = &async_scatter_pread_some_bytes_state_finish_cb<scheduler, stmtype, alloc_type, T>;
+	}
+};
+
+template <typename scheduler, typename stmtype, typename alloc_type>
 inline void async_scatter_pread_some_bytes_submit(
-	async_scatter_pread_some_bytes_state<scheduler, stmtype, alloc_type, T> *state) noexcept
+	async_scatter_pread_some_bytes_state_base<scheduler, stmtype, alloc_type> *state) noexcept
 {
 	while (state->elem_off == state->scatters[state->index].len)
 	{
@@ -45,10 +86,7 @@ inline void async_scatter_pread_some_bytes_submit(
 		state->elem_off = 0;
 		if (state->index == state->n)
 		{
-			auto callback{::std::move(state->callback)};
-			auto status{::fast_io::io_scatter_status_t{state->index, 0}};
-			::fast_io::details::async_delete_state(state);
-			callback(::std::cxx_std_error{}, status);
+			state->finish(state, {});
 			return;
 		}
 	}
@@ -84,10 +122,7 @@ inline void async_scatter_pread_some_bytes_submit(
 			/* a short element transfer ends the some operation */
 			goto report;
 		report:
-			auto callback{::std::move(state->callback)};
-			auto status{::fast_io::io_scatter_status_t{state->index, state->elem_off}};
-			::fast_io::details::async_delete_state(state);
-			callback(err, status);
+			state->finish(state, err);
 		});
 }
 
@@ -96,9 +131,9 @@ inline void async_scatter_pread_some_bytes_submit(
  * keeps resubmitting and a zero-byte read short of the goal is EOF
  * (parse_errc::end_of_file, matching sync scatter_read_all_bytes).
  */
-template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+template <typename scheduler, typename stmtype, typename alloc_type>
 inline void async_scatter_pread_all_bytes_submit(
-	async_scatter_pread_some_bytes_state<scheduler, stmtype, alloc_type, T> *state) noexcept
+	async_scatter_pread_some_bytes_state_base<scheduler, stmtype, alloc_type> *state) noexcept
 {
 	while (state->elem_off == state->scatters[state->index].len)
 	{
@@ -106,10 +141,7 @@ inline void async_scatter_pread_all_bytes_submit(
 		state->elem_off = 0;
 		if (state->index == state->n)
 		{
-			auto callback{::std::move(state->callback)};
-
-			::fast_io::details::async_delete_state(state);
-			callback(::std::cxx_std_error{});
+			state->finish(state, {});
 			return;
 		}
 	}
@@ -148,14 +180,12 @@ inline void async_scatter_pread_all_bytes_submit(
 				return;
 			}
 		report:
-			auto callback{::std::move(state->callback)};
-			::fast_io::details::async_delete_state(state);
-			callback(err);
+			state->finish(state, err);
 		});
 }
 
-template <typename scheduler, typename stmtype, typename alloc_type, typename T>
-struct async_scatter_pwrite_some_bytes_state
+template <typename scheduler, typename stmtype, typename alloc_type>
+struct async_scatter_pwrite_some_bytes_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -167,15 +197,56 @@ struct async_scatter_pwrite_some_bytes_state
 	::std::size_t elem_off;
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* terminal delivery: frees the derived state, invokes the stored
+	 * functor -- the resubmit machinery never sees the callback type */
+	void (*finish)(async_scatter_pwrite_some_bytes_state_base *state, ::std::cxx_std_error err) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
 template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+struct async_scatter_pwrite_some_bytes_state;
+
+template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+inline void async_scatter_pwrite_some_bytes_state_finish_cb(async_scatter_pwrite_some_bytes_state_base<scheduler, stmtype, alloc_type> *b,
+							::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_scatter_pwrite_some_bytes_state<scheduler, stmtype, alloc_type, T> *>(b)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::io_scatter_status_t const status{state->index, state->elem_off};
+	::fast_io::details::async_delete_state(state);
+	if constexpr (::std::is_invocable_v<T, ::std::cxx_std_error,
+									 ::fast_io::io_scatter_status_t>)
+	{
+		callback(err, status);
+	}
+	else
+	{
+		callback(err);
+	}
+}
+
+template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+struct async_scatter_pwrite_some_bytes_state : async_scatter_pwrite_some_bytes_state_base<scheduler, stmtype, alloc_type>
+{
+	using base_type = async_scatter_pwrite_some_bytes_state_base<scheduler, stmtype, alloc_type>;
+	T callback;
+
+	inline async_scatter_pwrite_some_bytes_state(scheduler s, stmtype st, ::fast_io::io_scatter_t const *sc,
+				 ::std::size_t n_, ::std::size_t index, ::std::size_t elem_off,
+				 ::fast_io::intfpos_opt o,
+				 ::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, st, sc, n_, index, elem_off, o, tmo},
+		  callback{::std::move(cb)}
+	{
+		this->finish = &async_scatter_pwrite_some_bytes_state_finish_cb<scheduler, stmtype, alloc_type, T>;
+	}
+};
+
+template <typename scheduler, typename stmtype, typename alloc_type>
 inline void async_scatter_pwrite_some_bytes_submit(
-	async_scatter_pwrite_some_bytes_state<scheduler, stmtype, alloc_type, T> *state) noexcept
+	async_scatter_pwrite_some_bytes_state_base<scheduler, stmtype, alloc_type> *state) noexcept
 {
 	while (state->elem_off == state->scatters[state->index].len)
 	{
@@ -183,10 +254,7 @@ inline void async_scatter_pwrite_some_bytes_submit(
 		state->elem_off = 0;
 		if (state->index == state->n)
 		{
-			auto callback{::std::move(state->callback)};
-			auto status{::fast_io::io_scatter_status_t{state->index, 0}};
-			::fast_io::details::async_delete_state(state);
-			callback(::std::cxx_std_error{}, status);
+			state->finish(state, {});
 			return;
 		}
 	}
@@ -219,16 +287,13 @@ inline void async_scatter_pwrite_some_bytes_submit(
 			}
 			goto report;
 		report:
-			auto callback{::std::move(state->callback)};
-			auto status{::fast_io::io_scatter_status_t{state->index, state->elem_off}};
-			::fast_io::details::async_delete_state(state);
-			callback(err, status);
+			state->finish(state, err);
 		});
 }
 
-template <typename scheduler, typename stmtype, typename alloc_type, typename T>
+template <typename scheduler, typename stmtype, typename alloc_type>
 inline void async_scatter_pwrite_all_bytes_submit(
-	async_scatter_pwrite_some_bytes_state<scheduler, stmtype, alloc_type, T> *state) noexcept
+	async_scatter_pwrite_some_bytes_state_base<scheduler, stmtype, alloc_type> *state) noexcept
 {
 	while (state->elem_off == state->scatters[state->index].len)
 	{
@@ -236,10 +301,7 @@ inline void async_scatter_pwrite_all_bytes_submit(
 		state->elem_off = 0;
 		if (state->index == state->n)
 		{
-			auto callback{::std::move(state->callback)};
-
-			::fast_io::details::async_delete_state(state);
-			callback(::std::cxx_std_error{});
+			state->finish(state, {});
 			return;
 		}
 	}
@@ -276,9 +338,7 @@ inline void async_scatter_pwrite_all_bytes_submit(
 				return;
 			}
 		report:
-			auto callback{::std::move(state->callback)};
-			::fast_io::details::async_delete_state(state);
-			callback(err);
+			state->finish(state, err);
 		});
 }
 
@@ -501,18 +561,7 @@ struct async_scatter_pread_some_bytes_awaiter : async_awaiter_result<::fast_io::
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pread_some_bytes_decay_callback(
 			sched, timeout, instm, scatters, n, off,
-			[this](::std::cxx_std_error e, ::fast_io::io_scatter_status_t status) noexcept {
-				this->err = e;
-				this->value = status;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<::fast_io::io_scatter_status_t>{this});
 		return this->async_suspend_done();
 	}
 	inline ::fast_io::io_scatter_status_t await_resume() throws
@@ -541,17 +590,7 @@ struct async_scatter_pread_all_bytes_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pread_all_bytes_decay_callback(
 			sched, timeout, instm, scatters, n, off,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws
@@ -579,18 +618,7 @@ struct async_scatter_pwrite_some_bytes_awaiter : async_awaiter_result<::fast_io:
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pwrite_some_bytes_decay_callback(
 			sched, timeout, outstm, scatters, n, off,
-			[this](::std::cxx_std_error e, ::fast_io::io_scatter_status_t status) noexcept {
-				this->err = e;
-				this->value = status;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<::fast_io::io_scatter_status_t>{this});
 		return this->async_suspend_done();
 	}
 	inline ::fast_io::io_scatter_status_t await_resume() throws
@@ -619,17 +647,7 @@ struct async_scatter_pwrite_all_bytes_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_scatter_pwrite_all_bytes_decay_callback(
 			sched, timeout, outstm, scatters, n, off,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

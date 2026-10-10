@@ -58,8 +58,8 @@ inline void tls_sw_cb_deliver(func &&cb, ::std::cxx_std_error err, ::std::size_t
 
 /* ---------------- generic sw recv ---------------- */
 
-template <typename sched_t, typename client_t, typename func, typename alloc_type>
-struct tls_sw_recv_state
+template <typename sched_t, typename client_t, typename alloc_type>
+struct tls_sw_recv_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{allocator_type::has_status};
@@ -74,37 +74,35 @@ struct tls_sw_recv_state
 	::std::byte ct[tls_max_record];
 	::std::size_t ct_have{};
 	::std::byte inner[tls_max_ciphertext];
-	func callback;
+	/* terminal delivery: frees the derived state, invokes the functor in
+	   its own signature (scalar n or io_scatter_status_t) -- the pump
+	   never sees the callback type */
+	void (*finish)(tls_sw_recv_state_base *st, ::std::cxx_std_error err,
+				   ::std::size_t delivered) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
 												   ::fast_io::details::empty>
 		alloc_handle{};
-
-	inline tls_sw_recv_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
-							 client_t *c, ::std::byte *b, ::std::size_t n,
-							 ::fast_io::io_scatter_t const *sc, ::std::size_t nsc,
-							 func cb) noexcept
-		: sched{s}, timeout{to}, client{c}, buf{b}, buf_size{n},
-		  scatters{sc}, nscatters{nsc}, callback{::std::move(cb)}
-	{
-	}
 };
 
-template <typename state_t>
-inline void tls_sw_recv_finish(state_t *st, ::std::cxx_std_error err,
-							   ::std::size_t delivered) noexcept
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_recv_state;
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+inline void tls_sw_recv_finish_cb(
+	tls_sw_recv_state_base<sched_t, client_t, alloc_type> *st, ::std::cxx_std_error err,
+	::std::size_t delivered) noexcept
 {
-	auto cb{::std::move(st->callback)};
-	bool const scatter_target{st->scatters != nullptr};
+	auto *self{static_cast<tls_sw_recv_state<sched_t, client_t, func, alloc_type> *>(st)};
+	auto cb{::std::move(self->callback)};
 	::fast_io::io_scatter_status_t st_status{};
-	if (scatter_target)
+	if (st->scatters != nullptr)
 	{
-		st_status =
-			::fast_io::scatter_size_to_status(delivered, st->scatters, st->nscatters);
+		st_status = ::fast_io::scatter_size_to_status(delivered, st->scatters, st->nscatters);
 	}
-	::fast_io::details::async_delete_state(st);
-	if constexpr (::std::is_invocable_v<decltype(cb), ::std::cxx_std_error,
-										::fast_io::io_scatter_status_t>)
+	::fast_io::details::async_delete_state(self);
+	if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
+									  ::fast_io::io_scatter_status_t>)
 	{
 		cb(err, st_status);
 	}
@@ -114,9 +112,34 @@ inline void tls_sw_recv_finish(state_t *st, ::std::cxx_std_error err,
 	}
 }
 
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_recv_state : tls_sw_recv_state_base<sched_t, client_t, alloc_type>
+{
+	using base_type = tls_sw_recv_state_base<sched_t, client_t, alloc_type>;
+	func callback;
+
+	inline tls_sw_recv_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
+							 client_t *c, ::std::byte *b, ::std::size_t n,
+							 ::fast_io::io_scatter_t const *sc, ::std::size_t nsc,
+							 func cb) noexcept
+		: base_type{s, to, c, b, n, sc, nsc}, callback{::std::move(cb)}
+	{
+		this->finish = &tls_sw_recv_finish_cb<sched_t, client_t, func, alloc_type>;
+	}
+};
+
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_recv_finish(
+	tls_sw_recv_state_base<sched_t, client_t, alloc_type> *st, ::std::cxx_std_error err,
+	::std::size_t delivered) noexcept
+{
+	st->finish(st, err, delivered);
+}
+
 /* copy plaintext into the scalar or scatter target */
-template <typename state_t>
-inline ::std::size_t tls_sw_copy_out(state_t *st, ::std::byte const *src,
+template <typename sched_t, typename client_t, typename alloc_type>
+inline ::std::size_t tls_sw_copy_out(
+	tls_sw_recv_state_base<sched_t, client_t, alloc_type> *st, ::std::byte const *src,
 									 ::std::size_t n) noexcept
 {
 	if (st->buf != nullptr)
@@ -138,8 +161,9 @@ inline ::std::size_t tls_sw_copy_out(state_t *st, ::std::byte const *src,
 	return copied;
 }
 
-template <typename state_t>
-inline void tls_sw_recv_round(state_t *st) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_recv_round(
+	tls_sw_recv_state_base<sched_t, client_t, alloc_type> *st) noexcept
 {
 	/* the backend define is noexcept -- submission failures arrive
 	   through the callback it was given */
@@ -165,8 +189,9 @@ inline void tls_sw_recv_round(state_t *st) noexcept
 
 /* drain pending plaintext -> frame -> open -> dispatch; resubmits a
    socket read whenever the accumulator can't frame a whole record. */
-template <typename state_t>
-inline void tls_sw_recv_pump(state_t *st) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_recv_pump(
+	tls_sw_recv_state_base<sched_t, client_t, alloc_type> *st) noexcept
 {
 	for (;;)
 	{
@@ -272,8 +297,8 @@ inline void tls_sw_recv_submit(
 
 /* ---------------- generic sw write ---------------- */
 
-template <typename sched_t, typename client_t, typename func, typename alloc_type>
-struct tls_sw_write_state
+template <typename sched_t, typename client_t, typename alloc_type>
+struct tls_sw_write_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{allocator_type::has_status};
@@ -287,34 +312,53 @@ struct tls_sw_write_state
 	::std::size_t plaintext_consumed{};
 	::fast_io::io_scatter_t const *scatters{};
 	::std::size_t nscatters{};
-	func callback;
+	void (*finish)(tls_sw_write_state_base *st, ::std::cxx_std_error err) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
 												   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_write_state;
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+inline void tls_sw_write_finish_cb(
+	tls_sw_write_state_base<sched_t, client_t, alloc_type> *st,
+	::std::cxx_std_error err) noexcept
+{
+	auto *self{static_cast<tls_sw_write_state<sched_t, client_t, func, alloc_type> *>(st)};
+	auto cb{::std::move(self->callback)};
+	::fast_io::details::async_delete_state(self);
+	tls_sw_cb_deliver(cb, err, st->plaintext_consumed, st->scatters, st->nscatters);
+}
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_write_state : tls_sw_write_state_base<sched_t, client_t, alloc_type>
+{
+	using base_type = tls_sw_write_state_base<sched_t, client_t, alloc_type>;
+	func callback;
 
 	inline tls_sw_write_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
 							  client_t *c, ::fast_io::io_scatter_t const *sc,
 							  ::std::size_t nsc, func cb) noexcept
-		: sched{s}, timeout{to}, client{c}, scatters{sc}, nscatters{nsc},
-		  callback{::std::move(cb)}
+		: base_type{s, to, c, {}, 0, 0, 0, sc, nsc}, callback{::std::move(cb)}
 	{
+		this->finish = &tls_sw_write_finish_cb<sched_t, client_t, func, alloc_type>;
 	}
 };
 
-template <typename state_t>
-inline void tls_sw_write_finish(state_t *st, ::std::cxx_std_error err) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_write_finish(
+	tls_sw_write_state_base<sched_t, client_t, alloc_type> *st,
+	::std::cxx_std_error err) noexcept
 {
-	auto cb{::std::move(st->callback)};
-	::std::size_t const consumed{st->plaintext_consumed};
-	auto const *sc{st->scatters};
-	::std::size_t const nsc{st->nscatters};
-	::fast_io::details::async_delete_state(st);
-	tls_sw_cb_deliver(cb, err, consumed, sc, nsc);
+	st->finish(st, err);
 }
 
-template <typename state_t>
-inline void tls_sw_write_round(state_t *st) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_write_round(
+	tls_sw_write_state_base<sched_t, client_t, alloc_type> *st) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
 		st->sched, st->timeout, st->client->sock_,
@@ -378,8 +422,8 @@ inline void tls_sw_write_submit(
 
 /* ---------------- generic sw close (sealed notify, then socket close) ---------------- */
 
-template <typename sched_t, typename client_t, typename func, typename alloc_type>
-struct tls_sw_close_state
+template <typename sched_t, typename client_t, typename alloc_type>
+struct tls_sw_close_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{allocator_type::has_status};
@@ -390,36 +434,59 @@ struct tls_sw_close_state
 	::std::byte wire[64];
 	::std::size_t wire_size{};
 	::std::size_t wire_done{};
-	func callback;
+	/* the close's terminal leg hands the functor to the socket's own
+	   close define -- typed inside the derived state */
+	void (*proceed)(tls_sw_close_state_base *st) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
 												   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_close_state;
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+inline void tls_sw_close_proceed_cb(
+	tls_sw_close_state_base<sched_t, client_t, alloc_type> *st) noexcept
+{
+	auto *self{static_cast<tls_sw_close_state<sched_t, client_t, func, alloc_type> *>(st)};
+	auto cb{::std::move(self->callback)};
+	auto sock{st->client->sock_};
+	auto sched{st->sched};
+	auto timeout{st->timeout};
+	::fast_io::details::async_delete_state(self);
+	async_close_define(sched, timeout, sock, ::std::move(cb));
+}
+
+template <typename sched_t, typename client_t, typename func, typename alloc_type>
+struct tls_sw_close_state : tls_sw_close_state_base<sched_t, client_t, alloc_type>
+{
+	using base_type = tls_sw_close_state_base<sched_t, client_t, alloc_type>;
+	func callback;
 
 	inline tls_sw_close_state(sched_t s, ::fast_io::posix_statx_timestamp_opt to,
 							  client_t *c, func cb) noexcept
-		: sched{s}, timeout{to}, client{c}, callback{::std::move(cb)}
+		: base_type{s, to, c}, callback{::std::move(cb)}
 	{
+		this->proceed = &tls_sw_close_proceed_cb<sched_t, client_t, func, alloc_type>;
 	}
 };
 
 /* leg 2 -- whatever the notify did, the raw transport still closes.
    The close's own result is what reaches the caller; the notify's
    error is intentionally dropped (close_notify is best-effort). */
-template <typename state_t>
-inline void tls_sw_close_socket(state_t *st) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_close_socket(
+	tls_sw_close_state_base<sched_t, client_t, alloc_type> *st) noexcept
 {
-	auto cb{::std::move(st->callback)};
-	auto sock{st->client->sock_};
-	auto sched{st->sched};
-	auto timeout{st->timeout};
-	::fast_io::details::async_delete_state(st);
-	async_close_define(sched, timeout, sock, ::std::move(cb));
+	st->proceed(st);
 }
 
 /* leg 1 -- the sealed close_notify write; failures go straight to leg 2 */
-template <typename state_t>
-inline void tls_sw_close_round(state_t *st) noexcept
+template <typename sched_t, typename client_t, typename alloc_type>
+inline void tls_sw_close_round(
+	tls_sw_close_state_base<sched_t, client_t, alloc_type> *st) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
 		st->sched, st->timeout, st->client->sock_,
@@ -742,17 +809,7 @@ struct async_handshake_awaiter : async_awaiter_result<void>
 		::fast_io::operations::decay::async_handshake_decay_callback(
 			sched, timeout, stm,
 			::fast_io::u8cstring_view{::fast_io::freestanding::from_range, hostname},
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

@@ -6,8 +6,8 @@ namespace fast_io::details
 /* Shared state for the async_pwrite_all_bytes chain: one allocation lives
  * across every partial-write resubmission and is freed when the user's
  * callback is finally invoked. */
-template <typename scheduler, typename outstmtype, typename alloc_type, typename T>
-struct async_pwrite_all_bytes_state
+template <typename scheduler, typename outstmtype, typename alloc_type>
+struct async_pwrite_all_bytes_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -17,13 +17,44 @@ struct async_pwrite_all_bytes_state
 	::std::size_t remaining;
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	void (*finish)(async_pwrite_all_bytes_state_base *state,
+				   ::std::cxx_std_error err) noexcept {};
 	/* status allocator handle copied from the scheduler at submission so
 	 * the state can be freed without it; kept last to preserve the
 	 * aggregate initialization order */
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename scheduler, typename outstmtype, typename alloc_type, typename T>
+struct async_pwrite_all_bytes_state;
+
+template <typename scheduler, typename outstmtype, typename alloc_type, typename T>
+inline void async_pwrite_all_bytes_finish_cb(
+	async_pwrite_all_bytes_state_base<scheduler, outstmtype, alloc_type> *b,
+	::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_pwrite_all_bytes_state<scheduler, outstmtype, alloc_type, T> *>(b)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err);
+}
+
+template <typename scheduler, typename outstmtype, typename alloc_type, typename T>
+struct async_pwrite_all_bytes_state
+	: async_pwrite_all_bytes_state_base<scheduler, outstmtype, alloc_type>
+{
+	using base_type = async_pwrite_all_bytes_state_base<scheduler, outstmtype, alloc_type>;
+	T callback;
+
+	inline async_pwrite_all_bytes_state(scheduler s, outstmtype o, ::std::byte const *f,
+										::std::size_t rem, ::fast_io::intfpos_opt of,
+										::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, o, f, rem, of, tmo}, callback{::std::move(cb)}
+	{
+		this->finish = &async_pwrite_all_bytes_finish_cb<scheduler, outstmtype, alloc_type, T>;
+	}
 };
 
 /*
@@ -34,18 +65,16 @@ struct async_pwrite_all_bytes_state
  * state frees itself; otherwise resubmit. A zero-byte write would loop
  * forever, so it is delivered as errc::no_space_on_device.
  */
-template <typename scheduler, typename outstmtype, typename alloc_type, typename T>
+template <typename scheduler, typename outstmtype, typename alloc_type>
 inline void async_pwrite_all_bytes_submit(
-	async_pwrite_all_bytes_state<scheduler, outstmtype, alloc_type, T> *state) noexcept
+	async_pwrite_all_bytes_state_base<scheduler, outstmtype, alloc_type> *state) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
 		state->sched, state->timeout, state->outstm, state->first, state->remaining, state->off,
 		[state](::std::cxx_std_error err, ::std::size_t byteswritten) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(err);
+				state->finish(state, err);
 				return;
 			}
 			state->first += byteswritten;
@@ -57,16 +86,13 @@ inline void async_pwrite_all_bytes_submit(
 			}
 			if (state->remaining == 0)
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(::std::cxx_std_error{});
+				state->finish(state, {});
 				return;
 			}
 			if (byteswritten == 0) [[unlikely]]
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(::fast_io::details::async_make_error(::std::errc::no_space_on_device));
+				state->finish(state, ::fast_io::details::async_make_error(
+					::std::errc::no_space_on_device));
 				return;
 			}
 			async_pwrite_all_bytes_submit(state);
@@ -182,18 +208,7 @@ struct async_pwrite_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 		this->coro = h;
 		::fast_io::operations::decay::async_pwrite_some_bytes_decay_callback(
 			sched, timeout, outstm, first, count, off,
-			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
-				this->err = e;
-				this->value = n;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<::std::size_t>{this});
 		return this->async_suspend_done();
 	}
 	inline ::std::size_t await_resume() throws
@@ -223,17 +238,7 @@ struct async_pwrite_all_bytes_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
 			sched, timeout, outstm, first, count, off,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

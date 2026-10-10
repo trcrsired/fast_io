@@ -158,6 +158,49 @@ struct io_uring_tls_recv_cookie
 	}
 };
 
+/* the typed callbacks carried on the base cookie: KeyUpdate goes through
+   the client's own function; terminal delivery adapts the functor's
+   signature */
+template <typename client_t>
+inline void io_uring_tls_recv_key_update_cb(void *cc, ::std::uint_least8_t req,
+										  ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		tls_client_key_update_received(static_cast<client_t *>(cc), req);
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+struct io_uring_tls_recv_cookie_of;
+
+template <typename client_t, typename func>
+inline void io_uring_tls_recv_finish_cb(io_uring_tls_recv_cookie *self,
+									  ::std::cxx_std_error err) noexcept
+{
+	auto *cookie{static_cast<io_uring_tls_recv_cookie_of<client_t, func> *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
+									  ::fast_io::io_scatter_status_t>)
+	{
+		::fast_io::io_scatter_status_t const status{
+			::fast_io::scatter_size_to_status(cookie->transferred, cookie->scatters,
+											   cookie->nscatters)};
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, status);
+	}
+	else
+	{
+		::std::size_t const transferred{cookie->transferred};
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, transferred);
+	}
+}
+
 /* the submission-time cookie: the typed functor plus the thunks that
    adapt it onto the erased base */
 template <typename client_t, typename func>
@@ -174,38 +217,8 @@ struct io_uring_tls_recv_cookie_of : io_uring_tls_recv_cookie
 		: io_uring_tls_recv_cookie{s, c, c->sock_.fd, b, bs, sc, nsc, tmo},
 		  callback{::std::move(cb)}
 	{
-		this->key_update = [](void *cc, ::std::uint_least8_t req,
-							  ::std::cxx_std_error *err) noexcept {
-			try
-			{
-				tls_client_key_update_received(static_cast<client_t *>(cc), req);
-			}
-			catch throws(::std::error e)
-			{
-				*err = e.release();
-			}
-		};
-		this->finish = [](io_uring_tls_recv_cookie *self,
-						  ::std::cxx_std_error err) noexcept {
-			auto *cookie{static_cast<io_uring_tls_recv_cookie_of *>(self)};
-			auto callback{::std::move(cookie->callback)};
-			if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
-											  ::fast_io::io_scatter_status_t>)
-			{
-				::fast_io::io_scatter_status_t const status{
-					::fast_io::scatter_size_to_status(cookie->transferred,
-													   cookie->scatters,
-													   cookie->nscatters)};
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, status);
-			}
-			else
-			{
-				::std::size_t const transferred{cookie->transferred};
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, transferred);
-			}
-		};
+		this->key_update = &io_uring_tls_recv_key_update_cb<client_t>;
+		this->finish = &io_uring_tls_recv_finish_cb<client_t, func>;
 	}
 };
 
@@ -462,6 +475,68 @@ struct io_uring_tls_sw_recv_cookie
 	}
 };
 
+/* typed callbacks carried on the sw-recv base: record open and the
+   rx-pending stash both go through the client; terminal delivery adapts
+   the functor's signature */
+template <typename client_t>
+inline bool io_uring_tls_sw_open_record_cb(void *cc, ::std::byte const *rec,
+										 ::std::size_t rec_size, ::std::byte *inner,
+										 sw_record_result *rr,
+										 ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		*rr = tls_client_sw_open_record(static_cast<client_t *>(cc), rec, rec_size, inner);
+		return true;
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+		return false;
+	}
+}
+
+template <typename client_t>
+inline void io_uring_tls_sw_rx_stash_cb(void *cc, ::std::byte const *pt,
+									  ::std::size_t n,
+									  ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		tls_client_rx_pending_stash(static_cast<client_t *>(cc), pt, n);
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+struct io_uring_tls_sw_recv_cookie_of;
+
+template <typename client_t, typename func>
+inline void io_uring_tls_sw_recv_finish_cb(io_uring_tls_sw_recv_cookie *self,
+										 ::std::cxx_std_error err) noexcept
+{
+	auto *cookie{static_cast<io_uring_tls_sw_recv_cookie_of<client_t, func> *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
+									  ::fast_io::io_scatter_status_t>)
+	{
+		::fast_io::io_scatter_status_t const status{
+			::fast_io::scatter_size_to_status(cookie->transferred, cookie->scatters,
+											   cookie->nscatters)};
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, status);
+	}
+	else
+	{
+		::std::size_t const transferred{cookie->transferred};
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, transferred);
+	}
+}
+
 template <typename client_t, typename func>
 struct io_uring_tls_sw_recv_cookie_of : io_uring_tls_sw_recv_cookie
 {
@@ -476,54 +551,9 @@ struct io_uring_tls_sw_recv_cookie_of : io_uring_tls_sw_recv_cookie
 		: io_uring_tls_sw_recv_cookie{s, c, c->sock_.fd, b, bs, sc, nsc, tmo},
 		  callback{::std::move(cb)}
 	{
-		this->open_record = [](void *cc, ::std::byte const *rec,
-							   ::std::size_t rec_size, ::std::byte *inner,
-							   sw_record_result *rr,
-							   ::std::cxx_std_error *err) noexcept -> bool {
-			try
-			{
-				*rr = tls_client_sw_open_record(static_cast<client_t *>(cc), rec,
-												rec_size, inner);
-				return true;
-			}
-			catch throws(::std::error e)
-			{
-				*err = e.release();
-				return false;
-			}
-		};
-		this->rx_stash = [](void *cc, ::std::byte const *pt, ::std::size_t n,
-							::std::cxx_std_error *err) noexcept {
-			try
-			{
-				tls_client_rx_pending_stash(static_cast<client_t *>(cc), pt, n);
-			}
-			catch throws(::std::error e)
-			{
-				*err = e.release();
-			}
-		};
-		this->finish = [](io_uring_tls_sw_recv_cookie *self,
-						  ::std::cxx_std_error err) noexcept {
-			auto *cookie{static_cast<io_uring_tls_sw_recv_cookie_of *>(self)};
-			auto callback{::std::move(cookie->callback)};
-			if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
-											  ::fast_io::io_scatter_status_t>)
-			{
-				::fast_io::io_scatter_status_t const status{
-					::fast_io::scatter_size_to_status(cookie->transferred,
-													   cookie->scatters,
-													   cookie->nscatters)};
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, status);
-			}
-			else
-			{
-				::std::size_t const transferred{cookie->transferred};
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, transferred);
-			}
-		};
+		this->open_record = &io_uring_tls_sw_open_record_cb<client_t>;
+		this->rx_stash = &io_uring_tls_sw_rx_stash_cb<client_t>;
+		this->finish = &io_uring_tls_sw_recv_finish_cb<client_t, func>;
 	}
 };
 
@@ -773,6 +803,29 @@ struct io_uring_tls_sw_write_cookie
 };
 
 template <typename client_t, typename func>
+struct io_uring_tls_sw_write_cookie_of;
+
+template <typename client_t, typename func>
+inline void io_uring_tls_sw_write_finish_cb(io_uring_tls_sw_write_cookie *self,
+										  ::std::cxx_std_error err) noexcept
+{
+	auto *cookie{static_cast<io_uring_tls_sw_write_cookie_of<client_t, func> *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	::std::size_t const n{cookie->plaintext};
+	if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
+									  ::fast_io::io_scatter_status_t>)
+	{
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, ::fast_io::io_scatter_status_t{n, 0zu});
+	}
+	else
+	{
+		::fast_io::details::async_delete_state(cookie);
+		callback(err, n);
+	}
+}
+
+template <typename client_t, typename func>
 struct io_uring_tls_sw_write_cookie_of : io_uring_tls_sw_write_cookie
 {
 	func callback;
@@ -784,23 +837,7 @@ struct io_uring_tls_sw_write_cookie_of : io_uring_tls_sw_write_cookie
 		: io_uring_tls_sw_write_cookie{s, c->sock_.fd, tmo},
 		  callback{::std::move(cb)}
 	{
-		this->finish = [](io_uring_tls_sw_write_cookie *self,
-						  ::std::cxx_std_error err) noexcept {
-			auto *cookie{static_cast<io_uring_tls_sw_write_cookie_of *>(self)};
-			auto callback{::std::move(cookie->callback)};
-			::std::size_t const n{cookie->plaintext};
-			if constexpr (::std::is_invocable_v<func, ::std::cxx_std_error,
-											  ::fast_io::io_scatter_status_t>)
-			{
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, ::fast_io::io_scatter_status_t{n, 0zu});
-			}
-			else
-			{
-				::fast_io::details::async_delete_state(cookie);
-				callback(err, n);
-			}
-		};
+		this->finish = &io_uring_tls_sw_write_finish_cb<client_t, func>;
 	}
 };
 
@@ -965,6 +1002,26 @@ struct io_uring_tls_close_cookie
 	}
 };
 
+template <typename client_t>
+inline ::std::size_t io_uring_tls_close_seal_alert_cb(void *cc, ::std::byte *out,
+													  alert_description desc) noexcept
+{
+	return tls_client_sw_seal_alert(static_cast<client_t *>(cc), out, desc);
+}
+
+template <typename client_t, typename func>
+struct io_uring_tls_close_cookie_of;
+
+template <typename client_t, typename func>
+inline void io_uring_tls_close_finish_cb(io_uring_tls_close_cookie *self,
+									   ::std::cxx_std_error err) noexcept
+{
+	auto *cookie{static_cast<io_uring_tls_close_cookie_of<client_t, func> *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err);
+}
+
 template <typename client_t, typename func>
 struct io_uring_tls_close_cookie_of : io_uring_tls_close_cookie
 {
@@ -977,17 +1034,8 @@ struct io_uring_tls_close_cookie_of : io_uring_tls_close_cookie
 		: io_uring_tls_close_cookie{s, c, c->sock_.fd, tmo},
 		  callback{::std::move(cb)}
 	{
-		this->seal_alert = [](void *cc, ::std::byte *out,
-							  alert_description desc) noexcept -> ::std::size_t {
-			return tls_client_sw_seal_alert(static_cast<client_t *>(cc), out, desc);
-		};
-		this->finish = [](io_uring_tls_close_cookie *self,
-						  ::std::cxx_std_error err) noexcept {
-			auto *cookie{static_cast<io_uring_tls_close_cookie_of *>(self)};
-			auto callback{::std::move(cookie->callback)};
-			::fast_io::details::async_delete_state(cookie);
-			callback(err);
-		};
+		this->seal_alert = &io_uring_tls_close_seal_alert_cb<client_t>;
+		this->finish = &io_uring_tls_close_finish_cb<client_t, func>;
 	}
 };
 
@@ -1389,6 +1437,35 @@ struct posix_thread_pool_tls_handshake_cookie_base : ::fast_io::details::posix_t
 	}
 };
 
+template <typename client_t>
+inline void posix_thread_pool_tls_handshake_cb(void *cc,
+											   ::fast_io::u8cstring_view h,
+											   ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		tls_client_handshake(static_cast<client_t *>(cc), h);
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+struct posix_thread_pool_tls_handshake_cookie;
+
+template <typename client_t, typename func>
+inline void posix_thread_pool_tls_handshake_dispatch_cb(
+	::fast_io::details::posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_tls_handshake_cookie<client_t, func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
 template <typename client_t, typename func>
 struct posix_thread_pool_tls_handshake_cookie
 	: posix_thread_pool_tls_handshake_cookie_base
@@ -1402,26 +1479,9 @@ struct posix_thread_pool_tls_handshake_cookie
 		: posix_thread_pool_tls_handshake_cookie_base{c, host, timeout},
 		  callback{::std::move(cb)}
 	{
-		this->handshake_fn = [](void *cc, ::fast_io::u8cstring_view h,
-								::std::cxx_std_error *err) noexcept {
-			try
-			{
-				tls_client_handshake(static_cast<client_t *>(cc), h);
-			}
-			catch throws(::std::error e)
-			{
-				*err = e.release();
-			}
-		};
+		this->handshake_fn = &posix_thread_pool_tls_handshake_cb<client_t>;
 		this->run = posix_thread_pool_tls_handshake_run;
-		this->dispatch = [](::fast_io::details::posix_thread_pool_node *p) noexcept {
-			auto *self{
-				static_cast<posix_thread_pool_tls_handshake_cookie *>(p)};
-			auto callback{::std::move(self->callback)};
-			auto err{self->err};
-			::fast_io::details::async_delete_state(self);
-			callback(err);
-		};
+		this->dispatch = &posix_thread_pool_tls_handshake_dispatch_cb<client_t, func>;
 	}
 };
 
@@ -1470,6 +1530,34 @@ struct posix_thread_pool_tls_close_cookie_base : ::fast_io::details::posix_threa
 	}
 };
 
+template <typename client_t>
+inline void posix_thread_pool_tls_close_notify_cb(void *cc,
+												  ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		tls_client_send_close_notify(static_cast<client_t *>(cc));
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+struct posix_thread_pool_tls_close_cookie;
+
+template <typename client_t, typename func>
+inline void posix_thread_pool_tls_close_dispatch_cb(
+	::fast_io::details::posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_tls_close_cookie<client_t, func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
 template <typename client_t, typename func>
 struct posix_thread_pool_tls_close_cookie
 	: posix_thread_pool_tls_close_cookie_base
@@ -1482,25 +1570,9 @@ struct posix_thread_pool_tls_close_cookie
 		: posix_thread_pool_tls_close_cookie_base{c, c->sock_.fd, timeout},
 		  callback{::std::move(cb)}
 	{
-		this->close_notify = [](void *cc, ::std::cxx_std_error *err) noexcept {
-			try
-			{
-				tls_client_send_close_notify(static_cast<client_t *>(cc));
-			}
-			catch throws(::std::error e)
-			{
-				*err = e.release();
-			}
-		};
+		this->close_notify = &posix_thread_pool_tls_close_notify_cb<client_t>;
 		this->run = posix_thread_pool_tls_close_run;
-		this->dispatch = [](::fast_io::details::posix_thread_pool_node *p) noexcept {
-			auto *self{
-				static_cast<posix_thread_pool_tls_close_cookie *>(p)};
-			auto callback{::std::move(self->callback)};
-			auto err{self->err};
-			::fast_io::details::async_delete_state(self);
-			callback(err);
-		};
+		this->dispatch = &posix_thread_pool_tls_close_dispatch_cb<client_t, func>;
 	}
 };
 

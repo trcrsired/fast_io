@@ -14,8 +14,8 @@ inline constexpr ::std::size_t async_transmit_bounce_size{
 	::fast_io::details::transmit_buffer_size_cache<1>};
 
 template <bool all, typename scheduler, typename outstmtype, typename instmtype,
-		  typename alloc_type, typename T>
-struct async_transmit_bytes_state
+		  typename alloc_type>
+struct async_transmit_bytes_state_base
 {
 	static inline constexpr bool transmit_all{all};
 	using allocator_type = alloc_type;
@@ -31,7 +31,6 @@ struct async_transmit_bytes_state
 	/* bytes still permitted by the caller's bound; SIZE_MAX for "until EOF" */
 	::std::size_t remaining;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
 	/* staged: bytes read into buf during the current round; moved: total
 	 * bytes delivered to the output; round_base: moved at round start, so
 	 * moved - round_base is how much of the staged bytes was written */
@@ -39,18 +38,33 @@ struct async_transmit_bytes_state
 	::std::size_t moved;
 	::std::size_t round_base;
 	::std::byte buf[async_transmit_bounce_size];
+	/* terminal delivery: frees the (derived) state, invokes the stored
+	 * functor -- the pump machinery never sees the callback type */
+	void (*finish)(async_transmit_bytes_state_base *state, ::std::cxx_std_error err,
+				   ::std::size_t moved) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-												   ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
-template <typename state_type>
-inline void async_transmit_bytes_deliver(state_type *state, ::std::cxx_std_error err,
-										 ::std::size_t moved) noexcept
+/* the callback-carrying state: the pump's round/completion functions work
+ * on the base, so they emit once per (all, scheduler, out, in, alloc)
+ * instead of once per functor */
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type, typename T>
+struct async_transmit_bytes_state;
+
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type, typename T>
+inline void async_transmit_bytes_finish_cb(
+	async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *b,
+	::std::cxx_std_error err, ::std::size_t moved) noexcept
 {
+	auto *state{static_cast<
+		async_transmit_bytes_state<all, scheduler, outstmtype, instmtype, alloc_type, T> *>(b)};
 	auto callback{::std::move(state->callback)};
 	::fast_io::details::async_delete_state(state);
-	if constexpr (state_type::transmit_all)
+	if constexpr (all)
 	{
 		callback(err);
 	}
@@ -60,11 +74,42 @@ inline void async_transmit_bytes_deliver(state_type *state, ::std::cxx_std_error
 	}
 }
 
-template <typename state_type>
-inline void async_transmit_bytes_write_staged(state_type *state) noexcept;
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type, typename T>
+struct async_transmit_bytes_state
+	: async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type>
+{
+	using base_type =
+		async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type>;
+	T callback;
+
+	inline async_transmit_bytes_state(
+		scheduler s, outstmtype o, ::fast_io::intfpos_opt oo, instmtype i,
+		::fast_io::intfpos_opt oi, ::std::size_t rem,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb, ::std::size_t staged,
+		::std::size_t moved, ::std::size_t round_base) noexcept
+		: base_type{s, o, oo, i, oi, rem, tmo, staged, moved, round_base},
+		  callback{::std::move(cb)}
+	{
+		this->finish =
+			&async_transmit_bytes_finish_cb<all, scheduler, outstmtype, instmtype, alloc_type, T>;
+	}
+};
 
 template <typename state_type>
-inline void async_transmit_bytes_read_round(state_type *state) noexcept;
+inline void async_transmit_bytes_deliver(state_type *state, ::std::cxx_std_error err,
+										 ::std::size_t moved) noexcept
+{
+	state->finish(state, err, moved);
+}
+
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_write_staged(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state) noexcept;
+
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_read_round(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state) noexcept;
 
 /*
  * Shared read-round completion: advance off_in, stage the bytes and chain
@@ -73,8 +118,9 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept;
  * offer synchronous reads (e.g. a memory source — the sync call runs inside
  * the submit lambda so a throw is still converted by async_submit_catching).
  */
-template <typename state_type>
-inline void async_transmit_bytes_read_done(state_type *state, ::std::cxx_std_error err,
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_read_done(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state, ::std::cxx_std_error err,
 										   ::std::size_t bytesread) noexcept
 {
 	if (err.domain == nullptr)
@@ -99,8 +145,9 @@ inline void async_transmit_bytes_read_done(state_type *state, ::std::cxx_std_err
  * writes, and for transmit_all chain back into a read round. A zero-byte
  * partial write reports no_space_on_device.
  */
-template <typename state_type>
-inline void async_transmit_bytes_write_done(state_type *state, ::std::cxx_std_error err,
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_write_done(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state, ::std::cxx_std_error err,
 											::std::size_t byteswritten) noexcept
 {
 	if (err.domain == nullptr)
@@ -126,7 +173,7 @@ inline void async_transmit_bytes_write_done(state_type *state, ::std::cxx_std_er
 			async_transmit_bytes_write_staged(state);
 			return;
 		}
-		if constexpr (state_type::transmit_all)
+		if constexpr (all)
 		{
 			if (state->remaining != 0)
 			{
@@ -146,10 +193,10 @@ inline void async_transmit_bytes_write_done(state_type *state, ::std::cxx_std_er
  * otherwise. A throw is delivered through the done path like any backend
  * error — it never escapes the noexcept state machine.
  */
-template <typename state_type>
-inline void async_transmit_bytes_sync_read(state_type *state, ::std::size_t chunk) noexcept
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_sync_read(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state, ::std::size_t chunk) noexcept
 {
-	using instmtype = typename state_type::instm_type;
 	try
 	{
 		::std::byte *iter;
@@ -187,11 +234,11 @@ inline void async_transmit_bytes_sync_read(state_type *state, ::std::size_t chun
 }
 
 /* the write-side mirror of async_transmit_bytes_sync_read */
-template <typename state_type>
-inline void async_transmit_bytes_sync_write(state_type *state, ::std::byte const *first,
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_sync_write(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state, ::std::byte const *first,
 											::std::size_t left) noexcept
 {
-	using outstmtype = typename state_type::outstm_type;
 	try
 	{
 		::std::byte const *iter;
@@ -239,10 +286,10 @@ inline void async_transmit_bytes_sync_write(state_type *state, ::std::byte const
  * opened for async) is driven inline — its "completion" is invoked directly
  * inside the submit lambda.
  */
-template <typename state_type>
-inline void async_transmit_bytes_read_round(state_type *state) noexcept
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_read_round(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state) noexcept
 {
-	using instmtype = typename state_type::instm_type;
 	::std::size_t const chunk{state->remaining < ::fast_io::details::async_transmit_bounce_size
 								  ? state->remaining
 								  : ::fast_io::details::async_transmit_bounce_size};
@@ -250,7 +297,7 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept
 		[state, chunk]() noexcept {
 			if constexpr (::fast_io::operations::decay::defines::
 							  has_async_pread_some_bytes_underflow_callback_define<
-								  typename state_type::scheduler_type, instmtype,
+								  typename ::std::remove_cvref_t<decltype(*state)>::scheduler_type, instmtype,
 								  ::fast_io::details::async_io_callback>)
 			{
 				async_pread_some_bytes_underflow_callback_define(
@@ -266,7 +313,7 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept
 			}
 			else
 			{
-				static_assert(!sizeof(state_type),
+				static_assert(!sizeof(decltype(*state)),
 							  "async_transmit input supports neither async nor synchronous byte reads");
 			}
 		},
@@ -275,17 +322,17 @@ inline void async_transmit_bytes_read_round(state_type *state) noexcept
 		});
 }
 
-template <typename state_type>
-inline void async_transmit_bytes_write_staged(state_type *state) noexcept
+template <bool all, typename scheduler, typename outstmtype, typename instmtype,
+		  typename alloc_type>
+inline void async_transmit_bytes_write_staged(async_transmit_bytes_state_base<all, scheduler, outstmtype, instmtype, alloc_type> *state) noexcept
 {
-	using outstmtype = typename state_type::outstm_type;
 	::std::size_t const left{state->staged - (state->moved - state->round_base)};
 	::fast_io::details::async_submit_catching(
 		[state, left]() noexcept {
 			::std::byte const *first{state->buf + (state->moved - state->round_base)};
 			if constexpr (::fast_io::operations::decay::defines::
 							  has_async_pwrite_some_bytes_overflow_callback_define<
-								  typename state_type::scheduler_type, outstmtype,
+								  typename ::std::remove_cvref_t<decltype(*state)>::scheduler_type, outstmtype,
 								  ::fast_io::details::async_io_callback>)
 			{
 				async_pwrite_some_bytes_overflow_callback_define(
@@ -302,7 +349,7 @@ inline void async_transmit_bytes_write_staged(state_type *state) noexcept
 			}
 			else
 			{
-				static_assert(!sizeof(state_type),
+				static_assert(!sizeof(decltype(*state)),
 							  "async_transmit output supports neither async nor synchronous byte writes");
 			}
 		},
@@ -316,9 +363,8 @@ inline void async_transmit_bytes_write_staged(state_type *state) noexcept
  * bound is met or a zero-byte round reports EOF. Shares the loop shape
  * with the p{read,write}_all chains.
  */
-template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type,
-		  typename T>
-struct async_transmit_all_native_state
+template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type>
+struct async_transmit_all_native_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -329,16 +375,54 @@ struct async_transmit_all_native_state
 	::fast_io::intfpos_opt off_in;
 	::std::size_t remaining;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	void (*finish)(async_transmit_all_native_state_base *state,
+				   ::std::cxx_std_error err) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-												   ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
 };
 
 template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type,
 		  typename T>
+struct async_transmit_all_native_state;
+
+template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type,
+		  typename T>
+inline void async_transmit_all_native_finish_cb(
+	async_transmit_all_native_state_base<scheduler, outstmtype, instmtype, alloc_type> *b,
+	::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_transmit_all_native_state<scheduler, outstmtype, instmtype,
+														 alloc_type, T> *>(b)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err);
+}
+
+template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type,
+		  typename T>
+struct async_transmit_all_native_state
+	: async_transmit_all_native_state_base<scheduler, outstmtype, instmtype, alloc_type>
+{
+	using base_type =
+		async_transmit_all_native_state_base<scheduler, outstmtype, instmtype, alloc_type>;
+	T callback;
+
+	inline async_transmit_all_native_state(
+		scheduler s, outstmtype o, ::fast_io::intfpos_opt oo, instmtype i,
+		::fast_io::intfpos_opt oi, ::std::size_t rem,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, o, oo, i, oi, rem, tmo}, callback{::std::move(cb)}
+	{
+		this->finish = &async_transmit_all_native_finish_cb<scheduler, outstmtype, instmtype,
+														  alloc_type, T>;
+	}
+};
+
+
+template <typename scheduler, typename outstmtype, typename instmtype, typename alloc_type>
 inline void async_transmit_all_native_submit(
-	async_transmit_all_native_state<scheduler, outstmtype, instmtype, alloc_type, T> *state) noexcept
+	async_transmit_all_native_state_base<scheduler, outstmtype, instmtype, alloc_type> *state) noexcept
 {
 	::std::size_t const bound{state->remaining};
 	::fast_io::details::async_submit_catching(
@@ -366,15 +450,11 @@ inline void async_transmit_all_native_submit(
 							return;
 						}
 					}
-					auto callback{::std::move(state->callback)};
-					::fast_io::details::async_delete_state(state);
-					callback(err);
+					state->finish(state, err);
 				});
 		},
 		[state](::std::cxx_std_error err) noexcept {
-			auto callback{::std::move(state->callback)};
-			::fast_io::details::async_delete_state(state);
-			callback(err);
+			state->finish(state, err);
 		});
 }
 
@@ -610,18 +690,7 @@ struct async_transmit_some_bytes_awaiter : async_awaiter_result<::std::size_t>
 		this->coro = h;
 		::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
 			sched, timeout, outstm, off_out, instm, off_in, bound,
-			[this](::std::cxx_std_error e, ::std::size_t n) noexcept {
-				this->err = e;
-				this->value = n;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<::std::size_t>{this});
 		return this->async_suspend_done();
 	}
 	inline ::std::size_t await_resume() throws
@@ -651,17 +720,7 @@ struct async_transmit_all_bytes_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_transmit_all_bytes_decay_callback(
 			sched, timeout, outstm, off_out, instm, off_in, bound,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

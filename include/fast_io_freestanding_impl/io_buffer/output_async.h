@@ -12,8 +12,8 @@ namespace details::io_buffer
  * handle asynchronously first; the completion then either buffers the
  * range or submits it to the device directly.
  */
-template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-struct async_iobuffer_pwrite_state
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+struct async_iobuffer_pwrite_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -22,24 +22,81 @@ struct async_iobuffer_pwrite_state
 	::std::byte const *first;
 	::std::size_t count;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* finish: free the derived state, invoke the functor (err, n);
+	 * relay: free the state and hand the functor to the handle's own
+	 * pwrite define -- both typed inside the derived state */
+	void (*finish)(async_iobuffer_pwrite_state_base *state, ::std::cxx_std_error err,
+				   ::std::size_t n) noexcept {};
+	void (*relay)(async_iobuffer_pwrite_state_base *state) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											 ::fast_io::details::empty>
 		alloc_handle{};
 };
 
-template <typename state_type>
-inline void async_iobuffer_pwrite_deliver(state_type *state, ::std::cxx_std_error err,
-										  ::std::size_t n) noexcept
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_pwrite_state;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_pwrite_finish_cb(
+	async_iobuffer_pwrite_state_base<scheduler, io_buffer_type, alloc_type> *base,
+	::std::cxx_std_error err, ::std::size_t n) noexcept
 {
+	auto *state{static_cast<async_iobuffer_pwrite_state<scheduler, io_buffer_type,
+													  alloc_type, T> *>(base)};
 	auto callback{::std::move(state->callback)};
 	::fast_io::details::async_delete_state(state);
 	callback(err, n);
 }
 
 template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_pwrite_relay_cb(
+	async_iobuffer_pwrite_state_base<scheduler, io_buffer_type, alloc_type> *base) noexcept
+{
+	auto *state{static_cast<async_iobuffer_pwrite_state<scheduler, io_buffer_type,
+													  alloc_type, T> *>(base)};
+	auto sched{state->sched};
+	auto outstm{::fast_io::operations::output_stream_ref(state->iobref.iobptr->handle)};
+	auto first{state->first};
+	auto count{state->count};
+	auto timeout{state->timeout};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	async_pwrite_some_bytes_overflow_callback_define(sched, timeout, outstm, first, count,
+													 ::fast_io::intfpos_opt{},
+													 ::std::move(callback));
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_pwrite_state
+	: async_iobuffer_pwrite_state_base<scheduler, io_buffer_type, alloc_type>
+{
+	using base_type =
+		async_iobuffer_pwrite_state_base<scheduler, io_buffer_type, alloc_type>;
+	T callback;
+
+	inline async_iobuffer_pwrite_state(
+		scheduler s, ::fast_io::basic_io_buffer_ref<io_buffer_type> b,
+		::std::byte const *f, ::std::size_t c,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, b, f, c, tmo}, callback{::std::move(cb)}
+	{
+		this->finish =
+			&async_iobuffer_pwrite_finish_cb<scheduler, io_buffer_type, alloc_type, T>;
+		this->relay =
+			&async_iobuffer_pwrite_relay_cb<scheduler, io_buffer_type, alloc_type, T>;
+	}
+};
+
+template <typename state_type>
+inline void async_iobuffer_pwrite_deliver(state_type *state, ::std::cxx_std_error err,
+										  ::std::size_t n) noexcept
+{
+	state->finish(state, err, n);
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
 inline void async_iobuffer_pwrite_submit(
-	async_iobuffer_pwrite_state<scheduler, io_buffer_type, alloc_type, T> *state) noexcept
+	async_iobuffer_pwrite_state_base<scheduler, io_buffer_type, alloc_type> *state) noexcept
 {
 	auto iobref{state->iobref};
 	auto &obuffer{iobref.iobptr->output_buffer};
@@ -49,16 +106,7 @@ inline void async_iobuffer_pwrite_submit(
 	{
 		/* nothing to flush: count >= buffer_size here, so the range goes
 		 * straight to the device */
-		auto sched{state->sched};
-		auto outstm{::fast_io::operations::output_stream_ref(iobref.iobptr->handle)};
-		auto first{state->first};
-		auto count{state->count};
-		auto timeout{state->timeout};
-		auto callback{::std::move(state->callback)};
-		::fast_io::details::async_delete_state(state);
-		async_pwrite_some_bytes_overflow_callback_define(sched, timeout, outstm, first, count,
-														 ::fast_io::intfpos_opt{},
-														 ::std::move(callback));
+		state->relay(state);
 		return;
 	}
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
@@ -86,16 +134,7 @@ inline void async_iobuffer_pwrite_submit(
 				async_iobuffer_pwrite_deliver(state, ::std::cxx_std_error{}, state->count);
 				return;
 			}
-			auto sched{state->sched};
-			auto outstm{::fast_io::operations::output_stream_ref(iobref.iobptr->handle)};
-			auto first{state->first};
-			auto count{state->count};
-			auto timeout{state->timeout};
-			auto callback{::std::move(state->callback)};
-			::fast_io::details::async_delete_state(state);
-			async_pwrite_some_bytes_overflow_callback_define(sched, timeout, outstm, first, count,
-															 ::fast_io::intfpos_opt{},
-															 ::std::move(callback));
+			state->relay(state);
 		});
 }
 
@@ -105,9 +144,8 @@ inline void async_iobuffer_pwrite_submit(
  * obuffer and writes the payload straight to the handle; never stage the
  * payload in the buffer.
  */
-template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type,
-		  typename T>
-struct async_iobuffer_transmit_state
+template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type>
+struct async_iobuffer_transmit_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
@@ -118,10 +156,75 @@ struct async_iobuffer_transmit_state
 	::fast_io::intfpos_opt off_in;
 	::fast_io::size_t_opt bound;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* finish: free the derived state, invoke the functor (err, n);
+	 * relay: free the state and run the transfer on the handle with the
+	 * functor carried along -- both typed inside the derived state */
+	void (*finish)(async_iobuffer_transmit_state_base *state, ::std::cxx_std_error err,
+				   ::std::size_t n) noexcept {};
+	void (*relay)(async_iobuffer_transmit_state_base *state) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											 ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type,
+		  typename T>
+struct async_iobuffer_transmit_state;
+
+template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type,
+		  typename T>
+inline void async_iobuffer_transmit_finish_cb(
+	async_iobuffer_transmit_state_base<scheduler, io_buffer_type, instmtype, alloc_type> *base,
+	::std::cxx_std_error err, ::std::size_t n) noexcept
+{
+	auto *state{static_cast<async_iobuffer_transmit_state<scheduler, io_buffer_type, instmtype,
+														alloc_type, T> *>(base)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err, n);
+}
+
+template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type,
+		  typename T>
+inline void async_iobuffer_transmit_relay_cb(
+	async_iobuffer_transmit_state_base<scheduler, io_buffer_type, instmtype, alloc_type> *base) noexcept
+{
+	auto *state{static_cast<async_iobuffer_transmit_state<scheduler, io_buffer_type, instmtype,
+														alloc_type, T> *>(base)};
+	auto sched{state->sched};
+	auto outstm{::fast_io::operations::output_stream_ref(state->iobref.iobptr->handle)};
+	auto off_out{state->off_out};
+	auto instm{::std::move(state->instm)};
+	auto off_in{state->off_in};
+	auto bound{state->bound};
+	auto timeout{state->timeout};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
+		sched, timeout, outstm, off_out, instm, off_in, bound, ::std::move(callback));
+}
+
+template <typename scheduler, typename io_buffer_type, typename instmtype, typename alloc_type,
+		  typename T>
+struct async_iobuffer_transmit_state
+	: async_iobuffer_transmit_state_base<scheduler, io_buffer_type, instmtype, alloc_type>
+{
+	using base_type =
+		async_iobuffer_transmit_state_base<scheduler, io_buffer_type, instmtype, alloc_type>;
+	T callback;
+
+	inline async_iobuffer_transmit_state(
+		scheduler s, ::fast_io::basic_io_buffer_ref<io_buffer_type> b,
+		::fast_io::intfpos_opt oo, instmtype i, ::fast_io::intfpos_opt oi,
+		::fast_io::size_t_opt bd,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, b, oo, i, oi, bd, tmo}, callback{::std::move(cb)}
+	{
+		this->finish =
+			&async_iobuffer_transmit_finish_cb<scheduler, io_buffer_type, instmtype, alloc_type, T>;
+		this->relay =
+			&async_iobuffer_transmit_relay_cb<scheduler, io_buffer_type, instmtype, alloc_type, T>;
+	}
 };
 
 template <typename state_type>
@@ -134,17 +237,7 @@ inline void async_iobuffer_transmit_dispatch(state_type *state) noexcept
 	if (pending == 0)
 	{
 		/* obuffer empty on the device — run the transfer on the handle */
-		auto sched{state->sched};
-		auto outstm{::fast_io::operations::output_stream_ref(iobref.iobptr->handle)};
-		auto off_out{state->off_out};
-		auto instm{::std::move(state->instm)};
-		auto off_in{state->off_in};
-		auto bound{state->bound};
-		auto timeout{state->timeout};
-		auto callback{::std::move(state->callback)};
-		::fast_io::details::async_delete_state(state);
-		::fast_io::operations::decay::async_transmit_some_bytes_decay_callback(
-			sched, timeout, outstm, off_out, instm, off_in, bound, ::std::move(callback));
+		state->relay(state);
 		return;
 	}
 	::fast_io::operations::decay::async_pwrite_all_bytes_decay_callback(
@@ -155,9 +248,7 @@ inline void async_iobuffer_transmit_dispatch(state_type *state) noexcept
 		[state](::std::cxx_std_error err) noexcept {
 			if (err.domain != nullptr) [[unlikely]]
 			{
-				auto callback{::std::move(state->callback)};
-				::fast_io::details::async_delete_state(state);
-				callback(err, 0);
+				state->finish(state, err, 0);
 				return;
 			}
 			auto &ob{state->iobref.iobptr->output_buffer};

@@ -78,17 +78,7 @@ struct async_close_awaiter : async_awaiter_result<void>
 		this->coro = h;
 		::fast_io::operations::decay::async_close_decay_callback(
 			sched, timeout, stm,
-			[this](::std::cxx_std_error e) noexcept {
-				this->err = e;
-				if (this->suspended)
-				{
-					this->coro.resume();
-				}
-				else
-				{
-					this->done = true;
-				}
-			});
+			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
 	inline constexpr void await_resume() throws

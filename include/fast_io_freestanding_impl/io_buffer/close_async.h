@@ -12,18 +12,77 @@ namespace details::io_buffer
  * the async analog of basic_io_buffer::close(), which flushes, clears
  * the windows and then closes the handle.
  */
-template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-struct async_iobuffer_close_state
+template <typename scheduler, typename io_buffer_type, typename T>
+inline void async_iobuffer_close_handle(
+	scheduler sched, ::fast_io::basic_io_buffer_ref<io_buffer_type> iobref,
+	::fast_io::posix_statx_timestamp_opt timeout, T callback) noexcept;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+struct async_iobuffer_close_state_base
 {
 	using allocator_type = alloc_type;
 	static inline constexpr bool alloc_with_status{alloc_type::has_status};
 	scheduler sched;
 	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* flush failed -> free the derived state, deliver err; flush done ->
+	 * free the state and chain into close_handle with the functor carried
+	 * along -- both typed inside the derived state */
+	void (*finish)(async_iobuffer_close_state_base *state,
+				   ::std::cxx_std_error err) noexcept {};
+	void (*proceed)(async_iobuffer_close_state_base *state) noexcept {};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
-												   ::fast_io::details::empty>
+											   ::fast_io::details::empty>
 		alloc_handle{};
+};
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_close_state;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_close_finish_cb(
+	async_iobuffer_close_state_base<scheduler, io_buffer_type, alloc_type> *base,
+	::std::cxx_std_error err) noexcept
+{
+	auto *state{static_cast<async_iobuffer_close_state<scheduler, io_buffer_type,
+													 alloc_type, T> *>(base)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err);
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_close_proceed_cb(
+	async_iobuffer_close_state_base<scheduler, io_buffer_type, alloc_type> *base) noexcept
+{
+	auto *state{static_cast<async_iobuffer_close_state<scheduler, io_buffer_type,
+													 alloc_type, T> *>(base)};
+	auto sched{state->sched};
+	auto iobref{state->iobref};
+	auto timeout{state->timeout};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	async_iobuffer_close_handle(sched, iobref, timeout, ::std::move(callback));
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_close_state
+	: async_iobuffer_close_state_base<scheduler, io_buffer_type, alloc_type>
+{
+	using base_type =
+		async_iobuffer_close_state_base<scheduler, io_buffer_type, alloc_type>;
+	T callback;
+
+	inline async_iobuffer_close_state(scheduler s,
+									  ::fast_io::basic_io_buffer_ref<io_buffer_type> b,
+									  ::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, b, tmo}, callback{::std::move(cb)}
+	{
+		this->finish =
+			&async_iobuffer_close_finish_cb<scheduler, io_buffer_type, alloc_type, T>;
+		this->proceed =
+			&async_iobuffer_close_proceed_cb<scheduler, io_buffer_type, alloc_type, T>;
+	}
 };
 
 /*
@@ -112,18 +171,10 @@ inline void async_close_define(
 							 * the flush error and leaves the handle
 							 * open; do the same so the caller may
 							 * retry or destroy */
-							auto callback{::std::move(state->callback)};
-							::fast_io::details::async_delete_state(state);
-							callback(err);
+							state->finish(state, err);
 							return;
 						}
-						auto sched{state->sched};
-						auto iobref{state->iobref};
-						auto timeout{state->timeout};
-						auto callback{::std::move(state->callback)};
-						::fast_io::details::async_delete_state(state);
-						::fast_io::details::io_buffer::async_iobuffer_close_handle(
-							sched, iobref, timeout, ::std::move(callback));
+						state->proceed(state);
 					});
 			}
 			catch throws(::std::error e)

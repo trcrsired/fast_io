@@ -20,8 +20,8 @@ namespace details::io_buffer
  * `output_flushed` records that the flush stage already ran so a
  * resubmission does not loop on it.
  */
-template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-struct async_iobuffer_pread_state
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+struct async_iobuffer_pread_state_base
 {
 	using allocator_type = alloc_type;
 	using io_buffer_type_t = io_buffer_type;
@@ -32,20 +32,85 @@ struct async_iobuffer_pread_state
 	::std::size_t count;
 	::fast_io::intfpos_opt off;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	/* finish: free the derived state, invoke the functor (err, n);
+	 * resume: re-enter the submit after a tied-output flush;
+	 * relay: free the state and hand the functor to the handle's own
+	 * async define -- all typed inside the derived state */
+	void (*finish)(async_iobuffer_pread_state_base *state, ::std::cxx_std_error err,
+				   ::std::size_t n) noexcept {};
+	void (*resume)(async_iobuffer_pread_state_base *state) noexcept {};
+	void (*relay)(async_iobuffer_pread_state_base *state, bool positional) noexcept {};
 	bool output_flushed{};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											 ::fast_io::details::empty>
 		alloc_handle{};
 };
 
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+inline void async_iobuffer_pread_submit(
+	async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type> *state) noexcept;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_pread_state;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_pread_finish_cb(
+	async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type> *base,
+	::std::cxx_std_error err, ::std::size_t n) noexcept
+{
+	auto *state{static_cast<async_iobuffer_pread_state<scheduler, io_buffer_type,
+													 alloc_type, T> *>(base)};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	callback(err, n);
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_pread_relay_cb(
+	async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type> *base,
+	bool positional) noexcept
+{
+	auto *state{static_cast<async_iobuffer_pread_state<scheduler, io_buffer_type,
+													 alloc_type, T> *>(base)};
+	auto sched{state->sched};
+	auto instm{::fast_io::operations::input_stream_ref(state->iobref.iobptr->handle)};
+	auto first{state->first};
+	auto count{state->count};
+	auto off{positional ? state->off : ::fast_io::intfpos_opt{}};
+	auto timeout{state->timeout};
+	auto callback{::std::move(state->callback)};
+	::fast_io::details::async_delete_state(state);
+	async_pread_some_bytes_underflow_callback_define(sched, timeout, instm, first, count,
+													 off, ::std::move(callback));
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+struct async_iobuffer_pread_state
+	: async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type>
+{
+	using base_type =
+		async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type>;
+	T callback;
+
+	inline async_iobuffer_pread_state(
+		scheduler s, ::fast_io::basic_io_buffer_ref<io_buffer_type> b,
+		::std::byte *f, ::std::size_t c, ::fast_io::intfpos_opt o,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, b, f, c, o, tmo}, callback{::std::move(cb)}
+	{
+		this->resume = &async_iobuffer_pread_submit<scheduler, io_buffer_type, alloc_type>;
+		this->finish =
+			&async_iobuffer_pread_finish_cb<scheduler, io_buffer_type, alloc_type, T>;
+		this->relay =
+			&async_iobuffer_pread_relay_cb<scheduler, io_buffer_type, alloc_type, T>;
+	}
+};
+
 template <typename state_type>
 inline void async_iobuffer_pread_deliver(state_type *state, ::std::cxx_std_error err,
 										 ::std::size_t n) noexcept
 {
-	auto callback{::std::move(state->callback)};
-	::fast_io::details::async_delete_state(state);
-	callback(err, n);
+	state->finish(state, err, n);
 }
 
 /* whether the traits mark this buffer in|out|tie */
@@ -73,8 +138,8 @@ inline constexpr bool async_iobuffer_output_pending(iobref_type iobref) noexcept
 
 /* submit the tied-output flush leg: pwrite_all the pending obuffer bytes
  * on the handle, then re-enter the state machine */
-template <typename state_type, typename resubmit>
-inline void async_iobuffer_flush_submit(state_type *state, resubmit &&resm) noexcept
+template <typename state_type>
+inline void async_iobuffer_flush_submit(state_type *state) noexcept
 {
 	auto iobref{state->iobref};
 	auto &obuffer{iobref.iobptr->output_buffer};
@@ -86,36 +151,33 @@ inline void async_iobuffer_flush_submit(state_type *state, resubmit &&resm) noex
 		static_cast<::std::size_t>(obuffer.buffer_curr - obuffer.buffer_begin) *
 			sizeof(typename state_type::io_buffer_type_t::output_char_type),
 		::fast_io::intfpos_opt{},
-		[state, resm{::std::move(resm)}](::std::cxx_std_error err) noexcept {
+		[state](::std::cxx_std_error err) noexcept {
 			if (err.domain == nullptr)
 			{
 				auto &ob{state->iobref.iobptr->output_buffer};
 				ob.buffer_curr = ob.buffer_begin;
 			}
-			resm(state, err);
+			if (err.domain != nullptr) [[unlikely]]
+			{
+				state->finish(state, err, 0);
+				return;
+			}
+			state->resume(state);
 		});
 }
 
 /* the dispatch behind the async pread define's slow path */
-template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
 inline void async_iobuffer_pread_submit(
-	async_iobuffer_pread_state<scheduler, io_buffer_type, alloc_type, T> *state) noexcept
+	async_iobuffer_pread_state_base<scheduler, io_buffer_type, alloc_type> *state) noexcept
 {
-	using state_type = async_iobuffer_pread_state<scheduler, io_buffer_type, alloc_type, T>;
 	if constexpr (async_iobuffer_tied<io_buffer_type>)
 	{
 		if (!state->output_flushed &&
 			state->iobref.iobptr->output_buffer.buffer_curr !=
 				state->iobref.iobptr->output_buffer.buffer_begin)
 		{
-			async_iobuffer_flush_submit(state, [](state_type *s, ::std::cxx_std_error err) noexcept {
-				if (err.domain != nullptr) [[unlikely]]
-				{
-					async_iobuffer_pread_deliver(s, err, 0);
-					return;
-				}
-				async_iobuffer_pread_submit(s);
-			});
+			async_iobuffer_flush_submit(state);
 			return;
 		}
 	}
@@ -124,16 +186,7 @@ inline void async_iobuffer_pread_submit(
 	{
 		/* explicit offset: the buffer window is unrelated to it — delegate
 		 * to the handle, matching the sync pread underflow define */
-		auto sched{state->sched};
-		auto instm{::fast_io::operations::input_stream_ref(iobref.iobptr->handle)};
-		auto first{state->first};
-		auto count{state->count};
-		auto off{state->off};
-		auto timeout{state->timeout};
-		auto callback{::std::move(state->callback)};
-		::fast_io::details::async_delete_state(state);
-		async_pread_some_bytes_underflow_callback_define(sched, timeout, instm, first, count, off,
-														 ::std::move(callback));
+		state->relay(state, true);
 		return;
 	}
 	try
@@ -157,16 +210,7 @@ inline void async_iobuffer_pread_submit(
 		{
 			/* a read covering the whole buffer talks to the device
 			 * directly — the buffer stays empty */
-			auto sched{state->sched};
-			auto instm{::fast_io::operations::input_stream_ref(iobref.iobptr->handle)};
-			auto first{state->first};
-			auto count{state->count};
-			auto timeout{state->timeout};
-			auto callback{::std::move(state->callback)};
-			::fast_io::details::async_delete_state(state);
-			async_pread_some_bytes_underflow_callback_define(sched, timeout, instm, first, count,
-															 ::fast_io::intfpos_opt{},
-															 ::std::move(callback));
+			state->relay(state, false);
 			return;
 		}
 		/* underflow: refill the window asynchronously, then serve the
@@ -208,8 +252,8 @@ inline void async_iobuffer_pread_submit(
  * State for async_ibuffer_underflow: refill the input window with one
  * async read on the handle and report how many bytes became pending.
  */
-template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-struct async_iobuffer_underflow_state
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+struct async_iobuffer_underflow_state_base
 {
 	using allocator_type = alloc_type;
 	using io_buffer_type_t = io_buffer_type;
@@ -217,42 +261,71 @@ struct async_iobuffer_underflow_state
 	scheduler sched;
 	::fast_io::basic_io_buffer_ref<io_buffer_type> iobref;
 	::fast_io::posix_statx_timestamp_opt timeout;
-	T callback;
+	void (*finish)(async_iobuffer_underflow_state_base *state, ::std::cxx_std_error err,
+				   ::std::size_t n) noexcept {};
+	void (*resume)(async_iobuffer_underflow_state_base *state) noexcept {};
 	bool output_flushed{};
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status, typename alloc_type::handle_type,
 											 ::fast_io::details::empty>
 		alloc_handle{};
 };
 
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+inline void async_iobuffer_underflow_submit(
+	async_iobuffer_underflow_state_base<scheduler, io_buffer_type, alloc_type> *state) noexcept;
+
 template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-inline void async_iobuffer_underflow_deliver(
-	async_iobuffer_underflow_state<scheduler, io_buffer_type, alloc_type, T> *state,
+struct async_iobuffer_underflow_state;
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
+inline void async_iobuffer_underflow_finish_cb(
+	async_iobuffer_underflow_state_base<scheduler, io_buffer_type, alloc_type> *base,
 	::std::cxx_std_error err, ::std::size_t n) noexcept
 {
+	auto *state{static_cast<async_iobuffer_underflow_state<scheduler, io_buffer_type,
+														 alloc_type, T> *>(base)};
 	auto callback{::std::move(state->callback)};
 	::fast_io::details::async_delete_state(state);
 	callback(err, n);
 }
 
 template <typename scheduler, typename io_buffer_type, typename alloc_type, typename T>
-inline void async_iobuffer_underflow_submit(
-	async_iobuffer_underflow_state<scheduler, io_buffer_type, alloc_type, T> *state) noexcept
+struct async_iobuffer_underflow_state
+	: async_iobuffer_underflow_state_base<scheduler, io_buffer_type, alloc_type>
 {
-	using state_type = async_iobuffer_underflow_state<scheduler, io_buffer_type, alloc_type, T>;
+	using base_type =
+		async_iobuffer_underflow_state_base<scheduler, io_buffer_type, alloc_type>;
+	T callback;
+
+	inline async_iobuffer_underflow_state(
+		scheduler s, ::fast_io::basic_io_buffer_ref<io_buffer_type> b,
+		::fast_io::posix_statx_timestamp_opt tmo, T cb) noexcept
+		: base_type{s, b, tmo}, callback{::std::move(cb)}
+	{
+		this->resume = &async_iobuffer_underflow_submit<scheduler, io_buffer_type, alloc_type>;
+		this->finish =
+			&async_iobuffer_underflow_finish_cb<scheduler, io_buffer_type, alloc_type, T>;
+	}
+};
+
+template <typename state_type>
+inline void async_iobuffer_underflow_deliver(state_type *state,
+											 ::std::cxx_std_error err, ::std::size_t n) noexcept
+{
+	state->finish(state, err, n);
+}
+
+template <typename scheduler, typename io_buffer_type, typename alloc_type>
+inline void async_iobuffer_underflow_submit(
+	async_iobuffer_underflow_state_base<scheduler, io_buffer_type, alloc_type> *state) noexcept
+{
 	if constexpr (async_iobuffer_tied<io_buffer_type>)
 	{
 		if (!state->output_flushed &&
 			state->iobref.iobptr->output_buffer.buffer_curr !=
 				state->iobref.iobptr->output_buffer.buffer_begin)
 		{
-			async_iobuffer_flush_submit(state, [](state_type *s, ::std::cxx_std_error err) noexcept {
-				if (err.domain != nullptr) [[unlikely]]
-				{
-					async_iobuffer_underflow_deliver(s, err, 0);
-					return;
-				}
-				async_iobuffer_underflow_submit(s);
-			});
+			async_iobuffer_flush_submit(state);
 			return;
 		}
 	}
