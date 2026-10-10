@@ -137,6 +137,10 @@ struct intfpos_opt
 		: opt{fpos}, has_opt{true}
 	{
 	}
+	inline constexpr intfpos_opt(::fast_io::intfpos_t fpos, bool has) noexcept
+		: opt{fpos}, has_opt{has}
+	{
+	}
 };
 
 /*
@@ -223,6 +227,10 @@ struct posix_statx_timestamp_opt
 	inline constexpr posix_statx_timestamp_opt() noexcept = default;
 	inline constexpr posix_statx_timestamp_opt(::fast_io::posix_statx_timestamp64 ts) noexcept
 		: opt{ts}, has_opt{true}
+	{
+	}
+	inline constexpr posix_statx_timestamp_opt(::fast_io::posix_statx_timestamp64 ts, bool has) noexcept
+		: opt{ts}, has_opt{has}
 	{
 	}
 };
