@@ -215,9 +215,9 @@ struct basic_schannel_tls_client
 	/* pt_pending: decrypted plaintext the caller's buffer could not
 	   take. ct_pending: undecrypted ciphertext DecryptMessage returned
 	   as EXTRA -- fed back in as the next decrypt input. */
-	::std::byte pt_pending_[details::tls13_max_record]{};
+	::std::byte pt_pending_[details::tls_max_record]{};
 	::std::size_t pt_pending_size_{};
-	::std::byte ct_pending_[details::tls13_max_record]{};
+	::std::byte ct_pending_[details::tls_max_record]{};
 	::std::size_t ct_pending_size_{};
 	details::schannel_stream_sizes stream_sizes_{};
 	bool have_ctx_{};
@@ -298,7 +298,7 @@ inline constexpr ::std::uint_least32_t schannel_isc_reqs{
 
 template <typename socket_observer_type>
 inline void tls_client_handshake(basic_schannel_tls_client<socket_observer_type> *client,
-								 tls13_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS
+								 tls_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (client->established_)
 	{
@@ -341,7 +341,7 @@ inline void tls_client_handshake(basic_schannel_tls_client<socket_observer_type>
 
 	char16_t *const target_name{cfg->check_hostname ? target : nullptr};
 
-	::std::byte inbuf[details::tls13_max_record];
+	::std::byte inbuf[details::tls_max_record];
 	::std::size_t in_size{};
 
 	schannel_timestamp expiry{};
@@ -664,7 +664,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_schannel_tls_io
 
 template <::std::integral ch_type, typename socket_observer_type>
 inline void handshake_define(basic_schannel_tls_io_observer<ch_type, socket_observer_type> tob,
-							 tls13_client_config cfg) FAST_IO_HERBCEPTIONS_THROWS
+							 tls_client_config cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::tls_client_handshake(tob.handle, __builtin_addressof(cfg));
 }
@@ -673,7 +673,7 @@ template <::std::integral ch_type, typename socket_observer_type>
 inline void handshake_define(basic_schannel_tls_io_observer<ch_type, socket_observer_type> tob,
 							 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
-	tls13_client_config cfg{};
+	tls_client_config cfg{};
 	cfg.hostname = hostname;
 	details::tls_client_handshake(tob.handle, __builtin_addressof(cfg));
 }
@@ -684,7 +684,7 @@ inline void tls_close_notify(basic_schannel_tls_io_observer<ch_type, socket_obse
 	details::tls_client_send_close_notify(tob.handle);
 }
 
-/* owning bundle, same shape as basic_tls13 / basic_ossl_tls */
+/* owning bundle, same shape as basic_tls / basic_ossl_tls */
 template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator>
 struct basic_schannel_tls
 {

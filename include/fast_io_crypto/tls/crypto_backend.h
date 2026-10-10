@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-crypto primitive provider for basic_tls13_client. The protocol machinery
+crypto primitive provider for basic_tls_client. The protocol machinery
 -- record framing, sequence numbers, key schedule, X.509 parse, chain
 and SAN checks -- always stays in fast_io; the backend only supplies the
 math primitives. Substituting a provider (OpenSSL EVP, GnuTLS, Windows
@@ -188,7 +188,7 @@ struct fast_io_crypto_backend
 								   cipher_suite suite, ::std::byte const *key,
 								   ::std::byte const *iv, ::std::uint_least64_t seq) noexcept
 	{
-		return details::tls13_record_open(out, out_size, inner_type, hdr5, ct,
+		return details::tls_record_open(out, out_size, inner_type, hdr5, ct,
 										  ct_size, suite, key, iv, seq);
 	}
 
@@ -197,7 +197,7 @@ struct fast_io_crypto_backend
 					  cipher_suite suite, ::std::byte const *key, ::std::byte const *iv,
 					  ::std::uint_least64_t seq) noexcept
 	{
-		return details::tls13_record_seal_inner(out, inner, inner_size, suite, key, iv, seq);
+		return details::tls_record_seal_inner(out, inner, inner_size, suite, key, iv, seq);
 	}
 
 	static inline ::std::size_t
@@ -205,7 +205,7 @@ struct fast_io_crypto_backend
 				::std::size_t pt_size, cipher_suite suite, ::std::byte const *key,
 				::std::byte const *iv, ::std::uint_least64_t seq) noexcept
 	{
-		return details::tls13_record_seal(out, inner_type, pt, pt_size, suite, key, iv, seq);
+		return details::tls_record_seal(out, inner_type, pt, pt_size, suite, key, iv, seq);
 	}
 
 	static inline details::x509_verify_result

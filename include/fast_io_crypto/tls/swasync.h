@@ -71,9 +71,9 @@ struct tls_sw_recv_state
 	::std::size_t buf_size{};
 	::fast_io::io_scatter_t const *scatters{};
 	::std::size_t nscatters{};
-	::std::byte ct[tls13_max_record];
+	::std::byte ct[tls_max_record];
 	::std::size_t ct_have{};
-	::std::byte inner[tls13_max_ciphertext];
+	::std::byte inner[tls_max_ciphertext];
 	func callback;
 	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
 												   typename allocator_type::handle_type,
@@ -192,7 +192,7 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 		::std::size_t const clen{
 			(static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(st->ct[3])) << 8) |
 			static_cast<::std::size_t>(static_cast<::std::uint_least8_t>(st->ct[4]))};
-		if (clen == 0 || clen > tls13_max_ciphertext)
+		if (clen == 0 || clen > tls_max_ciphertext)
 		{
 			tls_sw_recv_finish(
 				st,
@@ -289,7 +289,7 @@ struct tls_sw_write_state
 	sched_t sched;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	client_t *client;
-	::std::byte wire[tls13_max_record];
+	::std::byte wire[tls_max_record];
 	::std::size_t wire_size{};
 	::std::size_t wire_done{};
 	::std::size_t plaintext_consumed{};
@@ -604,7 +604,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 inline void async_handshake_callback_define(
 	::fast_io::win32_thread_pool_observer sched,
 	::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::u8cstring_view hostname, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -642,7 +642,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 inline void async_handshake_callback_define(
 	::fast_io::win32_ioring_observer sched,
 	::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::u8cstring_view hostname, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -708,7 +708,7 @@ namespace fast_io::operations::decay
  * Public callback entry for an asynchronous TLS handshake: submits the
  * stream's async_handshake_callback_define, found by ADL on the
  * scheduler/stream types. instm is reduced to its io_stream_ref first,
- * so basic_tls13 and buffered TLS streams arrive as the observer.
+ * so basic_tls and buffered TLS streams arrive as the observer.
  *
  * The functor is invoked once as callback(::std::cxx_std_error)
  * noexcept: domain == nullptr means the handshake completed and the
@@ -859,7 +859,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_pread_some_bytes_underflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::std::byte *first, ::std::size_t count, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -880,7 +880,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
 	::fast_io::intfpos_opt off, func callback) noexcept
 {
@@ -901,7 +901,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_pwrite_some_bytes_overflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -930,7 +930,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
 	::fast_io::intfpos_opt off, func callback) noexcept
 {
@@ -958,7 +958,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	func callback) noexcept
 {
 	auto *client{tob.handle};
@@ -1014,9 +1014,9 @@ template <typename async_scheduler_type, ::std::integral ch_type_out, typename a
 		  typename allocator_type_in, typename socket_observer_type_in, typename crypto_in, typename func>
 inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	async_scheduler_type sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls13_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out> outstm,
+	::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out> outstm,
 	::fast_io::intfpos_opt off_out,
-	::fast_io::tls::basic_tls13_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in> instm,
+	::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in> instm,
 	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound, func callback) noexcept
 {
 	if (outstm.handle->offloaded_ && instm.handle->offloaded_)
@@ -1030,8 +1030,8 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 		::std::remove_cvref_t<async_scheduler_type>>;
 	using state_type = ::fast_io::details::async_transmit_bytes_state<
 		false, ::std::remove_cvref_t<async_scheduler_type>,
-		::fast_io::tls::basic_tls13_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out>,
-		::fast_io::tls::basic_tls13_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in>, alloc_type,
+		::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out>,
+		::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in>, alloc_type,
 		::std::remove_cvref_t<func>>;
 	::std::size_t const remaining{bound.has_opt ? bound.opt
 												: ::std::numeric_limits<::std::size_t>::max()};

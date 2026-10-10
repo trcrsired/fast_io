@@ -227,7 +227,7 @@ public:
 			return false;
 		}
 		::std::byte nonce[12];
-		details::tls13_nonce_to_ptr(nonce, iv, seq);
+		details::tls_nonce_to_ptr(nonce, iv, seq);
 		::std::size_t const inner_size{ct_size - 16};
 
 		gnutls_aead_cipher_hd_t h{};
@@ -266,7 +266,7 @@ public:
 					  ::std::uint_least64_t seq) noexcept
 	{
 		::std::byte nonce[12];
-		details::tls13_nonce_to_ptr(nonce, iv, seq);
+		details::tls_nonce_to_ptr(nonce, iv, seq);
 		::std::byte *p{details::record_header_write(out, content_type::application_data,
 													static_cast<::std::uint_least16_t>(inner_size + 16))};
 		::std::byte *const hdr{out};

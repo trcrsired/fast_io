@@ -2,7 +2,7 @@
 
 /*
 trust-root store: decodes every CERTIFICATE block from a PEM bundle
-into DER and presents them in the flat array form tls13_client_config
+into DER and presents them in the flat array form tls_client_config
 wants. Hosted only (reads files via native_file_loader).
 */
 
@@ -178,12 +178,12 @@ namespace details
 
 /* hostname form: system trust bundle, chain + SAN checks on */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_handshake(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
 								 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto store{tls_alloc_construct<basic_root_store<allocator_type>, allocator_type>(client->allocator_handle)};
 	root_store_load_system(__builtin_addressof(store));
-	tls13_client_config cfg{};
+	tls_client_config cfg{};
 	cfg.hostname = hostname;
 	cfg.roots = store.ptrs.data();
 	cfg.root_sizes = store.sizes.data();
@@ -194,7 +194,7 @@ inline void tls_client_handshake(basic_tls13_client<allocator_type, socket_obser
 } // namespace details
 
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto>
-inline void handshake_define(basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+inline void handshake_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 							 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::tls_client_handshake(tob.handle, hostname);

@@ -3,7 +3,7 @@ https example: fetch a page over TLS 1.3.
 	./https www.google.com
 native_tls resolves to the OS/backend TLS for the build -- schannel on
 Windows, openssl when its headers are visible, fast_io's own TLS 1.3
-client everywhere else. Use fast_io::tls::u8iobuf_tls13_socket_file
+client everywhere else. Use fast_io::tls::u8iobuf_tls_socket_file
 directly for the fast_io implementation.
 */
 #include <fast_io.h>

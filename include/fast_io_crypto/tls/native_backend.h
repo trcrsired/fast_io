@@ -3,8 +3,8 @@
 /*
 native TLS backend selection: prefer the OS/OpenSSL record layer when
 available -- Schannel on Windows, OpenSSL when its headers are visible --
-and fall back to the userspace TLS 1.3 implementation (basic_tls13)
-everywhere else. The aliases mirror basic_tls13's names so code is
+and fall back to the userspace TLS 1.3 implementation (basic_tls)
+everywhere else. The aliases mirror basic_tls's names so code is
 backend-agnostic.
 
 -D FAST_IO_TLS_FORCE_FAST_IO=1 pins the aliases to the fast_io userspace
@@ -53,14 +53,14 @@ using u8iobuf_native_tls_socket_file = basic_iobuf_native_tls_socket_file<char8_
 
 /* the educational userspace TLS 1.3 client is always available */
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_native_tls = basic_tls13<basic_native_socket_file<ch_type>, allocator_type>;
+using basic_native_tls = basic_tls<basic_native_socket_file<ch_type>, allocator_type>;
 
 using native_tls_socket_file = basic_native_tls<char>;
 using u8native_tls_socket_file = basic_native_tls<char8_t>;
 
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
 using basic_iobuf_native_tls_socket_file =
-	basic_iobuf<basic_tls13_socket_file<ch_type, allocator_type>, allocator_type>;
+	basic_iobuf<basic_tls_socket_file<ch_type, allocator_type>, allocator_type>;
 
 using iobuf_native_tls_socket_file = basic_iobuf_native_tls_socket_file<char>;
 using u8iobuf_native_tls_socket_file = basic_iobuf_native_tls_socket_file<char8_t>;

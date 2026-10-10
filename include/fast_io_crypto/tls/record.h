@@ -17,7 +17,7 @@ inner plaintext = content || content_type || zeros
 namespace fast_io::tls::details
 {
 
-inline constexpr void tls13_nonce_to_ptr(::std::byte *out /*12*/,
+inline constexpr void tls_nonce_to_ptr(::std::byte *out /*12*/,
 										 ::std::byte const *iv, ::std::uint_least64_t seq) noexcept
 {
 	for (::std::size_t i{}; i != 12; ++i)
@@ -35,7 +35,7 @@ open one ciphertext record. hdr is the record's 5-byte header, ct its
 len-field bytes (ciphertext+tag). Writes the inner plaintext to out and
 returns {inner_type, content_size}, or false on tag failure.
 */
-inline bool tls13_record_open(::std::byte *out, ::std::size_t &out_size, content_type &inner_type,
+inline bool tls_record_open(::std::byte *out, ::std::size_t &out_size, content_type &inner_type,
 							  ::std::byte const *hdr5, ::std::byte const *ct, ::std::size_t ct_size,
 							  cipher_suite suite, ::std::byte const *key, ::std::byte const *iv,
 							  ::std::uint_least64_t seq) noexcept
@@ -45,7 +45,7 @@ inline bool tls13_record_open(::std::byte *out, ::std::size_t &out_size, content
 		return false;
 	}
 	::std::byte nonce[12];
-	tls13_nonce_to_ptr(nonce, iv, seq);
+	tls_nonce_to_ptr(nonce, iv, seq);
 	::std::size_t const inner_size{ct_size - 16};
 	::std::byte tag[16];
 	for (::std::size_t i{}; i != 16; ++i)
@@ -110,14 +110,14 @@ seal a precomposed inner plaintext (content || content_type already
 appended by the caller) into a ciphertext record. Writes hdr(5)+ct into
 out; returns total bytes written.
 */
-inline ::std::size_t tls13_record_seal_inner(::std::byte *out,
+inline ::std::size_t tls_record_seal_inner(::std::byte *out,
 											 ::std::byte const *inner, ::std::size_t inner_size,
 											 cipher_suite suite,
 											 ::std::byte const *key, ::std::byte const *iv,
 											 ::std::uint_least64_t seq) noexcept
 {
 	::std::byte nonce[12];
-	tls13_nonce_to_ptr(nonce, iv, seq);
+	tls_nonce_to_ptr(nonce, iv, seq);
 	::std::byte *p{record_header_write(out, content_type::application_data,
 									   static_cast<::std::uint_least16_t>(inner_size + 16))};
 	::std::byte *const hdr{out};
@@ -167,7 +167,7 @@ inline ::std::size_t tls13_record_seal_inner(::std::byte *out,
 seal inner plaintext into a ciphertext record. Writes hdr(5)+ct into
 out; returns total bytes written.
 */
-inline ::std::size_t tls13_record_seal(::std::byte *out,
+inline ::std::size_t tls_record_seal(::std::byte *out,
 									   content_type inner_type,
 									   ::std::byte const *pt, ::std::size_t pt_size,
 									   cipher_suite suite,
@@ -184,7 +184,7 @@ inline ::std::size_t tls13_record_seal(::std::byte *out,
 	::std::byte inner[16641];
 	::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
 	inner[pt_size] = static_cast<::std::byte>(inner_type);
-	return tls13_record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
+	return tls_record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 }
 
 } // namespace fast_io::tls::details

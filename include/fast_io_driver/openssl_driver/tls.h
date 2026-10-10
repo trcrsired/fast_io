@@ -204,7 +204,7 @@ inline void ossl_tls_drive(basic_ossl_tls_client<socket_observer_type> *client, 
 
 template <typename socket_observer_type>
 inline void tls_client_handshake(basic_ossl_tls_client<socket_observer_type> *client,
-								 tls13_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS
+								 tls_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (client->ssl_ != nullptr)
 	{
@@ -417,7 +417,7 @@ inline ::std::byte const *write_some_bytes_overflow_define(basic_ossl_tls_io_obs
 
 template <::std::integral ch_type, typename socket_observer_type>
 inline void handshake_define(basic_ossl_tls_io_observer<ch_type, socket_observer_type> tob,
-							 tls13_client_config cfg) FAST_IO_HERBCEPTIONS_THROWS
+							 tls_client_config cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::tls_client_handshake(tob.handle, __builtin_addressof(cfg));
 }
@@ -426,7 +426,7 @@ template <::std::integral ch_type, typename socket_observer_type>
 inline void handshake_define(basic_ossl_tls_io_observer<ch_type, socket_observer_type> tob,
 							 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
-	tls13_client_config cfg{};
+	tls_client_config cfg{};
 	cfg.hostname = hostname;
 	details::tls_client_handshake(tob.handle, __builtin_addressof(cfg));
 }
