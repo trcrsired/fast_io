@@ -280,7 +280,8 @@ inline void schannel_tls_send_submit(state_t *st, ::std::byte const *first,
 	{
 		schannel_tls_send_finish(
 			st, ::fast_io::details::async_make_error(
-					static_cast<::std::errc>(status < 0 ? EPROTO : 0)),
+					static_cast<::fast_io::freestanding::win32_errc>(
+						static_cast<::std::uint_least32_t>(status))),
 			0);
 		return;
 	}

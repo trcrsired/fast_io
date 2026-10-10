@@ -759,4 +759,12 @@ using u8iobuf_schannel_tls_socket_file = basic_iobuf_schannel_tls_socket_file<ch
 
 } // namespace fast_io::tls
 
+#if defined(_MSC_VER) && !defined(_KERNEL_MODE)
+#pragma comment(lib, "secur32.lib")
+#endif
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#include "schannel_linker.h"
+#endif
+
 #endif

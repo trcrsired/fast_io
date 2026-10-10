@@ -1,7 +1,8 @@
 ﻿/*
 https async example: fetch a page over TLS 1.3.
 	./https www.google.com
-The fast_io TLS 1.3 client is used (u8iobuf_tls13_socket_file). The
+native_tls is used: schannel on Windows, the fast_io TLS 1.3 client
+elsewhere (u8iobuf_native_tls_socket_file). The
 handshake is synchronous by design -- it is userspace protocol work,
 not a device op, and runs before the scheduler exists. Record-layer
 I/O rides io_async: io_uring on Linux (kTLS recvmsg+cmsg reads),
@@ -13,7 +14,7 @@ win32_file on Windows.
 
 static ::fast_io::io_async_task<> fetch(::fast_io::io_async_observer sched,
 										::fast_io::u8cstring_view host,
-										::fast_io::tls::u8iobuf_tls13_socket_file tls) throws
+										::fast_io::tls::u8iobuf_native_tls_socket_file tls) throws
 {
 	co_await ::fast_io::io::async_print(sched, {}, tls,
 										u8"GET / HTTP/1.1\r\n"
@@ -27,12 +28,13 @@ static ::fast_io::io_async_task<> fetch(::fast_io::io_async_observer sched,
 	fast_io::u8http_header_buffer buffer;
 	co_await ::fast_io::io::async_scan(sched, {}, tls, buffer);
 	std::uint_least64_t content_length{};
-	bool chunked{};
+	bool has_content_length{}, chunked{};
 	for (auto [key, value] : line_generator(buffer))
 	{
 		if (::fast_io::u8string_view(key) == ::fast_io::u8string_view(u8"Content-Length"))
 		{
 			content_length = ::fast_io::u8to<std::uint_least64_t>(value);
+			has_content_length = true;
 		}
 		else if (::fast_io::u8string_view(key) == ::fast_io::u8string_view(u8"Transfer-Encoding") &&
 				 ::fast_io::u8string_view(value) == ::fast_io::u8string_view(u8"chunked"))
@@ -63,15 +65,10 @@ static ::fast_io::io_async_task<> fetch(::fast_io::io_async_observer sched,
 																	 chunk_size);
 		}
 	}
-	else if (content_length)
-	{
-		co_await ::fast_io::operations::async_transmit_all_bytes(sched, {}, nf, {}, tls, {},
-																 content_length);
-	}
 	else
 	{
-		/* Connection: close -- transmit until the peer's close_notify (eof) */
-		co_await ::fast_io::operations::async_transmit_all_bytes(sched, {}, nf, {}, tls, {}, {});
+		co_await ::fast_io::operations::async_transmit_all_bytes(sched, {}, nf, {}, tls, {},
+				{content_length,has_content_length});
 	}
 }
 
@@ -93,7 +90,7 @@ int main(int argc, char const **argv)
 			::fast_io::mnp::string_filters::host(::fast_io::mnp::os_c_str(reinterpret_cast<char8_t const *>(argv[1])))};
 
 		::fast_io::net_service service;
-		::fast_io::tls::u8iobuf_tls13_socket_file tls{
+		::fast_io::tls::u8iobuf_native_tls_socket_file tls{
 			::fast_io::tcp_connect(
 				::fast_io::to_ip(::fast_io::native_dns_file{host}, 443),
 				::fast_io::open_mode::no_block)};
