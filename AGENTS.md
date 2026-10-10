@@ -61,3 +61,51 @@ All error handling uses Herbceptions, not legacy C++ exceptions.
   and is for C-ABI / thread-entry boundaries only.
 - Throwing functions are marked `FAST_IO_HERBCEPTIONS_THROWS`
   (or the explicit `throws` spec); noexcept helpers stay noexcept.
+## Detemplatization
+
+Template parameters must pay for themselves. Code inside a template
+that does not touch the template parameter is generated per
+instantiation -- N template args means N copies of identical machine
+code.
+
+```cpp
+// BAD: the before/after work is re-emitted for every T
+template <typename T>
+void foo(T t) noexcept
+{
+	// big block that never touches t
+	t.bar();
+	// big block that never touches t
+}
+
+// GOOD: hoist the invariant blocks; only the glue stays templated
+inline void foo_before() noexcept { /* ... */ }
+inline void foo_after() noexcept { /* ... */ }
+
+template <typename T>
+void foo(T t) noexcept
+{
+	foo_before();
+	t.bar();
+	foo_after();
+}
+```
+
+- Split functions at the points where the template parameter is
+  actually used; the extracted pieces take the client's concrete
+  fields, not the template param.
+- Prefer extracting to `details::` free functions on the non-templated
+  client/observer aggregate over adding more parameters.
+- A param used only at the boundary (e.g. `ch_type` on an observer
+  whose handle points at a ch_type-free client) means the whole
+  operation can drop that parameter -- delegate straight to the
+  client-level function.
+- Same rule for `crypto` backends: wire-format, transcript-buffer and
+  X.509 work is type-independent -- hoist it; only the primitive calls
+  belong in the templated layer.
+- Lambdas are particularly bad here: every lambda is a unique type,
+  so a lambda passed into a templated pump/state machine instantiates
+  the entire machine per call site even when the body differs by one
+  line. Factor shared lambda bodies into named functions and pass a
+  plain function pointer or a small functor -- one instantiation, not
+  one per call site.
