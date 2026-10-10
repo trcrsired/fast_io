@@ -696,8 +696,9 @@ struct basic_handshake_queue
 	}
 };
 
-template <typename allocator_type>
-inline void handshake_queue_feed(basic_handshake_queue<allocator_type> *q,
+using handshake_queue = basic_handshake_queue<>;
+
+inline void handshake_queue_feed(handshake_queue *q,
 								 ::std::byte const *data, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (q->consumed != 0)
@@ -716,8 +717,7 @@ inline void handshake_queue_feed(basic_handshake_queue<allocator_type> *q,
 	}
 }
 
-template <typename allocator_type>
-inline bool handshake_queue_next(basic_handshake_queue<allocator_type> *q,
+inline bool handshake_queue_next(handshake_queue *q,
 								 handshake_type *type, ::std::byte const **body, ::std::size_t *body_size,
 								 ::std::byte const **raw, ::std::size_t *raw_size) noexcept
 {
@@ -749,8 +749,7 @@ inline bool handshake_queue_next(basic_handshake_queue<allocator_type> *q,
 
 /* Certificate body: u8 request_context || u24 cert_list of
    {u24 der || u16 extensions}. DERs are copied into peer->storage. */
-template <typename allocator_type>
-inline bool certificate_body_parse(::fast_io::tls::basic_peer_certificates<allocator_type> *peer,
+inline bool certificate_body_parse(::fast_io::tls::peer_certificates *peer,
 								   ::std::byte const *body, ::std::size_t body_size) noexcept
 {
 	wire_reader r{body, body + body_size};
@@ -800,14 +799,12 @@ hashes CH..Certificate; server Finished's verify_data MACs CH..CV. Both
 exclude the message carrying them, so the running hash is snapshotted
 before each message is folded in.
 */
-template <typename crypto, typename allocator_type, typename stmtype>
+template <typename crypto, typename stmtype>
 inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 								   ::std::byte const *shared_secret,
 								   ::std::byte const *ch_msg, ::std::size_t ch_msg_size,
 								   ::std::byte const *sh_msg, ::std::size_t sh_msg_size,
 								   tls_client_config const *cfg,
-								   basic_peer_certificates<allocator_type> *peer,
-								   typename basic_peer_certificates<allocator_type>::allocator_handle_type alloc,
 								   bool offload,
 								   details::app_traffic_key_iv *tx_key_iv_out,
 								   details::app_traffic_key_iv *rx_key_iv_out,
@@ -853,11 +850,14 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	::std::uint_least64_t hs_rx_seq{};
 	::std::byte cr_context[255];
 	::std::size_t cr_context_size{};
+	/* every allocation lives in these concrete locals -- the rest of the
+	   flight is allocator-free protocol work */
+	peer_certificates peer{};
+	details::handshake_queue q{};
 	signature_scheme cv_scheme{};
-	auto cv_sig{tls_alloc_construct<::fast_io::vector<::std::byte, allocator_type>, allocator_type>(alloc)};
+	::std::byte cv_sig[1024]; /* rsa-8192 pss is the largest advertised */
+	::std::size_t cv_sig_size{};
 	::std::byte cv_transcript[64]; /* Hash(CH..Certificate) */
-
-	auto q{tls_alloc_construct<details::basic_handshake_queue<allocator_type>, allocator_type>(alloc)};
 	::std::byte recbuf[17408];
 	for (;;)
 	{
@@ -904,11 +904,11 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 				{
 					details::tls_fail(sock, alert_description::unexpected_message, false);
 				}
-				if (!details::certificate_body_parse(peer, body, body_size))
+				if (!details::certificate_body_parse(__builtin_addressof(peer), body, body_size))
 				{
 					details::tls_fail(sock, alert_description::decode_error, false);
 				}
-				if (peer->count == 0)
+				if (peer.count == 0)
 				{
 					/* empty client-visible chain is an abort in 1.3 */
 					details::tls_fail(sock, alert_description::bad_certificate, false);
@@ -927,8 +927,12 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 					details::tls_fail(sock, alert_description::decode_error, false);
 				}
 				cv_scheme = cvi.scheme;
-				cv_sig.assign(cvi.signature_size, {});
-				::fast_io::freestanding::non_overlapped_copy_n(cvi.signature, cvi.signature_size, cv_sig.data());
+				if (cvi.signature_size > sizeof(cv_sig))
+				{
+					details::tls_fail(sock, alert_description::decode_error, false);
+				}
+				cv_sig_size = cvi.signature_size;
+				::fast_io::freestanding::non_overlapped_copy_n(cvi.signature, cvi.signature_size, cv_sig);
 				/* pre holds Hash(CH..Certificate) -- what the CV signs */
 				::fast_io::tls::details::transcript_digest_to_ptr<crypto>(pre, cv_transcript);
 				state = want_fin;
@@ -1002,27 +1006,15 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	/* ---- verify the certificate chain + leaf hostname ---- */
 	::fast_io::tls::details::x509_certificate presented[16];
 	if (!::fast_io::tls::details::x509_certificate_parse_all(
-			presented, 16, peer->storage.data(), peer->offsets, peer->sizes,
-			peer->count))
+			presented, 16, peer.storage.data(), peer.offsets, peer.sizes,
+			peer.count))
 	{
 		details::tls_fail(sock, alert_description::bad_certificate, false);
 	}
 	if (cfg->check_chain)
 	{
-		/* parse every configured anchor; unparseable entries are skipped
-		   (a bundle may contain certs our minimal DER reader cannot handle) */
-		auto roots{tls_alloc_construct<::fast_io::vector<::fast_io::tls::details::x509_certificate, allocator_type>, allocator_type>(alloc)};
-		roots.reserve(cfg->root_count);
-		for (::std::size_t i{}; i != cfg->root_count; ++i)
-		{
-			::fast_io::tls::details::x509_certificate rc{};
-			if (::fast_io::tls::details::x509_certificate_parse(rc, cfg->roots[i], cfg->root_sizes[i]))
-			{
-				roots.push_back(rc);
-			}
-		}
 		::std::int_least64_t const now{static_cast<::std::int_least64_t>(::fast_io::posix_clock_gettime(::fast_io::posix_clock_id::realtime).tv_sec)};
-		switch (::fast_io::tls::details::x509_chain_verify<crypto>(presented, peer->count, roots.data(), roots.size(), now))
+		switch (::fast_io::tls::details::x509_chain_verify<crypto>(presented, peer.count, cfg->roots, cfg->root_sizes, cfg->root_count, now))
 		{
 		case ::fast_io::tls::details::x509_chain_result::ok:
 			break;
@@ -1048,7 +1040,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		::std::byte covered[::fast_io::tls::details::certificate_verify_content_prefix_size + 64];
 		::fast_io::tls::details::certificate_verify_content_write(covered, cv_transcript, digest_size);
 		switch (crypto::cert_cv_verify(
-			cv_scheme, covered, covered_size, cv_sig.data(), cv_sig.size(), presented[0]))
+			cv_scheme, covered, covered_size, cv_sig, cv_sig_size, presented[0]))
 		{
 		case ::fast_io::tls::details::x509_verify_result::ok:
 			break;
@@ -1145,14 +1137,12 @@ namespace fast_io::tls::details
 dispatch the post-SH handshake on the hash implied by the cipher suite.
 Returns the negotiated suite's hash size via secret_size_out.
 */
-template <typename crypto, typename allocator_type, typename stmtype>
+template <typename crypto, typename stmtype>
 inline void ktls_handshake_dispatch(stmtype sock, cipher_suite suite,
 									::std::byte const *shared_secret,
 									::std::byte const *ch_msg, ::std::size_t ch_msg_size,
 									::std::byte const *sh_msg, ::std::size_t sh_msg_size,
 									tls_client_config const *cfg,
-									basic_peer_certificates<allocator_type> *peer,
-									typename basic_peer_certificates<allocator_type>::allocator_handle_type alloc,
 									bool offload,
 									app_traffic_key_iv *tx_key_iv_out,
 									app_traffic_key_iv *rx_key_iv_out,
@@ -1160,9 +1150,9 @@ inline void ktls_handshake_dispatch(stmtype sock, cipher_suite suite,
 									::std::size_t *secret_size_out) FAST_IO_HERBCEPTIONS_THROWS
 {
 	ktls_handshake_flight2<crypto>(sock, suite, shared_secret,
-																ch_msg, ch_msg_size, sh_msg, sh_msg_size,
-																cfg, peer, alloc, offload, tx_key_iv_out,
-																rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
+								   ch_msg, ch_msg_size, sh_msg, sh_msg_size,
+								   cfg, offload, tx_key_iv_out,
+								   rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
 }
 
 } // namespace fast_io::tls::details
@@ -1282,13 +1272,12 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 		details::tls_fail(client->sock_, alert_description::illegal_parameter, false);
 	}
 
-	auto peer{tls_alloc_construct<basic_peer_certificates<allocator_type>, allocator_type>(client->allocator_handle)};
 	::std::byte tx_secret[48], rx_secret[48];
 	::std::size_t secret_size{};
 	details::app_traffic_key_iv tx_ki{}, rx_ki{};
 	details::ktls_handshake_dispatch<crypto>(client->sock_, suite, shared,
 											 msg, ch_msg_size, sh_msg, sh_msg_size,
-											 cfg, __builtin_addressof(peer), client->allocator_handle, offload,
+											 cfg, offload,
 											 __builtin_addressof(tx_ki), __builtin_addressof(rx_ki), tx_secret, rx_secret,
 											 __builtin_addressof(secret_size));
 	::fast_io::secure_clear(shared, sizeof(shared));

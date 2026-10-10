@@ -926,11 +926,14 @@ cross-signed by a retired GlobalSign root); its name+key still match the
 trusted anchor, so the path must terminate there instead of chasing the
 cross-sign's dead-end issuer.
 */
+/* takes the anchors as raw DER (a bundle may contain certs our minimal
+   parser cannot handle) so the caller keeps no parsed vector -- each
+   candidate is parsed when checked and skipped on failure */
 template <typename crypto>
 inline constexpr x509_chain_result x509_chain_verify(
 	x509_certificate const *presented, ::std::size_t presented_count,
-	x509_certificate const *roots, ::std::size_t root_count,
-	::std::int_least64_t now) noexcept
+	::std::byte const *const *roots_der, ::std::size_t const *root_sizes,
+	::std::size_t root_count, ::std::int_least64_t now) noexcept
 {
 	if (presented_count == 0)
 	{
@@ -951,7 +954,11 @@ inline constexpr x509_chain_result x509_chain_verify(
 		/* is cur itself a trust anchor? (same name+key as a root) */
 		for (::std::size_t i{}; i != root_count; ++i)
 		{
-			x509_certificate const &r{roots[i]};
+			x509_certificate r{};
+			if (!x509_certificate_parse(r, roots_der[i], root_sizes[i]))
+			{
+				continue;
+			}
 			if (x509_name_eq(cur.subject, cur.subject_size, r.subject, r.subject_size) &&
 				x509_name_eq(cur.spki_algorithm.oid.value, cur.spki_algorithm.oid.value_size,
 							 r.spki_algorithm.oid.value, r.spki_algorithm.oid.value_size) &&
@@ -966,8 +973,9 @@ inline constexpr x509_chain_result x509_chain_verify(
 		bool root_name_matched{};
 		for (::std::size_t i{}; i != root_count; ++i)
 		{
-			x509_certificate const &r{roots[i]};
-			if (!x509_name_eq(cur.issuer, cur.issuer_size, r.subject, r.subject_size))
+			x509_certificate r{};
+			if (!x509_certificate_parse(r, roots_der[i], root_sizes[i]) ||
+				!x509_name_eq(cur.issuer, cur.issuer_size, r.subject, r.subject_size))
 			{
 				continue;
 			}
