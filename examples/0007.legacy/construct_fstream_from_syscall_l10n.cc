@@ -32,7 +32,7 @@ FILE* or fstream apis
 	print(fiob, "Hello World from fast_io::filebuf_io_observer\n");
 	fast_io::posix_tzset();
 	auto unix_ts{fast_io::posix_clock_gettime(fast_io::posix_clock_id::realtime)};
-	fast_io::native_l10n l10n(u8"");
+	auto l10n{::fast_io::l10n::load_l10n(u8"")};
 	println(imbue(l10n, fast_io::c_stdout()), "Unix Timestamp:", unix_ts,
 			"\n"
 			"UTC iso8601:",
