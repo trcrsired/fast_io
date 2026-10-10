@@ -14,12 +14,12 @@ public:
 	template <typename... Args>
 		requires((sizeof...(Args) != 0) && ::std::constructible_from<handle_type, Args...>)
 	inline explicit constexpr basic_generic_posix_dev_urandom(Args &&...args)
-		: handle(::std::forward<Args>(args)...)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::is_nothrow_constructible_v<handletype, Args...>)) : handle(::std::forward<Args>(args)...)
 	{
 	}
 
 	inline constexpr basic_generic_posix_dev_urandom()
-		: handle(u8"/dev/urandom", ::fast_io::open_mode::in)
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(handle_type(u8"/dev/urandom", ::fast_io::open_mode::in))) : handle(u8"/dev/urandom", ::fast_io::open_mode::in)
 	{}
 	inline explicit constexpr basic_generic_posix_dev_urandom(::std::nullptr_t)
 	{}
