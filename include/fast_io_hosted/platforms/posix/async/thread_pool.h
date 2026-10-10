@@ -23,6 +23,7 @@
  */
 
 #include <errno.h>
+#include <poll.h>
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
@@ -104,6 +105,47 @@ inline void posix_thread_pool_submit(posix_thread_pool_state *st,
 	st->work_tail = node;
 	::fast_io::noexcept_call(::pthread_cond_signal, __builtin_addressof(st->work_cond));
 	::fast_io::noexcept_call(::pthread_mutex_unlock, __builtin_addressof(st->mutex));
+}
+
+/*
+nonblocking fds answer EAGAIN/EWOULDBLOCK when they are not ready --
+the worker parks on poll() and the op retries rather than reporting
+the error; the error path is for real failures. Any readiness bit
+(readable, hup, err, nval) wakes the poll -- the retried syscall
+itself decides what the actual outcome is.
+*/
+inline void posix_thread_pool_wait_io(int fd, short events) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::pollfd pfd{fd, events, 0};
+	for (;;)
+	{
+		int const rc{::fast_io::noexcept_call(::poll, __builtin_addressof(pfd), 1, -1)};
+		if (rc < 0)
+		{
+			if (errno == EINTR)
+			{
+				continue;
+			}
+			::fast_io::throw_posix_error();
+		}
+		return;
+	}
+}
+
+/* a caught op error is a would-block when its code says so */
+inline bool posix_thread_pool_would_block(::std::error const &e) noexcept
+{
+	if (e.code() == static_cast<::std::size_t>(EAGAIN))
+	{
+		return true;
+	}
+#if defined(EWOULDBLOCK) && (!defined(EAGAIN) || EWOULDBLOCK != EAGAIN)
+	if (e.code() == static_cast<::std::size_t>(EWOULDBLOCK))
+	{
+		return true;
+	}
+#endif
+	return false;
 }
 
 /* pop one completed node; abs == nullptr waits indefinitely */
@@ -235,8 +277,29 @@ inline void posix_thread_pool_rw_run(posix_thread_pool_node *p) noexcept
 				self->err = ::fast_io::details::async_make_error(::std::errc::invalid_seek);
 				return;
 			}
-			last = ::fast_io::operations::decay::write_some_bytes_decay(
-				self->stm, self->buf, self->count);
+			for (;;)
+			{
+				try
+				{
+					last = ::fast_io::operations::decay::write_some_bytes_decay(
+						self->stm, self->buf, self->count);
+					break;
+				}
+				catch throws(::std::error e)
+				{
+					/* a nonblocking fd waits on poll() instead of
+					   reporting EAGAIN as the result */
+					if constexpr (requires { self->stm.fd; })
+					{
+						if (posix_thread_pool_would_block(e))
+						{
+							posix_thread_pool_wait_io(self->stm.fd, POLLOUT);
+							continue;
+						}
+					}
+					throw throws e;
+				}
+			}
 			self->transferred = static_cast<::std::size_t>(last - self->buf);
 		}
 		else
@@ -257,8 +320,27 @@ inline void posix_thread_pool_rw_run(posix_thread_pool_node *p) noexcept
 				self->err = ::fast_io::details::async_make_error(::std::errc::invalid_seek);
 				return;
 			}
-			last = ::fast_io::operations::decay::read_some_bytes_decay(
-				self->stm, self->buf, self->count);
+			for (;;)
+			{
+				try
+				{
+					last = ::fast_io::operations::decay::read_some_bytes_decay(
+						self->stm, self->buf, self->count);
+					break;
+				}
+				catch throws(::std::error e)
+				{
+					if constexpr (requires { self->stm.fd; })
+					{
+						if (posix_thread_pool_would_block(e))
+						{
+							posix_thread_pool_wait_io(self->stm.fd, POLLIN);
+							continue;
+						}
+					}
+					throw throws e;
+				}
+			}
 			self->transferred = static_cast<::std::size_t>(last - self->buf);
 		}
 	}
@@ -315,9 +397,26 @@ inline void posix_thread_pool_accept_run(posix_thread_pool_node *p) noexcept
 			self->err = ::fast_io::details::async_make_error(::std::errc::timed_out);
 			return;
 		}
-		self->accepted_fd =
-			::fast_io::details::posix_accept_posix_socket_impl(self->listenstm.fd, nullptr,
-															   nullptr);
+		for (;;)
+		{
+			try
+			{
+				self->accepted_fd =
+					::fast_io::details::posix_accept_posix_socket_impl(self->listenstm.fd, nullptr,
+																	   nullptr);
+				break;
+			}
+			catch throws(::std::error e)
+			{
+				if (!posix_thread_pool_would_block(e))
+				{
+					throw throws e;
+				}
+				/* a no_block listener answers EAGAIN -- park this
+				   worker on the fd rather than resubmitting */
+				posix_thread_pool_wait_io(self->listenstm.fd, POLLIN);
+			}
+		}
 	}
 	catch throws(::std::error e)
 	{
@@ -449,8 +548,34 @@ inline void posix_thread_pool_connect_run(posix_thread_pool_node *p) noexcept
 			self->err = ::fast_io::details::async_make_error(::std::errc::invalid_argument);
 			return;
 		}
-		::fast_io::details::posix_connect_posix_socket_impl(
-			self->fd, __builtin_addressof(self->addr), self->addrlen);
+		try
+		{
+			::fast_io::details::posix_connect_posix_socket_impl(
+				self->fd, __builtin_addressof(self->addr), self->addrlen);
+		}
+		catch throws(::std::error e)
+		{
+			/* a nonblocking connect reports EINPROGRESS/EALREADY --
+			   wait writable then read the verdict out of SO_ERROR */
+			if (e.code() != static_cast<::std::size_t>(EINPROGRESS) &&
+				e.code() != static_cast<::std::size_t>(EALREADY))
+			{
+				throw throws e;
+			}
+			posix_thread_pool_wait_io(self->fd, POLLOUT);
+			int soerr{};
+			::fast_io::posix_socklen_t n{static_cast<::fast_io::posix_socklen_t>(sizeof(soerr))};
+			if (::fast_io::noexcept_call(::getsockopt, self->fd, SOL_SOCKET, SO_ERROR,
+										 __builtin_addressof(soerr),
+										 __builtin_addressof(n)) != 0)
+			{
+				::fast_io::throw_posix_error();
+			}
+			if (soerr != 0)
+			{
+				::fast_io::throw_posix_error(soerr);
+			}
+		}
 	}
 	catch throws(::std::error e)
 	{
