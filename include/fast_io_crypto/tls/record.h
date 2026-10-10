@@ -177,11 +177,12 @@ inline ::std::size_t tls13_record_seal(::std::byte *out,
 	/* inner = pt || type || (no padding -- records are small).
 	   PERFORMANCE: 16K stack buffer per call -- fine for handshake
 	   records; a real write path should take a caller buffer instead */
-	::std::byte inner[16641];
-	for (::std::size_t i{}; i != pt_size; ++i)
+	if (pt_size >= 16641)
 	{
-		inner[i] = pt[i];
+		::fast_io::fast_terminate();
 	}
+	::std::byte inner[16641];
+	::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
 	inner[pt_size] = static_cast<::std::byte>(inner_type);
 	return tls13_record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 }

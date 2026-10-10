@@ -204,11 +204,12 @@ public:
 				::std::size_t pt_size, cipher_suite suite, ::std::byte const *key,
 				::std::byte const *iv, ::std::uint_least64_t seq) noexcept
 	{
-		::std::byte inner[16641];
-		for (::std::size_t i{}; i != pt_size; ++i)
+		if (pt_size >= 16641)
 		{
-			inner[i] = pt[i];
+			::fast_io::fast_terminate();
 		}
+		::std::byte inner[16641];
+		::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
 		inner[pt_size] = static_cast<::std::byte>(inner_type);
 		return record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 	}
