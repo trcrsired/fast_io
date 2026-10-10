@@ -134,7 +134,6 @@ D:\hg\fast_io\examples\0007.legacy>set L10N=ja_JP.UTF-8
 
 D:\hg\fast_io\examples\0007.legacy>construct_fstream_from_syscall_l10n
 Unix Timestamp:1,666,670,097.1489241
-Universe Timestamp:434,602,343,095,905,297.1489241
 UTC iso8601:2022-10-25T03:54:57.1489241Z
 UTC date_fmt:2022年 10月 25日 火曜日 03:54:57 +00:00
 UTC era_d_t_fmt:令和4年10月25日 03時54分57秒
