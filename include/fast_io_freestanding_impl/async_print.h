@@ -22,6 +22,8 @@
  *  - unbuffered streams format into a string and write it out.
  */
 
+#include "../fast_io_dsal/string.h"
+
 namespace fast_io::details
 {
 
@@ -406,6 +408,15 @@ inline auto async_print_decay(async_scheduler_type sched,
 		(::fast_io::reserve_printable<char_type, ::std::remove_cvref_t<Args>> && ...)};
 
 	if constexpr (::fast_io::operations::decay::defines::
+					  has_async_status_print_define<async_scheduler_type, outstmtype, Args...>)
+	{
+		/* status streams (e.g. locale imbuer) own their formatting:
+		   the define runs the status machinery synchronously into
+		   owned storage and returns the submission awaiter */
+		return async_status_print_define<line>(sched, timeout, outstm,
+											   ::std::forward<Args>(args)...);
+	}
+	else if constexpr (::fast_io::operations::decay::defines::
 					  has_obuffer_flush_reserve_define<outstmtype>)
 	{
 		/* in-memory strlike target: formatting is the whole job */
@@ -741,12 +752,13 @@ namespace details
 {
 
 /* whether decayed T is an async-print device: an output stream that
- * either carries a strlike buffer (pure formatting target) or has the
- * async byte-write define */
-template <typename schedulertype, typename T>
+ * either carries a strlike buffer (pure formatting target), has the
+ * async byte-write define, or owns its status formatting and returns
+ * the submission awaiter (e.g. lc_imbuer) */
+template <typename schedulertype, typename T, typename... Args>
 concept async_print_device = requires {
 	::fast_io::operations::output_stream_ref(::std::declval<T &>());
-} && (::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>> || ::fast_io::operations::decay::defines::has_async_pwrite_some_bytes_overflow_callback_define<schedulertype, ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>, ::fast_io::details::async_io_callback>);
+} && (::fast_io::operations::decay::defines::has_obuffer_flush_reserve_define<::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>> || ::fast_io::operations::decay::defines::has_async_pwrite_some_bytes_overflow_callback_define<schedulertype, ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>, ::fast_io::details::async_io_callback> || ::fast_io::operations::decay::defines::has_async_status_print_define<schedulertype, ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(::std::declval<T &>()))>, Args...>);
 
 } // namespace details
 
@@ -767,7 +779,10 @@ inline auto async_print(async_scheduler_type &&scheduler,
 	requires(
 		::fast_io::details::async_print_device<
 			::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
-			outstmtype>)
+			outstmtype,
+			decltype(::fast_io::io_print_forward<
+					 typename ::std::remove_cvref_t<decltype(::fast_io::operations::output_stream_ref(
+						 outstm))>::output_char_type>(::fast_io::io_print_alias(args)))...>)
 {
 	return ::fast_io::operations::async_print_freestanding<line>(
 		::std::forward<async_scheduler_type>(scheduler), timeout,

@@ -75,7 +75,7 @@ freestanding ones.
 #endif
 
 #if defined(__HERBCEPTIONS__)
-#include "fast_io_hosted/async_print.h"
+
 #endif
 
 #if defined(_MSVC_EXECUTION_CHARACTER_SET)

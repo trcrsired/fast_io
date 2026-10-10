@@ -69,5 +69,36 @@ inline constexpr void status_print_define(::fast_io::lc_imbuer<output> imb, Args
 	}
 }
 
+#if defined(__HERBCEPTIONS__)
+/* the async counterpart of status_print_define: locale formatting is
+   synchronous by design (the locale hooks are pure computation), so it
+   runs eagerly into owned storage and the ordinary async print path
+   submits the bytes. Args carrying no locale state forward straight to
+   the plain async path — no copy, no string */
+template <bool line, typename schedulertype, typename output, typename... Args>
+inline auto async_status_print_define(schedulertype sched,
+									  ::fast_io::posix_statx_timestamp_opt timeout,
+									  ::fast_io::lc_imbuer<output> imb, Args... args)
+	FAST_IO_HERBCEPTIONS_THROWS
+{
+	using char_type = typename lc_imbuer<output>::char_type;
+	if constexpr (::fast_io::l10n::details::lc_any_arg_v<char_type, Args...>)
+	{
+		::fast_io::containers::basic_string<char_type, ::fast_io::native_global_allocator>
+			payload;
+		::fast_io::l10n::details::lc_status_print_impl<line>(
+			imb.ctx, io_strlike_ref(::fast_io::io_alias, payload), args...);
+		return ::fast_io::operations::decay::async_print_decay<false>(
+			sched, timeout, imb.handle,
+			::fast_io::mnp::strvw(payload));
+	}
+	else
+	{
+		return ::fast_io::operations::decay::async_print_decay<line>(
+			sched, timeout, imb.handle, args...);
+	}
+}
+#endif
+
 } // namespace fast_io
 
