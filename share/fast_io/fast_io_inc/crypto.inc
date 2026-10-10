@@ -22,7 +22,10 @@ export namespace fast_io
     {
         using ::fast_io::ecc::secp256r1;
         using ::fast_io::ecc::secp384r1;
+        using ::fast_io::ecc::secp521r1;
         using ::fast_io::ecc::ecdsa_verify_to_ptr;
         using ::fast_io::ecc::ecdsa_sign_to_ptr;
+        using ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr;
+        using ::fast_io::ecc::ecdsa_rfc6979_drbg;
     }
 }

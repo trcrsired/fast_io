@@ -85,6 +85,7 @@ enum class signature_scheme : ::std::uint_least16_t
 	rsa_pkcs1_sha512 = 0x0601,
 	ecdsa_secp256r1_sha256 = 0x0403,
 	ecdsa_secp384r1_sha384 = 0x0503,
+	ecdsa_secp521r1_sha512 = 0x0603,
 	ed25519 = 0x0807,
 	rsa_pss_rsae_sha256 = 0x0804,
 	rsa_pss_rsae_sha384 = 0x0805,

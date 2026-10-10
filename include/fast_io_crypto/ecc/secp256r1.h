@@ -30,7 +30,7 @@ namespace details
 {
 
 using ec_limb = ::fast_io::details::rsa::value_type;
-inline constexpr ::std::size_t ec_max_limbs{8}; /* room through P-521 */
+inline constexpr ::std::size_t ec_max_limbs{9}; /* room through P-521 */
 
 /* a short-Weierstrass curve: p, order n, generator, the two Fermat
    inverse exponents as big-endian byte strings */
@@ -45,6 +45,7 @@ struct ec_curve_params
 	::std::byte const *nm2{}; /* n - 2 */
 	::std::size_t limb_count{};
 	::std::size_t byte_count{};
+	::std::size_t bit_count{}; /* qlen -- 256/384/521 */
 };
 
 /* Montgomery context for one modulus, runtime limb count */
@@ -62,20 +63,8 @@ struct ec_mont_ctx
 	{
 		::fast_io::freestanding::non_overlapped_copy_n(m, nl, modulus);
 		n0inv = ::fast_io::details::rsa::montgomery_n0_inverse(m[0]);
-		/*
-		r2 = R^2 mod m = 2^(2*nl*64) mod m. montgomery_r2_setup /
-		limbs_pow2_mod's limb-at-a-time quotient estimate drifts for
-		this modulus shape (p384), so compute it the plain way: 2nl*64
-		doublings of 1, each conditional-subtracted. That is ~768
-		nl-limb steps -- trivial next to a handshake.
-		*/
-		ec_limb d[ec_max_limbs];
-		r2[0] = 1;
-		::fast_io::freestanding::fill_n(r2 + 1, nl - 1, ec_limb{});
-		for (::std::size_t i{2 * nl * ::fast_io::details::rsa::limb_digits}; i--;)
-		{
-			::fast_io::details::rsa::limbs_mod_double(r2, modulus, d, nl);
-		}
+		ec_limb d[3 * ec_max_limbs + 1];
+		::fast_io::details::rsa::montgomery_r2_setup(r2, modulus, nl, d);
 		ec_limb t[2 * ec_max_limbs + 1]{};
 		ec_limb u[ec_max_limbs]{};
 		u[0] = 1;
@@ -94,16 +83,34 @@ struct ec_curve
 	::std::byte const *nm2{};
 	::std::size_t nl{};
 	::std::size_t nbytes{};
+	::std::size_t nbits{};
 
 	inline constexpr ec_curve() noexcept = default;
 	inline constexpr explicit ec_curve(ec_curve_params const &c) noexcept
 		: field{c.p, c.limb_count}, order{c.n, c.limb_count},
-		  pm2{c.pm2}, nm2{c.nm2}, nl{c.limb_count}, nbytes{c.byte_count}
+		  pm2{c.pm2}, nm2{c.nm2}, nl{c.limb_count}, nbytes{c.byte_count},
+		  nbits{c.bit_count}
 	{
 		::fast_io::freestanding::non_overlapped_copy_n(c.gx, nl, gx);
 		::fast_io::freestanding::non_overlapped_copy_n(c.gy, nl, gy);
 	}
 };
+
+/* x[0..nl) >>= s for s < limb_digits */
+inline constexpr void ec_shift_right(ec_limb *x, ::std::size_t nl, unsigned s) noexcept
+{
+	if (s == 0)
+	{
+		return;
+	}
+	constexpr unsigned w{::fast_io::details::rsa::limb_digits};
+	for (::std::size_t i{}; i + 1 != nl; ++i)
+	{
+		x[i] = static_cast<ec_limb>(x[i] >> s) |
+			   static_cast<ec_limb>(x[i + 1] << (w - s));
+	}
+	x[nl - 1] = static_cast<ec_limb>(x[nl - 1] >> s);
+}
 
 /* z = x + y mod m (domain-blind: works on Montgomery values too) */
 inline constexpr void ec_add(ec_limb *z, ec_limb const *x, ec_limb const *y,
@@ -406,7 +413,7 @@ inline constexpr ::std::byte secp256r1_nm2[]{
 
 inline constexpr details::ec_curve secp256r1{details::ec_curve_params{
 	secp256r1_p, secp256r1_n, secp256r1_b, secp256r1_gx, secp256r1_gy,
-	secp256r1_pm2, secp256r1_nm2, 4, 32}};
+	secp256r1_pm2, secp256r1_nm2, 4, 32, 256}};
 
 inline constexpr details::ec_limb secp384r1_p[]{
 	0x00000000ffffffffull, 0xffffffff00000000ull, 0xfffffffffffffffeull,
@@ -452,7 +459,70 @@ inline constexpr ::std::byte secp384r1_nm2[]{
 
 inline constexpr details::ec_curve secp384r1{details::ec_curve_params{
 	secp384r1_p, secp384r1_n, secp384r1_b, secp384r1_gx, secp384r1_gy,
-	secp384r1_pm2, secp384r1_nm2, 6, 48}};
+	secp384r1_pm2, secp384r1_nm2, 6, 48, 384}};
+
+/* P-521: p = 2^521 - 1 (Mersenne), nine limbs; rolen = 66 bytes puts
+   seven spare bits in the top limb -- qlen = 521, not 528 */
+inline constexpr details::ec_limb secp521r1_p[]{
+	0xffffffffffffffffull, 0xffffffffffffffffull, 0xffffffffffffffffull, 0xffffffffffffffffull,
+	0xffffffffffffffffull, 0xffffffffffffffffull, 0xffffffffffffffffull, 0xffffffffffffffffull,
+	0x00000000000001ffull};
+inline constexpr details::ec_limb secp521r1_n[]{
+	0xbb6fb71e91386409ull, 0x3bb5c9b8899c47aeull, 0x7fcc0148f709a5d0ull, 0x51868783bf2f966bull,
+	0xfffffffffffffffaull, 0xffffffffffffffffull, 0xffffffffffffffffull, 0xffffffffffffffffull,
+	0x00000000000001ffull};
+inline constexpr details::ec_limb secp521r1_b[]{
+	0xef451fd46b503f00ull, 0x3573df883d2c34f1ull, 0x1652c0bd3bb1bf07ull, 0x56193951ec7e937bull,
+	0xb8b489918ef109e1ull, 0xa2da725b99b315f3ull, 0x929a21a0b68540eeull, 0x953eb9618e1c9a1full,
+	0x0000000000000051ull};
+inline constexpr details::ec_limb secp521r1_gx[]{
+	0xf97e7e31c2e5bd66ull, 0x3348b3c1856a429bull, 0xfe1dc127a2ffa8deull, 0xa14b5e77efe75928ull,
+	0xf828af606b4d3dbaull, 0x9c648139053fb521ull, 0x9e3ecb662395b442ull, 0x858e06b70404e9cdull,
+	0x00000000000000c6ull};
+inline constexpr details::ec_limb secp521r1_gy[]{
+	0x88be94769fd16650ull, 0x353c7086a272c240ull, 0xc550b9013fad0761ull, 0x97ee72995ef42640ull,
+	0x17afbd17273e662cull, 0x98f54449579b4468ull, 0x5c8a5fb42c7d1bd9ull, 0x39296a789a3bc004ull,
+	0x0000000000000118ull};
+inline constexpr ::std::byte secp521r1_pm2[]{
+	::std::byte{0x01}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xfd}};
+inline constexpr ::std::byte secp521r1_nm2[]{
+	::std::byte{0x01}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff}, ::std::byte{0xff},
+	::std::byte{0xff}, ::std::byte{0xfa}, ::std::byte{0x51}, ::std::byte{0x86},
+	::std::byte{0x87}, ::std::byte{0x83}, ::std::byte{0xbf}, ::std::byte{0x2f},
+	::std::byte{0x96}, ::std::byte{0x6b}, ::std::byte{0x7f}, ::std::byte{0xcc},
+	::std::byte{0x01}, ::std::byte{0x48}, ::std::byte{0xf7}, ::std::byte{0x09},
+	::std::byte{0xa5}, ::std::byte{0xd0}, ::std::byte{0x3b}, ::std::byte{0xb5},
+	::std::byte{0xc9}, ::std::byte{0xb8}, ::std::byte{0x89}, ::std::byte{0x9c},
+	::std::byte{0x47}, ::std::byte{0xae}, ::std::byte{0xbb}, ::std::byte{0x6f},
+	::std::byte{0xb7}, ::std::byte{0x1e}, ::std::byte{0x91}, ::std::byte{0x38},
+	::std::byte{0x64}, ::std::byte{0x07}};
+
+inline constexpr details::ec_curve secp521r1{details::ec_curve_params{
+	secp521r1_p, secp521r1_n, secp521r1_b, secp521r1_gx, secp521r1_gy,
+	secp521r1_pm2, secp521r1_nm2, 9, 66, 521}};
 
 /* ---------------- public ECDSA surface ---------------- */
 
@@ -499,7 +569,8 @@ inline bool ecdsa_verify_to_ptr(details::ec_curve const &c,
 	ec_limb u1[ec_max_limbs], u2[ec_max_limbs];
 	ec_mul_plain(o, u1, zv, w); /* z*w mod n */
 	ec_mul_plain(o, u2, rv, w); /* r*w mod n */
-	::std::byte u1b[64], u2b[64];
+	::std::byte u1b[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes],
+		u2b[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes];
 	nr::limbs_to_bytes_be(u1b, u1, c.nbytes, c.nl);
 	nr::limbs_to_bytes_be(u2b, u2, c.nbytes, c.nl);
 	ec_point g, q;
@@ -571,7 +642,7 @@ struct ecdsa_rfc6979_drbg
 		{
 			nr::limbs_subtraction(zv, zv, c.order.modulus, c.nl);
 		}
-		::std::byte bh[64];
+		::std::byte bh[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes];
 		nr::limbs_to_bytes_be(bh, zv, c.nbytes, c.nl);
 		::fast_io::freestanding::fill_n(v, hash_ctx::digest_size, ::std::byte{0x01});
 		::fast_io::freestanding::fill_n(k, hash_ctx::digest_size, ::std::byte{0x00});
@@ -597,13 +668,30 @@ struct ecdsa_rfc6979_drbg
 		auto const &o{curve->order};
 		for (;;)
 		{
-			hmac_once_(v);
+			/* T = V || V || ... until byte_count bytes: hlen < rolen
+			   curves (P-521 under sha512) take two blocks */
+			::std::byte t[128];
+			::std::size_t gen{};
+			while (gen < curve->nbytes)
+			{
+				hmac_once_(v);
+				::std::size_t const take{curve->nbytes - gen < hash_ctx::digest_size
+											 ? curve->nbytes - gen
+											 : hash_ctx::digest_size};
+				::fast_io::freestanding::non_overlapped_copy_n(v, take, t + gen);
+				gen += take;
+			}
+			/* bits2int(T): keep the leftmost qlen bits -- for qlen
+			   non-byte-aligned (P-521) shift the rest away */
 			details::ec_limb kv[details::ec_max_limbs];
-			nr::limbs_from_bytes_be(kv, v, curve->nbytes, curve->nl);
+			nr::limbs_from_bytes_be(kv, t, curve->nbytes, curve->nl);
+			details::ec_shift_right(
+				kv, curve->nl,
+				static_cast<unsigned>(curve->nbytes * 8 - curve->nbits));
 			if (!nr::limbs_is_zero(kv, curve->nl) &&
 				nr::limbs_less(kv, o.modulus, curve->nl))
 			{
-				::fast_io::freestanding::non_overlapped_copy_n(v, curve->nbytes, out);
+				nr::limbs_to_bytes_be(out, kv, curve->nbytes, curve->nl);
 				return true;
 			}
 			/* rejected: K = HMAC(K, V || 0x00); V = HMAC(K, V) */
@@ -685,7 +773,8 @@ inline bool ecdsa_sign_to_ptr(details::ec_curve const &c,
 		return false;
 	}
 	/* DER: SEQUENCE { INTEGER r, INTEGER s } */
-	::std::byte rb[64], sb[64];
+	::std::byte rb[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes],
+		sb[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes];
 	nr::limbs_to_bytes_be(rb, rv, c.nbytes, c.nl);
 	nr::limbs_to_bytes_be(sb, sv, c.nbytes, c.nl);
 	::std::size_t const nb{c.nbytes};
@@ -710,12 +799,29 @@ inline bool ecdsa_sign_to_ptr(details::ec_curve const &c,
 		return p;
 	}};
 	::std::byte *p{sig_out};
-	::std::byte *const body{p + 2};
+	::std::byte *const body{p + 3}; /* worst case 30 81 LL -- backfilled below */
 	p = put_int(body, rb);
 	p = put_int(p, sb);
+	::std::size_t const body_size{static_cast<::std::size_t>(p - body)};
 	sig_out[0] = ::std::byte{0x30};
-	sig_out[1] = static_cast<::std::byte>(p - body);
-	*sig_size = static_cast<::std::size_t>(p - sig_out);
+	::std::byte *out_end{p};
+	if (body_size < 0x80)
+	{
+		sig_out[1] = static_cast<::std::byte>(body_size);
+		/* pull the body back over the unused long-form slot */
+		::std::byte *dst{sig_out + 2};
+		for (::std::byte const *src{body}; src != p; ++src)
+		{
+			*dst++ = *src;
+		}
+		out_end = dst;
+	}
+	else
+	{
+		sig_out[1] = ::std::byte{0x81};
+		sig_out[2] = static_cast<::std::byte>(body_size);
+	}
+	*sig_size = static_cast<::std::size_t>(out_end - sig_out);
 	return true;
 }
 
@@ -734,7 +840,7 @@ inline bool ecdsa_sign_rfc6979_to_ptr(details::ec_curve const &c,
 									  ::std::byte const *digest, ::std::size_t digest_size) noexcept
 {
 	ecdsa_rfc6979_drbg<hash_ctx> drbg{c, privkey, digest, digest_size};
-	::std::byte k[64];
+	::std::byte k[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes];
 	while (drbg.next(k))
 	{
 		if (ecdsa_sign_to_ptr(c, sig_out, sig_size, privkey, k, digest, digest_size))

@@ -39,7 +39,7 @@ struct tls_pkey
 	/* ed25519: the expanded seed || public key (64-byte fast_io form) */
 	::std::byte ed25519_key[64]{};
 	/* ec: the scalar d and the curve it belongs to */
-	::std::byte ec_d[48]{};
+	::std::byte ec_d[66]{};
 	::fast_io::ecc::details::ec_curve const *ec_curve{};
 	::std::size_t ec_d_size{};
 };
@@ -106,6 +106,10 @@ inline constexpr bool tls_sec1_pkey_parse_body(tls_pkey *key, wire_reader &r) no
 			{
 				key->ec_curve = __builtin_addressof(::fast_io::ecc::secp384r1);
 			}
+			else if (der_oid_eq(coid, oid::secp521r1))
+			{
+				key->ec_curve = __builtin_addressof(::fast_io::ecc::secp521r1);
+			}
 		}
 	}
 	if (key->ec_curve == nullptr)
@@ -118,6 +122,10 @@ inline constexpr bool tls_sec1_pkey_parse_body(tls_pkey *key, wire_reader &r) no
 		else if (d.value_size == 48)
 		{
 			key->ec_curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+		}
+		else if (d.value_size == 66)
+		{
+			key->ec_curve = __builtin_addressof(::fast_io::ecc::secp521r1);
 		}
 	}
 	if (key->ec_curve == nullptr || d.value_size != key->ec_curve->nbytes)
@@ -211,6 +219,10 @@ inline constexpr bool tls_pkcs8_parse(tls_pkey *key,
 		else if (der_oid_eq(params, oid::secp384r1))
 		{
 			curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+		}
+		else if (der_oid_eq(params, oid::secp521r1))
+		{
+			curve = __builtin_addressof(::fast_io::ecc::secp521r1);
 		}
 		else
 		{
@@ -362,11 +374,14 @@ inline bool tls_cv_sign(signature_scheme scheme,
 	}
 	case signature_scheme::ecdsa_secp256r1_sha256:
 	case signature_scheme::ecdsa_secp384r1_sha384:
+	case signature_scheme::ecdsa_secp521r1_sha512:
 	{
 		::fast_io::ecc::details::ec_curve const *curve{
 			scheme == signature_scheme::ecdsa_secp256r1_sha256
 				? __builtin_addressof(::fast_io::ecc::secp256r1)
-				: __builtin_addressof(::fast_io::ecc::secp384r1)};
+				: scheme == signature_scheme::ecdsa_secp384r1_sha384
+					  ? __builtin_addressof(::fast_io::ecc::secp384r1)
+					  : __builtin_addressof(::fast_io::ecc::secp521r1)};
 		if (key.kind != tls_pkey_kind::ec || key.ec_curve != curve)
 		{
 			return false;
@@ -383,12 +398,22 @@ inline bool tls_cv_sign(signature_scheme scheme,
 			return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha256_context>(
 				*curve, sig_out, sig_size, key.ec_d, digest, sizeof(digest));
 		}
-		::fast_io::sha384_context hh{};
+		if (curve->nl == 6)
+		{
+			::fast_io::sha384_context hh{};
+			hh.update(covered, covered + covered_size);
+			hh.do_final();
+			::std::byte digest[::fast_io::sha384_context::digest_size];
+			hh.digest_to_byte_ptr(digest);
+			return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha384_context>(
+				*curve, sig_out, sig_size, key.ec_d, digest, sizeof(digest));
+		}
+		::fast_io::sha512_context hh{};
 		hh.update(covered, covered + covered_size);
 		hh.do_final();
-		::std::byte digest[::fast_io::sha384_context::digest_size];
+		::std::byte digest[::fast_io::sha512_context::digest_size];
 		hh.digest_to_byte_ptr(digest);
-		return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha384_context>(
+		return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha512_context>(
 			*curve, sig_out, sig_size, key.ec_d, digest, sizeof(digest));
 	}
 	default:
