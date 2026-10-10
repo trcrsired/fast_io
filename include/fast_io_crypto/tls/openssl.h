@@ -122,9 +122,15 @@ namespace details
 	default:
 		break;
 	}
-	if (ERR_GET_LIB(code) == ERR_LIB_SYS && 0 < reason && reason < 256)
+	if (ERR_GET_LIB(code) == ERR_LIB_SYS && reason > 0)
 	{
+#if defined(_WIN32) || defined(__CYGWIN__)
+		/* the queue carries GetLastError/WSA codes here, not errno */
+		::fast_io::herbceptions::throws_win32_errc_with_value(
+			static_cast<::std::uint_least32_t>(reason));
+#else
 		::fast_io::herbceptions::throws_errc_with_value(reason);
+#endif
 	}
 	throw throws::std::tls_alert{::std::tls_alert::alert_level::fatal,
 								 ::std::tls_alert::alert_description::internal_error};
