@@ -175,6 +175,9 @@ struct size_t_opt
 	inline constexpr size_t_opt(::std::size_t optsize) noexcept
 		: opt{optsize}, has_opt{true}
 	{}
+	inline constexpr size_t_opt(::std::size_t optsize, bool has) noexcept
+		: opt{optsize}, has_opt{has}
+	{}
 };
 
 struct posix_statx_timestamp64
