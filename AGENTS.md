@@ -27,3 +27,20 @@ fast_io.
 
 Default backend resolves: openssl EVP > gnutls > builtin on non-windows;
 builtin on windows and under FORCE_FAST_IO.
+## Freestanding discipline
+
+This library is freestanding. Do not use C++ hosted standard library
+facilities anywhere in include/.
+
+- No `::std::pair`, `::std::tuple`, `::std::unique_ptr`,
+  `::std::shared_ptr`, or any standard smart pointer.
+- No `new`/`delete` expressions and no `::std::construct_at` --
+  use placement new (`::new (ptr) T{...}`) or the fast_io construct
+  helpers.
+- No `::std::exchange`, `::std::move` where a fast_io utility exists,
+  and no standard-library containers at all -- `vector`, `string`,
+  `deque`, `list`, `map`, `unordered_map` etc. come from
+  `fast_io::containers` (`basic_vector`, `basic_string`, ...), not
+  `::std`.
+- No `iostream`, `fstream`, `sstream`, `algorithm` heap helpers, or
+  any other hosted-only standard header.
