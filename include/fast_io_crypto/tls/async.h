@@ -1283,18 +1283,26 @@ inline void async_close_define(
 													   ::std::move(callback));
 }
 
+} // namespace fast_io::tls
+
+#endif /* __linux__ */
+
+#if defined(__HERBCEPTIONS__)
+
+namespace fast_io::tls
+{
+
 /*
- * Fallback async close for other schedulers: emit close_notify inline --
- * send_close_notify is noexcept and best-effort -- then forward the fd
- * close to the bound socket's own async_close_define.
+ * Fallback async close for schedulers without a dedicated TLS path:
+ * emit close_notify inline -- send_close_notify is noexcept and
+ * best-effort -- then forward the fd close to the bound socket's own
+ * async_close_define. tls_generic_sched marks schedulers that carry
+ * their own define (io_uring, the pools), so this only fills gaps.
  */
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
 		  typename socket_observer_type,
 		  typename func>
-	requires(!::std::same_as<::std::remove_cvref_t<async_scheduler_type>,
-							 ::fast_io::posix_thread_pool_observer> &&
-			 !::std::same_as<::std::remove_cvref_t<async_scheduler_type>,
-							 ::fast_io::linux_io_uring_observer>)
+	requires(::fast_io::tls::details::tls_generic_sched<::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_close_define(
 	async_scheduler_type sched, ::fast_io::posix_statx_timestamp_opt timeout,
 	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, func callback) noexcept
@@ -1305,6 +1313,15 @@ inline void async_close_define(
 	}
 	async_close_define(sched, timeout, tob.handle->sock_, ::std::move(callback));
 }
+
+} // namespace fast_io::tls
+
+#endif /* __HERBCEPTIONS__ */
+
+#if (!defined(_WIN32) || defined(__WINE__)) && !defined(__MSDOS__) && !defined(__wasi__) && defined(__HERBCEPTIONS__)
+
+namespace fast_io::tls
+{
 
 namespace details
 {

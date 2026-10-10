@@ -28,11 +28,11 @@ inline constexpr bool tls_generic_sched{true};
 template <>
 inline constexpr bool tls_generic_sched<::fast_io::linux_io_uring_observer>{false};
 #endif
-#if !defined(_WIN32) && !defined(__MSDOS__) && !defined(__wasi__)
+#if (!defined(_WIN32) || defined(__WINE__)) && !defined(__MSDOS__) && !defined(__wasi__) && defined(__HERBCEPTIONS__)
 template <>
 inline constexpr bool tls_generic_sched<::fast_io::posix_thread_pool_observer>{false};
 #endif
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 template <>
 inline constexpr bool tls_generic_sched<::fast_io::win32_thread_pool_observer>{false};
 #endif
@@ -449,7 +449,7 @@ inline void tls_sw_close_round(state_t *st) noexcept
 		});
 }
 
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 /* ---------------- win32 thread pool: handshake runs on a worker ---------------- */
 
 /*
@@ -603,7 +603,7 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_handshake_work(void *
 
 } // namespace fast_io::tls::details
 
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 namespace fast_io
 {
 

@@ -94,7 +94,7 @@ then the well-known per-distro bundle paths.
 template <typename allocator_type>
 inline void root_store_load_system(basic_root_store<allocator_type> *store) FAST_IO_HERBCEPTIONS_THROWS
 {
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 	constexpr ::std::size_t pathmax{32767};
 	native_char_type envbuf[pathmax];
 	::std::uint_least32_t n{};

@@ -124,7 +124,7 @@ namespace details
 	}
 	if (ERR_GET_LIB(code) == ERR_LIB_SYS && reason > 0)
 	{
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 		/* the queue carries GetLastError/WSA codes here, not errno */
 		::fast_io::herbceptions::throws_win32_errc_with_value(
 			static_cast<::std::uint_least32_t>(reason));

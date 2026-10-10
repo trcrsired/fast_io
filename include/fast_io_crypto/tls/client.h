@@ -81,7 +81,7 @@ inline constexpr int tls_rx{2};
 
 /* transport-neutral whole-buffer I/O for the record layer */
 
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 /*
 win32 sockets marked no_block at connect stay nonblocking afterwards --
 the handshake is a synchronous exchange, so would-block reads/writes
@@ -148,13 +148,13 @@ inline void tls_read_full(stmtype sock, ::std::byte *buf, ::std::size_t n) FAST_
 {
 	for (;;)
 	{
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 		FAST_IO_HERBCEPTIONS_TRY
 		{
 #endif
 			::fast_io::operations::read_all_bytes(sock, buf, n);
 			return;
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 		}
 		catch throws(::std::error e)
 		{
@@ -172,13 +172,13 @@ inline void tls_write_full(stmtype sock, ::std::byte const *buf, ::std::size_t n
 {
 	for (;;)
 	{
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 		FAST_IO_HERBCEPTIONS_TRY
 		{
 #endif
 			::fast_io::operations::write_all_bytes(sock, buf, n);
 			return;
-#if defined(_WIN32)
+#if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 		}
 		catch throws(::std::error e)
 		{
