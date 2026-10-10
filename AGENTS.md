@@ -109,3 +109,36 @@ void foo(T t) noexcept
   line. Factor shared lambda bodies into named functions and pass a
   plain function pointer or a small functor -- one instantiation, not
   one per call site.
+
+## Dedup near-identical code
+
+A big block repeated with small variations is still one copy too many:
+extract the common shape into a function and let call sites pass the
+difference.
+
+```cpp
+// BAD
+void foo()
+{
+	/* somewhat similar code */
+}
+
+void bar()
+{
+	/* somewhat similar code */
+}
+
+// GOOD
+void baz(/* the differing bits as params */)
+{
+	/* the common shape */
+}
+
+void foo() { baz(...); }
+void bar() { baz(...); }
+```
+
+- "Somewhat similar" counts -- do not wait for byte-identical copies;
+  parameterize the differing constants/branches instead.
+- The extracted function is `details::` or file-local; call sites keep
+  their own names.
