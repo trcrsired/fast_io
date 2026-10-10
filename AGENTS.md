@@ -139,6 +139,29 @@ void consume(::fast_io::containers::basic_string<char8_t, ...N...> &s);
 void consume(char8_t const *data, ::std::size_t size);
 ```
 
+  This applies double when the size is a loop bound:
+
+```cpp
+// BAD: the loop is re-emitted for every N
+template <::std::size_t N>
+void clear(::std::byte *buf)
+{
+	for (::std::size_t i{}; i != N; ++i)
+	{
+		buf[i] = {};
+	}
+}
+
+// GOOD: one loop, one copy -- the bound is just a register
+inline void clear(::std::byte *buf, ::std::size_t n)
+{
+	for (::std::size_t i{}; i != n; ++i)
+	{
+		buf[i] = {};
+	}
+}
+```
+
 ## Dedup near-identical code
 
 A big block repeated with small variations is still one copy too many:
