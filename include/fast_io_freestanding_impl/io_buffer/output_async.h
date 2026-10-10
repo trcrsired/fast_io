@@ -286,7 +286,7 @@ inline void async_output_stream_buffer_flush_define(
 		sched, timeout, ::fast_io::operations::output_stream_ref(iobref.iobptr->handle),
 		reinterpret_cast<::std::byte const *>(obuffer.buffer_begin), pending,
 		::fast_io::intfpos_opt{},
-		[iobref, callback{::std::move(callback)}](::std::cxx_std_error err) noexcept {
+		[iobref, callback{::std::move(callback)}](::std::cxx_std_error err) mutable noexcept {
 			if (err.domain == nullptr)
 			{
 				auto &obuffer{iobref.iobptr->output_buffer};
