@@ -144,7 +144,7 @@ inline void tls_sw_recv_round(state_t *st) noexcept
 	/* the backend define is noexcept -- submission failures arrive
 	   through the callback it was given */
 	async_pread_some_bytes_underflow_callback_define(
-		st->sched, st->timeout, st->client->socket(),
+		st->sched, st->timeout, st->client->sock_,
 		st->ct + st->ct_have, sizeof(st->ct) - st->ct_have,
 		::fast_io::intfpos_opt{},
 		[st](::std::cxx_std_error err, ::std::size_t n) noexcept {
@@ -173,11 +173,11 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 		::std::size_t drained{};
 		if (st->buf != nullptr)
 		{
-			drained = st->client->rx_pending_drain(st->buf, st->buf_size);
+			drained = ::fast_io::tls::details::tls_client_rx_pending_drain(st->client, st->buf, st->buf_size);
 		}
 		else
 		{
-			drained = st->client->rx_pending_drain(st->scatters, st->nscatters);
+			drained = ::fast_io::tls::details::tls_client_rx_pending_drain(st->client, st->scatters, st->nscatters);
 		}
 		if (drained != 0)
 		{
@@ -210,7 +210,7 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 		}
 		FAST_IO_HERBCEPTIONS_TRY
 		{
-			auto const rr{st->client->sw_open_record(st->ct, reclen, st->inner)};
+			auto const rr{::fast_io::tls::details::tls_client_sw_open_record(st->client, st->ct, reclen, st->inner)};
 			st->ct_have -= reclen;
 			if (st->ct_have != 0)
 			{
@@ -228,8 +228,8 @@ inline void tls_sw_recv_pump(state_t *st) noexcept
 			::std::size_t const delivered{tls_sw_copy_out(st, st->inner, rr.plaintext_size)};
 			if (rr.plaintext_size > delivered)
 			{
-				st->client->rx_pending_stash(st->inner + delivered,
-											 rr.plaintext_size - delivered);
+				::fast_io::tls::details::tls_client_rx_pending_stash(st->client, st->inner + delivered,
+																	 rr.plaintext_size - delivered);
 			}
 			tls_sw_recv_finish(st, ::std::cxx_std_error{}, delivered);
 			return;
@@ -325,7 +325,7 @@ template <typename state_t>
 inline void tls_sw_write_round(state_t *st) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
-		st->sched, st->timeout, st->client->socket(),
+		st->sched, st->timeout, st->client->sock_,
 		st->wire + st->wire_done, st->wire_size - st->wire_done,
 		::fast_io::intfpos_opt{},
 		[st](::std::cxx_std_error err, ::std::size_t n) noexcept {
@@ -372,7 +372,7 @@ inline void tls_sw_write_submit(
 			scatters = __builtin_addressof(in);
 			nscatters = 1;
 		}
-		auto const rr{client->sw_seal_appdata(st->wire, scatters, nscatters)};
+		auto const rr{::fast_io::tls::details::tls_client_sw_seal_appdata(client, st->wire, scatters, nscatters)};
 		st->wire_size = rr.wire_size;
 		st->plaintext_consumed = rr.plaintext_consumed;
 		tls_sw_write_round(st);
@@ -418,7 +418,7 @@ template <typename state_t>
 inline void tls_sw_close_socket(state_t *st) noexcept
 {
 	auto cb{::std::move(st->callback)};
-	auto sock{st->client->socket()};
+	auto sock{st->client->sock_};
 	auto sched{st->sched};
 	auto timeout{st->timeout};
 	::fast_io::details::async_delete_state(st);
@@ -430,7 +430,7 @@ template <typename state_t>
 inline void tls_sw_close_round(state_t *st) noexcept
 {
 	async_pwrite_some_bytes_overflow_callback_define(
-		st->sched, st->timeout, st->client->socket(),
+		st->sched, st->timeout, st->client->sock_,
 		st->wire + st->wire_done, st->wire_size - st->wire_done,
 		::fast_io::intfpos_opt{},
 		[st](::std::cxx_std_error err, ::std::size_t n) noexcept {
@@ -493,9 +493,9 @@ inline void tls_win32_pool_handshake_run(::fast_io::details::win32_thread_pool_n
 				::fast_io::details::async_make_error(::std::errc::timed_out);
 			return;
 		}
-		self->client->handshake(
-			::fast_io::u8cstring_view{::fast_io::freestanding::from_range,
-									  self->hostname});
+		::fast_io::tls::details::tls_client_handshake(self->client,
+													  ::fast_io::u8cstring_view{::fast_io::freestanding::from_range,
+																				self->hostname});
 	}
 	catch throws(::std::error e)
 	{
@@ -575,9 +575,9 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_handshake_work(void *
 		}
 		else
 		{
-			cookie->client->handshake(
-				::fast_io::u8cstring_view{::fast_io::freestanding::from_range,
-										  cookie->base.hostname});
+			::fast_io::tls::details::tls_client_handshake(cookie->client,
+														  ::fast_io::u8cstring_view{::fast_io::freestanding::from_range,
+																					cookie->base.hostname});
 		}
 	}
 	catch throws(::std::error e)
@@ -668,7 +668,7 @@ inline void async_handshake_callback_define(
 			::fast_io::tls::details::tls_ioring_handshake_state_base{
 				{&::fast_io::tls::details::tls_ioring_handshake_deliver<alloc_type, client_type, fcb>,
 				 sched.native_handle(),
-				 reinterpret_cast<void *>(tob.handle->socket().hsocket)},
+				 reinterpret_cast<void *>(tob.handle->sock_.hsocket)},
 				::fast_io::u8string{hostname},
 				timeout.has_opt
 					? ::fast_io::details::win32_thread_pool_deadline(timeout.opt)
@@ -873,7 +873,7 @@ inline void async_pread_some_bytes_underflow_callback_define(
 	::std::byte *first, ::std::size_t count, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
-	if (off.has_opt || tob.handle->offloaded())
+	if (off.has_opt || tob.handle->offloaded_)
 	{
 		callback(::fast_io::details::async_make_error(::std::errc::io_error),
 				 ::std::size_t{});
@@ -894,7 +894,7 @@ inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
 	::fast_io::intfpos_opt off, func callback) noexcept
 {
-	if (off.has_opt || tob.handle->offloaded())
+	if (off.has_opt || tob.handle->offloaded_)
 	{
 		callback(::fast_io::details::async_make_error(::std::errc::io_error),
 				 ::fast_io::io_scatter_status_t{});
@@ -921,11 +921,11 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 				 ::std::size_t{});
 		return;
 	}
-	if (tob.handle->offloaded())
+	if (tob.handle->offloaded_)
 	{
 		/* plaintext write -- the kernel seals the records */
 		async_pwrite_some_bytes_overflow_callback_define(
-			sched, timeout, tob.handle->socket(), first, count, off,
+			sched, timeout, tob.handle->sock_, first, count, off,
 			::std::move(callback));
 		return;
 	}
@@ -950,10 +950,10 @@ inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 				 ::fast_io::io_scatter_status_t{});
 		return;
 	}
-	if (tob.handle->offloaded())
+	if (tob.handle->offloaded_)
 	{
 		async_scatter_pwrite_some_bytes_overflow_callback_define(
-			sched, timeout, tob.handle->socket(), pscatters, n, off,
+			sched, timeout, tob.handle->sock_, pscatters, n, off,
 			::std::move(callback));
 		return;
 	}
@@ -972,12 +972,12 @@ inline void async_close_define(
 	func callback) noexcept
 {
 	auto *client{tob.handle};
-	auto const sock{client->socket()};
-	if (client->offloaded())
+	auto const sock{client->sock_};
+	if (client->offloaded_)
 	{
 		/* cmsg close_notify is a cheap best-effort syscall; then the
 		   socket's own async close takes the fd */
-		client->send_close_notify();
+		::fast_io::tls::details::tls_client_send_close_notify(client);
 		FAST_IO_HERBCEPTIONS_TRY
 		{
 			async_close_define(sched, timeout, sock, ::std::move(callback));
@@ -999,7 +999,7 @@ inline void async_close_define(
 	{
 		auto *st{::fast_io::details::async_new_state<state_type>(
 			sched_ref, timeout, client, ::std::move(callback))};
-		st->wire_size = client->sw_seal_alert(st->wire, ::fast_io::tls::alert_description::close_notify);
+		st->wire_size = ::fast_io::tls::details::tls_client_sw_seal_alert(client, st->wire, ::fast_io::tls::alert_description::close_notify);
 		::fast_io::tls::details::tls_sw_close_round(st);
 	}
 	catch throws(::std::error e)
@@ -1029,10 +1029,10 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in> instm,
 	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound, func callback) noexcept
 {
-	if (outstm.handle->offloaded() && instm.handle->offloaded())
+	if (outstm.handle->offloaded_ && instm.handle->offloaded_)
 	{
 		async_transmit_some_bytes_overflow_underflow_callback_define(
-			sched, timeout, outstm.handle->socket(), off_out, instm.handle->socket(), off_in,
+			sched, timeout, outstm.handle->sock_, off_out, instm.handle->sock_, off_in,
 			bound, ::std::move(callback));
 		return;
 	}

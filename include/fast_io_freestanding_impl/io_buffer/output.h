@@ -287,6 +287,8 @@ inline constexpr void write_all_overflow_define(basic_io_buffer_ref<io_buffer_ty
 
 
 template <typename io_buffer_type>
+	requires(::fast_io::operations::decay::defines::pwritable<
+			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr typename io_buffer_type::output_char_type const *
 pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 							typename io_buffer_type::output_char_type const *first, ::std::size_t count,
@@ -297,6 +299,8 @@ pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 }
 
 template <typename io_buffer_type>
+	requires(::fast_io::operations::decay::defines::pwritable<
+			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr void pwrite_all_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 												 typename io_buffer_type::output_char_type const *first, ::std::size_t count,
 												 ::fast_io::intfpos_t off)
@@ -306,6 +310,8 @@ inline constexpr void pwrite_all_overflow_define(basic_io_buffer_ref<io_buffer_t
 }
 
 template <typename io_buffer_type>
+	requires(::fast_io::operations::decay::defines::pwritable<
+			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr ::fast_io::io_scatter_status_t
 scatter_pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 									::fast_io::basic_io_scatter_t<typename io_buffer_type::output_char_type> pscatters,
@@ -316,6 +322,8 @@ scatter_pwrite_some_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 }
 
 template <typename io_buffer_type>
+	requires(::fast_io::operations::decay::defines::pwritable<
+			 decltype(::fast_io::operations::output_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr void scatter_pwrite_all_overflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														 ::fast_io::basic_io_scatter_t<typename io_buffer_type::output_char_type> pscatters,
 														 ::std::size_t n, ::fast_io::intfpos_t off)
@@ -393,7 +401,10 @@ inline constexpr void obuffer_minimum_size_flush_prepare_define(basic_io_buffer_
 }
 
 template <typename io_buffer_type>
-	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out)
+	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::out) == ::fast_io::buffer_mode::out &&
+			 ::fast_io::operations::decay::defines::has_output_transmit_handle_define<
+				 decltype(::fast_io::operations::output_stream_ref(
+					 ::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr decltype(auto) output_transmit_handle_define(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
 {
 	return output_transmit_handle_define(

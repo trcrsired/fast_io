@@ -73,6 +73,6 @@ try
 }
 catch throws(::std::error e)
 {
-	fi::perrln("fatal: ", e);
+	fi::perrln(e);
 	return 1;
 }

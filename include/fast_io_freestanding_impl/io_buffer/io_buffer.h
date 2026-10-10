@@ -96,10 +96,11 @@ struct io_detached_output_buffer
 	inline io_detached_output_buffer &operator=(io_detached_output_buffer const &) = delete;
 	inline constexpr io_detached_output_buffer(io_detached_output_buffer &&other) noexcept
 		: allocator_handle(other.allocator_handle),
-		  buffer_begin(::std::exchange(other.buffer_begin, nullptr)),
-		  buffer_curr(::std::exchange(other.buffer_curr, nullptr)),
-		  buffer_end(::std::exchange(other.buffer_end, nullptr))
+		  buffer_begin(other.buffer_begin),
+		  buffer_curr(other.buffer_curr),
+		  buffer_end(other.buffer_end)
 	{
+		other.buffer_begin = other.buffer_curr = other.buffer_end = nullptr;
 	}
 	inline constexpr io_detached_output_buffer &operator=(io_detached_output_buffer &&other) noexcept
 	{
@@ -109,9 +110,10 @@ struct io_detached_output_buffer
 		}
 		release();
 		allocator_handle = other.allocator_handle;
-		buffer_begin = ::std::exchange(other.buffer_begin, nullptr);
-		buffer_curr = ::std::exchange(other.buffer_curr, nullptr);
-		buffer_end = ::std::exchange(other.buffer_end, nullptr);
+		buffer_begin = other.buffer_begin;
+		buffer_curr = other.buffer_curr;
+		buffer_end = other.buffer_end;
+		other.buffer_begin = other.buffer_curr = other.buffer_end = nullptr;
 		return *this;
 	}
 	inline constexpr void release() noexcept
@@ -127,8 +129,8 @@ struct io_detached_output_buffer
 	{
 		release();
 	}
-	/* pending bytes as [first, count) byte range */
-	inline constexpr ::std::pair<::std::byte const *, ::std::size_t> pending_bytes() const noexcept
+	/* pending bytes as a scatter {base, len} */
+	inline constexpr ::fast_io::io_scatter_t pending_bytes() const noexcept
 	{
 		return {reinterpret_cast<::std::byte const *>(buffer_begin),
 				static_cast<::std::size_t>(buffer_curr - buffer_begin) * sizeof(char_type)};

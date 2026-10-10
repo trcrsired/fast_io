@@ -54,7 +54,7 @@ inline EVP_MD_CTX *create_ossl_evp_hash_impl(char const *name)
 
 struct ossl_evp_common
 {
-	inline EVP_MD_CTX *operator()(char const *name) const
+	inline EVP_MD_CTX *operator()(char const *name) const FAST_IO_HERBCEPTIONS_THROWS
 	{
 		return create_ossl_evp_hash_impl(name);
 	}

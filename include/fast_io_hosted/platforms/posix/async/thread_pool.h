@@ -219,31 +219,46 @@ inline void posix_thread_pool_rw_run(posix_thread_pool_node *p) noexcept
 		if constexpr (is_write)
 		{
 			::std::byte const *last;
-			if (self->off.has_opt)
+			if constexpr (::fast_io::operations::decay::defines::bytes_pwritable<stmtype>)
 			{
-				last = ::fast_io::operations::decay::pwrite_some_bytes_decay(
-					self->stm, self->buf, self->count, self->off.opt);
+				if (self->off.has_opt)
+				{
+					last = ::fast_io::operations::decay::pwrite_some_bytes_decay(
+						self->stm, self->buf, self->count, self->off.opt);
+					self->transferred = static_cast<::std::size_t>(last - self->buf);
+					return;
+				}
 			}
-			else
+			else if (self->off.has_opt)
 			{
-				last = ::fast_io::operations::decay::write_some_bytes_decay(
-					self->stm, self->buf, self->count);
+				/* stream has no positional writes (sockets, TLS, ...) */
+				self->err = ::fast_io::details::async_make_error(::std::errc::invalid_seek);
+				return;
 			}
+			last = ::fast_io::operations::decay::write_some_bytes_decay(
+				self->stm, self->buf, self->count);
 			self->transferred = static_cast<::std::size_t>(last - self->buf);
 		}
 		else
 		{
 			::std::byte *last;
-			if (self->off.has_opt)
+			if constexpr (::fast_io::operations::decay::defines::bytes_preadable<stmtype>)
 			{
-				last = ::fast_io::operations::decay::pread_some_bytes_decay(
-					self->stm, self->buf, self->count, self->off.opt);
+				if (self->off.has_opt)
+				{
+					last = ::fast_io::operations::decay::pread_some_bytes_decay(
+						self->stm, self->buf, self->count, self->off.opt);
+					self->transferred = static_cast<::std::size_t>(last - self->buf);
+					return;
+				}
 			}
-			else
+			else if (self->off.has_opt)
 			{
-				last = ::fast_io::operations::decay::read_some_bytes_decay(
-					self->stm, self->buf, self->count);
+				self->err = ::fast_io::details::async_make_error(::std::errc::invalid_seek);
+				return;
 			}
+			last = ::fast_io::operations::decay::read_some_bytes_decay(
+				self->stm, self->buf, self->count);
 			self->transferred = static_cast<::std::size_t>(last - self->buf);
 		}
 	}

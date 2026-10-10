@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
@@ -7,14 +7,18 @@ class nt_bcrypt_hash_file;
 
 namespace details
 {
-inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t const *name);
+inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t const *name)
+	FAST_IO_HERBCEPTIONS_THROWS;
 
 template <constructible_to_os_c_str T>
-inline void create_nt_bcrypt_impl(nt_bcrypt_hash_file &h, T const &t);
+inline void create_nt_bcrypt_impl(nt_bcrypt_hash_file &h, T const &t)
+	FAST_IO_HERBCEPTIONS_THROWS;
 
-inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::std::byte const *last);
+inline void ntbcrypt_update_impl(void *hashHandle, ::std::byte const *first, ::std::byte const *last)
+	FAST_IO_HERBCEPTIONS_THROWS;
 
-inline void ntbcrypt_do_final_impl(void *hashhandle, ::std::byte *buffer, ::std::uint_least32_t bcrypt_size);
+inline void ntbcrypt_do_final_impl(void *hashhandle, ::std::byte *buffer, ::std::uint_least32_t bcrypt_size)
+	FAST_IO_HERBCEPTIONS_THROWS;
 } // namespace details
 
 class nt_bcrypt_hash_file
@@ -135,7 +139,7 @@ inline void create_bcrypt_common_hash_impl(nt_bcrypt_hash_file &g, char16_t cons
 struct bcrypt_common
 {
 	nt_bcrypt_hash_file *fl{};
-	inline void operator()(char16_t const *name) const
+	inline void operator()(char16_t const *name) const throws
 	{
 		using char16_t_may_alias_const_ptr
 #if __has_cpp_attribute(__gnu__::__may_alias__)
@@ -148,6 +152,7 @@ struct bcrypt_common
 
 template <constructible_to_os_c_str T>
 inline void create_nt_bcrypt_impl(nt_bcrypt_hash_file &h, T const &t)
+	FAST_IO_HERBCEPTIONS_THROWS
 {
 	nt_api_common(t, bcrypt_common{__builtin_addressof(h)});
 }

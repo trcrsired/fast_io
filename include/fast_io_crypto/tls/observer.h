@@ -14,9 +14,8 @@ namespace fast_io::tls
 
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator,
 		  typename socket_observer_type = ::fast_io::native_socket_io_observer>
-class basic_tls_io_observer
+struct basic_tls_io_observer
 {
-public:
 	using char_type = ch_type;
 	using input_char_type = char_type;
 	using output_char_type = char_type;
@@ -69,91 +68,108 @@ io_bytes_stream_ref_define(basic_tls_io_observer<ch_type, allocator_type, socket
 	return {other.handle};
 }
 
+/*
+The two record-layer primitives: everything else (write_all, scatters,
+positional forms) is synthesized by the generic operations layer.
+Before a handshake runs the stream is the plain transport.
+*/
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
 inline ::std::byte *read_some_bytes_underflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
 													 ::std::byte *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return first + tob.handle->read_some(first, count);
+	return first + details::tls_client_read_some(tob.handle, first, count);
 }
 
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
 inline ::std::byte const *write_some_bytes_overflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
 														   ::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
 {
-	return first + tob.handle->write_some(first, count);
+	return first + details::tls_client_write_some(tob.handle, first, count);
 }
 
+/* fully-configured handshake: caller supplies roots, checks, offload */
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline void write_all_bytes_overflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
-											::std::byte const *first, ::std::size_t count) FAST_IO_HERBCEPTIONS_THROWS
+inline void handshake_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+							 tls13_client_config cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
-	tob.handle->write_all(first, count);
+	details::tls_client_handshake(tob.handle, __builtin_addressof(cfg));
 }
 
-/*
-Positional byte ops: TLS records are not seekable, but a socket's
-transport ops still answer them (ESPIPE-style) -- forwarding keeps the
-pool's generic async-rw path and buffered positional helpers
-well-formed.
-*/
+/* graceful close_notify on an established session */
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline ::std::byte *pread_some_bytes_underflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
-													  ::std::byte *first, ::std::size_t count,
-													  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_close_notify(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob) noexcept
 {
-	(void)off;
-	return first + tob.handle->read_some(first, count);
-}
-
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline ::std::byte const *pwrite_some_bytes_overflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
-															::std::byte const *first, ::std::size_t count,
-															::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
-{
-	(void)off;
-	return first + tob.handle->write_some(first, count);
-}
-
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline ::fast_io::io_scatter_status_t
-scatter_pread_some_bytes_underflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
-										  ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
-										  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
-{
-	return scatter_pread_some_bytes_underflow_define(tob.handle->socket(), pscatters, n, off);
-}
-
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline ::fast_io::io_scatter_status_t
-scatter_pwrite_some_bytes_overflow_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
-										  ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
-										  ::fast_io::intfpos_t off) FAST_IO_HERBCEPTIONS_THROWS
-{
-	return scatter_pwrite_some_bytes_overflow_define(tob.handle->socket(), pscatters, n, off);
+	details::tls_client_send_close_notify(tob.handle);
 }
 
 #if defined(__linux__)
 /*
 fd-level zero-copy transmit: splice() on the input side and sendfile()
 on the output side ride the kTLS socket directly -- only while the
-client reports offloaded(); userspace-mode streams get the generic
+client's offloaded_ is set; userspace-mode streams get the generic
 bounce-buffer path from operations-level transmit.
 */
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
 inline constexpr ::fast_io::posix_transmit_entry
 input_transmit_handle_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob) noexcept
-	requires requires { tob.handle->fd(); }
+	requires requires { tob.handle->sock_.fd; }
 {
-	return ::fast_io::posix_transmit_entry{tob.handle->fd()};
+	return ::fast_io::posix_transmit_entry{tob.handle->sock_.fd};
 }
 
 template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
 inline constexpr ::fast_io::posix_transmit_entry
 output_transmit_handle_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob) noexcept
-	requires requires { tob.handle->fd(); }
+	requires requires { tob.handle->sock_.fd; }
 {
-	return ::fast_io::posix_transmit_entry{tob.handle->fd()};
+	return ::fast_io::posix_transmit_entry{tob.handle->sock_.fd};
 }
 #endif
 
 } // namespace fast_io::tls
+
+namespace fast_io::operations::decay::defines
+{
+
+template <typename streamtype, typename argtype>
+concept has_handshake_define = requires(streamtype stm, argtype arg) {
+	handshake_define(stm, arg);
+};
+
+} // namespace fast_io::operations::decay::defines
+
+namespace fast_io::operations::decay
+{
+
+/*
+ * handshake_decay: runs the TLS 1.3 handshake synchronously on the
+ * stream's observer. arg is either tls::tls13_client_config (full
+ * control) or a u8cstring_view hostname (system trust bundle, chain +
+ * SAN checks on -- defined in roots.h).
+ */
+template <typename streamtype, typename argtype>
+inline void handshake_decay(streamtype stm, argtype arg) FAST_IO_HERBCEPTIONS_THROWS
+	requires(::fast_io::operations::decay::defines::has_handshake_define<streamtype, argtype>)
+{
+	handshake_define(stm, arg);
+}
+
+} // namespace fast_io::operations::decay
+
+namespace fast_io::operations
+{
+
+/*
+ * handshake: TLS 1.3 client handshake on a TLS stream. instm decays to
+ * its io_stream_ref, so basic_tls, its observers and buffered TLS
+ * streams all arrive as basic_tls_io_observer.
+ */
+template <typename streamtype, typename argtype>
+inline void handshake(streamtype &&stm, argtype arg) FAST_IO_HERBCEPTIONS_THROWS
+	requires(::fast_io::operations::decay::defines::has_handshake_define<
+			 decltype(::fast_io::operations::io_stream_ref(stm)), argtype>)
+{
+	::fast_io::operations::decay::handshake_decay(::fast_io::operations::io_stream_ref(stm), arg);
+}
+
+} // namespace fast_io::operations

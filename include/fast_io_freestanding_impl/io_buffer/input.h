@@ -75,7 +75,15 @@ inline constexpr char_type *read_some_underflow_size_impl(::fast_io::details::io
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype> ||
 								   ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::throws_on_allocation_failure)
 {
-	first = ::fast_io::details::non_overlapped_copy(pointers.buffer_curr, pointers.buffer_end, first);
+	::std::size_t const buffered{static_cast<::std::size_t>(pointers.buffer_end - pointers.buffer_curr)};
+	::std::size_t const take{buffered < count ? buffered : count};
+	first = ::fast_io::details::non_overlapped_copy_n(pointers.buffer_curr, take, first);
+	pointers.buffer_curr += take;
+	if (take == count)
+	{
+		return first;
+	}
+	::std::size_t const remaining{count - take};
 	if (pointers.buffer_begin == nullptr)
 	{
 		pointers.buffer_end = pointers.buffer_curr = pointers.buffer_begin =
@@ -84,18 +92,18 @@ inline constexpr char_type *read_some_underflow_size_impl(::fast_io::details::io
 	if constexpr (::fast_io::operations::decay::defines::has_any_of_read_bytes_operations<instmtype>)
 	{
 		::fast_io::io_scatter_t scatters[2]{
-			{first, count * sizeof(char_type)},
+			{first, remaining * sizeof(char_type)},
 			{pointers.buffer_begin, bfsz * sizeof(char_type)}};
 		auto [pos, scpos]{::fast_io::operations::decay::scatter_read_some_bytes_decay(instm, scatters, 2)};
 		if (pos == 2)
 		{
 			pointers.buffer_end = (pointers.buffer_curr = pointers.buffer_begin) + bfsz;
-			return first + count;
+			return first + remaining;
 		}
 		else if (pos == 1)
 		{
 			pointers.buffer_end = (pointers.buffer_curr = pointers.buffer_begin) + (scpos / sizeof(char_type));
-			return first + count;
+			return first + remaining;
 		}
 		else
 		{
@@ -105,18 +113,18 @@ inline constexpr char_type *read_some_underflow_size_impl(::fast_io::details::io
 	}
 	else
 	{
-		basic_io_scatter_t<char_type> scatters[2]{{first, count},
+		basic_io_scatter_t<char_type> scatters[2]{{first, remaining},
 												  {pointers.buffer_begin, bfsz}};
 		auto [pos, scpos]{::fast_io::operations::decay::scatter_read_some_decay(instm, scatters, 2)};
 		if (pos == 2)
 		{
 			pointers.buffer_end = (pointers.buffer_curr = pointers.buffer_begin) + bfsz;
-			return first + count;
+			return first + remaining;
 		}
 		else if (pos == 1)
 		{
 			pointers.buffer_end = (pointers.buffer_curr = pointers.buffer_begin) + scpos;
-			return first + count;
+			return first + remaining;
 		}
 		else
 		{
@@ -162,6 +170,8 @@ inline constexpr char_type *read_some_underflow_define(basic_io_buffer_ref<io_bu
 }
 
 template <typename io_buffer_type, ::std::integral char_type>
+	requires(::fast_io::operations::decay::defines::preadable<
+			 decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr char_type *pread_some_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -180,6 +190,8 @@ inline constexpr char_type *pread_some_underflow_define(basic_io_buffer_ref<io_b
 }
 
 template <typename io_buffer_type, ::std::integral char_type>
+	requires(::fast_io::operations::decay::defines::preadable<
+			 decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr void pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 												 char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -198,6 +210,8 @@ inline constexpr void pread_all_underflow_define(basic_io_buffer_ref<io_buffer_t
 }
 
 template <typename io_buffer_type, ::std::integral char_type>
+	requires(::fast_io::operations::decay::defines::preadable<
+			 decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr ::fast_io::io_scatter_status_t scatter_pread_some_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 																					basic_io_scatter_t<char_type> const *pscatters, ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -216,6 +230,8 @@ inline constexpr ::fast_io::io_scatter_status_t scatter_pread_some_underflow_def
 }
 
 template <typename io_buffer_type, ::std::integral char_type>
+	requires(::fast_io::operations::decay::defines::preadable<
+			 decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr void scatter_pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 														 basic_io_scatter_t<char_type> const *pscatters, ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -234,6 +250,8 @@ inline constexpr void scatter_pread_all_underflow_define(basic_io_buffer_ref<io_
 }
 
 template <typename io_buffer_type, ::std::integral char_type>
+	requires(::fast_io::operations::decay::defines::preadable<
+			 decltype(::fast_io::operations::input_stream_ref(::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr char_type *pread_all_underflow_define(basic_io_buffer_ref<io_buffer_type> iobref,
 													   char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -322,7 +340,10 @@ inline constexpr void ibuffer_minimum_size_underflow_all_prepare_define(basic_io
 }
 
 template <typename io_buffer_type>
-	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::in) == ::fast_io::buffer_mode::in)
+	requires((io_buffer_type::traits_type::mode & ::fast_io::buffer_mode::in) == ::fast_io::buffer_mode::in &&
+			 ::fast_io::operations::decay::defines::has_input_transmit_handle_define<
+				 decltype(::fast_io::operations::input_stream_ref(
+					 ::std::declval<typename io_buffer_type::handle_type &>()))>)
 inline constexpr decltype(auto) input_transmit_handle_define(basic_io_buffer_ref<io_buffer_type> iobref) noexcept
 {
 	return input_transmit_handle_define(

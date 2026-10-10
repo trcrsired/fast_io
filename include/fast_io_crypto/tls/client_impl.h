@@ -8,9 +8,6 @@ Linux SOL_TLS plumbing; async.h carries the io_uring/pthread-pool ops --
 both stay linux-gated (windows async would come from an iocp backend).
 */
 
-#include "../../fast_io_crypto.h"
-#include "../../fast_io_dsal/string_view.h"
-#include "../../fast_io_dsal/string.h"
 #include "client.h"
 #include "observer.h"
 #include "file.h"
@@ -19,3 +16,6 @@ both stay linux-gated (windows async would come from an iocp backend).
 #if defined(__linux__)
 #include "async.h"
 #endif
+#include "openssl.h"
+#include "schannel.h"
+#include "native_backend.h"

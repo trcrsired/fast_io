@@ -200,7 +200,7 @@ io_strlike_ref(::fast_io::io_alias_t,
 
 /* pending byte range owned by a detached output buffer; the empty
  * placeholder used on non-detached paths contributes no bytes */
-inline constexpr ::std::pair<::std::byte const *, ::std::size_t>
+inline constexpr ::fast_io::io_scatter_t
 async_print_detached_pending(::fast_io::details::empty const &) noexcept
 {
 	return {nullptr, 0};
@@ -208,7 +208,7 @@ async_print_detached_pending(::fast_io::details::empty const &) noexcept
 
 template <typename detachedtype>
 	requires requires(detachedtype const &d) { d.pending_bytes(); }
-inline constexpr ::std::pair<::std::byte const *, ::std::size_t>
+inline constexpr ::fast_io::io_scatter_t
 async_print_detached_pending(detachedtype const &detached) noexcept
 {
 	return detached.pending_bytes();

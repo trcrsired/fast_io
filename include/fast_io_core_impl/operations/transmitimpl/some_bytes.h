@@ -32,19 +32,23 @@ inline constexpr ::std::size_t transmit_some_bytes_emulation_impl(
 	::fast_io::details::local_operator_new_array_ptr<::std::byte> newptr(this_round);
 	::std::byte *buffer_start{newptr.ptr};
 	::std::byte *iter;
-	if (off_in.ptr != nullptr)
+	if constexpr (::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
 	{
-		if constexpr (::fast_io::operations::decay::defines::bytes_preadable<instmtype>)
+		if (off_in.ptr != nullptr)
 		{
 			iter = ::fast_io::operations::decay::pread_some_bytes_decay(instm, buffer_start, this_round, *off_in.ptr);
 		}
 		else
 		{
-			::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			iter = ::fast_io::operations::decay::read_some_bytes_decay(instm, buffer_start, this_round);
 		}
 	}
 	else
 	{
+		if (off_in.ptr != nullptr)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+		}
 		iter = ::fast_io::operations::decay::read_some_bytes_decay(instm, buffer_start, this_round);
 	}
 	::std::size_t got{static_cast<::std::size_t>(iter - buffer_start)};
@@ -52,19 +56,23 @@ inline constexpr ::std::size_t transmit_some_bytes_emulation_impl(
 	{
 		return 0;
 	}
-	if (off_out.ptr != nullptr)
+	if constexpr (::fast_io::operations::decay::defines::bytes_pwritable<optstmtype>)
 	{
-		if constexpr (::fast_io::operations::decay::defines::bytes_pwritable<optstmtype>)
+		if (off_out.ptr != nullptr)
 		{
 			::fast_io::operations::decay::pwrite_all_bytes_decay(optstm, buffer_start, got, *off_out.ptr);
 		}
 		else
 		{
-			::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+			::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, got);
 		}
 	}
 	else
 	{
+		if (off_out.ptr != nullptr)
+		{
+			::fast_io::herbceptions::throws_errc(::std::errc::invalid_seek);
+		}
 		::fast_io::operations::decay::write_all_bytes_decay(optstm, buffer_start, got);
 	}
 	if (off_in.ptr != nullptr)

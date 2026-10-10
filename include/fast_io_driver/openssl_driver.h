@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <openssl/macros.h>
 #ifdef OSSL_DEPRECATEDIN_3_0
 #undef OSSL_DEPRECATEDIN_3_0
@@ -16,6 +16,7 @@
 
 #include "../fast_io_hosted.h"
 #include "../fast_io_legacy_impl/c/impl.h"
+#include "../fast_io_dsal/impl/misc/push_macros.h"
 #include "openssl_driver/init.h"
 #include "openssl_driver/observer.h"
 #include "openssl_driver/error.h"
@@ -29,3 +30,4 @@
 #if 0
 #include "openssl_driver/evp.h"
 #endif
+#include "../fast_io_dsal/impl/misc/pop_macros.h"

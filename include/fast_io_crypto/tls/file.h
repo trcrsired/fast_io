@@ -7,9 +7,10 @@ socket member OWNS whatever socket_type owns: basic_tls<native_socket_file>
 owns the fd; basic_tls<native_socket_io_observer> borrows it.
 
 Constructors forward to socket_type, mirroring basic_io_buffer's
-forwarding to its handle; the client binds the socket's fd during
-construction. No other member functions -- handshake() and
-send_close_notify() live on the client member.
+forwarding to its handle; the client binds the socket's observer during
+construction. The client itself is a plain aggregate -- operations are
+the free-function customization points (operations::handshake, the
+_bytes ops, tls_close_notify).
 */
 
 namespace fast_io::tls

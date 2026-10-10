@@ -1,23 +1,17 @@
-﻿#pragma once
+#pragma once
 
 namespace fast_io
 {
 
-class openssl_error
+/* OpenSSL failures are reported as std::tls_alert through the
+   herbceptions channel. */
+[[noreturn]] inline void throw_openssl_error() FAST_IO_HERBCEPTIONS_THROWS
 {
-public:
-};
-
-inline void throw_openssl_error()
-{
-#ifdef __cpp_exceptions
-#if defined(_MSC_VER) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS == 0)
-	fast_terminate();
+#if defined(__HERBCEPTIONS__)
+	throw throws::std::tls_alert{::std::tls_alert::alert_level::fatal,
+								 ::std::tls_alert::alert_description::internal_error};
 #else
-	throw openssl_error();
-#endif
-#else
-	fast_terminate();
+	::fast_io::fast_terminate();
 #endif
 }
 
