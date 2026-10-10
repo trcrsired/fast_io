@@ -371,41 +371,25 @@ inline bool tls_cv_sign(signature_scheme scheme,
 		{
 			return false;
 		}
-		::std::byte digest[64];
+		(void)salt; /* rfc6979: the nonce is key+message deterministic --
+			   no per-signature entropy consumed */
 		if (curve->nl == 4)
 		{
 			::fast_io::sha256_context hh{};
 			hh.update(covered, covered + covered_size);
 			hh.do_final();
+			::std::byte digest[::fast_io::sha256_context::digest_size];
 			hh.digest_to_byte_ptr(digest);
+			return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha256_context>(
+				*curve, sig_out, sig_size, key.ec_d, digest, sizeof(digest));
 		}
-		else
-		{
-			::fast_io::sha384_context hh{};
-			hh.update(covered, covered + covered_size);
-			hh.do_final();
-			hh.digest_to_byte_ptr(digest);
-		}
-		/* k is the caller's random salt; a degenerate retry
-		   (r or s == 0, k >= n) folds the salt's second half back
-		   in -- deterministic, no extra entropy needed */
-		for (::std::size_t attempt{};; ++attempt)
-		{
-			if (attempt == 4)
-			{
-				return false;
-			}
-			::std::byte k[48];
-			for (::std::size_t i{}; i != curve->nbytes; ++i)
-			{
-				k[i] = attempt == 0 ? salt[i] : salt[i] ^ salt[(i + attempt * 7) % 16 + 32];
-			}
-			if (::fast_io::ecc::ecdsa_sign_to_ptr(*curve, sig_out, sig_size, key.ec_d, k,
-												digest, curve->nl == 4 ? 32u : 48u))
-			{
-				return true;
-			}
-		}
+		::fast_io::sha384_context hh{};
+		hh.update(covered, covered + covered_size);
+		hh.do_final();
+		::std::byte digest[::fast_io::sha384_context::digest_size];
+		hh.digest_to_byte_ptr(digest);
+		return ::fast_io::ecc::ecdsa_sign_rfc6979_to_ptr<::fast_io::sha384_context>(
+			*curve, sig_out, sig_size, key.ec_d, digest, sizeof(digest));
 	}
 	default:
 		return false;

@@ -60,10 +60,7 @@ struct ec_mont_ctx
 	inline constexpr ec_mont_ctx(ec_limb const *m, ::std::size_t nl) noexcept
 		: nl{nl}
 	{
-		for (::std::size_t i{}; i != nl; ++i)
-		{
-			modulus[i] = m[i];
-		}
+		::fast_io::freestanding::non_overlapped_copy_n(m, nl, modulus);
 		n0inv = ::fast_io::details::rsa::montgomery_n0_inverse(m[0]);
 		/*
 		r2 = R^2 mod m = 2^(2*nl*64) mod m. montgomery_r2_setup /
@@ -74,10 +71,7 @@ struct ec_mont_ctx
 		*/
 		ec_limb d[ec_max_limbs];
 		r2[0] = 1;
-		for (::std::size_t i{1}; i != nl; ++i)
-		{
-			r2[i] = 0;
-		}
+		::fast_io::freestanding::fill_n(r2 + 1, nl - 1, ec_limb{});
 		for (::std::size_t i{2 * nl * ::fast_io::details::rsa::limb_digits}; i--;)
 		{
 			::fast_io::details::rsa::limbs_mod_double(r2, modulus, d, nl);
@@ -106,11 +100,8 @@ struct ec_curve
 		: field{c.p, c.limb_count}, order{c.n, c.limb_count},
 		  pm2{c.pm2}, nm2{c.nm2}, nl{c.limb_count}, nbytes{c.byte_count}
 	{
-		for (::std::size_t i{}; i != nl; ++i)
-		{
-			gx[i] = c.gx[i];
-			gy[i] = c.gy[i];
-		}
+		::fast_io::freestanding::non_overlapped_copy_n(c.gx, nl, gx);
+		::fast_io::freestanding::non_overlapped_copy_n(c.gy, nl, gy);
 	}
 };
 
@@ -191,10 +182,7 @@ inline constexpr void ec_mul_plain(ec_mont_ctx const &ctx,
 	ec_limb xm[ec_max_limbs];
 	ec_to_mont(ctx, xm, x);
 	ec_mul(ctx, xm, xm, y);
-	for (::std::size_t i{}; i != ctx.nl; ++i)
-	{
-		z[i] = xm[i];
-	}
+	::fast_io::freestanding::non_overlapped_copy_n(xm, ctx.nl, z);
 }
 
 /* ---------------- group law (Jacobian, a = -3) ---------------- */
@@ -244,10 +232,7 @@ inline constexpr void ec_double(ec_mont_ctx const &f, ec_point &pt) noexcept
 	ec_sqr(f, t1, t1);
 	ec_sub(t1, t1, gamma, f.modulus, f.nl);
 	ec_sub(t1, t1, delta, f.modulus, f.nl);
-	for (::std::size_t i{}; i != f.nl; ++i)
-	{
-		pt.z[i] = t1[i];
-	}
+	::fast_io::freestanding::non_overlapped_copy_n(t1, f.nl, pt.z);
 	/* y' = alpha(4beta - x') - 8gamma^2 */
 	ec_sub(t0, t0, x3, f.modulus, f.nl); /* 4beta - x' */
 	ec_mul(f, t0, alpha, t0);
@@ -256,11 +241,8 @@ inline constexpr void ec_double(ec_mont_ctx const &f, ec_point &pt) noexcept
 	ec_add2(t1, t1, f.modulus, f.nl);
 	ec_add2(t1, t1, f.modulus, f.nl); /* 8gamma^2 */
 	ec_sub(t0, t0, t1, f.modulus, f.nl);
-	for (::std::size_t i{}; i != f.nl; ++i)
-	{
-		pt.x[i] = x3[i];
-		pt.y[i] = t0[i];
-	}
+	::fast_io::freestanding::non_overlapped_copy_n(x3, f.nl, pt.x);
+	::fast_io::freestanding::non_overlapped_copy_n(t0, f.nl, pt.y);
 }
 
 /*
@@ -304,12 +286,9 @@ inline constexpr void ec_add_point(ec_mont_ctx const &f,
 		else
 		{
 			/* p + (-p) = infinity */
-			for (::std::size_t i{}; i != f.nl; ++i)
-			{
-				a.x[i] = 0;
-				a.y[i] = 0;
-				a.z[i] = 0;
-			}
+			::fast_io::freestanding::fill_n(a.x, f.nl, ec_limb{});
+			::fast_io::freestanding::fill_n(a.y, f.nl, ec_limb{});
+			::fast_io::freestanding::fill_n(a.z, f.nl, ec_limb{});
 		}
 		return;
 	}
@@ -328,12 +307,9 @@ inline constexpr void ec_add_point(ec_mont_ctx const &f,
 	ec_sub(y3, y3, t0, f.modulus, f.nl);
 	ec_mul(f, z3, a.z, b.z);
 	ec_mul(f, z3, z3, h);
-	for (::std::size_t i{}; i != f.nl; ++i)
-	{
-		a.x[i] = x3[i];
-		a.y[i] = y3[i];
-		a.z[i] = z3[i];
-	}
+	::fast_io::freestanding::non_overlapped_copy_n(x3, f.nl, a.x);
+	::fast_io::freestanding::non_overlapped_copy_n(y3, f.nl, a.y);
+	::fast_io::freestanding::non_overlapped_copy_n(z3, f.nl, a.z);
 }
 
 /* scalar*P -- double-and-add, most significant bit first.
@@ -343,12 +319,9 @@ inline constexpr void ec_scalar_mul(ec_mont_ctx const &f,
 									::std::byte const *scalar, ::std::size_t scalar_size,
 									ec_point const &pt) noexcept
 {
-	for (::std::size_t i{}; i != ec_max_limbs; ++i)
-	{
-		out.x[i] = 0;
-		out.y[i] = 0;
-		out.z[i] = 0;
-	}
+	::fast_io::freestanding::fill_n(out.x, ec_max_limbs, ec_limb{});
+	::fast_io::freestanding::fill_n(out.y, ec_max_limbs, ec_limb{});
+	::fast_io::freestanding::fill_n(out.z, ec_max_limbs, ec_limb{});
 	for (::std::size_t byte_i{}; byte_i != scalar_size; ++byte_i)
 	{
 		unsigned const b{static_cast<unsigned>(scalar[byte_i])};
@@ -394,10 +367,7 @@ inline constexpr bool ec_point_load(ec_curve const &c, ec_point &pt,
 	}
 	ec_to_mont(c.field, pt.x, x);
 	ec_to_mont(c.field, pt.y, y);
-	for (::std::size_t i{}; i != c.nl; ++i)
-	{
-		pt.z[i] = c.field.one[i];
-	}
+	::fast_io::freestanding::non_overlapped_copy_n(c.field.one, c.nl, pt.z);
 	return true;
 }
 
@@ -570,13 +540,93 @@ inline bool ecdsa_verify_to_ptr(details::ec_curve const &c,
 }
 
 /*
-ECDSA sign (FIPS 186-5 6.4.1): privkey is the d bytes, k the
-per-message secret (each curve byte_count), digest the hashed message.
-The signature lands DER-encoded in sig_out (2 + 2*byte_count + 6
-bytes max); *sig_size receives its length. Returns false when the key
-is out of range or k produced a degenerate (r or s == 0, k >= n)
-signature -- the caller resamples k and retries.
+RFC 6979 3.2 HMAC_DRBG for the per-message secret k. The DRBG state is
+two digest-size strings (K, V); init feeds int2octets(x) ||
+bits2octets(h1) into the standard seeding sequence, and next() emits
+successive candidates -- a rejected one (k = 0 or k >= n) triggers the
+spec's K = HMAC(K, V || 0x00) reseed before the next try. hlen equals
+byte_count for both supported curves, so a candidate is simply V.
 */
+template <typename hash_ctx>
+struct ecdsa_rfc6979_drbg
+{
+	::std::byte k[hash_ctx::digest_size]{};
+	::std::byte v[hash_ctx::digest_size]{};
+	details::ec_curve const *curve{};
+
+	inline constexpr ecdsa_rfc6979_drbg() noexcept = default;
+	inline constexpr ecdsa_rfc6979_drbg(details::ec_curve const &c,
+									  ::std::byte const *privkey,
+									  ::std::byte const *digest,
+									  ::std::size_t digest_size) noexcept
+		: curve{__builtin_addressof(c)}
+	{
+		namespace nr = ::fast_io::details::rsa;
+		/* bh = bits2octets(h1): leftmost qlen bits of the digest,
+		   reduced mod n, written back as a byte_count big-endian */
+		details::ec_limb zv[details::ec_max_limbs];
+		::std::size_t const take{digest_size < c.nbytes ? digest_size : c.nbytes};
+		nr::limbs_from_bytes_be(zv, digest, take, c.nl);
+		if (!nr::limbs_less(zv, c.order.modulus, c.nl))
+		{
+			nr::limbs_subtraction(zv, zv, c.order.modulus, c.nl);
+		}
+		::std::byte bh[64];
+		nr::limbs_to_bytes_be(bh, zv, c.nbytes, c.nl);
+		::fast_io::freestanding::fill_n(v, hash_ctx::digest_size, ::std::byte{0x01});
+		::fast_io::freestanding::fill_n(k, hash_ctx::digest_size, ::std::byte{0x00});
+		/* K = HMAC(K, V || 0x00 || x || bh); V = HMAC(K, V);
+		   K = HMAC(K, V || 0x01 || x || bh); V = HMAC(K, V) */
+		for (unsigned phase{}; phase != 2; ++phase)
+		{
+			::std::byte const tag{static_cast<::std::byte>(phase)};
+			::fast_io::hmac_context<hash_ctx> h{k, hash_ctx::digest_size};
+			h.update(v, v + hash_ctx::digest_size);
+			h.update(__builtin_addressof(tag), __builtin_addressof(tag) + 1);
+			h.update(privkey, privkey + c.nbytes);
+			h.update(bh, bh + c.nbytes);
+			h.do_final();
+			h.digest_to_byte_ptr(k);
+			hmac_once_(v);
+		}
+	}
+	/* pull the next candidate secret scalar (always 1 <= k < n) */
+	inline constexpr bool next(::std::byte *out) noexcept
+	{
+		namespace nr = ::fast_io::details::rsa;
+		auto const &o{curve->order};
+		for (;;)
+		{
+			hmac_once_(v);
+			details::ec_limb kv[details::ec_max_limbs];
+			nr::limbs_from_bytes_be(kv, v, curve->nbytes, curve->nl);
+			if (!nr::limbs_is_zero(kv, curve->nl) &&
+				nr::limbs_less(kv, o.modulus, curve->nl))
+			{
+				::fast_io::freestanding::non_overlapped_copy_n(v, curve->nbytes, out);
+				return true;
+			}
+			/* rejected: K = HMAC(K, V || 0x00); V = HMAC(K, V) */
+			::std::byte const zero{};
+			::fast_io::hmac_context<hash_ctx> h{k, hash_ctx::digest_size};
+			h.update(v, v + hash_ctx::digest_size);
+			h.update(__builtin_addressof(zero), __builtin_addressof(zero) + 1);
+			h.do_final();
+			h.digest_to_byte_ptr(k);
+			hmac_once_(v);
+		}
+	}
+
+private:
+	/* out = HMAC(K, V): the DRBG's only primitive */
+	inline constexpr void hmac_once_(::std::byte *out) noexcept
+	{
+		::fast_io::hmac_context<hash_ctx> h{k, hash_ctx::digest_size};
+		h.update(v, v + hash_ctx::digest_size);
+		h.do_final();
+		h.digest_to_byte_ptr(out);
+	}
+};
 inline bool ecdsa_sign_to_ptr(details::ec_curve const &c,
 							  ::std::byte *sig_out, ::std::size_t *sig_size,
 							  ::std::byte const *privkey, ::std::byte const *k,
@@ -667,6 +717,32 @@ inline bool ecdsa_sign_to_ptr(details::ec_curve const &c,
 	sig_out[1] = static_cast<::std::byte>(p - body);
 	*sig_size = static_cast<::std::size_t>(p - sig_out);
 	return true;
+}
+
+/*
+ECDSA sign with an rfc6979 deterministic k -- no caller-supplied
+randomness; the same (key, message) pair always yields the same
+signature, which is also what makes rfc6979 test vectors meaningful.
+hash_ctx must match the digest's hash (sha256_context for
+ecdsa_secp256r1_sha256, sha384_context for ecdsa_secp384r1_sha384) --
+the DRBG runs over it per rfc6979 3.2.
+*/
+template <typename hash_ctx>
+inline bool ecdsa_sign_rfc6979_to_ptr(details::ec_curve const &c,
+									  ::std::byte *sig_out, ::std::size_t *sig_size,
+									  ::std::byte const *privkey,
+									  ::std::byte const *digest, ::std::size_t digest_size) noexcept
+{
+	ecdsa_rfc6979_drbg<hash_ctx> drbg{c, privkey, digest, digest_size};
+	::std::byte k[64];
+	while (drbg.next(k))
+	{
+		if (ecdsa_sign_to_ptr(c, sig_out, sig_size, privkey, k, digest, digest_size))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 } // namespace fast_io::ecc
