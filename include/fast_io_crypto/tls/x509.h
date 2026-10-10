@@ -654,6 +654,29 @@ inline constexpr bool x509_rsa_verify_impl(bool use_pss, ::std::size_t pss_salt_
 }
 
 /*
+ECDSA signature wire form (rfc5758, same in TLS 1.3 CertificateVerify):
+SEQUENCE { INTEGER r, INTEGER s }. Decodes to the two INTEGER TLVs;
+trailing bytes are forbidden.
+*/
+inline constexpr bool ecdsa_signature_decode(::std::byte const *sig,
+											 ::std::size_t sig_size,
+											 der_tlv &r, der_tlv &s) noexcept
+{
+	wire_reader rd{sig, sig + sig_size};
+	der_tlv seq;
+	if (!der_expect_tag(rd, 0x30, seq))
+	{
+		return false;
+	}
+	wire_reader b{der_sub(seq)};
+	if (!der_expect_tag(b, 0x02, r) || !der_expect_tag(b, 0x02, s))
+	{
+		return false;
+	}
+	return rd.empty() && b.empty();
+}
+
+/*
 verify cert.signature over cert.tbs with the issuer's public key.
 issuer_* come from the issuer certificate's SPKI.
 RSA public key BIT STRING content is the DER SEQ { n INTEGER, e INTEGER }.
@@ -789,11 +812,65 @@ inline constexpr x509_verify_result x509_verify_signature(
 		return ok ? x509_verify_result::ok : x509_verify_result::bad_signature;
 	}
 
-	/* ecdsa-with-SHA*: parsed, but the P-256/P-384 verifier does not exist yet */
-	if (der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha256) ||
-		der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha384) ||
-		der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha512))
+	/* ecdsa-with-SHA{256,384}: the signature OID picks only the hash --
+	   the curve comes from the issuer's SPKI params; x509 mixes them
+	   freely (openssl signs P-384 certs with SHA-256 by default) */
 	{
+		::std::size_t digest_size{};
+		if (der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha256))
+		{
+			digest_size = ::fast_io::sha256_context::digest_size;
+		}
+		else if (der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha384))
+		{
+			digest_size = ::fast_io::sha384_context::digest_size;
+		}
+		if (digest_size != 0)
+		{
+			::fast_io::ecc::details::ec_curve const *curve{};
+			if (der_oid_eq(issuer_alg.params, oid::secp256r1))
+			{
+				curve = __builtin_addressof(::fast_io::ecc::secp256r1);
+			}
+			else if (der_oid_eq(issuer_alg.params, oid::secp384r1))
+			{
+				curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+			}
+			if (curve == nullptr ||
+				!der_oid_eq(issuer_alg.oid, oid::ec_public_key))
+			{
+				return x509_verify_result::unsupported_algorithm;
+			}
+			der_tlv r, s;
+			if (!ecdsa_signature_decode(cert.signature, cert.signature_size, r, s))
+			{
+				return x509_verify_result::malformed;
+			}
+			::std::byte digest[64];
+			if (digest_size == ::fast_io::sha256_context::digest_size)
+			{
+				::fast_io::sha256_context hh{};
+				hh.update(cert.tbs, cert.tbs + cert.tbs_size);
+				hh.do_final();
+				hh.digest_to_byte_ptr(digest);
+			}
+			else
+			{
+				::fast_io::sha384_context hh{};
+				hh.update(cert.tbs, cert.tbs + cert.tbs_size);
+				hh.do_final();
+				hh.digest_to_byte_ptr(digest);
+			}
+			bool const ok{::fast_io::ecc::ecdsa_verify_to_ptr(
+				*curve, r.value, r.value_size, s.value, s.value_size,
+				issuer_public_key, issuer_public_key_size,
+				digest, digest_size)};
+			return ok ? x509_verify_result::ok : x509_verify_result::bad_signature;
+		}
+	}
+	if (der_oid_eq(cert.signature_algorithm_oid, oid::ecdsa_with_sha512))
+	{
+		/* sha512 ecdsa pairs with P-521 -- still absent */
 		return x509_verify_result::unsupported_algorithm;
 	}
 	return x509_verify_result::unsupported_algorithm;
@@ -1112,9 +1189,51 @@ inline constexpr x509_verify_result tls_certificate_verify(
 		bool const ok{::fast_io::ed25519::verify_signature_to_ptr(signature, leaf_key, covered, covered_size)};
 		return ok ? x509_verify_result::ok : x509_verify_result::bad_signature;
 	}
+	case signature_scheme::ecdsa_secp256r1_sha256:
+	case signature_scheme::ecdsa_secp384r1_sha384:
+	{
+		::fast_io::ecc::details::ec_curve const *curve{
+			scheme == signature_scheme::ecdsa_secp256r1_sha256
+				? __builtin_addressof(::fast_io::ecc::secp256r1)
+				: __builtin_addressof(::fast_io::ecc::secp384r1)};
+		bool const curve_ok{curve->nl == 4
+								? der_oid_eq(leaf_alg.params, oid::secp256r1)
+								: der_oid_eq(leaf_alg.params, oid::secp384r1)};
+		if (!der_oid_eq(leaf_alg.oid, oid::ec_public_key) || !curve_ok)
+		{
+			return x509_verify_result::unsupported_algorithm;
+		}
+		der_tlv r, s;
+		if (!ecdsa_signature_decode(signature, signature_size, r, s))
+		{
+			return x509_verify_result::malformed;
+		}
+		::std::byte digest[64];
+		::std::size_t digest_size{};
+		if (curve->nl == 4)
+		{
+			::fast_io::sha256_context hh{};
+			hh.update(covered, covered + covered_size);
+			hh.do_final();
+			hh.digest_to_byte_ptr(digest);
+			digest_size = ::fast_io::sha256_context::digest_size;
+		}
+		else
+		{
+			::fast_io::sha384_context hh{};
+			hh.update(covered, covered + covered_size);
+			hh.do_final();
+			hh.digest_to_byte_ptr(digest);
+			digest_size = ::fast_io::sha384_context::digest_size;
+		}
+		bool const ok{::fast_io::ecc::ecdsa_verify_to_ptr(
+			*curve, r.value, r.value_size, s.value, s.value_size,
+			leaf_key, leaf_key_size, digest, digest_size)};
+		return ok ? x509_verify_result::ok : x509_verify_result::bad_signature;
+	}
 	default:
 		/* rsa_pkcs1_* is forbidden in CertificateVerify by TLS 1.3;
-		   ecdsa_secp256r1_sha256 waits on the P-256 verifier */
+		   ecdsa on P-521 stays unsupported */
 		return x509_verify_result::unsupported_algorithm;
 	}
 }

@@ -24,7 +24,8 @@ enum class tls_pkey_kind : ::std::uint_least8_t
 {
 	none,
 	rsa,
-	ed25519
+	ed25519,
+	ec
 };
 
 struct tls_pkey
@@ -37,6 +38,10 @@ struct tls_pkey
 	::std::size_t rsa_exponent_size{};
 	/* ed25519: the expanded seed || public key (64-byte fast_io form) */
 	::std::byte ed25519_key[64]{};
+	/* ec: the scalar d and the curve it belongs to */
+	::std::byte ec_d[48]{};
+	::fast_io::ecc::details::ec_curve const *ec_curve{};
+	::std::size_t ec_d_size{};
 };
 
 /*
@@ -57,6 +62,71 @@ inline constexpr bool tls_rsa_pkey_parse_body(tls_pkey *key, wire_reader &r) noe
 	key->rsa_modulus_size = n.value_size;
 	key->rsa_exponent = d.value;
 	key->rsa_exponent_size = d.value_size;
+	return true;
+}
+
+/*
+SEC1 ECPrivateKey ::= SEQ { INTEGER(1), OCTET STRING(d),
+[0] parameters?, [1] publicKey? }. The [0] params OID pins the curve;
+without it the scalar size picks (32 -> P-256, 48 -> P-384).
+*/
+inline constexpr bool tls_sec1_pkey_parse_body(tls_pkey *key, wire_reader &r) noexcept
+{
+	der_tlv v, d;
+	if (!der_expect_tag(r, 0x02, v) || !der_expect_tag(r, 0x04, d))
+	{
+		return false;
+	}
+	if (v.value_size != 1 || v.value[0] != ::std::byte{1})
+	{
+		return false;
+	}
+	key->ec_curve = nullptr;
+	while (!r.empty())
+	{
+		der_tlv opt;
+		if (!der_read_tlv(r, opt))
+		{
+			return false;
+		}
+		if (opt.tag != 0xa0)
+		{
+			continue;
+		}
+		/* [0] ECParameters { namedCurve OBJECT IDENTIFIER } */
+		wire_reader sub{der_sub(opt)};
+		der_tlv coid;
+		if (der_read_tlv(sub, coid))
+		{
+			if (der_oid_eq(coid, oid::secp256r1))
+			{
+				key->ec_curve = __builtin_addressof(::fast_io::ecc::secp256r1);
+			}
+			else if (der_oid_eq(coid, oid::secp384r1))
+			{
+				key->ec_curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+			}
+		}
+	}
+	if (key->ec_curve == nullptr)
+	{
+		/* no params -- infer the curve from the scalar size */
+		if (d.value_size == 32)
+		{
+			key->ec_curve = __builtin_addressof(::fast_io::ecc::secp256r1);
+		}
+		else if (d.value_size == 48)
+		{
+			key->ec_curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+		}
+	}
+	if (key->ec_curve == nullptr || d.value_size != key->ec_curve->nbytes)
+	{
+		return false;
+	}
+	::fast_io::freestanding::non_overlapped_copy_n(d.value, d.value_size, key->ec_d);
+	key->ec_d_size = d.value_size;
+	key->kind = tls_pkey_kind::ec;
 	return true;
 }
 
@@ -124,6 +194,41 @@ inline constexpr bool tls_pkcs8_parse(tls_pkey *key,
 		}
 		return tls_ed25519_seed_expand(key, iseed.value, iseed.value_size);
 	}
+	if (der_oid_eq(alg_oid, oid::ec_public_key))
+	{
+		/* id-ecPublicKey -- the params pin the curve; the privateKey
+		   OCTET STRING carries a SEC1 ECPrivateKey */
+		der_tlv params;
+		if (!der_read_tlv(a, params))
+		{
+			return false;
+		}
+		::fast_io::ecc::details::ec_curve const *curve{};
+		if (der_oid_eq(params, oid::secp256r1))
+		{
+			curve = __builtin_addressof(::fast_io::ecc::secp256r1);
+		}
+		else if (der_oid_eq(params, oid::secp384r1))
+		{
+			curve = __builtin_addressof(::fast_io::ecc::secp384r1);
+		}
+		else
+		{
+			return false;
+		}
+		wire_reader inner{pk.value, pk.value + pk.value_size};
+		der_tlv iseq;
+		if (!der_expect_tag(inner, 0x30, iseq))
+		{
+			return false;
+		}
+		wire_reader b{der_sub(iseq)};
+		if (!tls_sec1_pkey_parse_body(key, b))
+		{
+			return false;
+		}
+		return key->ec_curve == curve;
+	}
 	return false;
 }
 
@@ -144,6 +249,19 @@ inline constexpr bool tls_pkey_parse(tls_pkey *key,
 		{
 			wire_reader s{der_sub(seq)};
 			if (tls_rsa_pkey_parse_body(key, s))
+			{
+				return true;
+			}
+		}
+	}
+	/* bare SEC1 ECPrivateKey */
+	{
+		wire_reader r{der, der + der_size};
+		der_tlv seq;
+		if (der_expect_tag(r, 0x30, seq))
+		{
+			wire_reader s{der_sub(seq)};
+			if (tls_sec1_pkey_parse_body(key, s))
 			{
 				return true;
 			}
@@ -179,10 +297,11 @@ inline bool tls_cv_sign_rsa_pss(::std::byte *sig_out, ::fast_io::rsa::private_co
 
 /*
 sign the CertificateVerify covered content (64x0x20 || label || 0 ||
-transcript) with key. salt supplies PSS entropy -- at least 48 bytes
-(the largest digest); ed25519 ignores it. sig_out must hold
-modulus_bytes for RSA / 64 for ed25519; *sig_size receives the wire
-signature size.
+transcript) with key. salt supplies entropy -- at least 48 bytes
+(the largest digest); ed25519 ignores it, ecdsa uses the first 32
+bytes as the per-message secret with the rest folded in on a
+degenerate retry. sig_out must hold modulus_bytes for RSA / 64 for
+ed25519 / 72 for ecdsa; *sig_size receives the wire signature size.
 */
 inline bool tls_cv_sign(signature_scheme scheme,
 						::std::byte const *covered, ::std::size_t covered_size,
@@ -240,6 +359,53 @@ inline bool tls_cv_sign(signature_scheme scheme,
 		}
 		::fast_io::secure_clear(__builtin_addressof(ctx), sizeof(ctx));
 		return ok;
+	}
+	case signature_scheme::ecdsa_secp256r1_sha256:
+	case signature_scheme::ecdsa_secp384r1_sha384:
+	{
+		::fast_io::ecc::details::ec_curve const *curve{
+			scheme == signature_scheme::ecdsa_secp256r1_sha256
+				? __builtin_addressof(::fast_io::ecc::secp256r1)
+				: __builtin_addressof(::fast_io::ecc::secp384r1)};
+		if (key.kind != tls_pkey_kind::ec || key.ec_curve != curve)
+		{
+			return false;
+		}
+		::std::byte digest[64];
+		if (curve->nl == 4)
+		{
+			::fast_io::sha256_context hh{};
+			hh.update(covered, covered + covered_size);
+			hh.do_final();
+			hh.digest_to_byte_ptr(digest);
+		}
+		else
+		{
+			::fast_io::sha384_context hh{};
+			hh.update(covered, covered + covered_size);
+			hh.do_final();
+			hh.digest_to_byte_ptr(digest);
+		}
+		/* k is the caller's random salt; a degenerate retry
+		   (r or s == 0, k >= n) folds the salt's second half back
+		   in -- deterministic, no extra entropy needed */
+		for (::std::size_t attempt{};; ++attempt)
+		{
+			if (attempt == 4)
+			{
+				return false;
+			}
+			::std::byte k[48];
+			for (::std::size_t i{}; i != curve->nbytes; ++i)
+			{
+				k[i] = attempt == 0 ? salt[i] : salt[i] ^ salt[(i + attempt * 7) % 16 + 32];
+			}
+			if (::fast_io::ecc::ecdsa_sign_to_ptr(*curve, sig_out, sig_size, key.ec_d, k,
+												digest, curve->nl == 4 ? 32u : 48u))
+			{
+				return true;
+			}
+		}
 	}
 	default:
 		return false;

@@ -25,6 +25,7 @@
 #include "fast_io_crypto/cipher/aes.h"
 #include "fast_io_crypto/curve25519/impl.h"
 #include "fast_io_crypto/rsa/impl.h"
+#include "fast_io_crypto/ecc/impl.h"
 #include "fast_io_crypto/tls/impl.h"
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"

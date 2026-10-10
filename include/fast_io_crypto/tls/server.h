@@ -548,18 +548,20 @@ CertificateRequest body: u8 context_len=0 || u16 ext_len ||
 {signature_algorithms: u16 vec of u16}. The extension is required
 (rfc8446 4.3.2); certificate_authorities is a hint we leave out.
 */
-inline constexpr ::std::uint_least16_t server_cr_sigalgs[7]{
+inline constexpr ::std::uint_least16_t server_cr_sigalgs[9]{
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_rsae_sha256),
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_rsae_sha384),
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_rsae_sha512),
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_pss_sha256),
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_pss_sha384),
 	static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_pss_sha512),
+	static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp256r1_sha256),
+	static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp384r1_sha384),
 	static_cast<::std::uint_least16_t>(signature_scheme::ed25519)};
 
 inline constexpr ::std::byte *certificate_request_write(::std::byte *msg) noexcept
 {
-	::std::byte *p{handshake_header_write(msg, handshake_type::certificate_request, 23)};
+	::std::byte *p{handshake_header_write(msg, handshake_type::certificate_request, 27)};
 	*p++ = ::std::byte{0}; /* no request context */
 	::std::byte *const ext_len{p};
 	p += 2;
@@ -583,7 +585,7 @@ picks within it, in client preference order. Returns 0 when nothing
 overlaps.
 */
 inline constexpr ::std::uint_least16_t
-tls_server_scheme_pick(der_tlv const &leaf_spki_oid,
+tls_server_scheme_pick(der_tlv const &leaf_spki_oid, der_tlv const &leaf_spki_params,
 					   ::std::uint_least16_t const *sigalgs, ::std::size_t sigalg_count) noexcept
 {
 	if (der_oid_eq(leaf_spki_oid, oid::ed25519))
@@ -597,10 +599,33 @@ tls_server_scheme_pick(der_tlv const &leaf_spki_oid,
 		}
 		return 0;
 	}
+	if (der_oid_eq(leaf_spki_oid, oid::ec_public_key))
+	{
+		/* the params OID pins the curve; only P-256/P-384 can sign --
+		   a P-521 leaf gets no scheme */
+		::std::uint_least16_t const want{
+			der_oid_eq(leaf_spki_params, oid::secp256r1)
+				? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp256r1_sha256)
+				: der_oid_eq(leaf_spki_params, oid::secp384r1)
+					  ? static_cast<::std::uint_least16_t>(signature_scheme::ecdsa_secp384r1_sha384)
+					  : static_cast<::std::uint_least16_t>(0)};
+		if (want == 0)
+		{
+			return 0;
+		}
+		for (::std::size_t i{}; i != sigalg_count; ++i)
+		{
+			if (sigalgs[i] == want)
+			{
+				return sigalgs[i];
+			}
+		}
+		return 0;
+	}
 	bool const pss_spki{der_oid_eq(leaf_spki_oid, oid::rsassa_pss)};
 	if (!pss_spki && !der_oid_eq(leaf_spki_oid, oid::rsa_encryption))
 	{
-		return 0; /* ecdsa and friends cannot sign yet */
+		return 0;
 	}
 	::std::uint_least16_t const cands[3]{
 		pss_spki ? static_cast<::std::uint_least16_t>(signature_scheme::rsa_pss_pss_sha256)
@@ -1033,6 +1058,7 @@ details::tls_fail(client->sock_, alert_description::decode_error, false);
 				details::tls_fail(client->sock_, alert_description::internal_error, false);
 			}
 			scheme = tls_server_scheme_pick(leaf.spki_algorithm.oid,
+											leaf.spki_algorithm.params,
 											chi.sigalgs, chi.sigalg_count);
 			if (scheme == 0)
 			{
@@ -1154,7 +1180,7 @@ details::tls_fail(client->sock_, alert_description::decode_error, false);
 			   (post-handshake auth is the mechanism there) */
 			if (cfg->request_client_cert && psk_selected == 0xffff)
 			{
-				certificate_request_write(emit(handshake_header_size + 23));
+				certificate_request_write(emit(handshake_header_size + 27));
 			}
 			fold();
 

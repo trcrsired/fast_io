@@ -18,4 +18,11 @@ export namespace fast_io
         using ::fast_io::curve25519::ed25519_verify_context;
         using ::fast_io::curve25519::default_blinding;
     }
+    namespace ecc
+    {
+        using ::fast_io::ecc::secp256r1;
+        using ::fast_io::ecc::secp384r1;
+        using ::fast_io::ecc::ecdsa_verify_to_ptr;
+        using ::fast_io::ecc::ecdsa_sign_to_ptr;
+    }
 }
