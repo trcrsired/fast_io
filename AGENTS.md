@@ -124,6 +124,20 @@ void foo(T t) noexcept
 
   Prefer named function objects / function pointers; avoid lambdas
   whenever the call goes through a template.
+- Value parameters multiply the same way -- a `template <::std::size_t
+  N>` buffer/capacity instantiates once per N even when the body only
+  uses N as an array bound. If the function does not fundamentally need
+  the constant, take the size as a runtime parameter and let the
+  caller's `obj.data()`/`obj.size()` carry it:
+
+```cpp
+// BAD: f<4096>, f<8192>, f<65536> are three copies of the same loop
+template <::std::size_t N>
+void consume(::fast_io::containers::basic_string<char8_t, ...N...> &s);
+
+// GOOD: one copy, size arrives with the argument
+void consume(char8_t const *data, ::std::size_t size);
+```
 
 ## Dedup near-identical code
 
