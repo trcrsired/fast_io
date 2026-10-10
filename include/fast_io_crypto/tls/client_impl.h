@@ -14,7 +14,7 @@ both stay linux-gated (windows async would come from an iocp backend).
 #include "file.h"
 #include "roots.h"
 #include "swasync.h"
-#if defined(__linux__)
+#if (!defined(_WIN32) || defined(__WINE__)) && !defined(__MSDOS__) && !defined(__wasi__)
 #include "async.h"
 #endif
 /* the OpenSSL backend is a driver living outside this tree:
