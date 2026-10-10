@@ -607,14 +607,14 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_handshake_work(void *
 namespace fast_io
 {
 
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_handshake_callback_define(
 	::fast_io::win32_thread_pool_observer sched,
 	::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::u8cstring_view hostname, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -645,14 +645,14 @@ inline void async_handshake_callback_define(
  * cqe. A rejected work item reports through the callback rather than
  * running the handshake on the submission thread.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_handshake_callback_define(
 	::fast_io::win32_ioring_observer sched,
 	::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::u8cstring_view hostname, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -864,12 +864,12 @@ namespace fast_io
 {
 
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type, typename func>
+		  typename socket_observer_type, typename crypto, typename func>
 	requires(::fast_io::tls::details::tls_generic_sched<
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_pread_some_bytes_underflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::std::byte *first, ::std::size_t count, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -885,12 +885,12 @@ inline void async_pread_some_bytes_underflow_callback_define(
 }
 
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type, typename func>
+		  typename socket_observer_type, typename crypto, typename func>
 	requires(::fast_io::tls::details::tls_generic_sched<
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
 	::fast_io::intfpos_opt off, func callback) noexcept
 {
@@ -906,12 +906,12 @@ inline void async_scatter_pread_some_bytes_underflow_callback_define(
 }
 
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type, typename func>
+		  typename socket_observer_type, typename crypto, typename func>
 	requires(::fast_io::tls::details::tls_generic_sched<
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_pwrite_some_bytes_overflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -935,12 +935,12 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 }
 
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type, typename func>
+		  typename socket_observer_type, typename crypto, typename func>
 	requires(::fast_io::tls::details::tls_generic_sched<
 			 ::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
 	::fast_io::intfpos_opt off, func callback) noexcept
 {
@@ -963,12 +963,12 @@ inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 }
 
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type, typename func>
+		  typename socket_observer_type, typename crypto, typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	async_scheduler_type &&sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	func callback) noexcept
 {
 	auto *client{tob.handle};
@@ -1020,13 +1020,13 @@ generic bounce-buffer emulation takes over -- it drives this observer's
 async read/write defines, which seal/open records correctly per mode.
 */
 template <typename async_scheduler_type, ::std::integral ch_type_out, typename allocator_type_out,
-		  typename socket_observer_type_out, ::std::integral ch_type_in,
-		  typename allocator_type_in, typename socket_observer_type_in, typename func>
+		  typename socket_observer_type_out, typename crypto_out, ::std::integral ch_type_in,
+		  typename allocator_type_in, typename socket_observer_type_in, typename crypto_in, typename func>
 inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 	async_scheduler_type sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out> outstm,
+	::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out> outstm,
 	::fast_io::intfpos_opt off_out,
-	::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in> instm,
+	::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in> instm,
 	::fast_io::intfpos_opt off_in, ::fast_io::size_t_opt bound, func callback) noexcept
 {
 	if (outstm.handle->offloaded_ && instm.handle->offloaded_)
@@ -1040,8 +1040,8 @@ inline void async_transmit_some_bytes_overflow_underflow_callback_define(
 		::std::remove_cvref_t<async_scheduler_type>>;
 	using state_type = ::fast_io::details::async_transmit_bytes_state<
 		false, ::std::remove_cvref_t<async_scheduler_type>,
-		::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out>,
-		::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in>, alloc_type,
+		::fast_io::tls::basic_tls_io_observer<ch_type_out, allocator_type_out, socket_observer_type_out, crypto_out>,
+		::fast_io::tls::basic_tls_io_observer<ch_type_in, allocator_type_in, socket_observer_type_in, crypto_in>, alloc_type,
 		::std::remove_cvref_t<func>>;
 	::std::size_t const remaining{bound.has_opt ? bound.opt
 												: ::std::numeric_limits<::std::size_t>::max()};

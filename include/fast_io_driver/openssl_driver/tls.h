@@ -3,21 +3,18 @@
 /*
 OpenSSL-backed TLS client: an SSL* driven through a pair of memory
 BIOs so it works over any fast_io byte stream (posix fd, win32 socket,
-or anything else satisfying the _bytes ops). Compiled only when
-<openssl/ssl.h> is visible.
+or anything else satisfying the _bytes ops).
+
+This is a driver header: include it explicitly when you want the
+OpenSSL backend. It is never selected automatically -- OpenSSL's
+record layer is a blocking-call API that cannot compose with io_uring
+submission or kTLS offload, and it needs -lssl -lcrypto at link time.
 */
 
-#if !defined(FAST_IO_TLS_HAS_OPENSSL)
-#if __has_include(<openssl/ssl.h>)
-#define FAST_IO_TLS_HAS_OPENSSL 1
-#else
-#define FAST_IO_TLS_HAS_OPENSSL 0
-#endif
-#endif
-
-#if FAST_IO_TLS_HAS_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#include "../../fast_io_dsal/impl/misc/push_macros.h"
 
 namespace fast_io::tls
 {
@@ -516,4 +513,4 @@ using u8iobuf_ossl_tls_socket_file = basic_iobuf_ossl_tls_socket_file<char8_t>;
 
 } // namespace fast_io::tls
 
-#endif
+#include "../../fast_io_dsal/impl/misc/pop_macros.h"

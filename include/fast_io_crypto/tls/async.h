@@ -1109,13 +1109,13 @@ inline void io_uring_tls_close_submit(
  * ESPIPE. A peer alert arrives as a tls_alert-domain error; close_notify
  * is a 0-byte success (eof).
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, ::std::byte *first,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte *first,
 	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	if (off.has_opt)
@@ -1150,13 +1150,13 @@ inline void async_pread_some_bytes_underflow_callback_define(
  * own scatter submit. cb is invoked once as cb(::std::cxx_std_error,
  * io_scatter_status_t) noexcept.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -1196,13 +1196,13 @@ inline void async_scatter_pread_some_bytes_underflow_callback_define(
  * ::std::size_t) noexcept -- the size is plaintext consumed. Positional
  * writes report invalid_seek.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_bytes_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, ::std::byte const *first,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte const *first,
 	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	if (off.has_opt)
@@ -1228,13 +1228,13 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 }
 
 /* vectored form -- cb(::std::cxx_std_error, io_scatter_status_t) */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -1271,13 +1271,13 @@ inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
  * cb(::std::cxx_std_error) noexcept; the descriptor is consumed on every
  * path, including submission failure and a fired timeout.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, func callback) noexcept
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	::fast_io::tls::details::io_uring_tls_close_submit(sched, timeout, tob.handle,
 													   ::std::move(callback));
@@ -1300,12 +1300,12 @@ namespace fast_io::tls
  * their own define (io_uring, the pools), so this only fills gaps.
  */
 template <typename async_scheduler_type, ::std::integral ch_type, typename allocator_type,
-		  typename socket_observer_type,
+		  typename socket_observer_type, typename crypto,
 		  typename func>
 	requires(::fast_io::tls::details::tls_generic_sched<::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_close_define(
 	async_scheduler_type sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, func callback) noexcept
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	if (tob.handle->established_)
 	{
@@ -1470,13 +1470,13 @@ inline void posix_thread_pool_tls_close_dispatch(
  * cb is invoked once as cb(::std::cxx_std_error): domain == nullptr means
  * the stream is established and ready for application I/O.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_handshake_callback_define(
 	::fast_io::posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, ::fast_io::u8cstring_view hostname,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::fast_io::u8cstring_view hostname,
 	func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -1507,13 +1507,13 @@ inline void async_handshake_callback_define(
  * cb is invoked once as cb(::std::cxx_std_error) noexcept; the fd is
  * consumed on every path, including an expired deadline.
  */
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
 		  typename func>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	::fast_io::posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob, func callback) noexcept
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
 	using cookie_type =

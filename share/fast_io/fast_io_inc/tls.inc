@@ -54,17 +54,7 @@ using ::fast_io::tls::u8native_tls_socket_file;
 using ::fast_io::tls::basic_iobuf_native_tls_socket_file;
 using ::fast_io::tls::iobuf_native_tls_socket_file;
 using ::fast_io::tls::u8iobuf_native_tls_socket_file;
-#if FAST_IO_TLS_HAS_OPENSSL
-using ::fast_io::tls::basic_ossl_tls_client;
-using ::fast_io::tls::basic_ossl_tls_io_observer;
-using ::fast_io::tls::basic_ossl_tls;
-using ::fast_io::tls::basic_ossl_tls_socket_file;
-using ::fast_io::tls::ossl_tls_socket_file;
-using ::fast_io::tls::u8ossl_tls_socket_file;
-using ::fast_io::tls::basic_iobuf_ossl_tls_socket_file;
-using ::fast_io::tls::iobuf_ossl_tls_socket_file;
-using ::fast_io::tls::u8iobuf_ossl_tls_socket_file;
-#endif
+
 #if (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 using ::fast_io::tls::details::schannel_out_token;
 using ::fast_io::tls::basic_schannel_tls_client;

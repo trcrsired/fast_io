@@ -16,6 +16,9 @@ both stay linux-gated (windows async would come from an iocp backend).
 #if defined(__linux__)
 #include "async.h"
 #endif
-#include "openssl.h"
+/* the OpenSSL backend is a driver living outside this tree:
+   <fast_io_driver/openssl_driver.h> provides basic_ossl_tls for
+   explicit opt-in use. It never participates in native_tls
+   selection. */
 #include "schannel.h"
 #include "native_backend.h"

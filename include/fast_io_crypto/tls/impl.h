@@ -14,3 +14,4 @@ the kTLS socket glue lives in <fast_io_tls.h> (hosted, Linux).
 #include "record.h"
 #include "x509.h"
 #include "pem.h"
+#include "crypto_backend.h"

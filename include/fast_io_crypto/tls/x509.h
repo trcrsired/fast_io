@@ -919,6 +919,7 @@ cross-signed by a retired GlobalSign root); its name+key still match the
 trusted anchor, so the path must terminate there instead of chasing the
 cross-sign's dead-end issuer.
 */
+template <typename crypto>
 inline constexpr x509_chain_result x509_chain_verify(
 	x509_certificate const *presented, ::std::size_t presented_count,
 	x509_certificate const *roots, ::std::size_t root_count,
@@ -964,7 +965,7 @@ inline constexpr x509_chain_result x509_chain_verify(
 				continue;
 			}
 			root_name_matched = true;
-			if (x509_verify_signature(cur, r.spki_algorithm, r.public_key, r.public_key_size) ==
+			if (crypto::cert_sig_verify(cur, r.spki_algorithm, r.public_key, r.public_key_size) ==
 				x509_verify_result::ok)
 			{
 				return x509_chain_result::ok;
@@ -986,7 +987,7 @@ inline constexpr x509_chain_result x509_chain_verify(
 			{
 				return x509_chain_result::not_ca;
 			}
-			x509_verify_result const vr{x509_verify_signature(cur, presented[i].spki_algorithm,
+			x509_verify_result const vr{crypto::cert_sig_verify(cur, presented[i].spki_algorithm,
 															  presented[i].public_key, presented[i].public_key_size)};
 			if (vr == x509_verify_result::ok)
 			{

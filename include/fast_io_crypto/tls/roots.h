@@ -177,8 +177,8 @@ namespace details
 {
 
 /* hostname form: system trust bundle, chain + SAN checks on */
-template <typename allocator_type, typename socket_observer_type>
-inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observer_type> *client,
+template <typename allocator_type, typename socket_observer_type, typename crypto>
+inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
 								 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
 	auto store{tls_alloc_construct<basic_root_store<allocator_type>, allocator_type>(client->allocator_handle)};
@@ -193,8 +193,8 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 
 } // namespace details
 
-template <::std::integral ch_type, typename allocator_type, typename socket_observer_type>
-inline void handshake_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type> tob,
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto>
+inline void handshake_define(basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 							 ::fast_io::u8cstring_view hostname) FAST_IO_HERBCEPTIONS_THROWS
 {
 	details::tls_client_handshake(tob.handle, hostname);

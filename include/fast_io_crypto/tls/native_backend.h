@@ -21,21 +21,17 @@ namespace fast_io::tls
 
 /*
 which record-layer backend native_tls resolves to on this build --
-schannel on Windows, openssl when its headers are visible, fast_io
-otherwise (or when FAST_IO_TLS_FORCE_FAST_IO is set). `tls_platform::platform`
-names the selected backend.
+schannel on Windows, fast_io otherwise (or when FAST_IO_TLS_FORCE_FAST_IO
+is set). `tls_platform::platform` names the selected backend.
 */
 enum class tls_platform : ::std::uint_least8_t
 {
 	fast_io,  /* fast_io userspace TLS 1.3 (always available) */
-	openssl,  /* SSL* over memory BIOs */
 	schannel, /* Windows SSPI */
 #if FAST_IO_TLS_FORCE_FAST_IO
 	platform = fast_io,
 #elif (defined(_WIN32) && !defined(__WINE__)) || defined(__CYGWIN__)
 	platform = schannel,
-#elif FAST_IO_TLS_HAS_OPENSSL
-	platform = openssl,
 #else
 	platform = fast_io,
 #endif
@@ -45,21 +41,6 @@ enum class tls_platform : ::std::uint_least8_t
 
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
 using basic_native_tls = basic_schannel_tls<basic_native_socket_file<ch_type>, allocator_type>;
-
-using native_tls_socket_file = basic_native_tls<char>;
-using u8native_tls_socket_file = basic_native_tls<char8_t>;
-
-template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_iobuf_native_tls_socket_file =
-	basic_iobuf<basic_native_tls<ch_type, allocator_type>, allocator_type>;
-
-using iobuf_native_tls_socket_file = basic_iobuf_native_tls_socket_file<char>;
-using u8iobuf_native_tls_socket_file = basic_iobuf_native_tls_socket_file<char8_t>;
-
-#elif FAST_IO_TLS_HAS_OPENSSL && !FAST_IO_TLS_FORCE_FAST_IO
-
-template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_native_tls = basic_ossl_tls<basic_native_socket_file<ch_type>, allocator_type>;
 
 using native_tls_socket_file = basic_native_tls<char>;
 using u8native_tls_socket_file = basic_native_tls<char8_t>;

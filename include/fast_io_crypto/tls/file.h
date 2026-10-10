@@ -16,7 +16,8 @@ _bytes ops, tls_close_notify).
 namespace fast_io::tls
 {
 
-template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator>
+template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator,
+		  typename crypto = fast_io_crypto_backend>
 struct basic_tls
 {
 	using char_type = typename socket_type::char_type;
@@ -26,7 +27,7 @@ struct basic_tls
 	   (posix fd observer, win32 socket observer, ...) */
 	using socket_observer_type =
 		decltype(::fast_io::io_stream_ref_define(::std::declval<socket_type &>()));
-	using client_type = basic_tls_client<allocator_type, socket_observer_type>;
+	using client_type = basic_tls_client<allocator_type, socket_observer_type, crypto>;
 	using allocator_handle_type = typename client_type::allocator_handle_type;
 	static inline constexpr bool alloc_with_status{client_type::alloc_with_status};
 
@@ -80,7 +81,7 @@ struct basic_tls
 	   destructor cannot close it again -- the op consumes it) and the
 	   stream's non-owning observer is returned -- the same role
 	   posix_file::release()'s fd plays for posix_io_observer */
-	inline constexpr basic_tls_io_observer<char_type, allocator_type, socket_observer_type> release() noexcept
+	inline constexpr basic_tls_io_observer<char_type, allocator_type, socket_observer_type, crypto> release() noexcept
 		requires requires { socket.release(); }
 	{
 		socket.release();
@@ -88,18 +89,18 @@ struct basic_tls
 	}
 };
 
-template <typename socket_type, typename allocator_type>
+template <typename socket_type, typename allocator_type, typename crypto>
 inline constexpr basic_tls_io_observer<typename socket_type::char_type, allocator_type,
-									   typename basic_tls<socket_type, allocator_type>::socket_observer_type>
-io_stream_ref_define(basic_tls<socket_type, allocator_type> &t) noexcept
+									   typename basic_tls<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
+io_stream_ref_define(basic_tls<socket_type, allocator_type, crypto> &t) noexcept
 {
 	return {__builtin_addressof(t.client)};
 }
 
-template <typename socket_type, typename allocator_type>
+template <typename socket_type, typename allocator_type, typename crypto>
 inline constexpr basic_tls_io_observer<char, allocator_type,
-									   typename basic_tls<socket_type, allocator_type>::socket_observer_type>
-io_bytes_stream_ref_define(basic_tls<socket_type, allocator_type> &t) noexcept
+									   typename basic_tls<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
+io_bytes_stream_ref_define(basic_tls<socket_type, allocator_type, crypto> &t) noexcept
 {
 	return {__builtin_addressof(t.client)};
 }
