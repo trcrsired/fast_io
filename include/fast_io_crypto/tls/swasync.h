@@ -573,6 +573,63 @@ inline void tls_win32_pool_handshake_dispatch(
 	callback(err);
 }
 
+/* server-side sibling: the argument is a tls_server_config -- the
+   shallow copy keeps the caller-owned DER lifetime contract */
+template <typename client_t, typename func>
+struct tls_win32_pool_server_handshake_cookie : ::fast_io::details::win32_thread_pool_node
+{
+	using allocator_type = ::fast_io::native_global_allocator;
+	client_t *client{};
+	tls_server_config cfg{};
+	::std::uint_least64_t deadline{};
+	func callback;
+	::std::cxx_std_error err{};
+
+	inline tls_win32_pool_server_handshake_cookie(client_t *c, tls_server_config const &server_cfg,
+												  ::fast_io::posix_statx_timestamp_opt timeout,
+												  func &&cb) noexcept
+		: client{c}, cfg{server_cfg}, callback{::std::move(cb)}
+	{
+		if (timeout.has_opt)
+		{
+			this->deadline =
+				::fast_io::details::win32_thread_pool_deadline(timeout.opt);
+		}
+	}
+};
+
+template <typename client_t, typename func>
+inline void tls_win32_pool_server_handshake_run(::fast_io::details::win32_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<tls_win32_pool_server_handshake_cookie<client_t, func> *>(p)};
+	try
+	{
+		if (::fast_io::details::win32_thread_pool_expired(self->deadline))
+		{
+			self->err =
+				::fast_io::details::async_make_error(::std::errc::timed_out);
+			return;
+		}
+		::fast_io::tls::details::tls_server_handshake(self->client,
+													  __builtin_addressof(self->cfg));
+	}
+	catch throws(::std::error e)
+	{
+		self->err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+inline void tls_win32_pool_server_handshake_dispatch(
+	::fast_io::details::win32_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<tls_win32_pool_server_handshake_cookie<client_t, func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
 #if !defined(_WIN32_WINDOWS)
 /* ---------------- win11 IoRing: handshake on a worker, ferried through the ring ---------------- */
 
@@ -646,6 +703,70 @@ inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_handshake_work(void *
 	return 0;
 }
 
+/* server-side sibling of the ioring cookie: a tls_server_config rides
+   in the state base instead of a hostname */
+struct tls_ioring_server_handshake_state_base : ::fast_io::details::win32_ioring_state_base
+{
+	tls_server_config cfg{};
+	::std::uint_least64_t deadline{};
+	::std::cxx_std_error result{};
+};
+
+template <typename client_t, typename func, typename alloc_type>
+struct tls_ioring_server_handshake_cookie
+{
+	using allocator_type = alloc_type;
+	static inline constexpr bool alloc_with_status{allocator_type::has_status};
+	tls_ioring_server_handshake_state_base base;
+	client_t *client;
+	func callback;
+	FAST_IO_NO_UNIQUE_ADDRESS ::std::conditional_t<alloc_with_status,
+												   typename allocator_type::handle_type,
+												   ::fast_io::details::empty>
+		alloc_handle{};
+};
+
+template <typename alloc_type, typename client_t, typename func>
+inline void tls_ioring_server_handshake_deliver(void *self, ::std::uintptr_t,
+												::std::uint_least32_t) noexcept
+{
+	using cookie_type = tls_ioring_server_handshake_cookie<client_t, func, alloc_type>;
+	auto *cookie{static_cast<cookie_type *>(self)};
+	auto callback{::std::move(cookie->callback)};
+	auto err{cookie->base.result};
+	::fast_io::details::async_delete_state(cookie);
+	callback(err);
+}
+
+template <typename cookie_type>
+inline ::std::uint_least32_t FAST_IO_WINSTDCALL tls_ioring_server_handshake_work(void *context) noexcept
+{
+	auto *cookie{static_cast<cookie_type *>(context)};
+	try
+	{
+		if (::fast_io::details::win32_thread_pool_expired(cookie->base.deadline))
+		{
+			cookie->base.result =
+				::fast_io::details::async_make_error(::std::errc::timed_out);
+		}
+		else
+		{
+			::fast_io::tls::details::tls_server_handshake(cookie->client,
+														  __builtin_addressof(cookie->base.cfg));
+		}
+	}
+	catch throws(::std::error e)
+	{
+		cookie->base.result = e.release();
+	}
+	if (!::fast_io::details::win32_ioring_ferry_completion(
+			__builtin_addressof(cookie->base))) [[unlikely]]
+	{
+		cookie->base.invoke(__builtin_addressof(cookie->base), 0, 0);
+	}
+	return 0;
+}
+
 #endif
 
 #endif
@@ -678,6 +799,37 @@ inline void async_handshake_callback_define(
 			&::fast_io::tls::details::tls_win32_pool_handshake_run<client_type, fcb>;
 		cookie->dispatch =
 			&::fast_io::tls::details::tls_win32_pool_handshake_dispatch<client_type, fcb>;
+		::fast_io::details::win32_thread_pool_submit(sched.native_handle(), cookie);
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+	}
+}
+
+/* server-side: the argument is a tls_server_config */
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
+		  typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_handshake_callback_define(
+	::fast_io::win32_thread_pool_observer sched,
+	::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::tls_server_config cfg, func callback) noexcept
+{
+	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
+	using fcb = ::std::remove_cvref_t<func>;
+	using cookie_type =
+		::fast_io::tls::details::tls_win32_pool_server_handshake_cookie<client_type, fcb>;
+	try
+	{
+		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
+			sched, tob.handle, cfg, timeout, ::std::move(callback))};
+		cookie->run =
+			&::fast_io::tls::details::tls_win32_pool_server_handshake_run<client_type, fcb>;
+		cookie->dispatch =
+			&::fast_io::tls::details::tls_win32_pool_server_handshake_dispatch<client_type, fcb>;
 		::fast_io::details::win32_thread_pool_submit(sched.native_handle(), cookie);
 	}
 	catch throws(::std::error e)
@@ -742,6 +894,54 @@ inline void async_handshake_callback_define(
 		callback(e.release());
 	}
 }
+
+/* server-side ioring handshake: tls_server_config rides in the state base */
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
+		  typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_handshake_callback_define(
+	::fast_io::win32_ioring_observer sched,
+	::fast_io::posix_statx_timestamp_opt timeout,
+	::fast_io::tls::basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	::fast_io::tls::tls_server_config cfg, func callback) noexcept
+{
+	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
+	using fcb = ::std::remove_cvref_t<func>;
+	using alloc_type =
+		::fast_io::details::async_scheduler_allocator_t<::fast_io::win32_ioring_observer>;
+	using cookie_type =
+		::fast_io::tls::details::tls_ioring_server_handshake_cookie<client_type, fcb, alloc_type>;
+	try
+	{
+		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
+			sched,
+			::fast_io::tls::details::tls_ioring_server_handshake_state_base{
+				{&::fast_io::tls::details::tls_ioring_server_handshake_deliver<alloc_type, client_type, fcb>,
+				 sched.native_handle(),
+				 reinterpret_cast<void *>(tob.handle->sock_.hsocket)},
+				cfg,
+				timeout.has_opt
+					? ::fast_io::details::win32_thread_pool_deadline(timeout.opt)
+					: 0u,
+				{}},
+			tob.handle, fcb{::std::move(callback)})};
+		if (::fast_io::win32::QueueUserWorkItem(
+				&::fast_io::tls::details::tls_ioring_server_handshake_work<cookie_type>, cookie,
+				0x00000010u) == 0) [[unlikely]]
+		{
+			auto cb{::std::move(cookie->callback)};
+			::fast_io::details::async_delete_state(cookie);
+			cb(::fast_io::details::async_make_error(
+				static_cast<::fast_io::freestanding::win32_errc>(
+					static_cast<::std::uint_least32_t>(::fast_io::win32::GetLastError()))));
+		}
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+	}
+}
 #endif
 
 } // namespace fast_io
@@ -750,15 +950,62 @@ inline void async_handshake_callback_define(
 namespace fast_io::operations::decay::defines
 {
 
-template <typename async_scheduler_type, typename streamtype, typename callback_type>
+template <typename async_scheduler_type, typename streamtype, typename argtype, typename callback_type>
 concept has_async_handshake_callback_define = requires(async_scheduler_type sched,
 													   ::fast_io::posix_statx_timestamp_opt timeout,
-													   streamtype stm, ::fast_io::u8cstring_view hostname,
+													   streamtype stm, argtype arg,
 													   callback_type callback) {
-	async_handshake_callback_define(sched, timeout, stm, hostname, callback);
+	async_handshake_callback_define(sched, timeout, stm, arg, callback);
 };
 
 } // namespace fast_io::operations::decay::defines
+
+namespace fast_io::details
+{
+
+/*
+handshake argument lifetime: the caller's view (hostname) decays to an
+owned copy; value arguments (tls_server_config) store as-is.
+*/
+template <typename T>
+struct async_handshake_stored_arg
+{
+	using type = ::std::remove_cvref_t<T>;
+	static constexpr type store(type t) noexcept(noexcept(type{static_cast<type&&>(t)}))
+	{
+		return static_cast<type&&>(t);
+	}
+};
+template <>
+struct async_handshake_stored_arg<::fast_io::u8cstring_view>
+{
+	using type = ::fast_io::u8string;
+	static type store(::fast_io::u8cstring_view v) FAST_IO_HERBCEPTIONS_THROWS
+	{
+		return type{v.data(), v.data() + v.size()};
+	}
+};
+
+/* the submit-time shape of a stored argument: u8string goes back out
+   as the view the define wants, everything else forwards as stored */
+template <typename stored_t>
+struct async_handshake_submit_arg
+{
+	static constexpr stored_t const &get(stored_t const &t) noexcept
+	{
+		return t;
+	}
+};
+template <>
+struct async_handshake_submit_arg<::fast_io::u8string>
+{
+	static ::fast_io::u8cstring_view get(::fast_io::u8string const &t) noexcept
+	{
+		return ::fast_io::u8cstring_view{::fast_io::freestanding::from_range, t};
+	}
+};
+
+} // namespace fast_io::details
 
 namespace fast_io::operations::decay
 {
@@ -767,23 +1014,25 @@ namespace fast_io::operations::decay
  * Public callback entry for an asynchronous TLS handshake: submits the
  * stream's async_handshake_callback_define, found by ADL on the
  * scheduler/stream types. instm is reduced to its io_stream_ref first,
- * so basic_tls and buffered TLS streams arrive as the observer.
+ * so basic_tls and buffered TLS streams arrive as the observer. The arg
+ * is the handshake parameter -- u8cstring_view hostname for a client,
+ * tls_server_config for a server.
  *
  * The functor is invoked once as callback(::std::cxx_std_error)
  * noexcept: domain == nullptr means the handshake completed and the
  * stream carries established application traffic keys.
  */
-template <typename async_scheduler_type, typename streamtype, typename callback_type>
+template <typename async_scheduler_type, typename streamtype, typename argtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_completion_callback<
 				 ::std::remove_cvref_t<callback_type>> &&
 			 ::fast_io::operations::decay::defines::has_async_handshake_callback_define<
-				 async_scheduler_type, streamtype, ::std::remove_cvref_t<callback_type>>
+				 async_scheduler_type, streamtype, argtype, ::std::remove_cvref_t<callback_type>>
 inline void async_handshake_decay_callback(async_scheduler_type scheduler,
 										   ::fast_io::posix_statx_timestamp_opt timeout,
-										   streamtype stm, ::fast_io::u8cstring_view hostname,
+										   streamtype stm, argtype arg,
 										   callback_type callback) noexcept
 {
-	async_handshake_callback_define(scheduler, timeout, stm, hostname, ::std::move(callback));
+	async_handshake_callback_define(scheduler, timeout, stm, arg, ::std::move(callback));
 }
 
 } // namespace fast_io::operations::decay
@@ -792,23 +1041,23 @@ namespace fast_io::details
 {
 
 /*
- * coroutine awaiter for async_handshake_decay. The hostname is copied
- * into the awaiter — the co_await expression's temporaries are gone by
+ * coroutine awaiter for async_handshake_decay. The argument is stored
+ * in the awaiter — the co_await expression's temporaries are gone by
  * the time await_suspend submits.
  */
-template <typename scheduler, typename streamtype>
+template <typename scheduler, typename streamtype, typename stored_arg>
 struct async_handshake_awaiter : async_awaiter_result<void>
 {
 	scheduler sched;
 	streamtype stm;
-	::fast_io::u8string hostname;
+	stored_arg arg;
 	::fast_io::posix_statx_timestamp_opt timeout;
 	inline bool await_suspend(::std::coroutine_handle<> h) noexcept
 	{
 		this->coro = h;
 		::fast_io::operations::decay::async_handshake_decay_callback(
 			sched, timeout, stm,
-			::fast_io::u8cstring_view{::fast_io::freestanding::from_range, hostname},
+			::fast_io::details::async_handshake_submit_arg<stored_arg>::get(arg),
 			::fast_io::details::async_awaiter_callback<void>{this});
 		return this->async_suspend_done();
 	}
@@ -832,13 +1081,15 @@ namespace fast_io::operations::decay
  * Coroutine form of async_handshake: suspends until the handshake
  * resolves; await_resume() rethrows the error through the channel.
  */
-template <typename async_scheduler_type, typename streamtype>
+template <typename async_scheduler_type, typename streamtype, typename argtype>
 inline auto async_handshake_decay(async_scheduler_type scheduler,
 								  ::fast_io::posix_statx_timestamp_opt timeout, streamtype stm,
-								  ::fast_io::u8cstring_view hostname) noexcept
+								  argtype arg) noexcept
 {
-	return ::fast_io::details::async_handshake_awaiter<async_scheduler_type, streamtype>{
-		{}, scheduler, stm, ::fast_io::u8string{hostname.data(), hostname.data() + hostname.size()}, timeout};
+	using traits = ::fast_io::details::async_handshake_stored_arg<::std::remove_cvref_t<argtype>>;
+	return ::fast_io::details::async_handshake_awaiter<async_scheduler_type, streamtype,
+													 typename traits::type>{
+		{}, scheduler, stm, traits::store(arg), timeout};
 }
 
 } // namespace fast_io::operations::decay
@@ -858,33 +1109,37 @@ namespace fast_io::operations
  * coroutine form suspends until the handshake resolves and
  * await_resume() rethrows the error through the channel.
  */
-template <typename async_scheduler_type, typename streamtype>
+template <typename async_scheduler_type, typename streamtype, typename argtype>
 inline auto async_handshake(async_scheduler_type &&scheduler,
 							::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
-							::fast_io::u8cstring_view hostname) noexcept
+							argtype arg) noexcept
 	requires(::fast_io::operations::decay::defines::has_async_handshake_callback_define<
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(stm))>,
+			 decltype(::fast_io::details::async_handshake_submit_arg<
+						  ::std::remove_cvref_t<argtype>>::get(*static_cast<::std::remove_cvref_t<argtype> const *>(nullptr))),
 			 ::fast_io::details::async_io_error_callback>)
 {
 	return ::fast_io::operations::decay::async_handshake_decay(
 		::fast_io::operations::async_scheduler_ref(scheduler), timeout,
-		::fast_io::operations::io_stream_ref(stm), hostname);
+		::fast_io::operations::io_stream_ref(stm), arg);
 }
 
-template <typename async_scheduler_type, typename streamtype, typename callback_type>
+template <typename async_scheduler_type, typename streamtype, typename argtype, typename callback_type>
 inline void async_handshake_callback(async_scheduler_type &&scheduler,
 									 ::fast_io::posix_statx_timestamp_opt timeout, streamtype &&stm,
-									 ::fast_io::u8cstring_view hostname,
+									 argtype arg,
 									 callback_type callback) noexcept
 	requires(::fast_io::operations::decay::defines::has_async_handshake_callback_define<
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::async_scheduler_ref(scheduler))>,
 			 ::std::remove_cvref_t<decltype(::fast_io::operations::io_stream_ref(stm))>,
+			 decltype(::fast_io::details::async_handshake_submit_arg<
+						  ::std::remove_cvref_t<argtype>>::get(*static_cast<::std::remove_cvref_t<argtype> const *>(nullptr))),
 			 ::std::remove_cvref_t<callback_type>>)
 {
 	::fast_io::operations::decay::async_handshake_decay_callback(
 		::fast_io::operations::async_scheduler_ref(scheduler), timeout,
-		::fast_io::operations::io_stream_ref(stm), hostname, ::std::move(callback));
+		::fast_io::operations::io_stream_ref(stm), arg, ::std::move(callback));
 }
 
 } // namespace fast_io::operations

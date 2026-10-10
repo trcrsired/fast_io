@@ -1409,6 +1409,8 @@ need not outlive submission.
 */
 inline void posix_thread_pool_tls_handshake_run(
 	::fast_io::details::posix_thread_pool_node *p) noexcept;
+inline void posix_thread_pool_tls_server_handshake_run(
+	::fast_io::details::posix_thread_pool_node *p) noexcept;
 inline void posix_thread_pool_tls_close_run(
 	::fast_io::details::posix_thread_pool_node *p) noexcept;
 
@@ -1499,6 +1501,96 @@ inline void posix_thread_pool_tls_handshake_run(
 	self->handshake_fn(self->client,
 					   ::fast_io::u8cstring_view{::fast_io::freestanding::from_range,
 												 self->hostname},
+					   __builtin_addressof(self->err));
+}
+
+/*
+server-side sibling: same worker model, but the argument is a
+tls_server_config -- the shallow copy is safe because the sync driver
+borrows the same caller-owned DER pointers.
+*/
+struct posix_thread_pool_tls_server_handshake_cookie_base : ::fast_io::details::posix_thread_pool_node
+{
+	using allocator_type = ::fast_io::native_global_allocator;
+	void *client{};
+	tls_server_config cfg{};
+	::timespec deadline{};
+	bool has_deadline{};
+	::std::cxx_std_error err{};
+	void (*handshake_fn)(void *client, tls_server_config const *cfg,
+						 ::std::cxx_std_error *err) noexcept {};
+
+	inline posix_thread_pool_tls_server_handshake_cookie_base(
+		void *c, tls_server_config const &server_cfg,
+		::fast_io::posix_statx_timestamp_opt timeout) noexcept
+		: client{c}, cfg{server_cfg}, has_deadline{timeout.has_opt}
+	{
+		if (timeout.has_opt)
+		{
+			this->deadline = ::fast_io::details::posix_thread_pool_deadline(timeout.opt);
+		}
+	}
+};
+
+template <typename client_t>
+inline void posix_thread_pool_tls_server_handshake_cb(void *cc, tls_server_config const *cfg,
+													  ::std::cxx_std_error *err) noexcept
+{
+	try
+	{
+		tls_server_handshake(static_cast<client_t *>(cc), cfg);
+	}
+	catch throws(::std::error e)
+	{
+		*err = e.release();
+	}
+}
+
+template <typename client_t, typename func>
+struct posix_thread_pool_tls_server_handshake_cookie;
+
+template <typename client_t, typename func>
+inline void posix_thread_pool_tls_server_handshake_dispatch_cb(
+	::fast_io::details::posix_thread_pool_node *p) noexcept
+{
+	auto *self{static_cast<posix_thread_pool_tls_server_handshake_cookie<client_t, func> *>(p)};
+	auto callback{::std::move(self->callback)};
+	auto err{self->err};
+	::fast_io::details::async_delete_state(self);
+	callback(err);
+}
+
+template <typename client_t, typename func>
+struct posix_thread_pool_tls_server_handshake_cookie
+	: posix_thread_pool_tls_server_handshake_cookie_base
+{
+	func callback;
+
+	inline posix_thread_pool_tls_server_handshake_cookie(
+		client_t *c, tls_server_config const &server_cfg,
+		::fast_io::posix_statx_timestamp_opt timeout,
+		func &&cb) FAST_IO_HERBCEPTIONS_THROWS
+		: posix_thread_pool_tls_server_handshake_cookie_base{c, server_cfg, timeout},
+		  callback{::std::move(cb)}
+	{
+		this->handshake_fn = &posix_thread_pool_tls_server_handshake_cb<client_t>;
+		this->run = posix_thread_pool_tls_server_handshake_run;
+		this->dispatch = &posix_thread_pool_tls_server_handshake_dispatch_cb<client_t, func>;
+	}
+};
+
+inline void posix_thread_pool_tls_server_handshake_run(
+	::fast_io::details::posix_thread_pool_node *p) noexcept
+{
+	auto *self{
+		static_cast<posix_thread_pool_tls_server_handshake_cookie_base *>(p)};
+	if (self->has_deadline &&
+		::fast_io::details::posix_thread_pool_expired(self->deadline))
+	{
+		self->err = ::fast_io::details::async_make_error(::std::errc::timed_out);
+		return;
+	}
+	self->handshake_fn(self->client, __builtin_addressof(self->cfg),
 					   __builtin_addressof(self->err));
 }
 
@@ -1630,6 +1722,36 @@ inline void async_handshake_callback_define(
 	{
 		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
 			sched, tob.handle, hostname, timeout, ::std::move(callback))};
+		::fast_io::details::posix_thread_pool_submit(sched.native_handle(), cookie);
+	}
+	catch throws(::std::error e)
+	{
+		callback(e.release());
+	}
+}
+
+/*
+ * server-side async_handshake_callback_define: same worker model, the
+ * argument is a tls_server_config. The shallow copy keeps the
+ * caller-owned DER lifetime contract of the sync handshake.
+ */
+template <::std::integral ch_type, typename allocator_type, typename socket_observer_type, typename crypto,
+		  typename func>
+	requires ::fast_io::operations::decay::defines::async_completion_callback<
+		::std::remove_cvref_t<func>>
+inline void async_handshake_callback_define(
+	::fast_io::posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
+	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, tls_server_config cfg,
+	func callback) noexcept
+{
+	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
+	using cookie_type =
+		::fast_io::tls::details::posix_thread_pool_tls_server_handshake_cookie<client_type,
+																			 ::std::remove_cvref_t<func>>;
+	try
+	{
+		auto *cookie{::fast_io::details::async_new_state_plain<cookie_type>(
+			sched, tob.handle, cfg, timeout, ::std::move(callback))};
 		::fast_io::details::posix_thread_pool_submit(sched.native_handle(), cookie);
 	}
 	catch throws(::std::error e)
