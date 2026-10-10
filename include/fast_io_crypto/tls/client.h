@@ -355,7 +355,7 @@ struct sw_seal_result
 template <typename allocator_type = ::fast_io::native_global_allocator,
 		  typename socket_observer_type = ::fast_io::native_socket_io_observer,
 		  typename crypto = tls_default_crypto>
-struct basic_tls_client
+struct basic_tls13_client
 {
 	using allocator_handle_type = typename allocator_type::handle_type;
 	using socket_observer = socket_observer_type;
@@ -382,23 +382,23 @@ struct basic_tls_client
 	bool established_{};
 	bool offloaded_{};
 
-	inline constexpr basic_tls_client() noexcept = default;
-	inline explicit constexpr basic_tls_client(socket_observer_type sock) noexcept
+	inline constexpr basic_tls13_client() noexcept = default;
+	inline explicit constexpr basic_tls13_client(socket_observer_type sock) noexcept
 		: sock_{sock},
 		  rx_pending_{tls_alloc_construct<::fast_io::vector<::std::byte, allocator_type>,
 										  allocator_type>(allocator_handle)}
 	{}
-	inline constexpr basic_tls_client(socket_observer_type sock,
+	inline constexpr basic_tls13_client(socket_observer_type sock,
 									  allocator_handle_type hdl) noexcept
 		: sock_{sock}, allocator_handle{hdl},
 		  rx_pending_{tls_alloc_construct<::fast_io::vector<::std::byte, allocator_type>,
 										  allocator_type>(hdl)}
 	{}
 
-	basic_tls_client(basic_tls_client const &) = delete;
-	basic_tls_client &operator=(basic_tls_client const &) = delete;
+	basic_tls13_client(basic_tls13_client const &) = delete;
+	basic_tls13_client &operator=(basic_tls13_client const &) = delete;
 	/* move copies the state and wipes the source's secret bytes */
-	inline basic_tls_client(basic_tls_client &&other) noexcept
+	inline basic_tls13_client(basic_tls13_client &&other) noexcept
 		: sock_{other.sock_}, allocator_handle{other.allocator_handle}, suite_{other.suite_},
 		  secret_size_{other.secret_size_}, tx_seq_{other.tx_seq_}, rx_seq_{other.rx_seq_},
 		  rx_pending_{::std::move(other.rx_pending_)},
@@ -413,7 +413,7 @@ struct basic_tls_client
 		::fast_io::freestanding::non_overlapped_copy_n(other.rx_iv_, sizeof(other.rx_iv_), rx_iv_);
 		::fast_io::secure_clear(__builtin_addressof(other), sizeof(other));
 	}
-	inline basic_tls_client &operator=(basic_tls_client &&other) noexcept
+	inline basic_tls13_client &operator=(basic_tls13_client &&other) noexcept
 	{
 		if (__builtin_addressof(other) == this)
 		{
@@ -444,7 +444,7 @@ struct basic_tls_client
 	}
 };
 
-using tls_client = basic_tls_client<>;
+using tls13_client = basic_tls13_client<>;
 
 namespace details
 {
@@ -452,63 +452,63 @@ namespace details
 /* declarations for the client free-function machinery below (mutual
    recursion makes ordering insufficient) */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_handshake(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 								 tls13_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_read_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_read_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 										  ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_write_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_write_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 										   ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_read_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_sw_read_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											 ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_write_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_sw_write_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											  ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_process_post_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_process_post_handshake(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											  ::std::byte const *msgs, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending(basic_tls_client<allocator_type, socket_observer_type, crypto> const *client) noexcept;
+inline ::std::size_t tls_client_rx_pending(basic_tls13_client<allocator_type, socket_observer_type, crypto> const *client) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_rx_pending_drain(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												 ::std::byte *buf, ::std::size_t n) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_rx_pending_drain(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												 ::fast_io::io_scatter_t const *sc, ::std::size_t nsc) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_rx_pending_stash(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_rx_pending_stash(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 										::std::byte const *pt, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline sw_record_result tls_client_sw_open_record(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline sw_record_result tls_client_sw_open_record(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												  ::std::byte const *rec, ::std::size_t rec_size,
 												  ::std::byte *innerbuf) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline sw_seal_result tls_client_sw_seal_appdata(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline sw_seal_result tls_client_sw_seal_appdata(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												 ::std::byte *out, ::fast_io::io_scatter_t const *pt,
 												 ::std::size_t npt) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_seal_alert(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_sw_seal_alert(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											  ::std::byte *out, alert_description desc) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_key_update_received(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_key_update_received(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 										   ::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_set_established(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_set_established(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 									   cipher_suite suite,
 									   ::std::byte const *tx_secret, ::std::byte const *rx_secret,
 									   ::std::size_t secret_size, bool offloaded,
 									   app_traffic_key_iv const &tx_key_iv,
 									   app_traffic_key_iv const &rx_key_iv) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_send_alert(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_send_alert(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 								  alert_description desc) noexcept;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-[[noreturn]] inline void tls_client_fail(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+[[noreturn]] inline void tls_client_fail(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 										 alert_description desc) FAST_IO_HERBCEPTIONS_THROWS;
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_send_close_notify(basic_tls_client<allocator_type, socket_observer_type, crypto> *client) noexcept;
+inline void tls_client_send_close_notify(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client) noexcept;
 
 } // namespace details
 
@@ -755,7 +755,7 @@ hashes CH..Certificate; server Finished's verify_data MACs CH..CV. Both
 exclude the message carrying them, so the running hash is snapshotted
 before each message is folded in.
 */
-template <typename hash_ctx, typename crypto, typename allocator_type, typename stmtype>
+template <typename crypto, typename allocator_type, typename stmtype>
 inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 								   ::std::byte const *shared_secret,
 								   ::std::byte const *ch_msg, ::std::size_t ch_msg_size,
@@ -769,25 +769,26 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 								   ::std::byte *tx_secret_out, ::std::byte *rx_secret_out,
 								   ::std::size_t *secret_size_out) FAST_IO_HERBCEPTIONS_THROWS
 {
-	constexpr ::std::size_t digest_size{hash_ctx::digest_size};
+	typename crypto::md const md{crypto::md_for(suite)};
+	::std::size_t const digest_size{crypto::md_digest_size(md)};
 	*secret_size_out = digest_size;
 
-	hash_ctx transcript{};
+	typename crypto::hash_ctx transcript{md};
 	transcript.update(ch_msg, ch_msg + ch_msg_size);
 	transcript.update(sh_msg, sh_msg + sh_msg_size);
 
-	::fast_io::tls::details::key_schedule<hash_ctx> ks{};
+	::fast_io::tls::details::key_schedule<crypto> ks{md};
 	ks.init_early();
 	ks.derive_empty();
 	ks.extract_into(shared_secret, 32); /* handshake secret */
 
-	::std::byte c_hs[digest_size], s_hs[digest_size];
+	::std::byte c_hs[64], s_hs[64];
 	ks.derive_to_ptr(c_hs, u8"c hs traffic", 12, transcript);
 	ks.derive_to_ptr(s_hs, u8"s hs traffic", 12, transcript);
 
 	::std::byte key[32], iv[12];
 	::std::size_t const key_size{::fast_io::tls::details::cipher_suite_key_size(suite)};
-	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, s_hs);
+	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, s_hs);
 	/* userspace AEAD for the handshake epoch: openssl does the same --
 	   only the application epoch goes to the kernel */
 	::std::byte hs_rx_key[32], hs_rx_iv[12];
@@ -809,7 +810,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	::std::size_t cr_context_size{};
 	signature_scheme cv_scheme{};
 	auto cv_sig{tls_alloc_construct<::fast_io::vector<::std::byte, allocator_type>, allocator_type>(alloc)};
-	::std::byte cv_transcript[digest_size]; /* Hash(CH..Certificate) */
+	::std::byte cv_transcript[64]; /* Hash(CH..Certificate) */
 
 	auto q{tls_alloc_construct<details::basic_handshake_queue<allocator_type>, allocator_type>(alloc)};
 	::std::byte recbuf[17408];
@@ -822,7 +823,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		{
 			/* snapshot BEFORE this msg: CV covered and Fin MAC hash only
 			   the preceding handshake messages */
-			hash_ctx pre{transcript};
+			typename crypto::hash_ctx pre{transcript};
 			switch (mt)
 			{
 			case handshake_type::encrypted_extensions:
@@ -906,7 +907,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 				cv_sig.assign(cvi.signature_size, {});
 				::fast_io::freestanding::non_overlapped_copy_n(cvi.signature, cvi.signature_size, cv_sig.data());
 				/* pre holds Hash(CH..Certificate) -- what the CV signs */
-				::fast_io::tls::details::transcript_digest_to_ptr(pre, cv_transcript);
+				::fast_io::tls::details::transcript_digest_to_ptr<crypto>(pre, cv_transcript);
 				state = want_fin;
 				break;
 			}
@@ -917,8 +918,8 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 					details::tls13_fail(sock, alert_description::decode_error, false);
 				}
 				/* pre holds Hash(CH..CV) -- what server Finished MACs */
-				::std::byte expect[digest_size];
-				::fast_io::tls::details::finished_verify_data_to_ptr<hash_ctx>(expect, s_hs, pre);
+				::std::byte expect[64];
+				::fast_io::tls::details::finished_verify_data_to_ptr<crypto>(md, expect, s_hs, pre);
 				bool same{true};
 				for (::std::size_t i{}; i != digest_size; ++i)
 				{
@@ -1021,10 +1022,10 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 
 	/* ---- CertificateVerify over covered content ---- */
 	{
-		constexpr ::std::size_t covered_size{
+		::std::size_t const covered_size{
 			::fast_io::tls::details::certificate_verify_content_prefix_size + digest_size};
-		::std::byte covered[covered_size];
-		::fast_io::tls::details::certificate_verify_content_write<hash_ctx>(covered, cv_transcript);
+		::std::byte covered[::fast_io::tls::details::certificate_verify_content_prefix_size + 64];
+		::fast_io::tls::details::certificate_verify_content_write(covered, cv_transcript, digest_size);
 		switch (crypto::cert_cv_verify(
 			cv_scheme, covered, covered_size, cv_sig.data(), cv_sig.size(), presented[0]))
 		{
@@ -1039,10 +1040,10 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 
 	/* ---- master secret + application traffic secrets ---- */
 	ks.derive_empty();
-	::std::byte zero[digest_size]{};
+	::std::byte zero[64]{};
 	ks.extract_into(zero, digest_size); /* master secret */
 
-	::std::byte c_ap[digest_size], s_ap[digest_size];
+	::std::byte c_ap[64], s_ap[64];
 	ks.derive_to_ptr(c_ap, u8"c ap traffic", 12, transcript);
 	ks.derive_to_ptr(s_ap, u8"s ap traffic", 12, transcript);
 
@@ -1056,7 +1057,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		*p++ = ::std::byte{1};
 		details::tls_write_full(sock, ccs, static_cast<::std::size_t>(p - ccs));
 	}
-	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, c_hs);
+	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_hs);
 	::std::byte hs_tx_key[32], hs_tx_iv[12];
 	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_tx_key);
 	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_tx_iv);
@@ -1074,8 +1075,8 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 		fp = wire_put_u24(fp, 0); /* empty certificate_list */
 		transcript.update(flight, fp);
 	}
-	::std::byte fin[digest_size];
-	::fast_io::tls::details::finished_verify_data_to_ptr<hash_ctx>(fin, c_hs, transcript);
+	::std::byte fin[64];
+	::fast_io::tls::details::finished_verify_data_to_ptr<crypto>(md, fin, c_hs, transcript);
 	::std::byte *const fin_start{fp};
 	fp = details::handshake_header_write(fp, handshake_type::finished, digest_size);
 	fp = wire_put_bytes(fp, fin, digest_size);
@@ -1093,14 +1094,14 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	   only when the ulp attached (a half-installed offload would leave
 	   one direction kernel-encrypted and the other userspace -- a
 	   set_key failure is fatal, not a fallback) */
-	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, c_ap);
+	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_ap);
 	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, tx_key_iv_out->key);
 	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, tx_key_iv_out->iv);
 	if (offload)
 	{
 		::fast_io::tls::details::ktls_offload_key(sock, details::tls_tx, suite, key, iv);
 	}
-	::fast_io::tls::details::traffic_key_iv_to_ptr<hash_ctx>(key, key_size, iv, s_ap);
+	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, s_ap);
 	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, rx_key_iv_out->key);
 	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, rx_key_iv_out->iv);
 	if (offload)
@@ -1141,20 +1142,10 @@ inline void ktls_handshake_dispatch(stmtype sock, cipher_suite suite,
 									::std::byte *tx_secret_out, ::std::byte *rx_secret_out,
 									::std::size_t *secret_size_out) FAST_IO_HERBCEPTIONS_THROWS
 {
-	if (suite == cipher_suite::aes_256_gcm_sha384)
-	{
-		ktls_handshake_flight2<typename crypto::sha384, crypto>(sock, suite, shared_secret,
+	ktls_handshake_flight2<crypto>(sock, suite, shared_secret,
 																ch_msg, ch_msg_size, sh_msg, sh_msg_size,
 																cfg, peer, alloc, offload, tx_key_iv_out,
 																rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
-	}
-	else
-	{
-		ktls_handshake_flight2<typename crypto::sha256, crypto>(sock, suite, shared_secret,
-																ch_msg, ch_msg_size, sh_msg, sh_msg_size,
-																cfg, peer, alloc, offload, tx_key_iv_out,
-																rx_key_iv_out, tx_secret_out, rx_secret_out, secret_size_out);
-	}
 }
 
 } // namespace fast_io::tls::details
@@ -1166,7 +1157,7 @@ namespace details
 {
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_handshake(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 								 tls13_client_config const *cfg) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* attach the tls ulp before anything else -- when the kernel lacks
@@ -1320,7 +1311,7 @@ post-handshake message walk shared by both record pumps: KeyUpdate ->
 rekey, NST and friends are dropped (not a resumption client).
 */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_process_post_handshake(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_process_post_handshake(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											  ::std::byte const *msgs, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	wire_reader r{msgs, msgs + n};
@@ -1347,7 +1338,7 @@ secret and reinstalls the kernel key (new epoch, seq 0); NST is dropped;
 alerts map: close_notify -> 0 return (eof), else throw the alert.
 */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_read_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client_read_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!client->established_)
 	{
@@ -1399,7 +1390,7 @@ inner content type. Records bigger than the caller's buffer stash the
 remainder in client->rx_pending_.
 */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_read_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client_sw_read_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (buf_size == 0)
 	{
@@ -1442,7 +1433,7 @@ inline ::std::size_t tls_client_sw_read_some(basic_tls_client<allocator_type, so
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t n) noexcept
+inline ::std::size_t tls_client_rx_pending_drain(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte *buf, ::std::size_t n) noexcept
 {
 	::std::size_t const pend{tls_client_rx_pending(client)};
 	::std::size_t const take{pend < n ? pend : n};
@@ -1458,7 +1449,7 @@ inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_rx_pending_drain(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												 ::fast_io::io_scatter_t const *sc, ::std::size_t nsc) noexcept
 {
 	::std::size_t done{};
@@ -1481,7 +1472,7 @@ inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_rx_pending_stash(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *pt, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_client_rx_pending_stash(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *pt, ::std::size_t n) FAST_IO_HERBCEPTIONS_THROWS
 {
 	::std::size_t const old{client->rx_pending_.size()};
 	client->rx_pending_.resize(old + n);
@@ -1495,7 +1486,7 @@ under the current RX epoch. KeyUpdate rekeys inline via
 process_post_handshake. eof reports close_notify (plaintext or inner).
 */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline sw_record_result tls_client_sw_open_record(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *rec, ::std::size_t rec_size,
+inline sw_record_result tls_client_sw_open_record(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *rec, ::std::size_t rec_size,
 												  ::std::byte *innerbuf) FAST_IO_HERBCEPTIONS_THROWS
 {
 	sw_record_result rr{};
@@ -1546,7 +1537,7 @@ inline sw_record_result tls_client_sw_open_record(basic_tls_client<allocator_typ
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline sw_seal_result tls_client_sw_seal_appdata(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline sw_seal_result tls_client_sw_seal_appdata(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 												 ::std::byte *out, ::fast_io::io_scatter_t const *pt, ::std::size_t npt) noexcept
 {
 	/* gather up to 2^14 plaintext bytes into a precomposed inner
@@ -1568,27 +1559,17 @@ inline sw_seal_result tls_client_sw_seal_appdata(basic_tls_client<allocator_type
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_key_update_received(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_client_key_update_received(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::uint_least8_t request) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* next = HKDF-Expand-Label(secret, "traffic upd", "", hash_size) */
-	::std::byte next[48];
+	::std::byte next[64];
+	typename crypto::md const md{crypto::md_for(client->suite_)};
 	::std::size_t const key_size{::fast_io::tls::details::cipher_suite_key_size(client->suite_)};
-	if (client->secret_size_ == crypto::sha384::digest_size)
-	{
-		::fast_io::tls::details::hkdf_expand_label_to_ptr<typename crypto::sha384>(
-			next, client->secret_size_, client->rx_secret_, u8"traffic upd", 11, nullptr, 0);
-		::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->rx_secret_);
-		::fast_io::tls::details::traffic_key_iv_to_ptr<typename crypto::sha384>(
-			client->rx_key_, key_size, client->rx_iv_, client->rx_secret_);
-	}
-	else
-	{
-		::fast_io::tls::details::hkdf_expand_label_to_ptr<typename crypto::sha256>(
-			next, client->secret_size_, client->rx_secret_, u8"traffic upd", 11, nullptr, 0);
-		::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->rx_secret_);
-		::fast_io::tls::details::traffic_key_iv_to_ptr<typename crypto::sha256>(
-			client->rx_key_, key_size, client->rx_iv_, client->rx_secret_);
-	}
+	::fast_io::tls::details::hkdf_expand_label_to_ptr<crypto>(
+		md, next, client->secret_size_, client->rx_secret_, u8"traffic upd", 11, nullptr, 0);
+	::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->rx_secret_);
+	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(
+		md, client->rx_key_, key_size, client->rx_iv_, client->rx_secret_);
 	if (client->offloaded_)
 	{
 		details::ktls_offload_key(client->sock_, details::tls_rx, client->suite_, client->rx_key_, client->rx_iv_);
@@ -1619,22 +1600,11 @@ inline void tls_client_key_update_received(basic_tls_client<allocator_type, sock
 				rec, content_type::handshake, ku, ku_size, client->suite_, client->tx_key_, client->tx_iv_, client->tx_seq_++)};
 			details::tls_write_full(client->sock_, rec, rec_size);
 		}
-		if (client->secret_size_ == crypto::sha384::digest_size)
-		{
-			::fast_io::tls::details::hkdf_expand_label_to_ptr<typename crypto::sha384>(
-				next, client->secret_size_, client->tx_secret_, u8"traffic upd", 11, nullptr, 0);
-			::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->tx_secret_);
-			::fast_io::tls::details::traffic_key_iv_to_ptr<typename crypto::sha384>(
-				client->tx_key_, key_size, client->tx_iv_, client->tx_secret_);
-		}
-		else
-		{
-			::fast_io::tls::details::hkdf_expand_label_to_ptr<typename crypto::sha256>(
-				next, client->secret_size_, client->tx_secret_, u8"traffic upd", 11, nullptr, 0);
-			::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->tx_secret_);
-			::fast_io::tls::details::traffic_key_iv_to_ptr<typename crypto::sha256>(
-				client->tx_key_, key_size, client->tx_iv_, client->tx_secret_);
-		}
+		::fast_io::tls::details::hkdf_expand_label_to_ptr<crypto>(
+			md, next, client->secret_size_, client->tx_secret_, u8"traffic upd", 11, nullptr, 0);
+		::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->tx_secret_);
+		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(
+			md, client->tx_key_, key_size, client->tx_iv_, client->tx_secret_);
 		if (client->offloaded_)
 		{
 			details::ktls_offload_key(client->sock_, details::tls_tx, client->suite_, client->tx_key_, client->tx_iv_);
@@ -1645,7 +1615,7 @@ inline void tls_client_key_update_received(basic_tls_client<allocator_type, sock
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_write_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client_sw_write_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	/* one sealed record per call; the 2^14 cap is the wire limit */
 	::std::byte rec[details::record_header_size + (1u << 14u) + 1 + 16];
@@ -1656,7 +1626,7 @@ inline ::std::size_t tls_client_sw_write_some(basic_tls_client<allocator_type, s
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_write_some(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
+inline ::std::size_t tls_client_write_some(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, ::std::byte const *buf, ::std::size_t buf_size) FAST_IO_HERBCEPTIONS_THROWS
 {
 	if (!client->established_)
 	{
@@ -1674,7 +1644,7 @@ inline ::std::size_t tls_client_write_some(basic_tls_client<allocator_type, sock
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_send_alert(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, alert_description desc) noexcept
+inline void tls_client_send_alert(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, alert_description desc) noexcept
 {
 	if (client->offloaded_)
 	{
@@ -1697,21 +1667,21 @@ inline void tls_client_send_alert(basic_tls_client<allocator_type, socket_observ
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_fail(basic_tls_client<allocator_type, socket_observer_type, crypto> *client, alert_description desc) FAST_IO_HERBCEPTIONS_THROWS
+inline void tls_client_fail(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client, alert_description desc) FAST_IO_HERBCEPTIONS_THROWS
 {
 	tls_client_send_alert(client, desc);
 	details::tls13_throw_alert(desc);
 }
 
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_send_close_notify(basic_tls_client<allocator_type, socket_observer_type, crypto> *client) noexcept
+inline void tls_client_send_close_notify(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client) noexcept
 {
 	tls_client_send_alert(client, alert_description::close_notify);
 }
 
 /* decrypted plaintext pending delivery (record > caller buffer) */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_rx_pending(basic_tls_client<allocator_type, socket_observer_type, crypto> const *client) noexcept
+inline ::std::size_t tls_client_rx_pending(basic_tls13_client<allocator_type, socket_observer_type, crypto> const *client) noexcept
 {
 	return client->rx_pending_.size() - client->rx_pending_pos_;
 }
@@ -1719,7 +1689,7 @@ inline ::std::size_t tls_client_rx_pending(basic_tls_client<allocator_type, sock
 /* seal an alert into one wire record at out (>= 5 + 3 + 16); bumps
    tx_seq_ like a send would */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline ::std::size_t tls_client_sw_seal_alert(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline ::std::size_t tls_client_sw_seal_alert(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 											  ::std::byte *out, alert_description desc) noexcept
 {
 	::std::byte const level{desc == alert_description::close_notify
@@ -1733,7 +1703,7 @@ inline ::std::size_t tls_client_sw_seal_alert(basic_tls_client<allocator_type, s
 /* filled by handshake internals; keys are the expanded traffic
    key+iv (key_size/12 bytes used) */
 template <typename allocator_type, typename socket_observer_type, typename crypto>
-inline void tls_client_set_established(basic_tls_client<allocator_type, socket_observer_type, crypto> *client,
+inline void tls_client_set_established(basic_tls13_client<allocator_type, socket_observer_type, crypto> *client,
 									   cipher_suite suite,
 									   ::std::byte const *tx_secret, ::std::byte const *rx_secret,
 									   ::std::size_t secret_size, bool offloaded,

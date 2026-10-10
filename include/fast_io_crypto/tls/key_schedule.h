@@ -147,45 +147,120 @@ inline constexpr void finished_verify_data_to_ptr(::std::byte *verify_data /* di
 the running "secret chain" state: early -> handshake -> master.
 digest_size is 32 for SHA-256 suites, 48 for SHA-384 suites.
 */
-template <typename ctx>
+
+
+/* ---------------- crypto-backend level ----------------
+   the same key schedule expressed against a backend's md + hash ctx:
+   every op takes the md descriptor at runtime, so a single
+   instantiation covers sha256 and sha384 suites. */
+
+template <typename crypto>
+inline constexpr void hkdf_expand_label_to_ptr(typename crypto::md md,
+											   ::std::byte *out, ::std::size_t out_size,
+											   ::std::byte const *secret,
+											   char8_t const *label, ::std::size_t label_size,
+											   ::std::byte const *context, ::std::size_t context_size) noexcept
+{
+	::std::byte hkdf_label[2 + 1 + 6 + 24 + 1 + 255];
+	::std::byte *p{hkdf_label};
+	p = ::fast_io::tls::wire_put_u16(p, static_cast<::std::uint_least16_t>(out_size));
+	*p++ = static_cast<::std::byte>(6u + label_size);
+	::fast_io::details::non_overlapped_copy_n(u8"tls13 ", 6, reinterpret_cast<char8_t *>(p));
+	p += 6;
+	::fast_io::details::non_overlapped_copy_n(label, label_size, reinterpret_cast<char8_t *>(p));
+	p += label_size;
+	*p++ = static_cast<::std::byte>(context_size);
+	p = ::fast_io::tls::wire_put_bytes(p, context, context_size);
+	crypto::hkdf_expand(md, out, out_size, secret, crypto::md_digest_size(md),
+						hkdf_label, static_cast<::std::size_t>(p - hkdf_label));
+}
+
+template <typename crypto>
+inline constexpr void transcript_digest_to_ptr(typename crypto::hash_ctx const &transcript,
+											   ::std::byte *digest) noexcept
+{
+	typename crypto::hash_ctx copy{transcript};
+	copy.do_final();
+	copy.digest_to_byte_ptr(digest);
+}
+
+template <typename crypto>
+inline constexpr void derive_secret_to_ptr(typename crypto::md md, ::std::byte *out,
+										   ::std::byte const *secret,
+										   char8_t const *label, ::std::size_t label_size,
+										   typename crypto::hash_ctx const &transcript) noexcept
+{
+	::std::byte th[64];
+	transcript_digest_to_ptr<crypto>(transcript, th);
+	hkdf_expand_label_to_ptr<crypto>(md, out, crypto::md_digest_size(md), secret, label,
+									label_size, th, crypto::md_digest_size(md));
+}
+
+template <typename crypto>
+inline constexpr void traffic_key_iv_to_ptr(typename crypto::md md, ::std::byte *key,
+											::std::size_t key_size, ::std::byte *iv,
+											::std::byte const *secret) noexcept
+{
+	hkdf_expand_label_to_ptr<crypto>(md, key, key_size, secret, u8"key", 3, nullptr, 0);
+	hkdf_expand_label_to_ptr<crypto>(md, iv, 12, secret, u8"iv", 2, nullptr, 0);
+}
+
+template <typename crypto>
+inline constexpr void finished_verify_data_to_ptr(typename crypto::md md,
+												  ::std::byte *verify_data,
+												  ::std::byte const *base_secret,
+												  typename crypto::hash_ctx const &transcript) noexcept
+{
+	::std::size_t const ds{crypto::md_digest_size(md)};
+	::std::byte fk[64];
+	hkdf_expand_label_to_ptr<crypto>(md, fk, ds, base_secret, u8"finished", 8, nullptr, 0);
+	::std::byte th[64];
+	transcript_digest_to_ptr<crypto>(transcript, th);
+	crypto::hmac(md, verify_data, fk, ds, th, ds);
+}
+
+template <typename crypto>
 class key_schedule
 {
 public:
-	static inline constexpr ::std::size_t digest_size{ctx::digest_size};
-	::std::byte secret[digest_size]{};
+	crypto::md md_;
+	::std::byte secret[64]{};
 
-	/* early_secret = Extract(salt = 0, IKM = 0) -- no PSK in this client */
+	constexpr key_schedule(typename crypto::md md) noexcept : md_{md}
+	{
+	}
+
 	inline constexpr void init_early() noexcept
 	{
-		::std::byte zero[digest_size]{};
-		hkdf_extract_to_ptr<ctx>(secret, nullptr, 0, zero, digest_size);
+		::std::byte zero[64]{};
+		crypto::hkdf_extract(md_, secret, nullptr, 0, zero, crypto::md_digest_size(md_));
 	}
 
-	/* derived = Derive-Secret(secret, "derived", Hash("")); replaces secret */
 	inline constexpr void derive_empty() noexcept
 	{
-		::std::byte empty_digest[digest_size];
-		ctx empty_ctx{};
+		::std::byte empty_digest[64];
+		typename crypto::hash_ctx empty_ctx{md_};
 		empty_ctx.do_final();
 		empty_ctx.digest_to_byte_ptr(empty_digest);
-		::std::byte next[digest_size];
-		hkdf_expand_label_to_ptr<ctx>(next, digest_size, secret, u8"derived", 7, empty_digest, digest_size);
-		::fast_io::details::non_overlapped_copy_n(next, digest_size, secret);
+		::std::byte next[64];
+		hkdf_expand_label_to_ptr<crypto>(md_, next, crypto::md_digest_size(md_), secret,
+										u8"derived", 7, empty_digest,
+										crypto::md_digest_size(md_));
+		::fast_io::details::non_overlapped_copy_n(next, crypto::md_digest_size(md_), secret);
 	}
 
-	/* secret = Extract(derived_secret, ikm) */
 	inline constexpr void extract_into(::std::byte const *ikm, ::std::size_t ikm_size) noexcept
 	{
-		::std::byte next[digest_size];
-		hkdf_extract_to_ptr<ctx>(next, secret, digest_size, ikm, ikm_size);
-		::fast_io::details::non_overlapped_copy_n(next, digest_size, secret);
+		::std::byte next[64];
+		crypto::hkdf_extract(md_, next, secret, crypto::md_digest_size(md_), ikm, ikm_size);
+		::fast_io::details::non_overlapped_copy_n(next, crypto::md_digest_size(md_), secret);
 	}
 
-	/* out = Derive-Secret(current secret, label, transcript); chain unchanged */
-	inline constexpr void derive_to_ptr(::std::byte *out, char8_t const *label, ::std::size_t label_size,
-										ctx const &transcript) const noexcept
+	inline constexpr void derive_to_ptr(::std::byte *out, char8_t const *label,
+										::std::size_t label_size,
+										typename crypto::hash_ctx const &transcript) const noexcept
 	{
-		derive_secret_to_ptr<ctx>(out, secret, label, label_size, transcript);
+		derive_secret_to_ptr<crypto>(md_, out, secret, label, label_size, transcript);
 	}
 };
 

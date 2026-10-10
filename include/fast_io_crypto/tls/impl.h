@@ -19,10 +19,10 @@ the kTLS socket glue lives in <fast_io_tls.h> (hosted, Linux).
 #include "gnutls_backend.h"
 
 /*
-default crypto backend for basic_tls::crypto: openssl's primitives
+default crypto backend for basic_tls13::crypto: openssl's primitives
 where the EVP headers are visible on non-windows platforms (-lcrypto
 at link time), gnutls's where those are visible instead (-lgnutls
--lnettle), the builtin fast_io algorithms on windows and under
+-lnettle), the fast_io algorithms on windows and under
 FAST_IO_TLS_FORCE_FAST_IO.
 */
 namespace fast_io::tls

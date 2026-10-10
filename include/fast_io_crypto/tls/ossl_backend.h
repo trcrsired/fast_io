@@ -26,27 +26,33 @@ AEAD) and state size (X25519) are the EVP ones.
 #if FAST_IO_TLS_HAS_OSSL_CRYPTO
 
 #include <openssl/evp.h>
+#include <openssl/kdf.h>
+#include <openssl/core_names.h>
 #include <openssl/x509.h>
 #include <openssl/rsa.h>
 
 namespace fast_io::tls::details
 {
 
-/* EVP message-digest context in the basic_md5_sha_context_impl shape:
-   update / do_final / digest_to_byte_ptr / reset / copy. The ctx is a
-   heap object -- allocation failure is OOM, which terminates. Copies
-   go through EVP_MD_CTX_copy_ex so transcript snapshots work. */
-template <EVP_MD const *(*md_fn)(), ::std::size_t digest_size_, ::std::size_t block_size_>
+/* EVP message-digest context for the transcript. The ctx is a heap
+   object -- allocation failure is OOM, which terminates. Copies go
+   through EVP_MD_CTX_copy_ex so transcript snapshots work. The md is
+   carried at runtime so one type serves every suite hash. */
 struct ossl_evp_hash_ctx
 {
-	static inline constexpr ::std::size_t digest_size{digest_size_};
-	static inline constexpr ::std::size_t block_size{block_size_};
-
+	EVP_MD const *md_{};
+	::std::size_t digest_size_{};
+	::std::size_t block_size_{};
 	EVP_MD_CTX *ctx{};
 	::std::byte digest[64]{};
 
-	inline ossl_evp_hash_ctx() noexcept = default;
+	inline ossl_evp_hash_ctx(EVP_MD const *md) noexcept
+		: md_{md}, digest_size_{static_cast<::std::size_t>(EVP_MD_size(md))},
+		  block_size_{static_cast<::std::size_t>(EVP_MD_block_size(md))}
+	{
+	}
 	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx const &o) noexcept
+		: md_{o.md_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}
 	{
 		if (o.ctx != nullptr)
 		{
@@ -60,12 +66,13 @@ struct ossl_evp_hash_ctx
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
 	}
-	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx &&o) noexcept : ctx{o.ctx}
+	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx &&o) noexcept
+		: md_{o.md_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}, ctx{o.ctx}
 	{
 		o.ctx = nullptr;
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
 	}
 	inline ~ossl_evp_hash_ctx()
 	{
@@ -80,7 +87,7 @@ struct ossl_evp_hash_ctx
 			{
 				::fast_io::fast_terminate();
 			}
-			if (EVP_DigestInit_ex(ctx, md_fn(), nullptr) != 1)
+			if (EVP_DigestInit_ex(ctx, md_, nullptr) != 1)
 			{
 				::fast_io::fast_terminate();
 			}
@@ -99,7 +106,7 @@ struct ossl_evp_hash_ctx
 		if (ctx != nullptr)
 		{
 			EVP_MD_CTX_reset(ctx);
-			if (EVP_DigestInit_ex(ctx, md_fn(), nullptr) != 1)
+			if (EVP_DigestInit_ex(ctx, md_, nullptr) != 1)
 			{
 				::fast_io::fast_terminate();
 			}
@@ -114,11 +121,11 @@ struct ossl_evp_hash_ctx
 			::fast_io::fast_terminate();
 		}
 		::fast_io::freestanding::non_overlapped_copy_n(
-			reinterpret_cast<::std::byte *>(out), digest_size, digest);
+			reinterpret_cast<::std::byte *>(out), digest_size_, digest);
 	}
 	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size, ptr);
+		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size_, ptr);
 	}
 };
 
@@ -129,8 +136,148 @@ namespace fast_io::tls
 
 struct ossl_crypto_backend
 {
-	using sha256 = details::ossl_evp_hash_ctx<EVP_sha256, 32, 64>;
-	using sha384 = details::ossl_evp_hash_ctx<EVP_sha384, 48, 128>;
+	using md = EVP_MD const *;
+
+	static inline constexpr md md_for(cipher_suite suite) noexcept
+	{
+		return suite == cipher_suite::aes_256_gcm_sha384 ? EVP_sha384() : EVP_sha256();
+	}
+	static inline ::std::size_t md_digest_size(md a) noexcept
+	{
+		return static_cast<::std::size_t>(EVP_MD_size(a));
+	}
+	static inline ::std::size_t md_block_size(md a) noexcept
+	{
+		return static_cast<::std::size_t>(EVP_MD_block_size(a));
+	}
+
+	struct hash_ctx : details::ossl_evp_hash_ctx
+	{
+		hash_ctx(md m) noexcept : details::ossl_evp_hash_ctx{m}
+		{
+		}
+	};
+
+	/* HKDF over the EVP_KDF provider api (openssl 3.x) -- a missing
+	   provider/context is OOM and terminates. */
+	static inline void hkdf_extract(md a, ::std::byte *out,
+									::std::byte const *salt, ::std::size_t salt_size,
+									::std::byte const *ikm, ::std::size_t ikm_size) noexcept
+	{
+		::std::byte zero_salt[64]{};
+		if (salt == nullptr)
+		{
+			salt = zero_salt;
+			salt_size = md_digest_size(a);
+		}
+		EVP_KDF *kdf{EVP_KDF_fetch(nullptr, "HKDF", nullptr)};
+		if (kdf == nullptr)
+		{
+			::fast_io::fast_terminate();
+		}
+		EVP_KDF_CTX *c{EVP_KDF_CTX_new(kdf)};
+		if (c == nullptr)
+		{
+			EVP_KDF_free(kdf);
+			::fast_io::fast_terminate();
+		}
+		char const *digest{EVP_MD_get0_name(a)};
+		int kdf_extract_mode{EVP_KDF_HKDF_MODE_EXTRACT_ONLY};
+		OSSL_PARAM params[] = {
+			OSSL_PARAM_construct_utf8_string(
+				const_cast<char *>(OSSL_KDF_PARAM_DIGEST), const_cast<char *>(digest), 0),
+			OSSL_PARAM_construct_int(const_cast<char *>(OSSL_KDF_PARAM_MODE),
+									 __builtin_addressof(kdf_extract_mode)),
+			OSSL_PARAM_construct_octet_string(
+				const_cast<char *>(OSSL_KDF_PARAM_KEY),
+				const_cast<::std::byte *>(ikm), ikm_size),
+			OSSL_PARAM_construct_octet_string(
+				const_cast<char *>(OSSL_KDF_PARAM_SALT),
+				const_cast<::std::byte *>(salt), salt_size),
+			OSSL_PARAM_construct_end()};
+		if (EVP_KDF_derive(c, reinterpret_cast<char unsigned *>(out),
+						   md_digest_size(a), params) != 1)
+		{
+			EVP_KDF_CTX_free(c);
+			EVP_KDF_free(kdf);
+			::fast_io::fast_terminate();
+		}
+		EVP_KDF_CTX_free(c);
+		EVP_KDF_free(kdf);
+	}
+
+	static inline void hkdf_expand(md a, ::std::byte *out, ::std::size_t out_size,
+								   ::std::byte const *prk, ::std::size_t prk_size,
+								   ::std::byte const *info, ::std::size_t info_size) noexcept
+	{
+		EVP_KDF *kdf{EVP_KDF_fetch(nullptr, "HKDF", nullptr)};
+		if (kdf == nullptr)
+		{
+			::fast_io::fast_terminate();
+		}
+		EVP_KDF_CTX *c{EVP_KDF_CTX_new(kdf)};
+		if (c == nullptr)
+		{
+			EVP_KDF_free(kdf);
+			::fast_io::fast_terminate();
+		}
+		char const *digest{EVP_MD_get0_name(a)};
+		int kdf_expand_mode{EVP_KDF_HKDF_MODE_EXPAND_ONLY};
+		OSSL_PARAM params[] = {
+			OSSL_PARAM_construct_utf8_string(
+				const_cast<char *>(OSSL_KDF_PARAM_DIGEST), const_cast<char *>(digest), 0),
+			OSSL_PARAM_construct_int(const_cast<char *>(OSSL_KDF_PARAM_MODE),
+									 __builtin_addressof(kdf_expand_mode)),
+			OSSL_PARAM_construct_octet_string(
+				const_cast<char *>(OSSL_KDF_PARAM_KEY),
+				const_cast<::std::byte *>(prk), prk_size),
+			OSSL_PARAM_construct_octet_string(
+				const_cast<char *>(OSSL_KDF_PARAM_INFO),
+				const_cast<::std::byte *>(info), info_size),
+			OSSL_PARAM_construct_end()};
+		if (EVP_KDF_derive(c, reinterpret_cast<char unsigned *>(out),
+						   out_size, params) != 1)
+		{
+			EVP_KDF_CTX_free(c);
+			EVP_KDF_free(kdf);
+			::fast_io::fast_terminate();
+		}
+		EVP_KDF_CTX_free(c);
+		EVP_KDF_free(kdf);
+	}
+
+	static inline void hmac(md a, ::std::byte *out,
+							::std::byte const *key, ::std::size_t key_size,
+							::std::byte const *data, ::std::size_t data_size) noexcept
+	{
+		EVP_MAC *mac{EVP_MAC_fetch(nullptr, "HMAC", nullptr)};
+		if (mac == nullptr)
+		{
+			::fast_io::fast_terminate();
+		}
+		EVP_MAC_CTX *c{EVP_MAC_CTX_new(mac)};
+		if (c == nullptr)
+		{
+			EVP_MAC_free(mac);
+			::fast_io::fast_terminate();
+		}
+		char const *name{EVP_MD_get0_name(a)};
+		OSSL_PARAM params[] = {
+			OSSL_PARAM_construct_utf8_string(const_cast<char *>("digest"),
+											 const_cast<char *>(name), 0),
+			OSSL_PARAM_construct_end()};
+		::std::size_t out_size{md_digest_size(a)};
+		if (EVP_MAC_init(c, reinterpret_cast<char unsigned const *>(key), key_size, params) != 1 ||
+			EVP_MAC_update(c, reinterpret_cast<char unsigned const *>(data), data_size) != 1 ||
+			EVP_MAC_final(c, reinterpret_cast<char unsigned *>(out), __builtin_addressof(out_size), out_size) != 1)
+		{
+			EVP_MAC_CTX_free(c);
+			EVP_MAC_free(mac);
+			::fast_io::fast_terminate();
+		}
+		EVP_MAC_CTX_free(c);
+		EVP_MAC_free(mac);
+	}
 
 	static inline void x25519_keypair(::std::byte *pk, ::std::byte *sk) noexcept
 	{

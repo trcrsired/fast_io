@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-crypto primitive provider for basic_tls_client. The protocol machinery
+crypto primitive provider for basic_tls13_client. The protocol machinery
 -- record framing, sequence numbers, key schedule, X.509 parse, chain
 and SAN checks -- always stays in fast_io; the backend only supplies the
 math primitives. Substituting a provider (OpenSSL EVP, GnuTLS, Windows
@@ -12,9 +12,13 @@ of the binary.
 
 A backend supplies:
 
-	sha256 / sha384        context types (digest_size, update,
-						   do_final, digest_to_byte_ptr) -- the
-						   transcript and HKDF run over these
+	md                   a hash descriptor selected per cipher suite at
+						   runtime -- md_for/md_digest_size/md_block_size
+	hash_ctx             transcript context built on an md: update /
+						   do_final / digest_to_byte_ptr / reset / copy
+	hkdf_extract         HKDF-Extract(salt, ikm) -> prk[digest_size]
+	hkdf_expand          HKDF-Expand(prk, info, out_size) -> out
+	hmac                 HMAC(md, key, data) -> out[digest_size]
 	x25519_keypair         clamp sk[32], write pk[32]
 	x25519_shared_secret   X25519(sk, peer_pk) -> out[32]; the caller
 						   checks the all-zero result
@@ -26,15 +30,143 @@ A backend supplies:
 						   can import its spki_der directly
 	cert_cv_verify         the CertificateVerify signature over the
 						   transcript, leaf cert passed whole
+
+The digest and HKDF ops take the md descriptor so a single handshake
+flight2 instantiates once per backend instead of once per suite hash.
 */
+
+namespace fast_io::tls::details
+{
+
+/* runtime hash-algorithm tag for the fast_io backend's dyn dispatch */
+enum class tls_hash_alg : ::std::uint_least8_t
+{
+	sha256,
+	sha384
+};
+
+} // namespace fast_io::tls::details
 
 namespace fast_io::tls
 {
 
 struct fast_io_crypto_backend
 {
-	using sha256 = ::fast_io::sha256_context;
-	using sha384 = ::fast_io::sha384_context;
+	using md = details::tls_hash_alg;
+
+	static inline constexpr md md_for(cipher_suite suite) noexcept
+	{
+		return suite == cipher_suite::aes_256_gcm_sha384 ? md::sha384 : md::sha256;
+	}
+	static inline constexpr ::std::size_t md_digest_size(md a) noexcept
+	{
+		return a == md::sha384 ? 48 : 32;
+	}
+	static inline constexpr ::std::size_t md_block_size(md a) noexcept
+	{
+		return a == md::sha384 ? 128 : 64;
+	}
+
+	/* dyn transcript ctx: dispatches between the two fast_io contexts.
+	   trivially copyable -- transcript snapshots are value copies */
+	struct hash_ctx
+	{
+		::fast_io::sha256_context s256{};
+		::fast_io::sha384_context s384{};
+		::std::byte digest[64]{};
+		md a{md::sha256};
+
+		constexpr hash_ctx(md m) noexcept : a{m}
+		{
+		}
+		inline void update(::std::byte const *first, ::std::byte const *last) noexcept
+		{
+			if (a == md::sha384)
+			{
+				s384.update(first, last);
+			}
+			else
+			{
+				s256.update(first, last);
+			}
+		}
+		inline void reset() noexcept
+		{
+			if (a == md::sha384)
+			{
+				s384.reset();
+			}
+			else
+			{
+				s256.reset();
+			}
+		}
+		inline void do_final() noexcept
+		{
+			if (a == md::sha384)
+			{
+				s384.do_final();
+				s384.digest_to_byte_ptr(digest);
+			}
+			else
+			{
+				s256.do_final();
+				s256.digest_to_byte_ptr(digest);
+			}
+		}
+		inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
+		{
+			::fast_io::freestanding::non_overlapped_copy_n(digest, md_digest_size(a), ptr);
+		}
+	};
+
+	static inline void hkdf_extract(md a, ::std::byte *out,
+									::std::byte const *salt, ::std::size_t salt_size,
+									::std::byte const *ikm, ::std::size_t ikm_size) noexcept
+	{
+		if (a == md::sha384)
+		{
+			details::hkdf_extract_to_ptr<::fast_io::sha384_context>(out, salt, salt_size,
+																  ikm, ikm_size);
+		}
+		else
+		{
+			details::hkdf_extract_to_ptr<::fast_io::sha256_context>(out, salt, salt_size,
+																  ikm, ikm_size);
+		}
+	}
+
+	static inline void hkdf_expand(md a, ::std::byte *out, ::std::size_t out_size,
+								   ::std::byte const *prk, ::std::size_t prk_size,
+								   ::std::byte const *info, ::std::size_t info_size) noexcept
+	{
+		if (a == md::sha384)
+		{
+			details::hkdf_expand_to_ptr<::fast_io::sha384_context>(out, out_size, prk,
+																 info, info_size);
+		}
+		else
+		{
+			details::hkdf_expand_to_ptr<::fast_io::sha256_context>(out, out_size, prk,
+																 info, info_size);
+		}
+	}
+
+	static inline void hmac(md a, ::std::byte *out,
+							::std::byte const *key, ::std::size_t key_size,
+							::std::byte const *data, ::std::size_t data_size) noexcept
+	{
+		if (a == md::sha384)
+		{
+			::fast_io::hmac_once_to_ptr<::fast_io::sha384_context>(out, key, key_size,
+																 data, data_size);
+		}
+		else
+		{
+			::fast_io::hmac_once_to_ptr<::fast_io::sha256_context>(out, key, key_size,
+																 data, data_size);
+		}
+	}
 
 	static inline void x25519_keypair(::std::byte *pk, ::std::byte *sk) noexcept
 	{

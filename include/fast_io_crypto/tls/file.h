@@ -1,10 +1,10 @@
 #pragma once
 
 /*
-basic_tls<socket_type, allocator_type> -- a plain aggregate-style bundle
-of a socket (the transport) and a basic_tls_client (the TLS state). The
-socket member OWNS whatever socket_type owns: basic_tls<native_socket_file>
-owns the fd; basic_tls<native_socket_io_observer> borrows it.
+basic_tls13<socket_type, allocator_type> -- a plain aggregate-style bundle
+of a socket (the transport) and a basic_tls13_client (the TLS state). The
+socket member OWNS whatever socket_type owns: basic_tls13<native_socket_file>
+owns the fd; basic_tls13<native_socket_io_observer> borrows it.
 
 Constructors forward to socket_type, mirroring basic_io_buffer's
 forwarding to its handle; the client binds the socket's observer during
@@ -18,7 +18,7 @@ namespace fast_io::tls
 
 template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator,
 		  typename crypto = tls_default_crypto>
-struct basic_tls
+struct basic_tls13
 {
 	using char_type = typename socket_type::char_type;
 	using input_char_type = char_type;
@@ -27,46 +27,46 @@ struct basic_tls
 	   (posix fd observer, win32 socket observer, ...) */
 	using socket_observer_type =
 		decltype(::fast_io::io_stream_ref_define(::std::declval<socket_type &>()));
-	using client_type = basic_tls_client<allocator_type, socket_observer_type, crypto>;
+	using client_type = basic_tls13_client<allocator_type, socket_observer_type, crypto>;
 	using allocator_handle_type = typename client_type::allocator_handle_type;
 	static inline constexpr bool alloc_with_status{client_type::alloc_with_status};
 
 	socket_type socket;
 	client_type client;
 
-	inline constexpr basic_tls() noexcept
+	inline constexpr basic_tls13() noexcept
 		requires(!alloc_with_status && ::std::is_default_constructible_v<socket_type>)
 	= default;
 
 	template <typename... Args>
 		requires(!alloc_with_status && ::std::constructible_from<socket_type, Args...>)
-	inline explicit constexpr basic_tls(Args &&...args)
+	inline explicit constexpr basic_tls13(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(socket_type(::std::forward<Args>(args)...))
 		: socket(::std::forward<Args>(args)...), client{::fast_io::io_stream_ref_define(socket)}
 	{
 	}
 
-	inline explicit constexpr basic_tls(allocator_handle_type hdl)
+	inline explicit constexpr basic_tls13(allocator_handle_type hdl)
 		requires(alloc_with_status && ::std::is_default_constructible_v<socket_type>)
 		: socket(), client{socket, hdl}
 	{
 	}
 	template <typename... Args>
 		requires(alloc_with_status && ::std::constructible_from<socket_type, Args...>)
-	inline constexpr basic_tls(allocator_handle_type hdl, Args &&...args)
+	inline constexpr basic_tls13(allocator_handle_type hdl, Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(socket_type(::std::forward<Args>(args)...))
 		: socket(::std::forward<Args>(args)...), client{socket, hdl}
 	{
 	}
 
-	basic_tls(basic_tls const &) = delete;
-	basic_tls &operator=(basic_tls const &) = delete;
+	basic_tls13(basic_tls13 const &) = delete;
+	basic_tls13 &operator=(basic_tls13 const &) = delete;
 
-	inline basic_tls(basic_tls &&other) noexcept
+	inline basic_tls13(basic_tls13 &&other) noexcept
 		: socket(::std::move(other.socket)), client(::std::move(other.client))
 	{
 	}
-	inline basic_tls &operator=(basic_tls &&other) noexcept
+	inline basic_tls13 &operator=(basic_tls13 &&other) noexcept
 	{
 		if (__builtin_addressof(other) == this)
 		{
@@ -81,7 +81,7 @@ struct basic_tls
 	   destructor cannot close it again -- the op consumes it) and the
 	   stream's non-owning observer is returned -- the same role
 	   posix_file::release()'s fd plays for posix_io_observer */
-	inline constexpr basic_tls_io_observer<char_type, allocator_type, socket_observer_type, crypto> release() noexcept
+	inline constexpr basic_tls13_io_observer<char_type, allocator_type, socket_observer_type, crypto> release() noexcept
 		requires requires { socket.release(); }
 	{
 		socket.release();
@@ -90,50 +90,50 @@ struct basic_tls
 };
 
 template <typename socket_type, typename allocator_type, typename crypto>
-inline constexpr basic_tls_io_observer<typename socket_type::char_type, allocator_type,
-									   typename basic_tls<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
-io_stream_ref_define(basic_tls<socket_type, allocator_type, crypto> &t) noexcept
+inline constexpr basic_tls13_io_observer<typename socket_type::char_type, allocator_type,
+									   typename basic_tls13<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
+io_stream_ref_define(basic_tls13<socket_type, allocator_type, crypto> &t) noexcept
 {
 	return {__builtin_addressof(t.client)};
 }
 
 template <typename socket_type, typename allocator_type, typename crypto>
-inline constexpr basic_tls_io_observer<char, allocator_type,
-									   typename basic_tls<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
-io_bytes_stream_ref_define(basic_tls<socket_type, allocator_type, crypto> &t) noexcept
+inline constexpr basic_tls13_io_observer<char, allocator_type,
+									   typename basic_tls13<socket_type, allocator_type, crypto>::socket_observer_type, crypto>
+io_bytes_stream_ref_define(basic_tls13<socket_type, allocator_type, crypto> &t) noexcept
 {
 	return {__builtin_addressof(t.client)};
 }
 
 /* owning variants: the socket member is a native socket file */
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_tls_socket_file = basic_tls<basic_native_socket_file<ch_type>, allocator_type>;
+using basic_tls13_socket_file = basic_tls13<basic_native_socket_file<ch_type>, allocator_type>;
 
-using tls_socket_file = basic_tls_socket_file<char>;
-using wtls_socket_file = basic_tls_socket_file<wchar_t>;
-using u8tls_socket_file = basic_tls_socket_file<char8_t>;
-using u16tls_socket_file = basic_tls_socket_file<char16_t>;
-using u32tls_socket_file = basic_tls_socket_file<char32_t>;
+using tls13_socket_file = basic_tls13_socket_file<char>;
+using wtls13_socket_file = basic_tls13_socket_file<wchar_t>;
+using u8tls13_socket_file = basic_tls13_socket_file<char8_t>;
+using u16tls13_socket_file = basic_tls13_socket_file<char16_t>;
+using u32tls13_socket_file = basic_tls13_socket_file<char32_t>;
 
 /* non-owning variants: the socket member is a native socket observer */
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_tls_socket = basic_tls<basic_native_socket_io_observer<ch_type>, allocator_type>;
+using basic_tls13_socket = basic_tls13<basic_native_socket_io_observer<ch_type>, allocator_type>;
 
-using tls_socket = basic_tls_socket<char>;
-using wtls_socket = basic_tls_socket<wchar_t>;
-using u8tls_socket = basic_tls_socket<char8_t>;
-using u16tls_socket = basic_tls_socket<char16_t>;
-using u32tls_socket = basic_tls_socket<char32_t>;
+using tls13_socket = basic_tls13_socket<char>;
+using wtls13_socket = basic_tls13_socket<wchar_t>;
+using u8tls13_socket = basic_tls13_socket<char8_t>;
+using u16tls13_socket = basic_tls13_socket<char16_t>;
+using u32tls13_socket = basic_tls13_socket<char32_t>;
 
-/* buffered variants: basic_iobuf<basic_tls<socket_type>> */
+/* buffered variants: basic_iobuf<basic_tls13<socket_type>> */
 template <::std::integral ch_type, typename allocator_type = ::fast_io::native_global_allocator>
-using basic_iobuf_tls_socket_file =
-	basic_iobuf<basic_tls_socket_file<ch_type, allocator_type>, allocator_type>;
+using basic_iobuf_tls13_socket_file =
+	basic_iobuf<basic_tls13_socket_file<ch_type, allocator_type>, allocator_type>;
 
-using iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char>;
-using wiobuf_tls_socket_file = basic_iobuf_tls_socket_file<wchar_t>;
-using u8iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char8_t>;
-using u16iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char16_t>;
-using u32iobuf_tls_socket_file = basic_iobuf_tls_socket_file<char32_t>;
+using iobuf_tls13_socket_file = basic_iobuf_tls13_socket_file<char>;
+using wiobuf_tls13_socket_file = basic_iobuf_tls13_socket_file<wchar_t>;
+using u8iobuf_tls13_socket_file = basic_iobuf_tls13_socket_file<char8_t>;
+using u16iobuf_tls13_socket_file = basic_iobuf_tls13_socket_file<char16_t>;
+using u32iobuf_tls13_socket_file = basic_iobuf_tls13_socket_file<char32_t>;
 
 } // namespace fast_io::tls

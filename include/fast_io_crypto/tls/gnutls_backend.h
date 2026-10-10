@@ -31,22 +31,27 @@ stays on the fast_io parser for now.
 namespace fast_io::tls::details
 {
 
-/* gnutls_digest context in the basic_md5_sha_context_impl shape --
-   update / do_final / digest_to_byte_ptr / reset / copy. The handle is
-   a heap object; allocation failure is OOM and terminates. Copies go
-   through gnutls_hash_copy so transcript snapshots work. */
-template <gnutls_digest_algorithm_t algo, ::std::size_t digest_size_,
-		  ::std::size_t block_size_>
+/* gnutls_digest context for the transcript. The handle is a heap
+   object; allocation failure is OOM and terminates. Copies go through
+   gnutls_hash_copy so transcript snapshots work. The mac is carried at
+   runtime so one type serves every suite hash. */
 struct gnutls_evp_hash_ctx
 {
-	static inline constexpr ::std::size_t digest_size{digest_size_};
-	static inline constexpr ::std::size_t block_size{block_size_};
-
+	gnutls_mac_algorithm_t mac_{};
+	::std::size_t digest_size_{};
+	::std::size_t block_size_{};
 	gnutls_hash_hd_t ctx{};
 	::std::byte digest[64]{};
 
-	inline gnutls_evp_hash_ctx() noexcept = default;
+	inline gnutls_evp_hash_ctx(gnutls_mac_algorithm_t mac) noexcept
+		: mac_{mac},
+		  digest_size_{static_cast<::std::size_t>(gnutls_hmac_get_len(mac))},
+		  block_size_{mac == GNUTLS_MAC_SHA384 ? static_cast<::std::size_t>(128)
+												  : static_cast<::std::size_t>(64)}
+	{
+	}
 	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx const &o) noexcept
+		: mac_{o.mac_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}
 	{
 		if (o.ctx != nullptr)
 		{
@@ -56,12 +61,13 @@ struct gnutls_evp_hash_ctx
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
 	}
-	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx &&o) noexcept : ctx{o.ctx}
+	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx &&o) noexcept
+		: mac_{o.mac_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}, ctx{o.ctx}
 	{
 		o.ctx = nullptr;
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size, digest);
+		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
 	}
 	inline ~gnutls_evp_hash_ctx()
 	{
@@ -72,7 +78,9 @@ struct gnutls_evp_hash_ctx
 	}
 	inline void ensure() noexcept
 	{
-		if (ctx == nullptr && gnutls_hash_init(__builtin_addressof(ctx), algo) != 0)
+		if (ctx == nullptr &&
+			gnutls_hash_init(__builtin_addressof(ctx),
+							 static_cast<gnutls_digest_algorithm_t>(mac_)) != 0)
 		{
 			::fast_io::fast_terminate();
 		}
@@ -100,7 +108,7 @@ struct gnutls_evp_hash_ctx
 	}
 	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size, ptr);
+		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size_, ptr);
 	}
 };
 
@@ -111,8 +119,71 @@ namespace fast_io::tls
 
 struct gnutls_crypto_backend
 {
-	using sha256 = details::gnutls_evp_hash_ctx<GNUTLS_DIG_SHA256, 32, 64>;
-	using sha384 = details::gnutls_evp_hash_ctx<GNUTLS_DIG_SHA384, 48, 128>;
+	using md = gnutls_mac_algorithm_t;
+
+	static inline constexpr md md_for(cipher_suite suite) noexcept
+	{
+		return suite == cipher_suite::aes_256_gcm_sha384 ? GNUTLS_MAC_SHA384 : GNUTLS_MAC_SHA256;
+	}
+	static inline ::std::size_t md_digest_size(md a) noexcept
+	{
+		return static_cast<::std::size_t>(gnutls_hmac_get_len(a));
+	}
+	static inline ::std::size_t md_block_size(md a) noexcept
+	{
+		return a == GNUTLS_MAC_SHA384 ? static_cast<::std::size_t>(128)
+									: static_cast<::std::size_t>(64);
+	}
+
+	struct hash_ctx : details::gnutls_evp_hash_ctx
+	{
+		hash_ctx(md m) noexcept : details::gnutls_evp_hash_ctx{m}
+		{
+		}
+	};
+
+	static inline void hkdf_extract(md a, ::std::byte *out,
+									::std::byte const *salt, ::std::size_t salt_size,
+									::std::byte const *ikm, ::std::size_t ikm_size) noexcept
+	{
+		gnutls_datum_t const ik{const_cast<char unsigned *>(
+									reinterpret_cast<char unsigned const *>(ikm)),
+								static_cast<unsigned>(ikm_size)};
+		gnutls_datum_t const sl{const_cast<char unsigned *>(
+									reinterpret_cast<char unsigned const *>(salt)),
+								static_cast<unsigned>(salt_size)};
+		if (gnutls_hkdf_extract(a, __builtin_addressof(ik), __builtin_addressof(sl), out) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+
+	static inline void hkdf_expand(md a, ::std::byte *out, ::std::size_t out_size,
+								   ::std::byte const *prk, ::std::size_t prk_size,
+								   ::std::byte const *info, ::std::size_t info_size) noexcept
+	{
+		gnutls_datum_t const pk{const_cast<char unsigned *>(
+									reinterpret_cast<char unsigned const *>(prk)),
+								static_cast<unsigned>(prk_size)};
+		gnutls_datum_t const inf{const_cast<char unsigned *>(
+									 reinterpret_cast<char unsigned const *>(info)),
+								 static_cast<unsigned>(info_size)};
+		if (gnutls_hkdf_expand(a, __builtin_addressof(pk), __builtin_addressof(inf), out,
+							   out_size) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
+
+	static inline void hmac(md a, ::std::byte *out,
+							::std::byte const *key, ::std::size_t key_size,
+							::std::byte const *data, ::std::size_t data_size) noexcept
+	{
+		if (gnutls_hmac_fast(a, key, key_size, data, data_size, out) != 0)
+		{
+			::fast_io::fast_terminate();
+		}
+	}
 
 	static inline void x25519_keypair(::std::byte *pk, ::std::byte *sk) noexcept
 	{

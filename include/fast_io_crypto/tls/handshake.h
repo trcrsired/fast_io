@@ -333,8 +333,8 @@ the covered content the CertificateVerify signature signs:
 */
 inline constexpr ::std::size_t certificate_verify_content_prefix_size{98};
 
-template <typename ctx>
-inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::byte const *transcript_digest) noexcept
+inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::byte const *transcript_digest,
+													   ::std::size_t digest_size) noexcept
 {
 	for (::std::size_t i{}; i != 64; ++i)
 	{
@@ -343,7 +343,7 @@ inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::
 	char8_t const *ctx_str{u8"TLS 1.3, server CertificateVerify"};
 	::fast_io::details::non_overlapped_copy_n(ctx_str, 33, reinterpret_cast<char8_t *>(out + 64));
 	out[97] = ::std::byte{0};
-	::fast_io::details::non_overlapped_copy_n(transcript_digest, ctx::digest_size, out + 98);
+	::fast_io::details::non_overlapped_copy_n(transcript_digest, digest_size, out + 98);
 }
 
 } // namespace fast_io::tls::details

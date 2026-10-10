@@ -684,7 +684,7 @@ inline void tls_close_notify(basic_schannel_tls_io_observer<ch_type, socket_obse
 	details::tls_client_send_close_notify(tob.handle);
 }
 
-/* owning bundle, same shape as basic_tls / basic_ossl_tls */
+/* owning bundle, same shape as basic_tls13 / basic_ossl_tls */
 template <typename socket_type, typename allocator_type = ::fast_io::native_global_allocator>
 struct basic_schannel_tls
 {

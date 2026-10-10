@@ -21,4 +21,5 @@ both stay linux-gated (windows async would come from an iocp backend).
    explicit opt-in use. It never participates in native_tls
    selection. */
 #include "schannel.h"
+#include "schannel_async.h"
 #include "native_backend.h"

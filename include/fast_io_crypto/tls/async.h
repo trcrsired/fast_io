@@ -30,7 +30,7 @@ namespace fast_io::tls
 
 
 /* no async_close forwarder: the close contract consumes the handle, but
-   a tls observer does not own the fd -- the basic_tls::socket member or the
+   a tls observer does not own the fd -- the basic_tls13::socket member or the
    caller's file does. Close the socket owner directly. */
 
 namespace details
@@ -1029,7 +1029,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_pread_some_bytes_underflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte *first,
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte *first,
 	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	if (off.has_opt)
@@ -1070,7 +1070,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pread_some_bytes_underflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -1116,7 +1116,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte const *first,
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::std::byte const *first,
 	::std::size_t count, ::fast_io::intfpos_opt off, func callback) noexcept
 {
 	if (off.has_opt)
@@ -1148,7 +1148,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_scatter_pwrite_some_bytes_overflow_callback_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob,
 	::fast_io::io_scatter_t const *scatters, ::std::size_t n, ::fast_io::intfpos_opt off,
 	func callback) noexcept
 {
@@ -1191,7 +1191,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	::fast_io::linux_io_uring_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	::fast_io::tls::details::io_uring_tls_close_submit(sched, timeout, tob.handle,
 													   ::std::move(callback));
@@ -1219,7 +1219,7 @@ template <typename async_scheduler_type, ::std::integral ch_type, typename alloc
 	requires(::fast_io::tls::details::tls_generic_sched<::std::remove_cvref_t<async_scheduler_type>>)
 inline void async_close_define(
 	async_scheduler_type sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	if (tob.handle->established_)
 	{
@@ -1386,7 +1386,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_handshake_callback_define(
 	::fast_io::posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::fast_io::u8cstring_view hostname,
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, ::fast_io::u8cstring_view hostname,
 	func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
@@ -1423,7 +1423,7 @@ template <::std::integral ch_type, typename allocator_type, typename socket_obse
 		::std::remove_cvref_t<func>>
 inline void async_close_define(
 	::fast_io::posix_thread_pool_observer sched, ::fast_io::posix_statx_timestamp_opt timeout,
-	basic_tls_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
+	basic_tls13_io_observer<ch_type, allocator_type, socket_observer_type, crypto> tob, func callback) noexcept
 {
 	using client_type = ::std::remove_cvref_t<decltype(*tob.handle)>;
 	using cookie_type =
