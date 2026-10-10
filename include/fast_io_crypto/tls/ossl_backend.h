@@ -706,6 +706,93 @@ public:
 		EVP_PKEY_free(pk);
 		return res;
 	}
+
+	/*
+	server-side CertificateVerify signature. The private key DER is
+	handed to the provider's importer: d2i_AutoPrivateKey takes PKCS#8,
+	d2i_PrivateKey(EVP_PKEY_RSA) a bare PKCS#1, and a raw 32/64-byte
+	ed25519 key feeds EVP_PKEY_new_raw_private_key (the seed is the
+	first 32 bytes either way). salt is unused -- the provider RNG
+	supplies PSS entropy.
+	*/
+	static inline bool cert_cv_sign(signature_scheme scheme,
+									::std::byte const *covered, ::std::size_t covered_size,
+									::std::byte const *pkey_der, ::std::size_t pkey_size,
+									::std::byte const *salt,
+									::std::byte *sig_out, ::std::size_t *sig_size) noexcept
+	{
+		(void)salt;
+		char unsigned const *d{reinterpret_cast<char unsigned const *>(pkey_der)};
+		EVP_PKEY *pk{d2i_AutoPrivateKey(nullptr, __builtin_addressof(d),
+									   static_cast<long>(pkey_size))};
+		if (pk == nullptr)
+		{
+			d = reinterpret_cast<char unsigned const *>(pkey_der);
+			pk = d2i_PrivateKey(EVP_PKEY_RSA, nullptr, __builtin_addressof(d),
+								static_cast<long>(pkey_size));
+		}
+		if (pk == nullptr && (pkey_size == 32 || pkey_size == 64))
+		{
+			pk = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, nullptr,
+											  reinterpret_cast<char unsigned const *>(pkey_der), 32);
+		}
+		if (pk == nullptr)
+		{
+			return false;
+		}
+		bool ok{};
+		::std::size_t out{static_cast<::std::size_t>(EVP_PKEY_size(pk))};
+		EVP_MD_CTX *c{EVP_MD_CTX_new()};
+		if (c != nullptr)
+		{
+			if (scheme == signature_scheme::ed25519)
+			{
+				ok = EVP_DigestSignInit(c, nullptr, nullptr, nullptr, pk) == 1 &&
+					 EVP_DigestSign(c, reinterpret_cast<char unsigned *>(sig_out),
+									__builtin_addressof(out),
+									reinterpret_cast<char unsigned const *>(covered),
+									covered_size) == 1;
+			}
+			else
+			{
+				EVP_MD const *md{ossl_tls_scheme_md(scheme)};
+				EVP_PKEY_CTX *pctx{};
+				if (md != nullptr &&
+					EVP_DigestSignInit(c, __builtin_addressof(pctx), md, nullptr, pk) == 1)
+				{
+					bool const pss{scheme == signature_scheme::rsa_pss_rsae_sha256 ||
+								   scheme == signature_scheme::rsa_pss_rsae_sha384 ||
+								   scheme == signature_scheme::rsa_pss_rsae_sha512 ||
+								   scheme == signature_scheme::rsa_pss_pss_sha256 ||
+								   scheme == signature_scheme::rsa_pss_pss_sha384 ||
+								   scheme == signature_scheme::rsa_pss_pss_sha512};
+					bool params{true};
+					if (pss)
+					{
+						/* rfc8446 4.2.3: salt length equals the digest */
+						params = EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0 &&
+								 EVP_PKEY_CTX_set_rsa_pss_saltlen(
+									 pctx, static_cast<int>(EVP_MD_size(md))) > 0 &&
+								 EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, md) > 0;
+					}
+					if (params)
+					{
+						ok = EVP_DigestSign(c, reinterpret_cast<char unsigned *>(sig_out),
+											__builtin_addressof(out),
+											reinterpret_cast<char unsigned const *>(covered),
+											covered_size) == 1;
+					}
+				}
+			}
+			EVP_MD_CTX_free(c);
+		}
+		EVP_PKEY_free(pk);
+		if (ok)
+		{
+			*sig_size = out;
+		}
+		return ok;
+	}
 };
 
 } // namespace fast_io::tls

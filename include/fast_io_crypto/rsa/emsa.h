@@ -223,4 +223,69 @@ inline constexpr bool emsa_pss_verify(::std::byte const *em, ::std::size_t emlen
 	return bytes_equal(digest, h, hlen);
 }
 
+/*
+EMSA-PSS-ENCODE (rfc8017 9.1.1), the mirror of emsa_pss_verify.
+em_out receives emlen bytes:
+  maskedDB || H || 0xbc
+where DB = 0...0 || 01 || salt and maskedDB = DB xor MGF1(H).
+salt is caller-supplied entropy of salt_size bytes. embits is the
+encoded bit length (modulus_bits - 1 for TLS); the top unused bits of
+the first byte are zeroed. Returns false when emlen cannot hold the
+encoding.
+*/
+template <typename ctx>
+inline constexpr bool emsa_pss_encode(::std::byte *em_out, ::std::size_t emlen, ::std::size_t embits,
+									  ::std::byte const *mhash,
+									  ::std::byte const *salt, ::std::size_t salt_size) noexcept
+{
+	constexpr ::std::size_t hlen{ctx::digest_size};
+	if (emlen < hlen + salt_size + 2)
+	{
+		return false;
+	}
+	/* H = Hash(8 zero || mHash || salt) */
+	ctx hasher;
+	::std::byte const zeros[8]{};
+	hasher.update(zeros, zeros + 8);
+	hasher.update(mhash, mhash + hlen);
+	hasher.update(salt, salt + salt_size);
+	hasher.do_final();
+	::std::byte digest[hlen];
+	hasher.digest_to_byte_ptr(digest);
+
+	::std::size_t const dblen{emlen - hlen - 1};
+	::std::byte db[1024];
+	if (dblen > sizeof(db))
+	{
+		return false;
+	}
+	::std::size_t const zerolen{dblen - salt_size - 1};
+	for (::std::size_t i{}; i != zerolen; ++i)
+	{
+		db[i] = ::std::byte{};
+	}
+	db[zerolen] = ::std::byte{1};
+	for (::std::size_t i{}; i != salt_size; ++i)
+	{
+		db[zerolen + 1 + i] = salt[i];
+	}
+	/* maskedDB = DB xor MGF1(H, dbLen) */
+	mgf1<ctx>(em_out, dblen, digest, hlen);
+	for (::std::size_t i{}; i != dblen; ++i)
+	{
+		em_out[i] ^= db[i];
+	}
+	unsigned const unused{static_cast<unsigned>(8 * emlen - embits)};
+	if (unused != 0)
+	{
+		em_out[0] &= static_cast<::std::byte>(0xffu >> unused);
+	}
+	for (::std::size_t i{}; i != hlen; ++i)
+	{
+		em_out[dblen + i] = digest[i];
+	}
+	em_out[emlen - 1] = ::std::byte{0xbc};
+	return true;
+}
+
 } // namespace fast_io::details::rsa

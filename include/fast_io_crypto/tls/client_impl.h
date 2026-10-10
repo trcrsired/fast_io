@@ -10,6 +10,7 @@ both stay linux-gated (windows async would come from an iocp backend).
 
 #include "client.h"
 #include "observer.h"
+#include "server.h"
 #include "file.h"
 #include "roots.h"
 #include "swasync.h"

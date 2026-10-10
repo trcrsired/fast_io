@@ -34,6 +34,7 @@ using ::fast_io::tls::handshake_type;
 using ::fast_io::tls::named_group;
 using ::fast_io::tls::alert_description;
 using ::fast_io::tls::tls_client_config;
+using ::fast_io::tls::tls_server_config;
 using ::fast_io::tls::tls_platform;
 
 /* crypto backend selection -- basic_tls<..., crypto> takes one of

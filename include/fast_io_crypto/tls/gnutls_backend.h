@@ -507,6 +507,28 @@ public:
 		gnutls_pubkey_deinit(pk);
 		return res;
 	}
+
+	/*
+	server-side CertificateVerify signature. Signing is a once-per-
+	handshake op -- not throughput-critical -- so it stays on the
+	in-repo DER parse and primitives, shared with the fast_io backend.
+	*/
+	static inline bool cert_cv_sign(signature_scheme scheme,
+									::std::byte const *covered, ::std::size_t covered_size,
+									::std::byte const *pkey_der, ::std::size_t pkey_size,
+									::std::byte const *salt,
+									::std::byte *sig_out, ::std::size_t *sig_size) noexcept
+	{
+		details::tls_pkey key;
+		if (!details::tls_pkey_parse(__builtin_addressof(key), pkey_der, pkey_size))
+		{
+			return false;
+		}
+		bool const ok{details::tls_cv_sign(scheme, covered, covered_size, key, salt,
+										   sig_out, sig_size)};
+		::fast_io::secure_clear(__builtin_addressof(key), sizeof(key));
+		return ok;
+	}
 };
 
 } // namespace fast_io::tls

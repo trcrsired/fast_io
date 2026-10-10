@@ -30,6 +30,11 @@ A backend supplies:
 						   can import its spki_der directly
 	cert_cv_verify         the CertificateVerify signature over the
 						   transcript, leaf cert passed whole
+	cert_cv_sign           the server-side CertificateVerify signature:
+						   covered content signed per scheme with the
+						   private key (DER in -- PKCS#8, PKCS#1 or a
+						   raw ed25519 key). salt supplies PSS entropy;
+						   deterministic schemes ignore it
 
 The digest and HKDF ops take the md descriptor so a single handshake
 flight2 instantiates once per backend instead of once per suite hash.
@@ -225,6 +230,23 @@ struct fast_io_crypto_backend
 		return details::tls_certificate_verify(scheme, covered, covered_size, signature,
 											   signature_size, leaf.spki_algorithm, leaf.public_key,
 											   leaf.public_key_size);
+	}
+
+	/* sig_out must hold the modulus size (rsa) / 64 (ed25519) */
+	static inline bool cert_cv_sign(signature_scheme scheme,
+									::std::byte const *covered, ::std::size_t covered_size,
+									::std::byte const *pkey_der, ::std::size_t pkey_size,
+									::std::byte const *salt,
+									::std::byte *sig_out, ::std::size_t *sig_size) noexcept
+	{
+		details::tls_pkey key;
+		if (!details::tls_pkey_parse(__builtin_addressof(key), pkey_der, pkey_size))
+		{
+			return false;
+		}
+		bool const ok{details::tls_cv_sign(scheme, covered, covered_size, key, salt, sig_out, sig_size)};
+		::fast_io::secure_clear(__builtin_addressof(key), sizeof(key));
+		return ok;
 	}
 };
 
