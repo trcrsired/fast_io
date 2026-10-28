@@ -17,13 +17,16 @@
 namespace fast_io
 {
 
-template <typename stm>
+// Holds exactly the output_stream_ref result and the locale pointer.
+// The whole object is passed by value through the print path, so it must
+// stay small; the lc_ctx is built lazily only when a locale-aware
+// argument actually needs it.
+template <typename output_stream_ref_t>
 struct lc_imbuer
 {
-	using handle_type = stm;
+	using handle_type = output_stream_ref_t;
 	using output_char_type = typename handle_type::output_char_type;
 	using char_type = output_char_type;
-	::fast_io::l10n::lc_locale const *loc{};
 #ifndef __INTELLISENSE__
 #if __has_cpp_attribute(msvc::no_unique_address)
 	[[msvc::no_unique_address]]
@@ -32,6 +35,7 @@ struct lc_imbuer
 #endif
 #endif
 	handle_type handle{};
+	::fast_io::l10n::lc_locale const *loc{};
 };
 
 template <typename stm>
@@ -48,8 +52,7 @@ inline constexpr auto imbue(::fast_io::l10n::lc_locale const *loc,
 {
 	using reftype = decltype(::fast_io::operations::output_stream_ref(out));
 	using char_type = typename reftype::output_char_type;
-	return lc_imbuer<reftype>{loc,
-							  ::fast_io::operations::output_stream_ref(out)};
+	return lc_imbuer<reftype>{::fast_io::operations::output_stream_ref(out), loc};
 }
 
 
