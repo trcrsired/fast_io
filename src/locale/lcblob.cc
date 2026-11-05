@@ -409,7 +409,9 @@ struct intl_key
 			hkey = 0;
 		}
 	}
-	inline ~intl_key() noexcept
+	intl_key(intl_key const &) = delete;
+	intl_key &operator=(intl_key const &) = delete;
+	inline ~intl_key()
 	{
 		if (hkey != 0)
 		{
