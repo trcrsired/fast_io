@@ -40,12 +40,20 @@ rather than by an unsigned compare, which x86 SSE2 has no cheap form of.
 
 Recursion is bounded by max_depth and the node count by max_nodes, so a
 hostile document is rejected instead of exhausting the stack or the 32 bit
-index space. Integers go through ::fast_io::parse_by_scan into
-::std::uint_least64_t / ::std::int_least64_t and are stored two's complement
-in one unsigned slot (use value::as_int64() to read a negative back); a
-number with a fraction or an exponent becomes float64_type, whose
-conversion lives in the fast_io.floating module (fp_scan_decimal) — link that
-module when documents carry reals, exactly as fast_io's own print/scan do.
+index space. Integers accumulate by hand with exact overflow checks and are
+stored two's complement in one unsigned slot (use value::as_int64() to read a
+negative back); a number with a fraction or an exponent becomes float64_type
+through a Clinger fast path plus a long double tail, converted in this module
+rather than through fast_io.floating, so no #embed and no extra module is
+needed. json_policy::floating_point is the bit that carries all of it: without
+it neither the arm nor the table exists.
+
+The tree is two flat containers (values and members) whose allocator is
+basic_document's template parameter, so indexing and allocation report
+violations through the same allocator_adapter_flags the containers use:
+fail fast by default, herbceptions when the allocator asks for them.
+
+Usage, one section per entry point, lives in tests/0047.json.
 */
 
 #include <coroutine>
@@ -70,7 +78,10 @@ export namespace fast_io
 
 /* The API is spelled in these types, so an importer must be able to name them
  * without textually including the headers they come from. */
+using ::fast_io::allocator_adapter_flags;
 using ::fast_io::array;
+using ::fast_io::generic_allocator_adapter;
+using ::fast_io::native_global_allocator;
 using ::fast_io::u8string_view;
 using ::fast_io::vector;
 
@@ -874,7 +885,7 @@ inline constexpr ::fast_io::u8string_view parser<policy, arena_type>::parse_stri
 {
 	::std::size_t const length{decode_string(*this, body, nullptr)};
 	char8_t *const dest{arena->reserve(length)};
-	decode_string(*this, body, dest);
+	(void)decode_string(*this, body, dest);
 	arena->commit(length);
 	::fast_io::u8string_view const text(dest, length);
 	if (details::has_non_ascii(text) && !details::valid_utf8(text))
@@ -1236,11 +1247,22 @@ constexpr void parse_document(parser<policy, arena_type> &self, handler_type &h)
 
 /* A document owns the node array, the member array and the decoded text; the
  * source buffer handed to parse() must outlive it. */
-struct document
+template <typename allocator_type = ::fast_io::native_global_allocator>
+struct basic_document
 {
+	/* The tree is two containers, so the allocator is a template parameter here
+	 * exactly as it is for the containers themselves: out-of-range indexing
+	 * throws only when the allocator carries allocator_adapter_flags::
+	 * throws_on_violations, and otherwise fails fast, which is what `[]` on a
+	 * vector already does. Nothing about the flag is reinterpreted here. */
+	using value_container = ::fast_io::containers::vector<value, allocator_type>;
+	using member_container = ::fast_io::containers::vector<member, allocator_type>;
+	static inline constexpr bool throwing_violations{
+		::fast_io::containers::details::allocator_throws_on_violations<allocator_type>};
+
 	::fast_io::u8string_view source{};
-	::fast_io::vector<value> values{};
-	::fast_io::vector<member> members{};
+	value_container values{};
+	member_container members{};
 	details::string_arena arena{};
 
 	[[nodiscard]] inline constexpr bool is_empty() const noexcept
@@ -1253,14 +1275,21 @@ struct document
 		return values.front();
 	}
 
-	[[nodiscard]] inline value const &at(::std::uint_least32_t index) const noexcept
+	/* Index the flat node array the way the containers do: `[]` checks, so a
+	 * walk that runs off the end of a sibling chain is caught instead of
+	 * silently reading a neighbour, and `index_unchecked` is the form for a
+	 * loop that has already proved it is in range. The check is the vector's
+	 * own, so whether it throws ::std::errc::invalid_argument or terminates is
+	 * the allocator's throws_on_violations flag, not a decision made here. */
+	[[nodiscard]] inline constexpr value const &operator[](::std::size_t index) const
+		throws(throwing_violations)
 	{
-		return values.index_unchecked(index);
+		return values[index];
 	}
 
-	[[nodiscard]] inline member const &member_at(::std::uint_least32_t index) const noexcept
+	[[nodiscard]] inline constexpr value const &index_unchecked(::std::size_t index) const noexcept
 	{
-		return members.index_unchecked(index);
+		return values.index_unchecked(index);
 	}
 
 	/* first child of an array, or first member of an object */
@@ -1326,12 +1355,17 @@ struct document
 	}
 };
 
+/* The default: a global allocator, fail fast on a bad index. Pick another
+ * allocator only when the caller wants violations to come back as herbceptions. */
+using document = basic_document<>;
+
 /* Builds a document. Children are chained as they are appended, so the tree
  * is complete in a single pass: no value stack and no finalisation step. */
+template <typename document_type>
 class dom_handler
 {
 private:
-	document &docs;
+	document_type &docs;
 	::fast_io::vector<::std::uint_least32_t> open{};
 	::fast_io::vector<::std::uint_least32_t> open_last{};
 	::std::uint_least32_t pending_member{no_index};
@@ -1384,7 +1418,7 @@ private:
 	}
 
 public:
-	explicit dom_handler(document &d) noexcept : docs(d)
+	explicit dom_handler(document_type &d) noexcept : docs(d)
 	{
 	}
 
@@ -1473,12 +1507,13 @@ public:
 	}
 };
 
-/* Parse into a document. */
-template <json_policy policy = default_json_policy>
-[[nodiscard]] inline document parse(::fast_io::u8string_view source) throws
+/* Parse into a document. `document_type` defaults to `document`; naming another
+ * one only changes the allocator, and with it the bounds behaviour. */
+template <json_policy policy = default_json_policy, typename document_type = document>
+[[nodiscard]] inline document_type parse(::fast_io::u8string_view source) throws
 {
-	document docs;
-	dom_handler h{docs};
+	document_type docs;
+	dom_handler<document_type> h{docs};
 	details::string_arena arena{};
 	parser<policy> p{source, __builtin_addressof(arena)};
 	parse_document(p, h);
@@ -1689,7 +1724,7 @@ public:
 	{
 		try
 		{
-			dom_handler h{docs};
+			dom_handler<document> h{docs};
 			details::string_arena arena{};
 			parser<policy> p{source, __builtin_addressof(arena)};
 			parse_document(p, h);
