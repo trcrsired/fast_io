@@ -1,0 +1,4 @@
+corpus/
+fast_io.json.pcm
+json_fuzz
+crash-*
