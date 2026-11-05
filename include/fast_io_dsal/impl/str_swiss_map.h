@@ -1140,11 +1140,19 @@ public:
 	{
 		return const_reverse_iterator(cbegin());
 	}
-	constexpr reverse_iterator rbegin() const noexcept
+	constexpr reverse_iterator rbegin() noexcept
+	{
+		return reverse_iterator(this->end());
+	}
+	constexpr reverse_iterator rend() noexcept
+	{
+		return reverse_iterator(this->begin());
+	}
+	constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return this->crbegin();
 	}
-	constexpr reverse_iterator rend() const noexcept
+	constexpr const_reverse_iterator rend() const noexcept
 	{
 		return this->crend();
 	}
