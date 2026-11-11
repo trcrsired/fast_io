@@ -16,10 +16,10 @@
  *   demand (up to a cap) whenever every live worker is parked and work
  *   is queued — otherwise N idle keep-alive connections would starve
  *   the (N+1)-th, a state a browser reaches with a handful of tabs;
- * - posix_statx_timestamp_opt is a DURATION despite the name (same
- *   convention as the other backends); the pool can only report
- *   errc::timed_out for work a worker has not picked up yet — a running
- *   syscall cannot be preempted;
+ * - posix_statx_timestamp_opt is a DURATION despite the name. A
+ *   nonblocking fd lets a worker honour it by polling for readiness and
+ *   reporting errc::timed_out at the deadline; a blocking fd parks the
+ *   worker inside the syscall, where it cannot be preempted;
  * - destroy the pool only after pumping it to quiescence; completions
  *   queued after the last pump are leaked, matching every async API's
  *   "the scheduler outlives its submissions" rule.
@@ -212,6 +212,62 @@ inline void posix_thread_pool_wait_io(posix_thread_pool_state *st, int fd,
 	}
 }
 
+/*
+Deadline-aware park. io_uring implements an op timeout with a linked
+IORING_OP_LINK_TIMEOUT, but a pool worker sits in a blocking syscall and
+cannot be cancelled. A nonblocking fd answers EAGAIN instead, so the
+worker can poll for readiness and give up at the absolute CLOCK_REALTIME
+deadline. Returns false when the deadline elapsed before the fd became
+ready; the caller reports errc::timed_out, matching the io_uring path.
+*/
+inline bool posix_thread_pool_wait_io_deadline(posix_thread_pool_state *st, int fd,
+											   short events,
+											   ::timespec const &deadline) FAST_IO_HERBCEPTIONS_THROWS
+{
+	::pollfd pfd{fd, events, 0};
+	::fast_io::noexcept_call(::pthread_mutex_lock, __builtin_addressof(st->mutex));
+	++st->parked_workers;
+	bool const grow{st->parked_workers == st->live_workers && st->work_head != nullptr};
+	::fast_io::noexcept_call(::pthread_mutex_unlock, __builtin_addressof(st->mutex));
+	if (grow)
+	{
+		(void)posix_thread_pool_grow(st);
+	}
+	int rc{};
+	for (;;)
+	{
+		::timespec now{};
+		::fast_io::noexcept_call(::clock_gettime, CLOCK_REALTIME, __builtin_addressof(now));
+		auto const remaining{
+			(static_cast<long long>(deadline.tv_sec) - static_cast<long long>(now.tv_sec)) *
+				1000000000LL +
+			(static_cast<long long>(deadline.tv_nsec) - static_cast<long long>(now.tv_nsec))};
+		if (remaining <= 0)
+		{
+			rc = 0;
+			break;
+		}
+		long long const timeout_ms{(remaining + 999999LL) / 1000000LL};
+		rc = ::fast_io::noexcept_call(
+			::poll, __builtin_addressof(pfd), ::nfds_t{1},
+			static_cast<int>(timeout_ms > 2147483647LL ? 2147483647LL : timeout_ms));
+		if (rc < 0 && errno == EINTR)
+		{
+			continue;
+		}
+		break;
+	}
+	int const poll_errno{rc < 0 ? errno : 0};
+	::fast_io::noexcept_call(::pthread_mutex_lock, __builtin_addressof(st->mutex));
+	--st->parked_workers;
+	::fast_io::noexcept_call(::pthread_mutex_unlock, __builtin_addressof(st->mutex));
+	if (rc < 0)
+	{
+		::fast_io::throw_posix_error(poll_errno);
+	}
+	return rc > 0;
+}
+
 /* a caught op error is a would-block when its code says so */
 inline bool posix_thread_pool_would_block(::std::error const &e) noexcept
 {
@@ -373,7 +429,20 @@ inline void posix_thread_pool_rw_run(posix_thread_pool_node *p) noexcept
 					{
 						if (posix_thread_pool_would_block(e))
 						{
-							posix_thread_pool_wait_io(self->state, self->stm.fd, POLLOUT);
+							if (self->has_deadline)
+							{
+								if (!posix_thread_pool_wait_io_deadline(
+										self->state, self->stm.fd, POLLOUT, self->deadline))
+								{
+									self->err = ::fast_io::details::async_make_error(
+										::std::errc::timed_out);
+									return;
+								}
+							}
+							else
+							{
+								posix_thread_pool_wait_io(self->state, self->stm.fd, POLLOUT);
+							}
 							continue;
 						}
 					}
@@ -414,7 +483,20 @@ inline void posix_thread_pool_rw_run(posix_thread_pool_node *p) noexcept
 					{
 						if (posix_thread_pool_would_block(e))
 						{
-							posix_thread_pool_wait_io(self->state, self->stm.fd, POLLIN);
+							if (self->has_deadline)
+							{
+								if (!posix_thread_pool_wait_io_deadline(
+										self->state, self->stm.fd, POLLIN, self->deadline))
+								{
+									self->err = ::fast_io::details::async_make_error(
+										::std::errc::timed_out);
+									return;
+								}
+							}
+							else
+							{
+								posix_thread_pool_wait_io(self->state, self->stm.fd, POLLIN);
+							}
 							continue;
 						}
 					}
@@ -495,6 +577,17 @@ inline void posix_thread_pool_accept_run(posix_thread_pool_node *p) noexcept
 					::fast_io::details::sys_fcntl(self->accepted_fd, F_GETFL)};
 				::fast_io::details::sys_fcntl(self->accepted_fd, F_SETFL,
 											  acceptedFlags | O_NONBLOCK);
+#endif
+#if defined(F_GETFD) && defined(F_SETFD) && defined(FD_CLOEXEC)
+				/* accept() cannot carry SOCK_CLOEXEC, so set it here: a
+				   server that fork+execs (a PTY shell, a worker) must not
+				   leak live client sockets into the child.  The io_uring
+				   accept op gets CLOEXEC from the socket(2) flags; the
+				   pool's plain accept() has to match it. */
+				auto const acceptedFdFlags{
+					::fast_io::details::sys_fcntl(self->accepted_fd, F_GETFD)};
+				::fast_io::details::sys_fcntl(self->accepted_fd, F_SETFD,
+											  acceptedFdFlags | FD_CLOEXEC);
 #endif
 				break;
 			}
