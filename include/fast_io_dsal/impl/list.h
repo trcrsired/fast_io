@@ -801,7 +801,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.prev);
 		if (node == __builtin_addressof(imp))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 #if 0
 		auto prev = static_cast<::fast_io::containers::details::list_node_common *>(node->prev);
@@ -819,7 +819,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.next);
 		if (node == __builtin_addressof(imp))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 #if 0
 		auto next = static_cast<::fast_io::containers::details::list_node_common *>(node->next);
@@ -856,7 +856,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -867,7 +867,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -879,7 +879,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -890,7 +890,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}

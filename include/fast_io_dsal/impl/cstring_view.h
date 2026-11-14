@@ -53,7 +53,7 @@ public:
 		constexpr size_type nm1{N - 1};
 		if (buffer[nm1]) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 	}
 
@@ -139,7 +139,7 @@ public:
 	{
 		if (this->n < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return basic_cstring_view(this->ptr + (this->n - count), count);
 	}

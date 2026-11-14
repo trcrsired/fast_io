@@ -588,7 +588,7 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(typename allocator::ha
 	{
 		if (__builtin_add_overflow(new_blocks_count_least, 1zu, __builtin_addressof(new_blocks_count_least_p1))) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -598,7 +598,7 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(typename allocator::ha
 		new_blocks_count_least_p1 = new_blocks_count_least;
 		if (mx == new_blocks_count_least)
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		++new_blocks_count_least_p1;
 	}
@@ -666,7 +666,7 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(typename alloca
 		if (__builtin_add_overflow(initial_allocated_block_counts, 1u,
 								   __builtin_addressof(initial_allocated_block_counts_with_sentinel)))
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -675,7 +675,7 @@ inline constexpr void deque_allocate_on_empty_common_with_n_impl(typename alloca
 		constexpr ::std::size_t maxval{::std::numeric_limits<::std::size_t>::max()};
 		if (initial_allocated_block_counts == maxval) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		initial_allocated_block_counts_with_sentinel = initial_allocated_block_counts + 1u;
 	}
@@ -788,7 +788,7 @@ inline constexpr void deque_allocate_init_blocks_dezeroing_impl(typename allocat
 	constexpr ::std::size_t mx{::std::numeric_limits<::std::size_t>::max()};
 	if (blocks_count_least == mx)
 	{
-		::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 	}
 	using block_typed_allocator = ::fast_io::typed_generic_allocator_adapter<allocator, typename dequecontroltype::controlreplacetype>;
 	auto [start_ptr, blocks_count] = ::fast_io::containers::details::deque_alloc_at_least<block_typed_allocator>(allochdl, blocks_count_least + 1u);
@@ -1384,7 +1384,7 @@ inline constexpr ::std::size_t deque_new_blocks_count_compute_impl(::std::size_t
 		::std::size_t blocksx2;
 		if (__builtin_add_overflow(blocks, blocks, __builtin_addressof(blocksx2)))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		if (reserved_space_at_opposite_direction < blocksx2)
 		{
@@ -1392,11 +1392,11 @@ inline constexpr ::std::size_t deque_new_blocks_count_compute_impl(::std::size_t
 		}
 		if (__builtin_add_overflow(new_blocks_count_least, reserved_space_at_opposite_direction, __builtin_addressof(reserved_space_at_opposite_direction)))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		if (__builtin_add_overflow(reserved_space_at_opposite_direction, 1u, __builtin_addressof(reserved_space_at_opposite_direction)))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		return reserved_space_at_opposite_direction;
 	}
@@ -1406,7 +1406,7 @@ inline constexpr ::std::size_t deque_new_blocks_count_compute_impl(::std::size_t
 		::std::size_t blocksx2{blocks + blocks};
 		if (blocksx2 < blocks)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		if (reserved_space_at_opposite_direction < blocksx2)
 		{
@@ -1416,12 +1416,12 @@ inline constexpr ::std::size_t deque_new_blocks_count_compute_impl(::std::size_t
 		::std::size_t const mxm{mx - new_blocks_count_least};
 		if (mxm < reserved_space_at_opposite_direction)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		reserved_space_at_opposite_direction += new_blocks_count_least;
 		if (mx == reserved_space_at_opposite_direction)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 		}
 		++reserved_space_at_opposite_direction;
 		return reserved_space_at_opposite_direction;
@@ -1531,7 +1531,7 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(typenam
 	{
 		if (__builtin_add_overflow(old_elements_blocks_count, extrablocks, __builtin_addressof(new_elements_blocks_count))) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -1541,7 +1541,7 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(typenam
 		::std::size_t const mx_sub_extrablocks{mx - extrablocks};
 		if (mx_sub_extrablocks < old_elements_blocks_count)
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		new_elements_blocks_count = old_elements_blocks_count + extrablocks;
 	}
@@ -1555,7 +1555,7 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(typenam
 	{
 		if (__builtin_add_overflow(capacity_blocks_count_direction, capacity_blocks_count_direction, __builtin_addressof(capacity_blocks_count_direction)))
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -1565,7 +1565,7 @@ inline constexpr void deque_rebalance_or_grow_insertation_direction_impl(typenam
 		constexpr ::std::size_t mxdv2m1{(mx >> 1u)};
 		if (mxdv2m1 < capacity_blocks_count_direction)
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		capacity_blocks_count_direction <<= 1u;
 	}
@@ -1753,7 +1753,7 @@ inline constexpr void deque_reserve_back_spaces_impl(typename allocator::handle_
 	{
 		if (__builtin_add_overflow(toallocate, 1u, __builtin_addressof(toallocate)))
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -1762,7 +1762,7 @@ inline constexpr void deque_reserve_back_spaces_impl(typename allocator::handle_
 		constexpr ::std::size_t mxval{::std::numeric_limits<::std::size_t>::max()};
 		if (toallocate == mxval)
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		++toallocate;
 	}
@@ -1914,7 +1914,7 @@ inline constexpr void deque_reserve_front_spaces_impl(typename allocator::handle
 	{
 		if (__builtin_add_overflow(toallocate, 1u, __builtin_addressof(toallocate)))
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 	}
 	else
@@ -1923,7 +1923,7 @@ inline constexpr void deque_reserve_front_spaces_impl(typename allocator::handle
 		constexpr ::std::size_t mxval{::std::numeric_limits<::std::size_t>::max()};
 		if (toallocate == mxval)
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		++toallocate;
 	}
@@ -2112,7 +2112,7 @@ inline constexpr ::fast_io::containers::details::deque_nth_element_result<typena
 	::std::size_t lastsegidx{static_cast<::std::size_t>(static_cast<::std::size_t>(back_controller_ptr - front_controller_ptr))};
 	if (lastsegidx < pos) [[unlikely]]
 	{
-		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing>();
 #if __has_cpp_attribute(unreachable)
 		[[unreachable]];
 #endif
@@ -2959,7 +2959,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		pop_back_unchecked();
 	}
@@ -2991,7 +2991,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		return controller.back_block.curr_ptr[-1];
@@ -3002,7 +3002,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		return controller.back_block.curr_ptr[-1];
@@ -3138,7 +3138,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		pop_front_unchecked();
@@ -3172,7 +3172,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		return *controller.front_block.curr_ptr;
@@ -3183,7 +3183,7 @@ public:
 	{
 		if (controller.front_block.curr_ptr == controller.back_block.curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		return *controller.front_block.curr_ptr;
@@ -3194,7 +3194,7 @@ public:
 	{
 		if (size() <= index) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return ::fast_io::containers::details::deque_index_container_unsigned(controller.front_block, index);
 	}
@@ -3204,7 +3204,7 @@ public:
 	{
 		if (size() <= index) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return ::fast_io::containers::details::deque_index_container_unsigned(controller.front_block, index);
 	}
@@ -3608,7 +3608,7 @@ public:
 		size_type const n{this->size()};
 		if (n < pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->insert_range_impl(pos, ::std::forward<R>(rg), n).pos;
 	}
@@ -3859,7 +3859,7 @@ private:
 		auto oldsize{this->size()};
 		if (oldsize < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 #if __has_cpp_attribute(unreachable)
 			[[unreachable]];
 #endif
@@ -3963,7 +3963,7 @@ public:
 		auto oldsize{this->size()};
 		if (oldsize < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		if constexpr (::std::is_nothrow_constructible_v<value_type, Args...>)
 		{
@@ -4047,7 +4047,7 @@ public:
 		size_type const n{this->size()};
 		if (n < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->insert_index_impl(idx, count, val, n).pos;
 	}
@@ -4375,7 +4375,7 @@ public:
 		size_type const n{this->size()};
 		if (n < firstidx || n < lastidx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		auto bg{this->begin()};
 		this->erase_unchecked_impl(bg + firstidx, bg + lastidx, firstidx < (n - lastidx));
@@ -4397,7 +4397,7 @@ public:
 		size_type const n{this->size()};
 		if (n <= firstidx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->erase_unchecked_single_impl(this->begin() + firstidx,
 										  firstidx < static_cast<size_type>(n - firstidx));

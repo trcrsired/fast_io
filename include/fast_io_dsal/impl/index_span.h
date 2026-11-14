@@ -60,7 +60,7 @@ public:
 	{
 		if (::std::ranges::size(range) < N) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 	}
 
@@ -133,7 +133,7 @@ public:
 	{
 		if (N <= idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return ptr[idx];
 	}
@@ -159,7 +159,7 @@ public:
 	{
 		if constexpr (!N)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		else
 		{
@@ -190,7 +190,7 @@ public:
 	{
 		if constexpr (!N)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		else
 		{
@@ -225,7 +225,7 @@ public:
 	{
 		if (N < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return span_type(this->ptr, count);
 	}
@@ -249,7 +249,7 @@ public:
 	{
 		if (N < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return span_type(this->ptr + (N - count), count);
 	}
@@ -273,14 +273,14 @@ public:
 	{
 		if (N < pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		size_type const val{N - pos};
 		if (val < count)
 		{
 			if (count != ::fast_io::containers::npos) [[unlikely]]
 			{
-				::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+				::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 			}
 			count = val;
 		}
@@ -310,7 +310,7 @@ public:
 	{
 		if (N < pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->copy_unchecked(dest, count, pos);
 	}

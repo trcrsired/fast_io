@@ -616,7 +616,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->imp->element;
 	}
@@ -625,7 +625,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->imp->element;
 	}
@@ -677,7 +677,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->erase_after_impl(__builtin_addressof(this->imp));
 	}

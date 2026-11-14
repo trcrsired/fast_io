@@ -99,7 +99,7 @@ public:
 	{
 		if (n <= idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report_invalid_argument<throwing_violations>();
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return ptr[idx];
 	}
@@ -125,7 +125,7 @@ public:
 	{
 		if (!n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		size_type const nm1{n - 1};
 		return ptr[nm1];
@@ -153,7 +153,7 @@ public:
 	{
 		if (!n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return *ptr;
 	}
@@ -206,7 +206,7 @@ public:
 	{
 		if (this->n < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return span(this->ptr, count);
 	}
@@ -230,7 +230,7 @@ public:
 	{
 		if (this->n < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return span(this->ptr + (this->n - count), count);
 	}
@@ -254,14 +254,14 @@ public:
 	{
 		if (this->n < pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		size_type const val{this->n - pos};
 		if (val < count)
 		{
 			if (count != ::fast_io::containers::npos) [[unlikely]]
 			{
-				::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+				::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 			}
 			count = val;
 		}
@@ -292,7 +292,7 @@ public:
 		size_type const thisn{this->n};
 		if (thisn < pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->copy_unchecked(dest, count, pos);
 	}

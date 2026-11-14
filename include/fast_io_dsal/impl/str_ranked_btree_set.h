@@ -998,7 +998,7 @@ public:
 	{
 		if (this->size() <= n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>();
 		}
 		return this->nth_element_unchecked(n);
 	}
@@ -1180,7 +1180,7 @@ public:
 	{
 		if (this->imp.leftmost == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>();
 		}
 		return this->front_unchecked();
 	}
@@ -1189,7 +1189,7 @@ public:
 	{
 		if (this->imp.rightmost == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<::fast_io::containers::details::allocator_throws_on_violations<allocator_type>>();
 		}
 		return this->back_unchecked();
 	}

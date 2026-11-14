@@ -585,13 +585,13 @@ print_freestanding_decay(outputstmtype optstm,
 #if FAST_IO_HAS_BUILTIN(__builtin_add_overflow)
 								if (__builtin_add_overflow(total_to_allocate_size, argsz, __builtin_addressof(total_to_allocate_size)))
 								{
-									::fast_io::containers::details::contract_violation_report<report_overflow>(::std::errc::value_too_large);
+									::fast_io::containers::details::violation_report<report_overflow>(::std::errc::value_too_large);
 								}
 #else
 								if (static_cast<::std::size_t>(szmx - argsz) <
 									total_to_allocate_size)
 								{
-									::fast_io::containers::details::contract_violation_report<report_overflow>(::std::errc::value_too_large);
+									::fast_io::containers::details::violation_report<report_overflow>(::std::errc::value_too_large);
 								}
 								total_to_allocate_size += argsz;
 #endif
@@ -602,13 +602,13 @@ print_freestanding_decay(outputstmtype optstm,
 #if FAST_IO_HAS_BUILTIN(__builtin_add_overflow)
 								if (__builtin_add_overflow(total_to_allocate_size, argsz, __builtin_addressof(total_to_allocate_size)))
 								{
-									::fast_io::containers::details::contract_violation_report<report_overflow>(::std::errc::value_too_large);
+									::fast_io::containers::details::violation_report<report_overflow>(::std::errc::value_too_large);
 								}
 #else
 								if (static_cast<::std::size_t>(szmx - argsz) <
 									total_to_allocate_size)
 								{
-									::fast_io::containers::details::contract_violation_report<report_overflow>(::std::errc::value_too_large);
+									::fast_io::containers::details::violation_report<report_overflow>(::std::errc::value_too_large);
 								}
 								total_to_allocate_size += argsz;
 #endif

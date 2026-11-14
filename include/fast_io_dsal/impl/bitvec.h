@@ -182,7 +182,7 @@ private:
 		constexpr ::std::size_t mxbyteshalf{max_size() >> 1};
 		if (mxbyteshalf < current_capacity)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		::std::size_t toallocate{current_capacity << 1u};
 		if (current_capacity == 0)
@@ -201,7 +201,7 @@ private:
 		}
 		if (mxbytes < to_allocate_bytes)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		auto [new_begin_ptr, new_capacity] = typed_allocator::allocate_zero_at_least(to_allocate_bytes);
 		if (mxbytes < new_capacity)
@@ -359,7 +359,7 @@ public:
 	{
 		if (this->imp.curr_pos <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->test_unchecked(pos);
 	}
@@ -395,7 +395,7 @@ public:
 	{
 		if (this->imp.curr_pos <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->set_unchecked(pos, value);
 	}
@@ -429,7 +429,7 @@ public:
 	{
 		if (this->imp.curr_pos <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->reset_unchecked(pos);
 	}
@@ -457,7 +457,7 @@ public:
 	{
 		if (!(this->imp.curr_pos)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->pop_back_unchecked();
 	}
@@ -473,7 +473,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->test_front_unchecked();
 	}
@@ -491,7 +491,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->set_front_unchecked(value);
 	}
@@ -508,7 +508,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->reset_front_unchecked();
 	}
@@ -541,7 +541,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->test_back_unchecked();
 	}
@@ -579,7 +579,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->set_back_unchecked(value);
 	}
@@ -597,7 +597,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->reset_back_unchecked();
 	}
@@ -617,7 +617,7 @@ public:
 	{
 		if (this->imp.curr_pos <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->flip_unchecked(pos);
 	}
@@ -633,7 +633,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->flip_front_unchecked();
 	}
@@ -652,7 +652,7 @@ public:
 	{
 		if (!this->imp.curr_pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->flip_back_unchecked();
 	}
@@ -752,7 +752,7 @@ public:
 	{
 		if (max_size() - (underlying_digits - 1u) < n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		if (this->imp.end_pos < n)
 		{
@@ -845,7 +845,7 @@ public:
 	{
 		if (this->imp.curr_pos != other.imp.curr_pos)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		std::size_t bits = this->imp.curr_pos;
@@ -885,7 +885,7 @@ public:
 	{
 		if (this->imp.curr_pos != other.imp.curr_pos)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		std::size_t bits = this->imp.curr_pos;
@@ -920,7 +920,7 @@ public:
 	{
 		if (this->imp.curr_pos != other.imp.curr_pos)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		std::size_t bits = this->imp.curr_pos;
@@ -1951,7 +1951,7 @@ public:
 		// [firstpos, lastpos) must be a valid subrange of [0, imp.curr_pos)
 		if (lastpos < firstpos || this->imp.curr_pos < lastpos)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		return this->erase_index_unchecked(firstpos, lastpos);
@@ -1962,7 +1962,7 @@ public:
 		// idx must be a valid bit index
 		if (this->imp.curr_pos <= idx)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 
 		// erase the single bit [idx, idx+1)
@@ -2056,7 +2056,7 @@ public:
 	{
 		if (this->imp.curr_pos < idx)
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		if (this->imp.curr_pos == this->imp.end_pos)
 		{

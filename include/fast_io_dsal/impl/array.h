@@ -151,7 +151,7 @@ public:
 	{
 		if (N <= idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return element[idx];
 	}
@@ -164,7 +164,7 @@ public:
 	{
 		if (N <= idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return element[idx];
 	}
@@ -382,7 +382,7 @@ public:
 #endif
 	inline constexpr reference operator[](size_type) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -391,7 +391,7 @@ public:
 #endif
 	inline constexpr const_reference operator[](size_type) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -419,7 +419,7 @@ public:
 #endif
 	inline constexpr reference back() FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -428,7 +428,7 @@ public:
 #endif
 	inline constexpr const_reference back() const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -456,7 +456,7 @@ public:
 #endif
 	inline constexpr reference front() FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -465,7 +465,7 @@ public:
 #endif
 	inline constexpr const_reference front() const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+		::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]

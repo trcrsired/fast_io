@@ -24,7 +24,7 @@ throws_on_violations flag the violation is reported through herbceptions,
 otherwise the program terminates.
 */
 template <bool throwing>
-[[noreturn]] inline constexpr void contract_violation_report(::std::errc ec) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+[[noreturn]] inline constexpr void violation_report(::std::errc ec) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	if constexpr (throwing)
 	{
@@ -37,7 +37,7 @@ template <bool throwing>
 }
 
 template <bool throwing>
-[[noreturn]] inline constexpr void contract_violation_report_invalid_argument() FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
+[[noreturn]] inline constexpr void violation_report_on_invalid_argument() FAST_IO_HERBCEPTIONS_THROWS_IF(throwing)
 {
 	if constexpr (throwing)
 	{
@@ -228,7 +228,7 @@ inline constexpr ::std::size_t cal_grow_twice_size(::std::size_t cap) FAST_IO_HE
 	constexpr ::std::size_t mx_half_value{mx_value >> 1u};
 	if (cap == mx_value)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 	}
 	else if (mx_half_value < cap)
 	{
