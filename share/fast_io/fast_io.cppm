@@ -3,6 +3,7 @@ module;
 #include <fast_io.h>
 #include <fast_io_device.h>
 #include <fast_io_dsal/array.h>
+#include <fast_io_dsal/algorithms/impl.h>
 #include <fast_io_dsal/tuple.h>
 #include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/sized_vector.h>
@@ -85,6 +86,11 @@ containers
 #include "fast_io_inc/dsal/str_btree_map.inc"
 #include "fast_io_inc/dsal/str_ranked_btree_set.inc"
 #include "fast_io_inc/dsal/str_ranked_btree_map.inc"
+
+/*
+algorithms
+*/
+#include "fast_io_inc/algorithms.inc"
 
 /*
 details

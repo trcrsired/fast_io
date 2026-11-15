@@ -7,8 +7,6 @@ using ::fast_io::io::print;
 using ::fast_io::io::println;
 using ::fast_io::io::perr;
 using ::fast_io::io::perrln;
-using ::fast_io::io::panic;
-using ::fast_io::io::panicln;
 using ::fast_io::io::scan;
 using ::fast_io::io::scan_some;
 
