@@ -16,7 +16,6 @@
 #if __cpp_lib_three_way_comparison >= 201907L
 #include <compare>
 #endif
-#include <algorithm>
 #include "../fast_io_core.h"
 #include "impl/misc/push_macros.h"
 #include "impl/misc/push_warnings.h"

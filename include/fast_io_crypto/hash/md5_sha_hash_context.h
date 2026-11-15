@@ -56,7 +56,7 @@ struct md5_sha_common_impl
 		::std::size_t const buffer_remain_space{static_cast<::std::size_t>(block_size - buffer_offset)};
 		if (buffer_remain_space != block_size)
 		{
-			::fast_io::details::non_overlapped_copy_n(first, buffer_remain_space, buffer + buffer_space);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(first, buffer_remain_space, buffer + buffer_space);
 			diff -= buffer_remain_space;
 			first += buffer_remain_space;
 			this->update_impl(buffer, block_size);
@@ -65,7 +65,7 @@ struct md5_sha_common_impl
 		this->update_impl(first, blocks_bytes);
 		first += blocks_bytes;
 		diff -= blocks_bytes;
-		::fast_io::details::non_overlapped_copy_n(first, diff, buffer);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, buffer);
 		buffer_offset = diff;
 	}
 	inline
@@ -118,7 +118,7 @@ struct md5_sha_common_impl
 			{
 				::fast_io::unreachable();
 			}
-			::fast_io::details::non_overlapped_copy_n(block_first, diff, buffer + buffer_offset);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(block_first, diff, buffer + buffer_offset);
 			buffer_offset += diff;
 		}
 		else

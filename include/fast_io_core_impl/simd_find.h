@@ -468,11 +468,11 @@ inline constexpr char_type const *find_simd_constant_common_cold_impl(char_type 
 	}
 	if constexpr (findnot)
 	{
-		return ::fast_io::freestanding::find_not(first, last, lfchct);
+		return ::fast_io::algorithms::find_if_not_iters(first, last, [lfchct](auto ch) noexcept { return ch == lfchct; });
 	}
 	else
 	{
-		return ::fast_io::freestanding::find(first, last, lfchct);
+		return ::fast_io::algorithms::find_iters(first, last, lfchct);
 	}
 }
 
@@ -678,11 +678,11 @@ inline constexpr Iter find_ch_impl(Iter first, Iter last)
 		constexpr auto lfchct{char_literal_v<lfch, ::std::remove_cvref_t<value_type>>};
 		if constexpr (findnot)
 		{
-			return ::fast_io::freestanding::find_not(first, last, lfchct);
+			return ::fast_io::algorithms::find_if_not_iters(first, last, [lfchct](auto ch) noexcept { return ch == lfchct; });
 		}
 		else
 		{
-			return ::fast_io::freestanding::find(first, last, lfchct);
+			return ::fast_io::algorithms::find_iters(first, last, lfchct);
 		}
 	}
 }

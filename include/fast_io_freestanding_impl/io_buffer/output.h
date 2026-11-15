@@ -13,7 +13,7 @@ inline constexpr void write_nullptr_case(::fast_io::details::io_buffer::iobuffer
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>::throws_on_allocation_failure)
 {
 	char_type *buffer_begin = ::fast_io::details::io_buffer::iobuffer_allocate<char_type, allocator_type>(allochdl, buffersize);
-	char_type *buffer_curr = non_overlapped_copy_n(first, count, buffer_begin);
+	char_type *buffer_curr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, count, buffer_begin);
 	pointers.buffer_begin = buffer_begin;
 	pointers.buffer_curr = buffer_curr;
 	pointers.buffer_end = buffer_begin + buffersize;
@@ -47,7 +47,7 @@ inline constexpr ::std::size_t write_some_typical_case(optstmtype optstm,
 		{
 			scpos /= sizeof(char_type);
 			pointers.buffer_curr =
-				::fast_io::freestanding::copy_n(pointers.buffer_curr - scpos, scpos, pointers.buffer_begin);
+				::fast_io::algorithms::copy_n_iters(pointers.buffer_curr - scpos, scpos, pointers.buffer_begin);
 			return 0;
 		}
 	}
@@ -70,7 +70,7 @@ inline constexpr ::std::size_t write_some_typical_case(optstmtype optstm,
 		else
 		{
 			pointers.buffer_curr =
-				::fast_io::freestanding::copy_n(pointers.buffer_curr - scpos, scpos, pointers.buffer_begin);
+				::fast_io::algorithms::copy_n_iters(pointers.buffer_curr - scpos, scpos, pointers.buffer_begin);
 			return 0;
 		}
 	}

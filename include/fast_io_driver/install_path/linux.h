@@ -20,7 +20,7 @@ namespace fast_io::details
 inline ::fast_io::install_path get_module_install_path()
 	FAST_IO_HERBCEPTIONS_THROWS
 {
-	constexpr ::std::size_t path_max{::std::max<::std::size_t>(PATH_MAX, 4096u)};
+	constexpr ::std::size_t path_max{::fast_io::algorithms::field_ops::maximum{}.compute(static_cast<::std::size_t>(PATH_MAX), static_cast<::std::size_t>(4096u))};
 
 	char buffer[path_max + 1];
 	::fast_io::install_path ret;

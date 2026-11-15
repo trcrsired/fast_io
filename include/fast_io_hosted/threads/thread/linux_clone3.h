@@ -164,8 +164,8 @@ public:
 
 	inline constexpr void swap(linux_clone3_thread &other) noexcept
 	{
-		::std::ranges::swap(this->id_, other.id_);
-		::std::ranges::swap(this->stack_, other.stack_);
+		::fast_io::algorithms::swap(this->id_, other.id_);
+		::fast_io::algorithms::swap(this->stack_, other.stack_);
 	}
 
 	inline constexpr bool joinable() const noexcept

@@ -159,7 +159,7 @@ inline constexpr void *move_backward_impl(vector_model &imp, void *iter, ::std::
 	}
 	auto currptr{imp.curr_ptr};
 	auto currptrp1{currptr + size};
-	static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1));
+	static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1));
 	return iter;
 }
 
@@ -949,7 +949,7 @@ private:
 		{
 			FAST_IO_IF_NOT_CONSTEVAL
 			{
-				static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(iter, imp.curr_ptr, imp.curr_ptr + 1));
+				static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(iter, imp.curr_ptr, imp.curr_ptr + 1));
 				return;
 			}
 		}
@@ -1536,7 +1536,7 @@ private:
 						p->~value_type();
 					}
 				}
-				::fast_io::freestanding::uninitialized_relocate(
+				::fast_io::algorithms::uninitialized_relocate_iters(
 					first + static_cast<::std::ptrdiff_t>(count), thisvec->imp.curr_ptr, first);
 				thisvec->imp.curr_ptr -= static_cast<::std::ptrdiff_t>(count);
 			}
@@ -1560,13 +1560,13 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(count));
 		}
 		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
-			::fast_io::freestanding::uninitialized_fill_n(it, count, val);
+			::fast_io::algorithms::uninitialized_fill_n_iters(it, count, val);
 		}
 		else
 		{
@@ -1597,7 +1597,7 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(rgsize));
 		}
 		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
@@ -1632,7 +1632,7 @@ private:
 			while (b < e)
 			{
 				--e;
-				::fast_io::freestanding::iter_swap(b, e);
+				::fast_io::algorithms::iter_swap(b, e);
 				++b;
 			}
 		}};
@@ -1746,7 +1746,7 @@ private:
 				{
 					it->~value_type();
 				}
-				::fast_io::freestanding::uninitialized_relocate(it + 1, lastele, it);
+				::fast_io::algorithms::uninitialized_relocate_iters(it + 1, lastele, it);
 				imp.curr_ptr = lastele - 1;
 				return it;
 			}
@@ -1780,7 +1780,7 @@ private:
 				}
 				// relocation consumes the source images; the stale tail bytes
 				// must not be destroyed
-				imp.curr_ptr = ::fast_io::freestanding::uninitialized_relocate(last, currptr, first);
+				imp.curr_ptr = ::fast_io::algorithms::uninitialized_relocate_iters(last, currptr, first);
 				return first;
 			}
 		}
@@ -1963,10 +1963,10 @@ public:
 
 	inline constexpr void swap(vector &other) noexcept
 	{
-		::std::swap(imp, other.imp);
+		::fast_io::algorithms::swap(imp, other.imp);
 		if constexpr (alloc_with_status)
 		{
-			::std::swap(allochdl, other.allochdl);
+			::fast_io::algorithms::swap(allochdl, other.allochdl);
 		}
 	}
 };
@@ -1976,16 +1976,16 @@ template <typename T, typename allocator1, typename allocator2>
 inline constexpr bool operator==(vector<T, allocator1> const &lhs, vector<T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(*lhs.imp.begin_ptr == *rhs.imp.begin_ptr)
 {
-	return ::fast_io::freestanding::equal(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr);
+	return ::fast_io::algorithms::equal_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr);
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(vector<T, allocator1> const &lhs, vector<T, allocator2> const &rhs)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::freestanding::compare_three_way{}))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::algorithms::compare_three_way{}))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::freestanding::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::algorithms::compare_three_way{});
 }
 #endif
 

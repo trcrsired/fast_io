@@ -113,9 +113,9 @@ inline constexpr ::std::size_t ktls_fill_crypto_info(void *blob,
 	{
 		auto &ci{*static_cast<ktls_crypto_info_aes_gcm_128 *>(blob)};
 		ci.info = {tls_1_3_version, tls_cipher_aes_gcm_128};
-		::fast_io::details::non_overlapped_copy_n(key, 16, reinterpret_cast<::std::byte *>(ci.key));
-		::fast_io::details::non_overlapped_copy_n(iv12, 4, reinterpret_cast<::std::byte *>(ci.salt));
-		::fast_io::details::non_overlapped_copy_n(iv12 + 4, 8, reinterpret_cast<::std::byte *>(ci.iv));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, 16, reinterpret_cast<::std::byte *>(ci.key));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv12, 4, reinterpret_cast<::std::byte *>(ci.salt));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv12 + 4, 8, reinterpret_cast<::std::byte *>(ci.iv));
 		wire_put_u64(reinterpret_cast<::std::byte *>(ci.rec_seq), seq);
 		return sizeof(ci);
 	}
@@ -123,9 +123,9 @@ inline constexpr ::std::size_t ktls_fill_crypto_info(void *blob,
 	{
 		auto &ci{*static_cast<ktls_crypto_info_aes_gcm_256 *>(blob)};
 		ci.info = {tls_1_3_version, tls_cipher_aes_gcm_256};
-		::fast_io::details::non_overlapped_copy_n(key, 32, reinterpret_cast<::std::byte *>(ci.key));
-		::fast_io::details::non_overlapped_copy_n(iv12, 4, reinterpret_cast<::std::byte *>(ci.salt));
-		::fast_io::details::non_overlapped_copy_n(iv12 + 4, 8, reinterpret_cast<::std::byte *>(ci.iv));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, 32, reinterpret_cast<::std::byte *>(ci.key));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv12, 4, reinterpret_cast<::std::byte *>(ci.salt));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv12 + 4, 8, reinterpret_cast<::std::byte *>(ci.iv));
 		wire_put_u64(reinterpret_cast<::std::byte *>(ci.rec_seq), seq);
 		return sizeof(ci);
 	}
@@ -133,8 +133,8 @@ inline constexpr ::std::size_t ktls_fill_crypto_info(void *blob,
 	{
 		auto &ci{*static_cast<ktls_crypto_info_chacha20_poly1305 *>(blob)};
 		ci.info = {tls_1_3_version, tls_cipher_chacha20_poly1305};
-		::fast_io::details::non_overlapped_copy_n(key, 32, reinterpret_cast<::std::byte *>(ci.key));
-		::fast_io::details::non_overlapped_copy_n(iv12, 12, reinterpret_cast<::std::byte *>(ci.iv));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, 32, reinterpret_cast<::std::byte *>(ci.key));
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv12, 12, reinterpret_cast<::std::byte *>(ci.iv));
 		wire_put_u64(reinterpret_cast<::std::byte *>(ci.rec_seq), seq);
 		return sizeof(ci);
 	}

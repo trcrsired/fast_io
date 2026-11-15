@@ -41,7 +41,7 @@ public:
 		}
 		else
 		{
-			::fast_io::details::non_overlapped_copy_n(key, key_size, k);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, k);
 		}
 		::std::byte ipad[block_size];
 		for (::std::size_t i{}; i != block_size; ++i)

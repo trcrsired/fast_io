@@ -309,13 +309,13 @@ inline constexpr char_type *handle_common_ch(char_type *first, char_type *last, 
 		constexpr ::std::size_t one{1};
 		::std::size_t const left_indent{static_cast<::std::size_t>(to_fill_chs >> one)};
 		::std::size_t const right_indent{to_fill_chs - left_indent};
-		my_copy(first, last, first + left_indent);
+		::fast_io::algorithms::copy_iters(first, last, first + left_indent);
 		my_fill_n(first, left_indent, fillch);
 		my_fill_n(first + wd - right_indent, right_indent, fillch);
 	}
 	else
 	{
-		my_copy(first, last, first + to_fill_chs);
+		::fast_io::algorithms::copy_iters(first, last, first + to_fill_chs);
 		my_fill_n(first, to_fill_chs, fillch);
 	}
 	return first + wd;
@@ -334,7 +334,7 @@ inline constexpr char_type *handle_common_internal_ch(char_type *first, char_typ
 	wd -= internal_len;
 	::std::size_t const diff{static_cast<::std::size_t>(last - first)};
 	::std::size_t const to_fill_chs{wd - diff};
-	my_copy(first, last, first + to_fill_chs);
+	::fast_io::algorithms::copy_iters(first, last, first + to_fill_chs);
 	my_fill_n(first, to_fill_chs, fillch);
 	return first + wd;
 }
@@ -413,14 +413,14 @@ inline constexpr char_type *handle_common_rt_ch(::fast_io::manipulators::scalar_
 		::std::size_t one{1};
 		::std::size_t const left_indent{static_cast<::std::size_t>(to_fill_chs >> one)};
 		::std::size_t const right_indent{to_fill_chs - left_indent};
-		my_copy(first, last, first + left_indent);
+		::fast_io::algorithms::copy_iters(first, last, first + left_indent);
 		my_fill_n(first, left_indent, fillch);
 		my_fill_n(first + wd - right_indent, right_indent, fillch);
 		return first + wd;
 	}
 	else if (placement == ::fast_io::manipulators::scalar_placement::right)
 	{
-		my_copy(first, last, first + to_fill_chs);
+		::fast_io::algorithms::copy_iters(first, last, first + to_fill_chs);
 		my_fill_n(first, to_fill_chs, fillch);
 		return first + wd;
 	}

@@ -150,7 +150,7 @@ inline constexpr void *move_backward_impl(sized_vector_model<uinttype> &imp, voi
 		return grow_twice_iter_impl<allocator>(imp, iter, size, alignment);
 	}
 	auto currptr{imp.begin_ptr + static_cast<::std::size_t>(imp.size) * size};
-	static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(reinterpret_cast<::std::byte *>(iter), currptr, currptr + size));
+	static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(reinterpret_cast<::std::byte *>(iter), currptr, currptr + size));
 	return iter;
 }
 
@@ -955,7 +955,7 @@ private:
 		{
 			FAST_IO_IF_NOT_CONSTEVAL
 			{
-				static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(iter, (imp.begin_ptr + imp.size), (imp.begin_ptr + imp.size) + 1));
+				static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(iter, (imp.begin_ptr + imp.size), (imp.begin_ptr + imp.size) + 1));
 				return;
 			}
 		}
@@ -1548,7 +1548,7 @@ private:
 						p->~value_type();
 					}
 				}
-				::fast_io::freestanding::uninitialized_relocate(
+				::fast_io::algorithms::uninitialized_relocate_iters(
 					first + static_cast<::std::ptrdiff_t>(count), (thisvec->imp.begin_ptr + thisvec->imp.size), first);
 				thisvec->imp.size -= count;
 			}
@@ -1572,13 +1572,13 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, (imp.begin_ptr + imp.size), (imp.begin_ptr + imp.size) + static_cast<::std::ptrdiff_t>(count));
 		}
 		imp.size = new_size;
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
-			::fast_io::freestanding::uninitialized_fill_n(it, count, val);
+			::fast_io::algorithms::uninitialized_fill_n_iters(it, count, val);
 		}
 		else
 		{
@@ -1609,7 +1609,7 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, (imp.begin_ptr + imp.size), (imp.begin_ptr + imp.size) + static_cast<::std::ptrdiff_t>(rgsize));
 		}
 		imp.size = new_size;
@@ -1644,7 +1644,7 @@ private:
 			while (b < e)
 			{
 				--e;
-				::fast_io::freestanding::iter_swap(b, e);
+				::fast_io::algorithms::iter_swap(b, e);
 				++b;
 			}
 		}};
@@ -1762,7 +1762,7 @@ private:
 				{
 					it->~value_type();
 				}
-				::fast_io::freestanding::uninitialized_relocate(it + 1, lastele, it);
+				::fast_io::algorithms::uninitialized_relocate_iters(it + 1, lastele, it);
 				imp.size = static_cast<size_type>(lastele - imp.begin_ptr) - 1;
 				return it;
 			}
@@ -1796,7 +1796,7 @@ private:
 				}
 				// relocation consumes the source images; the stale tail bytes
 				// must not be destroyed
-				imp.size = static_cast<size_type>(::fast_io::freestanding::uninitialized_relocate(last, currptr, first) - imp.begin_ptr);
+				imp.size = static_cast<size_type>(::fast_io::algorithms::uninitialized_relocate_iters(last, currptr, first) - imp.begin_ptr);
 				return first;
 			}
 		}
@@ -1979,10 +1979,10 @@ public:
 
 	inline constexpr void swap(sized_vector &other) noexcept
 	{
-		::std::swap(imp, other.imp);
+		::fast_io::algorithms::swap(imp, other.imp);
 		if constexpr (alloc_with_status)
 		{
-			::std::swap(allochdl, other.allochdl);
+			::fast_io::algorithms::swap(allochdl, other.allochdl);
 		}
 	}
 };
@@ -1992,16 +1992,16 @@ template <typename uinttype1, typename uinttype2, typename T, typename allocator
 inline constexpr bool operator==(sized_vector<uinttype1, T, allocator1> const &lhs, sized_vector<uinttype2, T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(*lhs.imp.begin_ptr == *rhs.imp.begin_ptr)
 {
-	return ::fast_io::freestanding::equal(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size));
+	return ::fast_io::algorithms::equal_iters(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size));
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
 template <typename uinttype1, typename uinttype2, typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(sized_vector<uinttype1, T, allocator1> const &lhs, sized_vector<uinttype2, T, allocator2> const &rhs)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size), ::fast_io::freestanding::compare_three_way{}))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size), ::fast_io::algorithms::compare_three_way{}))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size), ::fast_io::freestanding::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, (lhs.imp.begin_ptr + lhs.imp.size), rhs.imp.begin_ptr, (rhs.imp.begin_ptr + rhs.imp.size), ::fast_io::algorithms::compare_three_way{});
 }
 #endif
 

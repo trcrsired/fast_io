@@ -70,7 +70,7 @@ inline constexpr char_type *print_reserve_define(io_reserve_type_t<char_type, si
 	++curr_ptr;
 	for (::std::size_t i{}; i != t.size - 1; ++i, ++curr_ptr)
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(t.sep.base, t.sep.len, ptr);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(t.sep.base, t.sep.len, ptr);
 		ptr += t.sep.len;
 		ptr = print_reserve_define(io_reserve_type<char_type, value_type>, ptr,
 								   ::fast_io::io_print_forward<char_type>(::fast_io::io_print_alias(*curr_ptr)));

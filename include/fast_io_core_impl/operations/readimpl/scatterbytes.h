@@ -105,7 +105,7 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_impl(instmtype insm
 					[[__gnu__::__may_alias__]]
 #endif
 					= char_type *;
-				::fast_io::details::non_overlapped_copy_n(curr, len, reinterpret_cast<char_type_ptr>(const_cast<void *>(base)));
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, len, reinterpret_cast<char_type_ptr>(const_cast<void *>(base)));
 				curr += len;
 				buffptrdiff -= len;
 			}
@@ -260,7 +260,7 @@ inline constexpr void scatter_read_all_bytes_impl(instmtype insm, io_scatter_t c
 					[[__gnu__::__may_alias__]]
 #endif
 					= char_type *;
-				::fast_io::details::non_overlapped_copy_n(curr, len, reinterpret_cast<char_type_ptr>(const_cast<void *>(base)));
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, len, reinterpret_cast<char_type_ptr>(const_cast<void *>(base)));
 				curr += len;
 				buffptrdiff -= len;
 			}

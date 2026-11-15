@@ -138,7 +138,7 @@ public:
 	{
 		for (size_type i{}; i != N; ++i)
 		{
-			::fast_io::freestanding::iter_swap(element + i, other.element + i);
+			::fast_io::algorithms::iter_swap(element + i, other.element + i);
 		}
 	}
 
@@ -507,7 +507,7 @@ inline constexpr bool operator==(::fast_io::containers::array<T, N1, f1> const &
 		}
 		else
 		{
-			return ::fast_io::freestanding::equal(a.data(), a.data() + N1, b.data(), b.data() + N2);
+			return ::fast_io::algorithms::equal_iters(a.data(), a.data() + N1, b.data(), b.data() + N2);
 		}
 	}
 	else
@@ -521,9 +521,9 @@ inline constexpr bool operator==(::fast_io::containers::array<T, N1, f1> const &
 template <typename T, ::std::size_t N1, ::std::size_t N2, ::fast_io::allocator_adapter_flags f1, ::fast_io::allocator_adapter_flags f2>
 	requires(::std::three_way_comparable<T>)
 inline constexpr auto operator<=>(::fast_io::containers::array<T, N1, f1> const &a, ::fast_io::containers::array<T, N2, f2> const &b)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::compare_three_way{}(::std::declval<T const &>(), ::std::declval<T const &>())))
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::fast_io::algorithms::compare_three_way{}.compare(::std::declval<T const &>(), ::std::declval<T const &>())))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.data(), a.data() + N1, b.data(), b.data() + N2, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.data(), a.data() + N1, b.data(), b.data() + N2, ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

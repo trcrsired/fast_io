@@ -310,7 +310,7 @@ public:
 			count = val;
 		}
 		auto start{this->ptr + pos};
-		::std::copy(start, start + count, dest);
+		::fast_io::algorithms::copy_iters(start, start + count, dest);
 		return count;
 	}
 };
@@ -342,7 +342,7 @@ template <typename T, ::fast_io::allocator_adapter_flags f1, ::fast_io::allocato
 inline constexpr bool operator==(::fast_io::containers::span<T, f1> a, ::fast_io::containers::span<T, f2> b)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*a.ptr == *b.ptr))
 {
-	return ::std::equal(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n);
+	return ::fast_io::algorithms::equal_iters(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n);
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
@@ -350,7 +350,7 @@ template <typename T, ::fast_io::allocator_adapter_flags f1, ::fast_io::allocato
 	requires(::std::three_way_comparable<T>)
 inline constexpr auto operator<=>(::fast_io::containers::span<T, f1> a, ::fast_io::containers::span<T, f2> b)
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n, ::fast_io::algorithms::compare_three_way{});
 }
 #endif
 

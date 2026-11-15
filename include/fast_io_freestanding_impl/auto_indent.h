@@ -154,7 +154,7 @@ print_reserve_define_auto_indent(char_type *iter,
 		if ((slt) | (*first == lf)) [[unlikely]]
 		{
 			::std::size_t diff{static_cast<::std::size_t>(first - last_tab)};
-			iter = non_overlapped_copy_n(last_tab, diff, iter);
+			iter = ::fast_io::algorithms::non_overlapped_copy_n_iters(last_tab, diff, iter);
 			last_tab = first + 1;
 			if (slt) [[likely]]
 			{
@@ -173,7 +173,7 @@ print_reserve_define_auto_indent(char_type *iter,
 	}
 	if (last_tab != last)
 	{
-		iter = non_overlapped_copy(last_tab, first, iter);
+		iter = ::fast_io::algorithms::non_overlapped_copy_iters(last_tab, first, iter);
 	}
 	return iter;
 }

@@ -63,7 +63,7 @@ inline constexpr char_type *chrono_two_digits_impl(char_type *it, I i) noexcept
 				return it;
 			}
 		}
-		return non_overlapped_copy_n(digits_table<char_type, 10, false> + (i << 1), 2, it);
+		return ::fast_io::algorithms::non_overlapped_copy_n_iters(digits_table<char_type, 10, false> + (i << 1), 2, it);
 	}
 }
 
@@ -85,8 +85,8 @@ inline constexpr char_type *chrono_year_impl(char_type *it, integ i) noexcept
 	unsigned_type dv(u / 100u);
 	unsigned_type rmd(u % 100u);
 	constexpr auto tb{digits_table<char_type, 10, false>};
-	it = non_overlapped_copy_n(tb + (dv << 1), 2, it);
-	return non_overlapped_copy_n(tb + (rmd << 1), 2, it);
+	it = ::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (dv << 1), 2, it);
+	return ::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (rmd << 1), 2, it);
 }
 
 // assert(end - begin >= 2)

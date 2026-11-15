@@ -217,8 +217,8 @@ public:
 
 	inline constexpr void swap(nt_thread &other) noexcept
 	{
-		::std::ranges::swap(handle_, other.handle_);
-		::std::ranges::swap(id_, other.id_);
+		::fast_io::algorithms::swap(handle_, other.handle_);
+		::fast_io::algorithms::swap(id_, other.id_);
 	}
 
 	[[nodiscard]]

@@ -222,7 +222,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+					::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff),
 										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
@@ -267,7 +267,7 @@ inline constexpr void read_all_cold_impl(instmtype insm, typename instmtype::inp
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+					::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff),
 										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
@@ -353,7 +353,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+					::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff),
 										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
@@ -398,7 +398,7 @@ inline constexpr void read_all_bytes_cold_impl(instmtype insm, ::std::byte *firs
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff),
+					::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff),
 										  reinterpret_cast<char_type *>(first));
 					ibuffer_set_curr(insm, curr + itdiff);
 					return;
@@ -486,7 +486,7 @@ read_some_impl(instmtype insm, typename instmtype::input_char_type *first, ::std
 				[[likely]]
 #endif
 			{
-				non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff), first);
 				ibuffer_set_curr(insm, curr + itdiff);
 				return count;
 			}
@@ -520,7 +520,7 @@ inline constexpr void read_all_impl(instmtype insm, typename instmtype::input_ch
 				[[likely]]
 #endif
 			{
-				non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff), first);
 				ibuffer_set_curr(insm, curr + itdiff);
 				return;
 			}
@@ -561,7 +561,7 @@ inline constexpr ::std::size_t read_some_bytes_impl(instmtype insm, ::std::byte 
 					[[__gnu__::__may_alias__]]
 #endif
 					= char_type *;
-				non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), reinterpret_cast<char_type_ptr>(first));
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff), reinterpret_cast<char_type_ptr>(first));
 				ibuffer_set_curr(insm, curr + itdiff);
 				return count;
 			}
@@ -602,7 +602,7 @@ inline constexpr void read_all_bytes_impl(instmtype insm, ::std::byte *first, ::
 					[[__gnu__::__may_alias__]]
 #endif
 					= char_type *;
-				non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), reinterpret_cast<char_type_ptr>(first));
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff), reinterpret_cast<char_type_ptr>(first));
 				ibuffer_set_curr(insm, curr + itdiff);
 				return;
 			}

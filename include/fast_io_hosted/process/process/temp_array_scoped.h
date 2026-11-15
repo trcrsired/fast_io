@@ -71,7 +71,7 @@ inline
 	}
 	else
 	{
-		non_overlapped_copy_n(begin, size, uptr.get());
+		::fast_io::algorithms::non_overlapped_copy_n_iters(begin, size, uptr.get());
 	}
 	uptr[size] = nullptr;
 	return uptr.release();

@@ -143,7 +143,7 @@ inline constexpr auto operator<=>(::fast_io::containers::details::str_btree_map_
 	{
 		return static_cast<order_type>(cmp);
 	}
-	return static_cast<order_type>(::std::compare_three_way{}(a.mapped(), b.mapped()));
+	return static_cast<order_type>(::fast_io::algorithms::compare_three_way{}.compare(a.mapped(), b.mapped()));
 }
 #endif
 
@@ -238,7 +238,7 @@ inline constexpr void str_btree_map_values_insert_at(T *values, ::std::size_t po
 		return;
 	}
 	::new (static_cast<void *>(values + n)) T(::std::move(values[n - 1u]));
-	::std::move_backward(values + pos, values + (n - 1u), values + n);
+	::fast_io::algorithms::move_backward_iters(values + pos, values + (n - 1u), values + n);
 	::std::destroy_at(values + pos);
 	::new (static_cast<void *>(values + pos)) T(::std::forward<M>(m));
 }
@@ -301,10 +301,10 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 		movekeystrn = keystrptrkeysnumber.n;
 		::new (static_cast<void *>(moveval)) mapped_type(::std::move(midvptr[-1]));
 
-		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(midptr, keys_number_half, rightchildkeys);
 		str_btree_map_uninit_move_n(midvptr, keys_number_half, rightchildvalues);
-		::fast_io::freestanding::overlapped_copy(keys + pos, keys + keys_number_half, keys + pos + 1);
-		::std::move_backward(values + pos, values + (keys_number_half - 1u), values + keys_number_half);
+		::fast_io::algorithms::copy_iters(keys + pos, keys + keys_number_half, keys + pos + 1);
+		::fast_io::algorithms::move_backward_iters(values + pos, values + (keys_number_half - 1u), values + keys_number_half);
 
 		keys[pos] = {tempkeystrptr, tempkeystrn};
 		::std::destroy_at(values + pos);
@@ -312,7 +312,7 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 	}
 	else if (poskeys_number_halfcmp == 0)
 	{
-		::fast_io::details::non_overlapped_copy_n(midptr, keys_number_half, rightchildkeys);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(midptr, keys_number_half, rightchildkeys);
 		str_btree_map_uninit_move_n(midvptr, keys_number_half, rightchildvalues);
 		movekeystrptr = tempkeystrptr;
 		movekeystrn = tempkeystrn;
@@ -324,13 +324,13 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 		movekeystrptr = keystrptrkeysnumber.ptr;
 		movekeystrn = keystrptrkeysnumber.n;
 		::new (static_cast<void *>(moveval)) mapped_type(::std::move(*midvptr));
-		auto it{::fast_io::details::non_overlapped_copy(midptr + 1, keysit, rightchildkeys)};
+		auto it{::fast_io::algorithms::non_overlapped_copy_iters(midptr + 1, keysit, rightchildkeys)};
 		auto vit{str_btree_map_uninit_move(midvptr + 1, valuesit, rightchildvalues)};
 		*it = {tempkeystrptr, tempkeystrn};
 		::new (static_cast<void *>(vit)) mapped_type(::std::forward<mappedarg>(mapped));
 		++it;
 		++vit;
-		::fast_io::details::non_overlapped_copy(keysit, keysed, it);
+		::fast_io::algorithms::non_overlapped_copy_iters(keysit, keysed, it);
 		str_btree_map_uninit_move(valuesit, valuesed, vit);
 	}
 	// the left node's tail slots [half, keys_number) are dead now; end their lifetimes
@@ -350,11 +350,11 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 		if (jn != keys_number)
 		{
 			// Shift keys and children to make room for the promoted key and new child
-			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jkeys + jn, jkeys + child_pos + 1);
+			::fast_io::algorithms::copy_iters(jkeys + child_pos, jkeys + jn, jkeys + child_pos + 1);
 			jkeys[child_pos] = {movekeystrptr, movekeystrn};
 			str_btree_map_values_insert_at(jvalues, child_pos, jn, ::std::move(*moveval));
 			::std::destroy_at(moveval);
-			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + jn + 1, jchildrens + child_pos + 2);
+			::fast_io::algorithms::copy_iters(jchildrens + child_pos + 1, jchildrens + jn + 1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
 			rightchild->parent = j;
 			rightchild->parent_pos = child_pos + 1;
@@ -392,11 +392,11 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 			auto tmpn{jmidkey.n};
 			::new (static_cast<void *>(mvup)) mapped_type(::std::move(jmidvptr[-1]));
 
-			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(jmidptr, keys_number_half, new_right_keys);
 			str_btree_map_uninit_move_n(jmidvptr, keys_number_half, new_right_values);
-			::fast_io::freestanding::overlapped_copy(jkeys + child_pos, jmidptr, jkeys + child_pos + 1);
+			::fast_io::algorithms::copy_iters(jkeys + child_pos, jmidptr, jkeys + child_pos + 1);
 			jkeys[child_pos] = {movekeystrptr, movekeystrn};
-			::std::move_backward(jvalues + child_pos, jmidvptr - 1, jmidvptr);
+			::fast_io::algorithms::move_backward_iters(jvalues + child_pos, jmidvptr - 1, jmidvptr);
 			::std::destroy_at(jvalues + child_pos);
 			::new (static_cast<void *>(jvalues + child_pos)) mapped_type(::std::move(*moveval));
 			*moveval = ::std::move(*mvup);
@@ -404,8 +404,8 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 			movekeystrptr = tmpptr;
 			movekeystrn = tmpn;
 
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half, keys_number_half_p1, new_right_childrens);
-			::fast_io::freestanding::overlapped_copy(jchildrens + child_pos + 1, jchildrens + keys_number_half_p1, jchildrens + child_pos + 2);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(jchildrens + keys_number_half, keys_number_half_p1, new_right_childrens);
+			::fast_io::algorithms::copy_iters(jchildrens + child_pos + 1, jchildrens + keys_number_half_p1, jchildrens + child_pos + 2);
 			jchildrens[child_pos + 1] = rightchild;
 			rightchild->parent = j;
 			rightchild->parent_pos = child_pos + 1;
@@ -417,10 +417,10 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 		}
 		else if (child_poskeys_number_halfcmp == 0)
 		{
-			::fast_io::details::non_overlapped_copy_n(jmidptr, keys_number_half, new_right_keys);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(jmidptr, keys_number_half, new_right_keys);
 			str_btree_map_uninit_move_n(jmidvptr, keys_number_half, new_right_values);
 			// movekeystrptr/moveval already carry the incoming pair upward
-			::fast_io::details::non_overlapped_copy_n(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens + 1);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(jchildrens + keys_number_half_p1, keys_number_half, new_right_childrens + 1);
 			*new_right_childrens = rightchild;
 		}
 		else
@@ -432,7 +432,7 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 
 			auto jkeysit{jkeys + child_pos};
 			auto jkeysed{jkeys + keys_number};
-			auto it{::fast_io::details::non_overlapped_copy(jmidptr + 1, jkeysit, new_right_keys)};
+			auto it{::fast_io::algorithms::non_overlapped_copy_iters(jmidptr + 1, jkeysit, new_right_keys)};
 			auto vit{str_btree_map_uninit_move(jmidvptr + 1, jvalues + child_pos, new_right_values)};
 			*it = {movekeystrptr, movekeystrn};
 			::new (static_cast<void *>(vit)) mapped_type(::std::move(*moveval));
@@ -442,15 +442,15 @@ inline constexpr bool str_btree_map_insert_key_cold(nodetype *node, ::std::size_
 			movekeystrn = tmpn;
 			++it;
 			++vit;
-			::fast_io::details::non_overlapped_copy(jkeysit, jkeysed, it);
+			::fast_io::algorithms::non_overlapped_copy_iters(jkeysit, jkeysed, it);
 			str_btree_map_uninit_move(jvalues + child_pos, jvalues + keys_number, vit);
 
 			auto jchildrensit{jchildrens + child_pos + 1};
 			auto jchildrensed{jchildrens + keys_number + 1};
-			auto kit{::fast_io::details::non_overlapped_copy(jchildrens + keys_number_half_p1, jchildrensit, new_right_childrens)};
+			auto kit{::fast_io::algorithms::non_overlapped_copy_iters(jchildrens + keys_number_half_p1, jchildrensit, new_right_childrens)};
 			*kit = rightchild;
 			++kit;
-			::fast_io::details::non_overlapped_copy(jchildrensit, jchildrensed, kit);
+			::fast_io::algorithms::non_overlapped_copy_iters(jchildrensit, jchildrensed, kit);
 		}
 		// j keeps only its left half; end the lifetimes of the moved-out tail slots
 		for (auto v{jvalues + keys_number_half}; v != jvalues + keys_number; ++v)
@@ -502,7 +502,7 @@ inline constexpr bool str_btree_map_insert_key_leaf_at(nodetype *node, ::std::si
 	if (n != keys_number)
 	{
 		auto keys{node->keys};
-		::fast_io::freestanding::overlapped_copy(keys + pos, keys + n, keys + pos + 1);
+		::fast_io::algorithms::copy_iters(keys + pos, keys + n, keys + pos + 1);
 		keys[pos] = tempkey;
 		str_btree_map_values_insert_at(node->values, pos, n, ::std::forward<mappedarg>(mapped));
 		++node->size;
@@ -563,7 +563,7 @@ inline constexpr bool str_btree_map_insert_key_with_root(::fast_io::containers::
 	if (n != keys_number)
 	{
 		auto keys{node->keys};
-		::fast_io::freestanding::overlapped_copy(keys + pos, keys + n, keys + pos + 1);
+		::fast_io::algorithms::copy_iters(keys + pos, keys + n, keys + pos + 1);
 		keys[pos] = tempkey;
 		str_btree_map_values_insert_at(node->values, pos, n, ::std::forward<mappedarg>(mapped));
 		++node->size;
@@ -622,7 +622,7 @@ inline constexpr bool str_btree_map_insert_key_or_assign_with_root(::fast_io::co
 	if (n != keys_number)
 	{
 		auto keys{node->keys};
-		::fast_io::freestanding::overlapped_copy(keys + pos, keys + n, keys + pos + 1);
+		::fast_io::algorithms::copy_iters(keys + pos, keys + n, keys + pos + 1);
 		keys[pos] = tempkey;
 		str_btree_map_values_insert_at(node->values, pos, n, ::std::forward<mappedarg>(mapped));
 		++node->size;
@@ -746,7 +746,7 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 						moved_child->parent = current;
 						moved_child->parent_pos = current_size_before + 1;
 					}
-					::fast_io::freestanding::overlapped_copy(
+					::fast_io::algorithms::copy_iters(
 						right->childrens + 1, right->childrens + right->size + 1, right->childrens);
 				}
 				++current->size;
@@ -756,7 +756,7 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 				parent->values[parpos] = ::std::move(right->values[0]);
 
 				// Shift right sibling's keys left
-				::fast_io::freestanding::overlapped_copy(
+				::fast_io::algorithms::copy_iters(
 					right->keys + 1, right->keys + right->size, right->keys);
 				str_btree_map_values_erase_at(right->values, 0, right->size);
 				--right->size;
@@ -777,12 +777,12 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 				auto const current_size_before{current->size};
 				auto const left_size_before{left->size};
 				// Shift current keys right
-				::fast_io::freestanding::overlapped_copy(
+				::fast_io::algorithms::copy_iters(
 					current->keys, current->keys + current_size_before, current->keys + 1);
 				if (!current->leaf)
 				{
 					// Shift current children right to make room for the borrowed child
-					::fast_io::freestanding::overlapped_copy(
+					::fast_io::algorithms::copy_iters(
 						current->childrens, current->childrens + current_size_before + 1, current->childrens + 1);
 					current->childrens[0] = left->childrens[left_size_before];
 					auto moved_child{static_cast<nodeptr>(left->childrens[left_size_before])};
@@ -824,13 +824,13 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 			::new (static_cast<void *>(current->values + current_size_before)) mapped_type(::std::move(parent->values[parpos]));
 
 			// Append right sibling's keys
-			::fast_io::freestanding::non_overlapped_copy(
+			::fast_io::algorithms::non_overlapped_copy_iters(
 				right->keys, right->keys + right_size_before, current->keys + current_size_before + 1);
 			str_btree_map_uninit_move(right->values, right->values + right_size_before,
 									  current->values + current_size_before + 1);
 			if (!current->leaf)
 			{
-				::fast_io::freestanding::non_overlapped_copy(
+				::fast_io::algorithms::non_overlapped_copy_iters(
 					right->childrens, right->childrens + right_size_before + 1,
 					current->childrens + current_size_before + 1);
 				for (::std::size_t i{}; i <= right_size_before; ++i)
@@ -857,10 +857,10 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 			typed_allocator_type::deallocate_n(right, 1);
 
 			// Shift parent's keys and children
-			::fast_io::freestanding::overlapped_copy(
+			::fast_io::algorithms::copy_iters(
 				parent->keys + parpos + 1, parent->keys + parent_size, parent->keys + parpos);
 			str_btree_map_values_erase_at(parent->values, parpos, parent_size);
-			::fast_io::freestanding::overlapped_copy(
+			::fast_io::algorithms::copy_iters(
 				parent->childrens + parpos + 2, parent->childrens + parent_size + 1,
 				parent->childrens + parpos + 1);
 			--parent->size;
@@ -881,13 +881,13 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 			::new (static_cast<void *>(left->values + left_size_before)) mapped_type(::std::move(parent->values[parpos - 1]));
 
 			// Append current's keys
-			::fast_io::freestanding::non_overlapped_copy(
+			::fast_io::algorithms::non_overlapped_copy_iters(
 				current->keys, current->keys + current_size_before, left->keys + left_size_before + 1);
 			str_btree_map_uninit_move(current->values, current->values + current_size_before,
 									  left->values + left_size_before + 1);
 			if (!left->leaf)
 			{
-				::fast_io::freestanding::non_overlapped_copy(
+				::fast_io::algorithms::non_overlapped_copy_iters(
 					current->childrens, current->childrens + current_size_before + 1,
 					left->childrens + left_size_before + 1);
 				for (::std::size_t i{}; i <= current_size_before; ++i)
@@ -914,10 +914,10 @@ inline constexpr void str_btree_map_erase_underflow(::fast_io::containers::detai
 			typed_allocator_type::deallocate_n(current, 1);
 
 			// Shift parent's keys and children
-			::fast_io::freestanding::overlapped_copy(
+			::fast_io::algorithms::copy_iters(
 				parent->keys + parpos, parent->keys + parent_size, parent->keys + parpos - 1);
 			str_btree_map_values_erase_at(parent->values, parpos - 1, parent_size);
-			::fast_io::freestanding::overlapped_copy(
+			::fast_io::algorithms::copy_iters(
 				parent->childrens + parpos + 1, parent->childrens + parent_size + 1,
 				parent->childrens + parpos);
 			--parent->size;
@@ -960,7 +960,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 			target_keys[found_pos].ptr, target_keys[found_pos].n);
 
 		// Physically remove the key by shifting left
-		::fast_io::freestanding::overlapped_copy(target_keys + found_pos + 1, target_keys + target_node->size, target_keys + found_pos);
+		::fast_io::algorithms::copy_iters(target_keys + found_pos + 1, target_keys + target_node->size, target_keys + found_pos);
 		str_btree_map_values_erase_at(target_values, found_pos, target_node->size);
 		--target_node->size;
 
@@ -995,7 +995,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 				++target_node->size;
 				target_parent->keys[parent_pos] = right_sibling->keys[0];
 				target_parent->values[parent_pos] = ::std::move(right_sibling->values[0]);
-				::fast_io::freestanding::overlapped_copy(
+				::fast_io::algorithms::copy_iters(
 					right_sibling->keys + 1, right_sibling->keys + right_sibling->size, right_sibling->keys);
 				str_btree_map_values_erase_at(right_sibling->values, 0, right_sibling->size);
 				--right_sibling->size;
@@ -1009,7 +1009,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 			auto left_sibling{target_parent->childrens[parent_pos - 1]};
 			if (left_sibling->size > min_keys)
 			{
-				::fast_io::freestanding::overlapped_copy(target_keys, target_keys + target_node->size, target_keys + 1);
+				::fast_io::algorithms::copy_iters(target_keys, target_keys + target_node->size, target_keys + 1);
 				target_keys[0] = target_parent->keys[parent_pos - 1];
 				str_btree_map_values_insert_at(target_values, 0, target_node->size,
 											   ::std::move(target_parent->values[parent_pos - 1]));
@@ -1034,7 +1034,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 			parent_key_index = parent_pos;
 			merged_target->keys[merged_target->size] = target_parent->keys[parent_key_index];
 			::new (static_cast<void *>(merged_target->values + merged_target->size)) mapped_type(::std::move(target_parent->values[parent_key_index]));
-			::fast_io::freestanding::non_overlapped_copy(
+			::fast_io::algorithms::non_overlapped_copy_iters(
 				merged_victim->keys, merged_victim->keys + merged_victim->size,
 				merged_target->keys + merged_target->size + 1);
 			str_btree_map_uninit_move(merged_victim->values, merged_victim->values + merged_victim->size,
@@ -1048,7 +1048,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 			parent_key_index = parent_pos - 1;
 			merged_target->keys[merged_target->size] = target_parent->keys[parent_key_index];
 			::new (static_cast<void *>(merged_target->values + merged_target->size)) mapped_type(::std::move(target_parent->values[parent_key_index]));
-			::fast_io::freestanding::non_overlapped_copy(
+			::fast_io::algorithms::non_overlapped_copy_iters(
 				target_keys, target_keys + target_node->size,
 				merged_target->keys + merged_target->size + 1);
 			str_btree_map_uninit_move(target_values, target_values + target_node->size,
@@ -1071,11 +1071,11 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 			imp.leftmost = merged_target;
 		}
 
-		::fast_io::freestanding::overlapped_copy(
+		::fast_io::algorithms::copy_iters(
 			target_parent->keys + parent_key_index + 1, target_parent->keys + parent_size,
 			target_parent->keys + parent_key_index);
 		str_btree_map_values_erase_at(target_parent->values, parent_key_index, parent_size);
-		::fast_io::freestanding::overlapped_copy(
+		::fast_io::algorithms::copy_iters(
 			target_parent->childrens + parent_key_index + 2, target_parent->childrens + parent_size + 1,
 			target_parent->childrens + parent_key_index + 1);
 		--target_parent->size;
@@ -1146,7 +1146,7 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 		auto const descend_size{descend->size};
 		internal_node->keys[internal_key_index] = descend->keys[0];
 		internal_node->values[internal_key_index] = ::std::move(descend->values[0]);
-		::fast_io::freestanding::overlapped_copy(descend->keys + 1, descend->keys + descend_size, descend->keys);
+		::fast_io::algorithms::copy_iters(descend->keys + 1, descend->keys + descend_size, descend->keys);
 		str_btree_map_values_erase_at(descend->values, 0, descend_size);
 		--descend->size;
 		if (descend->parent && descend->size < min_keys)
@@ -1161,14 +1161,14 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 	std::size_t right_size_before{right_child->size};
 	left_child->keys[left_size_before] = internal_node->keys[internal_key_index];
 	::new (static_cast<void *>(left_child->values + left_size_before)) mapped_type(::std::move(internal_node->values[internal_key_index]));
-	::fast_io::freestanding::non_overlapped_copy(
+	::fast_io::algorithms::non_overlapped_copy_iters(
 		right_child->keys, right_child->keys + right_size_before,
 		left_child->keys + left_size_before + 1);
 	str_btree_map_uninit_move(right_child->values, right_child->values + right_size_before,
 							  left_child->values + left_size_before + 1);
 	if (!left_child->leaf)
 	{
-		::fast_io::freestanding::non_overlapped_copy(
+		::fast_io::algorithms::non_overlapped_copy_iters(
 			right_child->childrens, right_child->childrens + right_size_before + 1,
 			left_child->childrens + left_size_before + 1);
 		for (std::size_t i{}; i <= right_size_before; ++i)
@@ -1193,12 +1193,12 @@ inline constexpr bool str_btree_map_erase(::fast_io::containers::details::btree_
 	typed_allocator_type::deallocate_n(right_child, 1);
 
 	std::size_t internal_size_before{internal_node->size};
-	::fast_io::freestanding::overlapped_copy(
+	::fast_io::algorithms::copy_iters(
 		internal_node->keys + internal_key_index + 1,
 		internal_node->keys + internal_size_before,
 		internal_node->keys + internal_key_index);
 	str_btree_map_values_erase_at(internal_node->values, internal_key_index, internal_size_before);
-	::fast_io::freestanding::overlapped_copy(
+	::fast_io::algorithms::copy_iters(
 		internal_node->childrens + internal_key_index + 2,
 		internal_node->childrens + internal_size_before + 1,
 		internal_node->childrens + internal_key_index + 1);
@@ -1616,7 +1616,7 @@ template <::std::integral chtype, typename mappedtype, typename Allocator, ::std
 constexpr bool operator==(::fast_io::containers::basic_str_btree_map<chtype, mappedtype, Allocator, keys_number> const &lhs,
 						  ::fast_io::containers::basic_str_btree_map<chtype, mappedtype, Allocator, keys_number> const &rhs) noexcept
 {
-	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
@@ -1624,7 +1624,7 @@ template <::std::integral chtype, typename mappedtype, typename Allocator, ::std
 constexpr auto operator<=>(::fast_io::containers::basic_str_btree_map<chtype, mappedtype, Allocator, keys_number> const &lhs,
 						   ::fast_io::containers::basic_str_btree_map<chtype, mappedtype, Allocator, keys_number> const &rhs) noexcept
 {
-	return ::std::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 #endif
 

@@ -327,14 +327,14 @@ public:
 			count = val;
 		}
 		auto start{this->ptr + pos};
-		::std::copy(start, start + count, dest);
+		::fast_io::algorithms::copy_iters(start, start + count, dest);
 		return count;
 	}
 	inline constexpr void fill(const_reference u) noexcept(!::std::is_const_v<element_type> && ::std::is_nothrow_copy_constructible_v<element_type>)
 	{
 		if constexpr (N)
 		{
-			::std::fill_n(this->ptr, N, u);
+			::fast_io::algorithms::fill_n_iters(this->ptr, N, u);
 		}
 	}
 };
@@ -378,7 +378,7 @@ inline constexpr bool operator==(::fast_io::containers::index_span<T, N1> a, ::f
 	}
 	else
 	{
-		return ::std::equal(a.ptr, a.ptr + N1, b.ptr, b.ptr + N2);
+		return ::fast_io::algorithms::equal_iters(a.ptr, a.ptr + N1, b.ptr, b.ptr + N2);
 	}
 }
 
@@ -387,7 +387,7 @@ template <typename T, ::std::size_t N1, ::std::size_t N2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(::fast_io::containers::index_span<T, N1> a, ::fast_io::containers::index_span<T, N2> b)
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.ptr, a.ptr + N1, b.ptr, b.ptr + N2, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.ptr, a.ptr + N1, b.ptr, b.ptr + N2, ::fast_io::algorithms::compare_three_way{});
 }
 #endif
 

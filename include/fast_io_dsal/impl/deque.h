@@ -638,9 +638,9 @@ inline constexpr void deque_grow_to_new_blocks_count_impl(typename allocator::ha
 	old_pivot -= pivot_diff;
 	new_pivot += pivot_diff;
 
-	::fast_io::freestanding::non_overlapped_copy(old_pivot,
+	::fast_io::algorithms::non_overlapped_copy_iters(old_pivot,
 												 old_after_reserved_ptr, new_start_reserved_ptr);
-	::fast_io::freestanding::non_overlapped_copy(old_start_reserved_ptr,
+	::fast_io::algorithms::non_overlapped_copy_iters(old_start_reserved_ptr,
 												 old_pivot, new_pivot);
 
 	*new_after_reserved_ptr = 0;
@@ -924,7 +924,7 @@ inline constexpr void deque_shrink_to_fit_common(typename allocator::handle_type
 		auto [new_start_ptr, new_actual_count] = ::fast_io::containers::details::deque_alloc_at_least<block_ptr_allocator>(allochdl, new_controller_size_least);
 
 		// Move the pointers (non-overlapped because it's a new allocation)
-		::fast_io::freestanding::non_overlapped_copy_n(front_ptr, used_blocks_count, new_start_ptr);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(front_ptr, used_blocks_count, new_start_ptr);
 
 		// 4. Update controller metadata and pointers
 		// We align the new reserved range to the start of the new allocation
@@ -1031,7 +1031,7 @@ inline constexpr void deque_clone_trivial_impl(typename allocator::handle_type a
 		auto destit{controller.front_block.controller_ptr};
 		auto pos{fromcontroller.front_block.curr_ptr - fromcontroller.front_block.begin_ptr};
 		controller.front_end_ptr =
-			::fast_io::freestanding::non_overlapped_copy(fromcontroller.front_block.curr_ptr,
+			::fast_io::algorithms::non_overlapped_copy_iters(fromcontroller.front_block.curr_ptr,
 														 fromcontroller.front_end_ptr,
 														 (controller.front_block.curr_ptr =
 															  pos + controller.front_block.begin_ptr));
@@ -1039,13 +1039,13 @@ inline constexpr void deque_clone_trivial_impl(typename allocator::handle_type a
 		for (begin_ptrtype *it{front_controller_ptr + 1}, *ed{back_controller_ptr}; it != ed; ++it)
 		{
 			begin_ptrtype blockptr{*it};
-			::fast_io::freestanding::non_overlapped_copy_n(blockptr, blockbytes, *destit);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(blockptr, blockbytes, *destit);
 			++destit;
 		}
 		lastblockbegin = fromcontroller.back_block.begin_ptr;
 	}
 	controller.back_block.curr_ptr =
-		::fast_io::freestanding::non_overlapped_copy(lastblockbegin,
+		::fast_io::algorithms::non_overlapped_copy_iters(lastblockbegin,
 													 fromcontroller.back_block.curr_ptr, controller.back_block.begin_ptr);
 }
 
@@ -1094,7 +1094,7 @@ deque_copy_impl(Itercontent first, Itercontent last,
 		{
 			tocopy = dest_block_to_end;
 		}
-		::fast_io::freestanding::copy_n(firstcurrptr, tocopy, destcurrptr);
+		::fast_io::algorithms::copy_n_iters(firstcurrptr, tocopy, destcurrptr);
 		if (0 < cmp)
 		{
 			dest.curr_ptr = (dest.begin_ptr = (*++dest.controller_ptr));
@@ -1157,7 +1157,7 @@ deque_copy_backward_impl(Itercontent first, Itercontent last,
 		{
 			tocopy = dest_block_to_begin;
 		}
-		::fast_io::freestanding::copy_backward(lastcurrptr - tocopy, lastcurrptr,
+		::fast_io::algorithms::copy_backward_iters(lastcurrptr - tocopy, lastcurrptr,
 											   destcurrptr);
 		if (0 < cmp)
 		{
@@ -1195,7 +1195,7 @@ inline constexpr Itercontent
 deque_relocate_impl(Itercontent first, Itercontent last,
 					Itercontent dest, ::std::size_t blocksize)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(
-		::fast_io::freestanding::uninitialized_relocate_ignore_define(first.curr_ptr, first.curr_ptr, dest.curr_ptr)))
+		::fast_io::details::uninitialized_relocate_ignore(first.curr_ptr, first.curr_ptr, dest.curr_ptr)))
 {
 	if (first.curr_ptr == last.curr_ptr)
 	{
@@ -1228,7 +1228,7 @@ deque_relocate_impl(Itercontent first, Itercontent last,
 		{
 			tocopy = dest_block_to_end;
 		}
-		::fast_io::freestanding::uninitialized_relocate_ignore_define(firstcurrptr, firstcurrptr + tocopy, destcurrptr);
+		::fast_io::details::uninitialized_relocate_ignore(firstcurrptr, firstcurrptr + tocopy, destcurrptr);
 		if (0 < cmp)
 		{
 			dest.curr_ptr = (dest.begin_ptr = (*++dest.controller_ptr));
@@ -1259,7 +1259,7 @@ inline constexpr Itercontent
 deque_relocate_backward_impl(Itercontent first, Itercontent last,
 							 Itercontent dest, ::std::size_t blocksize)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(
-		::fast_io::freestanding::uninitialized_relocate_ignore_define(last.curr_ptr, last.curr_ptr, dest.curr_ptr)))
+		::fast_io::details::uninitialized_relocate_ignore(last.curr_ptr, last.curr_ptr, dest.curr_ptr)))
 {
 	if (first.curr_ptr == last.curr_ptr)
 	{
@@ -1292,7 +1292,7 @@ deque_relocate_backward_impl(Itercontent first, Itercontent last,
 		{
 			tocopy = dest_block_to_begin;
 		}
-		::fast_io::freestanding::uninitialized_relocate_backward_ignore_define(lastcurrptr - tocopy, lastcurrptr,
+		::fast_io::details::uninitialized_relocate_backward_ignore(lastcurrptr - tocopy, lastcurrptr,
 																			   destcurrptr);
 		if (0 < cmp)
 		{
@@ -1501,7 +1501,7 @@ inline constexpr void deque_grow_to_new_blocks_count_direction_impl(typename all
 		new_start_reserved_ptr_pos = new_blocks_count_least - static_cast<::std::size_t>(old_back_block_controller_pos - old_start_reserved_pos);
 	}
 	auto new_start_reserved_ptr{new_start_ptr + new_start_reserved_ptr_pos};
-	auto ed{::fast_io::freestanding::overlapped_copy(old_start_ptr + old_start_reserved_pos, old_start_ptr + old_after_reserved_pos, new_start_reserved_ptr)};
+	auto ed{::fast_io::algorithms::copy_iters(old_start_ptr + old_start_reserved_pos, old_start_ptr + old_after_reserved_pos, new_start_reserved_ptr)};
 	::new (static_cast<void *>(ed)) typename dequecontroltype::controlreplacetype(nullptr);
 
 	controller.controller_block.controller_start_ptr = new_start_ptr;
@@ -1631,7 +1631,7 @@ inline constexpr void deque_reserve_back_blocks_impl_none_empty(typename allocat
 				controller.controller_block.controller_start_reserved_ptr};
 			auto pos{
 				controller.controller_block.controller_after_reserved_ptr};
-			pos = ::fast_io::freestanding::non_overlapped_copy_n(controller_start_reserved_ptr,
+			pos = ::fast_io::algorithms::non_overlapped_copy_n_iters(controller_start_reserved_ptr,
 																 front_borrowed_blocks_count,
 																 pos);
 			controller.controller_block.controller_start_reserved_ptr =
@@ -1839,7 +1839,7 @@ inline constexpr void deque_reserve_front_blocks_none_empty_impl(typename alloca
 				controller_start_reserved_ptr - back_borrowed_blocks_count};
 			auto new_controller_after_reserved_ptr{
 				controller_after_reserved_ptr - back_borrowed_blocks_count};
-			::fast_io::freestanding::non_overlapped_copy_n(new_controller_after_reserved_ptr,
+			::fast_io::algorithms::non_overlapped_copy_n_iters(new_controller_after_reserved_ptr,
 														   back_borrowed_blocks_count,
 														   new_controller_start_reserved_ptr);
 			::new (static_cast<void *>(controller.controller_block.controller_after_reserved_ptr = new_controller_after_reserved_ptr)) begin_ptrtype(nullptr);
@@ -2273,7 +2273,7 @@ inline constexpr ForwardIt rotate_for_fast_io_deque(ForwardIt first, ForwardIt m
 		::fast_io::containers::details::may_throw_move_constructible<::std::iter_value_t<ForwardIt>> ||
 		::fast_io::containers::details::may_throw_move_assignable<::std::iter_value_t<ForwardIt>>)
 {
-	return ::fast_io::freestanding::rotate(first, middle, last);
+	return ::fast_io::algorithms::rotate_iters(first, middle, last);
 }
 
 template <typename T, typename allocator>
@@ -2457,7 +2457,7 @@ private:
 			{
 				auto destit{controller.front_block.controller_ptr};
 				auto pos{fromcontroller.front_block.curr_ptr - fromcontroller.front_block.begin_ptr};
-				::fast_io::freestanding::uninitialized_copy(
+				::fast_io::algorithms::uninitialized_copy_iters(
 					fromcontroller.front_block.curr_ptr,
 					fromcontroller.front_end_ptr,
 					(controller.front_block.curr_ptr =
@@ -2468,7 +2468,7 @@ private:
 				for (pointer *it{front_controller_ptr + 1}, *ed{back_controller_ptr}; it != ed; ++it)
 				{
 					pointer blockptr{*it};
-					::fast_io::freestanding::uninitialized_copy_n(blockptr, block_size, *destit);
+					::fast_io::algorithms::uninitialized_copy_n_iters(blockptr, block_size, *destit);
 					auto new_curr_ptr{blockptr + block_size};
 					this->controller.back_block = {blockptr, new_curr_ptr, destit};
 					this->controller.back_end_ptr = new_curr_ptr;
@@ -2478,7 +2478,7 @@ private:
 			}
 
 			dq_back_backup.curr_ptr =
-				::fast_io::freestanding::uninitialized_copy(lastblockbegin,
+				::fast_io::algorithms::uninitialized_copy_iters(lastblockbegin,
 															fromcontroller.back_block.curr_ptr, dq_back_backup.begin_ptr);
 
 			this->controller.back_block = dq_back_backup;
@@ -2506,19 +2506,19 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_default_construct(controller.front_block.curr_ptr, controller.front_end_ptr);
+			::fast_io::algorithms::uninitialized_default_construct_iters(controller.front_block.curr_ptr, controller.front_end_ptr);
 			this->controller.back_block.curr_ptr = this->controller.back_end_ptr;
 			for (T **it{front_controller_ptr + 1}, **ed{back_controller_ptr}; it != ed; ++it)
 			{
 				T *blockptr{*it};
-				::fast_io::freestanding::uninitialized_default_construct(blockptr, blockptr + block_size);
+				::fast_io::algorithms::uninitialized_default_construct_iters(blockptr, blockptr + block_size);
 				auto new_curr_ptr{blockptr + block_size};
 				this->controller.back_block = {blockptr, new_curr_ptr, it};
 				this->controller.back_end_ptr = new_curr_ptr;
 			}
 			lastblockbegin = dq_back_backup.begin_ptr;
 		}
-		::fast_io::freestanding::uninitialized_default_construct(lastblockbegin, dq_back_backup.curr_ptr);
+		::fast_io::algorithms::uninitialized_default_construct_iters(lastblockbegin, dq_back_backup.curr_ptr);
 		this->controller.back_block = dq_back_backup;
 		this->controller.back_end_ptr = dq_back_end_ptr_backup;
 		des.thiscontroller = nullptr;
@@ -2655,7 +2655,7 @@ private:
 			this->reserve_back(n);
 			auto bg{this->begin()};
 			auto ed{bg + n};
-			::fast_io::freestanding::uninitialized_fill(bg, ed, val);
+			::fast_io::algorithms::uninitialized_fill_iters(bg, ed, val);
 			this->set_newed_common(ed.itercontent);
 		}
 		else
@@ -2664,7 +2664,7 @@ private:
 			d.reserve_back(n);
 			auto bg{d.begin()};
 			auto ed{bg + n};
-			::fast_io::freestanding::uninitialized_fill(bg, ed, val);
+			::fast_io::algorithms::uninitialized_fill_iters(bg, ed, val);
 			d.set_newed_common(ed.itercontent);
 			this->controller = d.controller;
 			d.controller = {};
@@ -3491,7 +3491,7 @@ private:
 		auto thisbg{this->begin()};
 		auto posit{thisbg + pos};
 		auto thisbgrgsize{thisbg - rgsize};
-		auto thisbgrgsizenew{::fast_io::freestanding::uninitialized_relocate(thisbg, posit, thisbgrgsize)};
+		auto thisbgrgsizenew{::fast_io::algorithms::uninitialized_relocate_iters(thisbg, posit, thisbgrgsize)};
 		this->controller.front_block = thisbgrgsize.itercontent;
 		this->controller.front_end_ptr = thisbgrgsize.itercontent.begin_ptr + block_size;
 		return {pos, thisbgrgsizenew};
@@ -3502,7 +3502,7 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		auto ret{this->insert_n_front_common_impl(pos, rgsize)};
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		::fast_io::algorithms::uninitialized_copy_n_iters(::std::ranges::cbegin(rg), rgsize, ret.it);
 		return ret;
 	}
 	inline constexpr insert_range_result insert_n_back_common_impl(size_type pos, size_type rgsize)
@@ -3513,7 +3513,7 @@ private:
 		auto posit{this->begin() + pos};
 		auto thisend{this->end()};
 		auto thisendrgsize{thisend + rgsize};
-		::fast_io::freestanding::uninitialized_relocate_backward(posit,
+		::fast_io::algorithms::uninitialized_relocate_backward_iters(posit,
 																 thisend, thisendrgsize);
 		if (thisendrgsize.itercontent.begin_ptr == thisendrgsize.itercontent.curr_ptr)
 		{
@@ -3530,7 +3530,7 @@ private:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
 		auto ret{this->insert_n_back_common_impl(pos, rgsize)};
-		::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+		::fast_io::algorithms::uninitialized_copy_n_iters(::std::ranges::cbegin(rg), rgsize, ret.it);
 		return ret;
 	}
 	template <::std::ranges::range R>
@@ -3555,7 +3555,7 @@ private:
 			{
 				ret = this->insert_n_back_common_impl(pos, rgsize);
 			}
-			::fast_io::freestanding::uninitialized_copy_n(::std::ranges::cbegin(rg), rgsize, ret.it);
+			::fast_io::algorithms::uninitialized_copy_n_iters(::std::ranges::cbegin(rg), rgsize, ret.it);
 			return ret;
 		}
 		else
@@ -3717,7 +3717,7 @@ public:
 				{
 					this->emplace_front(::std::forward<decltype(e)>(e));
 				}
-				::fast_io::freestanding::reverse(this->begin(), this->end() - oldn);
+				::fast_io::algorithms::reverse_iters(this->begin(), this->end() - oldn);
 			}
 			else
 			{
@@ -3726,7 +3726,7 @@ public:
 				{
 					this->emplace_front(::std::forward<decltype(e)>(e));
 				}
-				::fast_io::freestanding::reverse(this->begin(), this->end() - oldn);
+				::fast_io::algorithms::reverse_iters(this->begin(), this->end() - oldn);
 				guard.thisdeq = nullptr;
 			}
 		}
@@ -4024,12 +4024,12 @@ private:
 		insert_range_result res{this->emplace_index_n_impl(idx, count, oldn)};
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
-			::fast_io::freestanding::uninitialized_fill_n(res.it, count, val);
+			::fast_io::algorithms::uninitialized_fill_n_iters(res.it, count, val);
 		}
 		else
 		{
 			insert_index_guard g{this, res.it, count};
-			::fast_io::freestanding::uninitialized_fill_n(res.it, count, val);
+			::fast_io::algorithms::uninitialized_fill_n_iters(res.it, count, val);
 			g.thisdeq = nullptr;
 		}
 		return res;
@@ -4132,7 +4132,7 @@ public:
 			this->reserve_back(count);
 			auto bg{this->begin()};
 			auto newed{bg + count};
-			::fast_io::freestanding::uninitialized_fill(bg, newed, val);
+			::fast_io::algorithms::uninitialized_fill_iters(bg, newed, val);
 			this->set_newed_common(newed.itercontent);
 		}
 		else
@@ -4181,11 +4181,11 @@ private:
 			newed = ed + static_cast<size_type>(count - oldsz);
 			if (pval)
 			{
-				::fast_io::freestanding::uninitialized_fill(ed, newed, *pval);
+				::fast_io::algorithms::uninitialized_fill_iters(ed, newed, *pval);
 			}
 			else
 			{
-				::fast_io::freestanding::uninitialized_default_construct(ed, newed);
+				::fast_io::algorithms::uninitialized_default_construct_iters(ed, newed);
 			}
 		}
 		this->set_newed_common(newed.itercontent);
@@ -4260,7 +4260,7 @@ private:
 		if (moveleft)
 		{
 			auto ed{this->end()};
-			auto front_block{::fast_io::freestanding::uninitialized_relocate_backward(this->begin(), first, last).itercontent};
+			auto front_block{::fast_io::algorithms::uninitialized_relocate_backward_iters(this->begin(), first, last).itercontent};
 			back_block = this->controller.back_block;
 			if (last == ed)
 			{
@@ -4272,7 +4272,7 @@ private:
 		}
 		else
 		{
-			back_block = ::fast_io::freestanding::uninitialized_relocate(last, this->end(), first).itercontent;
+			back_block = ::fast_io::algorithms::uninitialized_relocate_iters(last, this->end(), first).itercontent;
 		}
 
 		this->set_newed_common(back_block);
@@ -4411,8 +4411,8 @@ public:
 
 	inline constexpr void swap(deque &rhs) noexcept
 	{
-		::std::swap(this->controller, rhs.controller);
-		::std::swap(this->allochdl, rhs.allochdl);
+		::fast_io::algorithms::swap(this->controller, rhs.controller);
+		::fast_io::algorithms::swap(this->allochdl, rhs.allochdl);
 	}
 };
 
@@ -4427,7 +4427,7 @@ template <typename T, typename allocator1, typename allocator2>
 inline constexpr bool operator==(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(*lhs.cbegin() == *rhs.cbegin())
 {
-	return ::fast_io::freestanding::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 #if defined(__cpp_lib_three_way_comparison)
@@ -4435,9 +4435,9 @@ inline constexpr bool operator==(::fast_io::containers::deque<T, allocator1> con
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(::fast_io::containers::deque<T, allocator1> const &lhs, ::fast_io::containers::deque<T, allocator2> const &rhs)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::freestanding::compare_three_way{}))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{}))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::freestanding::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

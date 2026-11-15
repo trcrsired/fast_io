@@ -104,7 +104,7 @@ inline constexpr char_type *print_reserve_define_chain_scatter_impl(char_type *p
 	else
 	{
 		auto sc{print_scatter_define(io_reserve_type<char_type, ::std::remove_cvref_t<T>>, t)};
-		p = non_overlapped_copy_n(sc.base, sc.len, p);
+		p = ::fast_io::algorithms::non_overlapped_copy_n_iters(sc.base, sc.len, p);
 	}
 	if constexpr (sizeof...(Args) == 0)
 	{

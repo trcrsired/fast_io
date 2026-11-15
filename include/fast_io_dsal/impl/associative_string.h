@@ -57,7 +57,7 @@ inline constexpr ::fast_io::details::associative_string<char_type> create_associ
 	}
 	::std::size_t const np1{static_cast<::std::size_t>(n + 1u)};
 	char_type *newp{typed_allocator_type::allocate(np1)};
-	*::fast_io::details::non_overlapped_copy_n(p, n, newp) = 0;
+	*::fast_io::algorithms::non_overlapped_copy_n_iters(p, n, newp) = 0;
 	return {newp, n};
 }
 

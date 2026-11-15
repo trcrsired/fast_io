@@ -72,7 +72,7 @@ inline void llvm_ostream_write_impl(::llvm::raw_ostream *os, void const *first_v
 	if (n < remain_size) [[likely]]
 	{
 		::fast_io::llvm::details::llvm_raw_ostream_set_obuffer_curr_ptr(
-			os, ::fast_io::details::non_overlapped_copy_n(first, n, os_obuffer_curr_ptr));
+			os, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, n, os_obuffer_curr_ptr));
 		return;
 	}
 	os->write(first, n);

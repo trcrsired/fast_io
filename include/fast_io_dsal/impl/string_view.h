@@ -240,7 +240,7 @@ public:
 	{
 		if (sv.n <= n)
 		{
-			return ::std::equal(ptr, ptr + sv.n, sv.ptr, sv.ptr + sv.n);
+			return ::fast_io::algorithms::equal_iters(ptr, ptr + sv.n, sv.ptr, sv.ptr + sv.n);
 		}
 		return false;
 	}
@@ -253,7 +253,7 @@ public:
 	{
 		if (sv.n <= n)
 		{
-			return ::std::equal(ptr + (n - sv.n), ptr + n, sv.ptr, sv.ptr + sv.n);
+			return ::fast_io::algorithms::equal_iters(ptr + (n - sv.n), ptr + n, sv.ptr, sv.ptr + sv.n);
 		}
 		return false;
 	}
@@ -303,12 +303,12 @@ public:
 	inline constexpr bool contains(basic_string_view vw) const noexcept
 	{
 		auto ed{this->ptr + this->n};
-		return ::std::search(this->ptr, ed, vw.ptr, vw.ptr + vw.n) != ed;
+		return ::fast_io::algorithms::search_iters(this->ptr, ed, vw.ptr, vw.ptr + vw.n) != ed;
 	}
 	inline constexpr bool contains_character(char_type ch) const noexcept
 	{
 		auto ed{this->ptr + this->n};
-		return ::std::find(this->ptr, ed, ch) != ed;
+		return ::fast_io::algorithms::find_iters(this->ptr, ed, ch) != ed;
 	}
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]
@@ -422,7 +422,7 @@ public:
 			count = val;
 		}
 		auto start{this->ptr + pos};
-		::std::copy(start, start + count, dest);
+		::fast_io::algorithms::copy_iters(start, start + count, dest);
 		return count;
 	}
 
@@ -442,19 +442,37 @@ private:
 		const_pointer it;
 		if constexpr (situation == 0)
 		{
-			it = ::std::find(start, ed, ch);
+			it = ::fast_io::algorithms::find_iters(start, ed, ch);
 		}
 		else if constexpr (situation == 1)
 		{
-			it = ::fast_io::freestanding::find_not(start, ed, ch);
+			it = ::fast_io::algorithms::find_if_not_iters(start, ed, [ch](auto c) noexcept { return c == ch; });
 		}
 		else if constexpr (situation == 2)
 		{
-			it = ::fast_io::freestanding::find_last(start, ed, ch);
+			it = ed;
+			for (auto p{ed}; p != start;)
+			{
+				--p;
+				if (*p == ch)
+				{
+					it = p;
+					break;
+				}
+			}
 		}
 		else if constexpr (situation == 3)
 		{
-			it = ::fast_io::freestanding::find_last_not(start, ed, ch);
+			it = ed;
+			for (auto p{ed}; p != start;)
+			{
+				--p;
+				if (!(*p == ch))
+				{
+					it = p;
+					break;
+				}
+			}
 		}
 		if (it == ed)
 		{
@@ -482,11 +500,11 @@ private:
 		const_pointer it;
 		if constexpr (situation == 0)
 		{
-			it = ::std::search(start, ed, s, sed);
+			it = ::fast_io::algorithms::search_iters(start, ed, s, sed);
 		}
 		else if constexpr (situation == 1)
 		{
-			it = ::std::find_end(start, ed, s, sed);
+			it = ::fast_io::algorithms::find_end_iters(start, ed, s, sed);
 		}
 		if (it == ed)
 		{
@@ -505,19 +523,57 @@ private:
 		const_pointer it;
 		if constexpr (situation == 0)
 		{
-			it = ::std::find_first_of(start, ed, s, sed);
+			it = ::fast_io::algorithms::find_first_of_iters(start, ed, s, sed);
 		}
 		else if constexpr (situation == 1)
 		{
-			it = ::fast_io::freestanding::find_first_not_of(start, ed, s, sed);
+			it = ed;
+			for (auto p{start}; p != ed; ++p)
+			{
+				auto q{s};
+				for (; q != sed && !(*q == *p); ++q)
+				{
+				}
+				if (q == sed)
+				{
+					it = p;
+					break;
+				}
+			}
 		}
 		else if constexpr (situation == 2)
 		{
-			it = ::fast_io::freestanding::find_last_of(start, ed, s, sed);
+			it = ed;
+			for (auto p{ed}; p != start;)
+			{
+				--p;
+				auto q{s};
+				for (; q != sed && !(*q == *p); ++q)
+				{
+				}
+				if (q != sed)
+				{
+					it = p;
+					break;
+				}
+			}
 		}
 		else if constexpr (situation == 3)
 		{
-			it = ::fast_io::freestanding::find_last_not_of(start, ed, s, sed);
+			it = ed;
+			for (auto p{ed}; p != start;)
+			{
+				--p;
+				auto q{s};
+				for (; q != sed && !(*q == *p); ++q)
+				{
+				}
+				if (q == sed)
+				{
+					it = p;
+					break;
+				}
+			}
 		}
 		if (it == ed)
 		{
@@ -677,42 +733,42 @@ inline constexpr ::fast_io::basic_io_scatter_t<char_type> print_alias_define(::f
 template <::std::integral char_type, ::fast_io::allocator_adapter_flags f1, ::fast_io::allocator_adapter_flags f2>
 inline constexpr bool operator==(::fast_io::containers::basic_string_view<char_type, f1> a, ::fast_io::containers::basic_string_view<char_type, f2> b) noexcept
 {
-	return ::std::equal(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n);
+	return ::fast_io::algorithms::equal_iters(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n);
 }
 
 template <::std::integral char_type, ::std::size_t n, ::fast_io::allocator_adapter_flags flags>
 inline constexpr bool operator==(::fast_io::containers::basic_string_view<char_type, flags> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::std::equal(a.ptr, a.ptr + a.n, buffer, buffer + nm1);
+	return ::fast_io::algorithms::equal_iters(a.ptr, a.ptr + a.n, buffer, buffer + nm1);
 }
 
 template <::std::integral char_type, ::std::size_t n, ::fast_io::allocator_adapter_flags flags>
 inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::containers::basic_string_view<char_type, flags> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::std::equal(buffer, buffer + nm1, a.ptr, a.ptr + a.n);
+	return ::fast_io::algorithms::equal_iters(buffer, buffer + nm1, a.ptr, a.ptr + a.n);
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
 template <::std::integral char_type, ::fast_io::allocator_adapter_flags f1, ::fast_io::allocator_adapter_flags f2>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<char_type, f1> a, ::fast_io::containers::basic_string_view<char_type, f2> b) noexcept
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.ptr, a.ptr + a.n, b.ptr, b.ptr + b.n, ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral char_type, ::std::size_t n, ::fast_io::allocator_adapter_flags flags>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<char_type, flags> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.ptr, a.ptr + a.n, buffer, buffer + nm1, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.ptr, a.ptr + a.n, buffer, buffer + nm1, ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral char_type, ::std::size_t n, ::fast_io::allocator_adapter_flags flags>
 inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::containers::basic_string_view<char_type, flags> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::fast_io::freestanding::lexicographical_compare_three_way(buffer, buffer + nm1, a.ptr, a.ptr + a.n, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(buffer, buffer + nm1, a.ptr, a.ptr + a.n, ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

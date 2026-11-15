@@ -179,7 +179,7 @@ scatter_write_some_impl(outstmtype outsm, basic_io_scatter_t<typename outstmtype
 			if (len < buffptrdiff)
 				[[likely]]
 			{
-				curr = ::fast_io::details::non_overlapped_copy_n(base, len, curr);
+				curr = ::fast_io::algorithms::non_overlapped_copy_n_iters(base, len, curr);
 				buffptrdiff -= len;
 			}
 			else
@@ -353,7 +353,7 @@ inline constexpr void scatter_write_all_impl(outstmtype outsm,
 			if (len < buffptrdiff)
 				[[likely]]
 			{
-				curr = ::fast_io::details::non_overlapped_copy_n(base, len, curr);
+				curr = ::fast_io::algorithms::non_overlapped_copy_n_iters(base, len, curr);
 				buffptrdiff -= len;
 			}
 			else

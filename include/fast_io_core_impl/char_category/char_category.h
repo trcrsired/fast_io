@@ -1972,7 +1972,7 @@ inline constexpr Iter find_lf(Iter first, Iter last)
 	}
 	else
 	{
-		return ::fast_io::freestanding::find(first, last, ::fast_io::char_literal_v<u8'\n', char_type>);
+		return ::fast_io::algorithms::find_iters(first, last, ::fast_io::char_literal_v<u8'\n', char_type>);
 	}
 }
 

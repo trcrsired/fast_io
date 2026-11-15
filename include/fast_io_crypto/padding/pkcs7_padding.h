@@ -16,7 +16,7 @@ struct pkcs7_padding
 		}
 		::std::byte pad(static_cast<::std::byte>(static_cast<::std::uint_least8_t>(remaining_length & 0xFF)));
 		::fast_io::freestanding::array<::std::byte, block_size> text{};
-		details::my_copy(inp.begin(), inp.end(), text.data());
+		::fast_io::algorithms::copy_iters(inp.begin(), inp.end(), text.data());
 		for (::std::size_t i(block_size - static_cast<::std::size_t>(1u)); i >= block_size - remaining_length; --i)
 		{
 			text[i] = pad;

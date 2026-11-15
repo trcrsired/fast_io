@@ -371,9 +371,9 @@ public:
 
 	inline constexpr void swap(wasi_thread &other) noexcept
 	{
-		::std::ranges::swap(cb_, other.cb_);
-		::std::ranges::swap(id_, other.id_);
-		::std::ranges::swap(joinable_, other.joinable_);
+		::fast_io::algorithms::swap(cb_, other.cb_);
+		::fast_io::algorithms::swap(id_, other.id_);
+		::fast_io::algorithms::swap(joinable_, other.joinable_);
 	}
 
 	[[nodiscard]]

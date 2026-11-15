@@ -254,7 +254,7 @@ inline constexpr void write_all_cold_impl(outstmtype outsm, typename outstmtype:
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+					obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, static_cast<::std::size_t>(itdiff), curr));
 					return;
 				}
 			}
@@ -287,7 +287,7 @@ inline constexpr void write_all_cold_impl(outstmtype outsm, typename outstmtype:
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+					obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, static_cast<::std::size_t>(itdiff), curr));
 					return;
 				}
 			}
@@ -382,7 +382,7 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					obuffer_set_curr(outsm, non_overlapped_copy_n(
+					obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(
 												reinterpret_cast<char_type_const_ptr>(first), static_cast<::std::size_t>(itdiff), curr));
 					return;
 				}
@@ -416,7 +416,7 @@ inline constexpr void write_all_bytes_cold_impl(outstmtype outsm, ::std::byte co
 				::std::ptrdiff_t itdiff{e - first};
 				if (itdiff < bfddiff)
 				{
-					obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+					obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, static_cast<::std::size_t>(itdiff), curr));
 					return;
 				}
 			}
@@ -499,7 +499,7 @@ write_some_impl(outstmtype outsm, typename outstmtype::output_char_type const *f
 				[[likely]]
 #endif
 			{
-				obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+				obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, static_cast<::std::size_t>(itdiff), curr));
 				return count;
 			}
 		}
@@ -529,7 +529,7 @@ inline constexpr void write_all_impl(outstmtype outsm, typename outstmtype::outp
 		if (itdiff < bfddiff)
 			[[likely]]
 		{
-			obuffer_set_curr(outsm, non_overlapped_copy_n(first, static_cast<::std::size_t>(itdiff), curr));
+			obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(first, static_cast<::std::size_t>(itdiff), curr));
 			return;
 		}
 	}
@@ -564,7 +564,7 @@ inline constexpr ::std::size_t write_some_bytes_impl(outstmtype outsm, ::std::by
 				[[__gnu__::__may_alias__]]
 #endif
 				= char_type const *;
-			obuffer_set_curr(outsm, non_overlapped_copy_n(reinterpret_cast<char_type_const_ptr>(first),
+			obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(reinterpret_cast<char_type_const_ptr>(first),
 														  static_cast<::std::size_t>(itdiff), curr));
 			return count;
 		}
@@ -605,7 +605,7 @@ inline constexpr void write_all_bytes_impl(outstmtype outsm, ::std::byte const *
 					[[__gnu__::__may_alias__]]
 #endif
 					= char_type const *;
-				obuffer_set_curr(outsm, non_overlapped_copy_n(reinterpret_cast<char_type_const_ptr>(first),
+				obuffer_set_curr(outsm, ::fast_io::algorithms::non_overlapped_copy_n_iters(reinterpret_cast<char_type_const_ptr>(first),
 															  static_cast<::std::size_t>(itdiff), curr));
 				return;
 			}

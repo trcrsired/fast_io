@@ -252,7 +252,7 @@ private:
 		auto newrep{allocate_new_bytes(to_copy_units)};
 
 		// copy all full units
-		auto it{::fast_io::freestanding::non_overlapped_copy_n(
+		auto it{::fast_io::algorithms::non_overlapped_copy_n_iters(
 			other.begin_ptr, full_units, newrep.begin_ptr)};
 
 		// handle partial last unit, if any
@@ -693,7 +693,7 @@ public:
 	}
 	constexpr void swap(bitvec &other) noexcept
 	{
-		::std::swap(this->imp, other.imp);
+		::fast_io::algorithms::swap(this->imp, other.imp);
 	}
 	constexpr underlying_pointer underlying_data() noexcept
 	{
@@ -785,7 +785,7 @@ public:
 	}
 	constexpr void reset_all() noexcept
 	{
-		::fast_io::freestanding::fill_n(this->imp.begin_ptr, this->size_bytes(), 0u);
+		::fast_io::algorithms::fill_n_iters(this->imp.begin_ptr, this->size_bytes(), 0u);
 	}
 
 	constexpr void flip_all() noexcept
@@ -831,7 +831,7 @@ public:
 		constexpr underlying_type mask{static_cast<underlying_type>(~static_cast<underlying_type>(0u))};
 		auto [full_bytes, rem] = ::fast_io::details::bitvec_split_bits<underlying_digits>(bits);
 
-		::fast_io::freestanding::fill_n(p, full_bytes, mask);
+		::fast_io::algorithms::fill_n_iters(p, full_bytes, mask);
 
 		// Partial byte
 		if (rem)
@@ -1767,7 +1767,7 @@ public:
 			size_type start = old_full + (old_rem != 0);
 			if (start < new_full)
 			{
-				::fast_io::freestanding::fill(
+				::fast_io::algorithms::fill_iters(
 					p + start,
 					p + new_full,
 					static_cast<unsigned char>(0));

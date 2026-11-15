@@ -151,7 +151,7 @@ inline ::std::size_t tls_sw_copy_out(
 	if (st->buf != nullptr)
 	{
 		::std::size_t const take{n < st->buf_size ? n : st->buf_size};
-		::fast_io::freestanding::non_overlapped_copy_n(src, take, st->buf);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(src, take, st->buf);
 		return take;
 	}
 	::std::size_t copied{};
@@ -159,7 +159,7 @@ inline ::std::size_t tls_sw_copy_out(
 	{
 		::std::size_t const cap{st->scatters[i].len};
 		::std::size_t const take{n - copied < cap ? n - copied : cap};
-		::fast_io::freestanding::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			src + copied, take,
 			static_cast<::std::byte *>(const_cast<void *>(st->scatters[i].base)));
 		copied += take;

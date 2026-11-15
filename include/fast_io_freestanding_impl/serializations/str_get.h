@@ -53,7 +53,7 @@ scan_context_define_str_get_all_buffer_common_impl(char_type const *first, char_
 		to_copy = itdiff;
 	}
 	auto firstthen{first + to_copy};
-	non_overlapped_copy_n(first, to_copy, curr);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(first, to_copy, curr);
 	obuffer_set_curr(output, curr + to_copy);
 	return {firstthen, (not_enough ? (::fast_io::freestanding::parse_errc::partial) : (::fast_io::freestanding::parse_errc::ok))};
 }

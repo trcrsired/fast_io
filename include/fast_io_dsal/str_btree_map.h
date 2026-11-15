@@ -15,7 +15,6 @@
 #include <initializer_list>
 #include <bit>
 #include <compare>
-#include <algorithm>
 #include <ranges>
 #include <utility>
 #include "impl/misc/push_macros.h"

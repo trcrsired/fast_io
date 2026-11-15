@@ -33,7 +33,7 @@ struct deco_partial_adapter
 			{
 				::std::size_t fromdiff{static_cast<::std::size_t>(fromlast - fromfirst)};
 				::fast_io::details::local_operator_new_array_ptr<input_char_type> fromptr(fromdiff);
-				::fast_io::details::non_overlapped_copy_n(fromfirst, fromdiff, fromptr.ptr);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(fromfirst, fromdiff, fromptr.ptr);
 				auto [fromit, toit] = this->process_chars(fromptr.ptr, fromptr.ptr + fromdiff, tofirst, tolast);
 				return {(fromit - fromptr.ptr) + fromfirst, toit};
 			}
@@ -55,19 +55,19 @@ struct deco_partial_adapter
 			auto remainedit{remained_buffer + remained};
 			if (fromdiff < diff)
 			{
-				auto remainedstop{::fast_io::details::non_overlapped_copy_n(fromfirst, fromdiff, remainedit)};
+				auto remainedstop{::fast_io::algorithms::non_overlapped_copy_n_iters(fromfirst, fromdiff, remainedit)};
 				auto [fromit, toit] = deco.process_chars(remained_buffer, remainedstop, tofirst, tolast);
 				tofirst = toit;
 				fromfirst += fromdiff;
 				remained = static_cast<::std::size_t>(
-					::fast_io::freestanding::copy_n(fromit, static_cast<::std::size_t>(remainedstop - fromit),
+					::fast_io::algorithms::copy_n_iters(fromit, static_cast<::std::size_t>(remainedstop - fromit),
 													remained_buffer) -
 					remained_buffer);
 				return {fromfirst, tofirst};
 			}
 			if (remained)
 			{
-				::fast_io::details::non_overlapped_copy_n(fromfirst, diff, remainedit);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(fromfirst, diff, remainedit);
 				auto [fromit, toit] = deco.process_chars(remained_buffer, remainedend, tofirst, tolast);
 				fromfirst += fromit - remainedit;
 				tofirst = toit;
@@ -77,7 +77,7 @@ struct deco_partial_adapter
 			if (fromit != fromlast && toit != tolast)
 			{
 				remained = static_cast<::std::size_t>(fromlast - fromit);
-				::fast_io::details::non_overlapped_copy_n(fromit, remained, remained_buffer);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(fromit, remained, remained_buffer);
 				fromit = fromlast;
 			}
 			return {fromit, toit};

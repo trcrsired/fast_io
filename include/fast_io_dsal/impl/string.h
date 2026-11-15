@@ -35,7 +35,7 @@ inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_alloc
 	// n is not possible to SIZE_MAX since that would overflow the memory which is not possible
 	::std::size_t const np1{static_cast<::std::size_t>(n + 1u)};
 	auto [ptr, allocn]{typed_allocator_type::allocate_at_least(np1)};
-	*::fast_io::freestanding::non_overlapped_copy_n(first, n, ptr) = 0;
+	*::fast_io::algorithms::non_overlapped_copy_n_iters(first, n, ptr) = 0;
 	return {ptr, static_cast<::std::size_t>(allocn - 1u)};
 }
 
@@ -210,7 +210,7 @@ public:
 			}
 			auto [ptr, cap]{typed_allocator_type::allocate_at_least(n + 1u)};
 			this->imp = {ptr, ptr + n, ptr + static_cast<size_type>(cap - 1u)};
-			*::fast_io::freestanding::uninitialized_fill(ptr, ptr + n, ch) = 0;
+			*::fast_io::algorithms::uninitialized_fill_iters(ptr, ptr + n, ch) = 0;
 		}
 	}
 
@@ -520,7 +520,7 @@ private:
 		{
 			return;
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::overlapped_copy_n(otherptr, othern, thisbegin)) = 0;
+		*(this->imp.curr_ptr = ::fast_io::algorithms::copy_n_iters(otherptr, othern, thisbegin)) = 0;
 	}
 
 public:
@@ -553,7 +553,7 @@ public:
 		{
 			return;
 		}
-		::fast_io::freestanding::uninitialized_fill_n(beginptr, n, ch);
+		::fast_io::algorithms::uninitialized_fill_n_iters(beginptr, n, ch);
 		*(this->imp.curr_ptr = beginptr + n) = 0;
 	}
 	inline constexpr void assign_characters(size_type n)
@@ -636,10 +636,10 @@ private:
 
 		// Perform the insertion
 		auto it{ptr};
-		it = ::fast_io::freestanding::non_overlapped_copy(beginptr, insertpos, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_iters(beginptr, insertpos, it);
 		auto retit{it};
-		it = ::fast_io::freestanding::non_overlapped_copy_n(otherptr, othern, it);
-		it = ::fast_io::freestanding::non_overlapped_copy(insertpos, currptr, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_n_iters(otherptr, othern, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_iters(insertpos, currptr, it);
 		*it = 0;
 		this->imp.curr_ptr = it;
 
@@ -675,7 +675,7 @@ private:
 			this->append_cold_impl(otherptr, othern);
 			return;
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::overlapped_copy_n(otherptr, othern, currptr)) = 0;
+		*(this->imp.curr_ptr = ::fast_io::algorithms::copy_n_iters(otherptr, othern, currptr)) = 0;
 	}
 
 public:
@@ -894,8 +894,8 @@ private:
 		}
 		auto newcurrptr{currptr + othern};
 		*newcurrptr = 0;
-		auto lastptr{::fast_io::freestanding::copy_backward(ptr, currptr, newcurrptr)};
-		auto retptr{::fast_io::freestanding::copy_backward(otherptr, otherptr + othern, lastptr)};
+		auto lastptr{::fast_io::algorithms::copy_backward_iters(ptr, currptr, newcurrptr)};
+		auto retptr{::fast_io::algorithms::copy_backward_iters(otherptr, otherptr + othern, lastptr)};
 		this->imp.curr_ptr = newcurrptr;
 		return retptr;
 	}
@@ -940,7 +940,7 @@ private:
 	{
 		if (this->imp.begin_ptr != this->imp.end_ptr) [[likely]]
 		{
-			*(this->imp.curr_ptr = ::fast_io::freestanding::my_copy(last, this->imp.curr_ptr, first)) = 0;
+			*(this->imp.curr_ptr = ::fast_io::algorithms::copy_iters(last, this->imp.curr_ptr, first)) = 0;
 		}
 		return first;
 	}
@@ -1003,7 +1003,7 @@ public:
 	}
 	inline constexpr void swap(basic_string &other) noexcept
 	{
-		::std::swap(other.imp, this->imp);
+		::fast_io::algorithms::swap(other.imp, this->imp);
 	}
 	inline constexpr iterator insert(const_iterator ptr, basic_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
@@ -1061,10 +1061,10 @@ private:
 		this->imp.begin_ptr = ptr;
 		this->imp.end_ptr = ptr + static_cast<size_type>(allocn - 1u);
 		auto it{ptr};
-		it = ::fast_io::freestanding::non_overlapped_copy(beginptr, first, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_iters(beginptr, first, it);
 		auto retit{it};
-		it = ::fast_io::freestanding::non_overlapped_copy_n(otherptr, othern, it);
-		it = ::fast_io::freestanding::non_overlapped_copy(last, currptr, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_n_iters(otherptr, othern, it);
+		it = ::fast_io::algorithms::non_overlapped_copy_iters(last, currptr, it);
 		*it = 0;
 		this->imp.curr_ptr = it;
 		if (!is_sso)
@@ -1080,10 +1080,10 @@ private:
 		auto currptr{this->imp.curr_ptr};
 		if (othersize < toremoven) [[likely]]
 		{
-			auto itr{::fast_io::freestanding::overlapped_copy_n(otherdata, othersize, first)};
+			auto itr{::fast_io::algorithms::copy_n_iters(otherdata, othersize, first)};
 			if (itr != last)
 			{
-				*(this->imp.curr_ptr = ::fast_io::freestanding::copy_backward(itr, last, currptr)) = 0;
+				*(this->imp.curr_ptr = ::fast_io::algorithms::copy_backward_iters(itr, last, currptr)) = 0;
 			}
 			return first;
 		}
@@ -1315,17 +1315,17 @@ public:
 	inline constexpr bool contains(string_view_type vw) const noexcept
 	{
 		auto ed{this->imp.curr_ptr};
-		return ::std::search(this->imp.begin_ptr, ed, vw.ptr, vw.ptr + vw.n) != ed;
+		return ::fast_io::algorithms::search_iters(this->imp.begin_ptr, ed, vw.ptr, vw.ptr + vw.n) != ed;
 	}
 	inline constexpr bool contains(basic_string const &other) const noexcept
 	{
 		auto ed{this->imp.curr_ptr};
-		return ::std::search(this->imp.begin_ptr, ed, other.cbegin(), other.cend()) != ed;
+		return ::fast_io::algorithms::search_iters(this->imp.begin_ptr, ed, other.cbegin(), other.cend()) != ed;
 	}
 	inline constexpr bool contains_character(char_type ch) const noexcept
 	{
 		auto ed{this->imp.curr_ptr};
-		return ::std::find(this->imp.begin_ptr, ed, ch) != ed;
+		return ::fast_io::algorithms::find_iters(this->imp.begin_ptr, ed, ch) != ed;
 	}
 
 #if __has_cpp_attribute(__gnu__::__always_inline__)
@@ -1517,7 +1517,7 @@ public:
 			::fast_io::containers::details::string_heap_dilate_uncheck<allocator_type>(this->imp, count);
 			currptr = this->imp.curr_ptr;
 		}
-		*(this->imp.curr_ptr = ::fast_io::freestanding::uninitialized_fill_n(currptr, static_cast<size_type>(count - thissize), ch)) = 0;
+		*(this->imp.curr_ptr = ::fast_io::algorithms::uninitialized_fill_n_iters(currptr, static_cast<size_type>(count - thissize), ch)) = 0;
 	}
 	inline constexpr void resize(size_type count)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
@@ -1549,7 +1549,7 @@ public:
 
 		if (frontit != beginptr)
 		{
-			backit = ::fast_io::freestanding::overlapped_copy(frontit, backit, beginptr);
+			backit = ::fast_io::algorithms::copy_iters(frontit, backit, beginptr);
 		}
 
 		if (backit != beginptr) // Safety check before modifying memory
@@ -1580,7 +1580,7 @@ public:
 		{
 			if (frontit != currptr) // Prevent unnecessary copying
 			{
-				currptr = ::fast_io::freestanding::overlapped_copy(frontit, currptr, beginptr);
+				currptr = ::fast_io::algorithms::copy_iters(frontit, currptr, beginptr);
 			}
 
 			// Ensure safe null termination
@@ -1689,7 +1689,7 @@ inline constexpr ::fast_io::containers::basic_string<chtype, allocator1>::size_t
 								   !noexcept(*c.begin() = ::std::move(*c.begin())) ||
 								   !noexcept(c.erase(c.begin(), c.end())))
 {
-	auto it = ::std::remove(c.begin(), c.end(), value);
+	auto it = ::fast_io::algorithms::remove_iters(c.begin(), c.end(), value);
 	auto r = c.end() - it;
 	c.erase(it, c.end());
 	return static_cast<::fast_io::containers::basic_string<chtype, allocator1>::size_type>(r);
@@ -1701,7 +1701,7 @@ inline constexpr ::fast_io::containers::basic_string<chtype, allocator1>::size_t
 								   !noexcept(*c.begin() = ::std::move(*c.begin())) ||
 								   !noexcept(c.erase(c.begin(), c.end())))
 {
-	auto it = ::std::remove_if(c.begin(), c.end(), pred);
+	auto it = ::fast_io::algorithms::remove_if_iters(c.begin(), c.end(), pred);
 	auto r = c.end() - it;
 	c.erase(it, c.end());
 	return static_cast<::fast_io::containers::basic_string<chtype, allocator1>::size_type>(r);
@@ -1710,33 +1710,33 @@ inline constexpr ::fast_io::containers::basic_string<chtype, allocator1>::size_t
 template <::std::integral chtype, typename allocator1, typename allocator2>
 inline constexpr bool operator==(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string<chtype, allocator2> const &rhs) noexcept
 {
-	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 template <::std::integral chtype, typename allocator1>
 inline constexpr bool operator==(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
 {
-	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 template <::std::integral chtype, typename allocator1>
 inline constexpr bool operator==(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_string<chtype, allocator1> const &rhs) noexcept
 {
-	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 template <::std::integral char_type, typename allocator1, ::std::size_t n>
 inline constexpr bool operator==(::fast_io::containers::basic_string<char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::std::equal(a.cbegin(), a.cend(), buffer, buffer + nm1);
+	return ::fast_io::algorithms::equal_iters(a.cbegin(), a.cend(), buffer, buffer + nm1);
 }
 
 template <::std::integral char_type, typename allocator1, ::std::size_t n>
 inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::containers::basic_string<char_type, allocator1> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::std::equal(buffer, buffer + nm1, a.cbegin(), a.cend());
+	return ::fast_io::algorithms::equal_iters(buffer, buffer + nm1, a.cbegin(), a.cend());
 }
 
 #if __cpp_lib_three_way_comparison >= 201907L
@@ -1744,33 +1744,33 @@ inline constexpr bool operator==(char_type const (&buffer)[n], ::fast_io::contai
 template <::std::integral chtype, typename allocator1, typename allocator2>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string<chtype, allocator2> const &rhs) noexcept
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral chtype, typename allocator1>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string<chtype, allocator1> const &lhs, ::fast_io::containers::basic_string_view<chtype> rhs) noexcept
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral chtype, typename allocator1>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<chtype> lhs, ::fast_io::containers::basic_string<chtype, allocator1> const &rhs) noexcept
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral char_type, typename allocator1, ::std::size_t n>
 inline constexpr auto operator<=>(::fast_io::containers::basic_string<char_type, allocator1> a, char_type const (&buffer)[n]) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::fast_io::freestanding::lexicographical_compare_three_way(a.cbegin(), a.cend(), buffer, buffer + nm1, ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(a.cbegin(), a.cend(), buffer, buffer + nm1, ::fast_io::algorithms::compare_three_way{});
 }
 
 template <::std::integral char_type, typename allocator1, ::std::size_t n>
 inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::containers::basic_string<char_type, allocator1> a) noexcept
 {
 	constexpr ::std::size_t nm1{n - 1u};
-	return ::fast_io::freestanding::lexicographical_compare_three_way(buffer, buffer + nm1, a.cbegin(), a.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(buffer, buffer + nm1, a.cbegin(), a.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

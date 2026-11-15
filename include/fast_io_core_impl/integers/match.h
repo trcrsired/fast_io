@@ -31,7 +31,7 @@ inline
 					   ::std::size_t len) noexcept
 {
 	auto base_ed{base + len - matched};
-	auto [first_it, base_it] = ::fast_io::freestanding::my_mismatch(first, last, base, base_ed);
+	auto [first_it, base_it] = ::fast_io::algorithms::mismatch_iters(first, last, base, base_ed);
 	matched += static_cast<::std::size_t>(base_it - base);
 	if (first_it == last)
 	{

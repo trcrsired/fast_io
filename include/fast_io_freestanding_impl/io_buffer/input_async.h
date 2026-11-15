@@ -187,7 +187,7 @@ inline void async_iobuffer_pread_step(void *vst, ::std::cxx_std_error err,
 	ibuffer.buffer_curr = ibuffer.buffer_begin;
 	ibuffer.buffer_end = ibuffer.buffer_begin + got;
 	::std::size_t const n{got < state->count ? got : state->count};
-	::fast_io::details::non_overlapped_copy_n(
+	::fast_io::algorithms::non_overlapped_copy_n_iters(
 		reinterpret_cast<::std::byte const *>(ibuffer.buffer_begin), n, state->first);
 	ibuffer.buffer_curr += n;
 	async_iobuffer_pread_deliver(state, ::std::cxx_std_error{}, n);
@@ -226,7 +226,7 @@ inline void async_iobuffer_pread_submit(
 		{
 			/* still drained after the flush: serve from the window */
 			::std::size_t const n{pending < state->count ? pending : state->count};
-			::fast_io::details::non_overlapped_copy_n(
+			::fast_io::algorithms::non_overlapped_copy_n_iters(
 				reinterpret_cast<::std::byte const *>(ibuffer.buffer_curr), n, state->first);
 			ibuffer.buffer_curr += n;
 			async_iobuffer_pread_deliver(state, ::std::cxx_std_error{}, n);
@@ -456,7 +456,7 @@ inline void async_pread_some_bytes_underflow_callback_define(
 		if (pending != 0)
 		{
 			::std::size_t const n{pending < count ? pending : count};
-			::fast_io::details::non_overlapped_copy_n(
+			::fast_io::algorithms::non_overlapped_copy_n_iters(
 				reinterpret_cast<::std::byte const *>(ibuffer.buffer_curr), n, first);
 			ibuffer.buffer_curr += n;
 			callback(::std::cxx_std_error{}, n);

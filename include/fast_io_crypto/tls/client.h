@@ -515,12 +515,12 @@ struct basic_tls_client
 		  rx_pending_pos_{other.rx_pending_pos_},
 		  established_{other.established_}, offloaded_{other.offloaded_}
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_secret_, sizeof(other.tx_secret_), tx_secret_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_secret_, sizeof(other.rx_secret_), rx_secret_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_key_, sizeof(other.tx_key_), tx_key_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_key_, sizeof(other.rx_key_), rx_key_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_iv_, sizeof(other.tx_iv_), tx_iv_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_iv_, sizeof(other.rx_iv_), rx_iv_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_secret_, sizeof(other.tx_secret_), tx_secret_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_secret_, sizeof(other.rx_secret_), rx_secret_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_key_, sizeof(other.tx_key_), tx_key_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_key_, sizeof(other.rx_key_), rx_key_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_iv_, sizeof(other.tx_iv_), tx_iv_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_iv_, sizeof(other.rx_iv_), rx_iv_);
 		::fast_io::secure_clear(__builtin_addressof(other), sizeof(other));
 	}
 	inline basic_tls_client &operator=(basic_tls_client &&other) noexcept
@@ -543,12 +543,12 @@ struct basic_tls_client
 		rx_pending_pos_ = other.rx_pending_pos_;
 		established_ = other.established_;
 		offloaded_ = other.offloaded_;
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_secret_, sizeof(other.tx_secret_), tx_secret_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_secret_, sizeof(other.rx_secret_), rx_secret_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_key_, sizeof(other.tx_key_), tx_key_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_key_, sizeof(other.rx_key_), rx_key_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.tx_iv_, sizeof(other.tx_iv_), tx_iv_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.rx_iv_, sizeof(other.rx_iv_), rx_iv_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_secret_, sizeof(other.tx_secret_), tx_secret_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_secret_, sizeof(other.rx_secret_), rx_secret_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_key_, sizeof(other.tx_key_), tx_key_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_key_, sizeof(other.rx_key_), rx_key_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.tx_iv_, sizeof(other.tx_iv_), tx_iv_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.rx_iv_, sizeof(other.rx_iv_), rx_iv_);
 		::fast_io::secure_clear(__builtin_addressof(other), sizeof(other));
 		return *this;
 	}
@@ -768,14 +768,14 @@ inline void handshake_queue_feed(handshake_queue *q,
 {
 	if (q->consumed != 0)
 	{
-		::fast_io::freestanding::overlapped_copy_n(q->pending.data() + q->consumed,
+		::fast_io::algorithms::copy_n_iters(q->pending.data() + q->consumed,
 												   q->pending.size() - q->consumed, q->pending.data());
 		q->pending.resize(q->pending.size() - q->consumed);
 		q->consumed = 0;
 	}
 	::std::size_t const old{q->pending.size()};
 	q->pending.resize(old + n);
-	::fast_io::freestanding::non_overlapped_copy_n(data, n, q->pending.data() + old);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(data, n, q->pending.data() + old);
 	if (q->pending.size() > (1u << 20u)) /* 1MB handshake cap */
 	{
 		::fast_io::throw_posix_error(EPROTO);
@@ -843,7 +843,7 @@ inline bool certificate_body_parse(::fast_io::tls::peer_certificates *peer,
 		}
 		::std::size_t const off{peer->storage.size()};
 		peer->storage.resize(off + der_size);
-		::fast_io::freestanding::non_overlapped_copy_n(der, der_size, peer->storage.data() + off);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(der, der_size, peer->storage.data() + off);
 		peer->offsets[peer->count] = off;
 		peer->sizes[peer->count] = der_size;
 		++peer->count;
@@ -899,8 +899,8 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	/* userspace AEAD for the handshake epoch: openssl does the same --
 	   only the application epoch goes to the kernel */
 	::std::byte hs_rx_key[32], hs_rx_iv[12];
-	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_rx_key);
-	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_rx_iv);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, hs_rx_key);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, hs_rx_iv);
 	::fast_io::secure_clear(key, sizeof(key));
 
 	enum : ::std::uint_least8_t
@@ -997,7 +997,7 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 					details::tls_fail(sock, alert_description::decode_error, false);
 				}
 				cv_sig_size = cvi.signature_size;
-				::fast_io::freestanding::non_overlapped_copy_n(cvi.signature, cvi.signature_size, cv_sig);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(cvi.signature, cvi.signature_size, cv_sig);
 				/* pre holds Hash(CH..Certificate) -- what the CV signs */
 				::fast_io::tls::details::transcript_digest_to_ptr<crypto>(pre, cv_transcript);
 				state = want_fin;
@@ -1137,8 +1137,8 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	}
 	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_hs);
 	::std::byte hs_tx_key[32], hs_tx_iv[12];
-	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_tx_key);
-	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_tx_iv);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, hs_tx_key);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, hs_tx_iv);
 	::fast_io::secure_clear(key, sizeof(key));
 
 	::std::byte flight[4 + 255 + 3 + 4 + 64];
@@ -1169,15 +1169,15 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	   one direction kernel-encrypted and the other userspace -- a
 	   set_key failure is fatal, not a fallback) */
 	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_ap);
-	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, tx_key_iv_out->key);
-	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, tx_key_iv_out->iv);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, tx_key_iv_out->key);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, tx_key_iv_out->iv);
 	if (offload)
 	{
 		::fast_io::tls::details::ktls_offload_key(sock, details::tls_tx, suite, key, iv);
 	}
 	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, s_ap);
-	::fast_io::freestanding::non_overlapped_copy_n(key, key_size, rx_key_iv_out->key);
-	::fast_io::freestanding::non_overlapped_copy_n(iv, 12, rx_key_iv_out->iv);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, rx_key_iv_out->key);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, rx_key_iv_out->iv);
 	if (offload)
 	{
 		::fast_io::tls::details::ktls_offload_key(sock, details::tls_rx, suite, key, iv);
@@ -1185,8 +1185,8 @@ inline void ktls_handshake_flight2(stmtype sock, cipher_suite suite,
 	::fast_io::secure_clear(key, sizeof(key));
 	::fast_io::secure_clear(iv, sizeof(iv));
 
-	::fast_io::freestanding::non_overlapped_copy_n(c_ap, digest_size, tx_secret_out);
-	::fast_io::freestanding::non_overlapped_copy_n(s_ap, digest_size, rx_secret_out);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(c_ap, digest_size, tx_secret_out);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(s_ap, digest_size, rx_secret_out);
 	::fast_io::secure_clear(hs_rx_key, sizeof(hs_rx_key));
 	::fast_io::secure_clear(hs_tx_key, sizeof(hs_tx_key));
 	::fast_io::secure_clear(hs_rx_iv, sizeof(hs_rx_iv));
@@ -1308,7 +1308,7 @@ inline void tls_client_handshake(basic_tls_client<allocator_type, socket_observe
 			}
 			/* record bytes past the SH belong to a flight the version
 			   check aborts anyway -- only the message itself is kept */
-			::fast_io::freestanding::non_overlapped_copy_n(rec, mlen + 4, sh_msg);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(rec, mlen + 4, sh_msg);
 			sh_msg_size = mlen + 4;
 			break;
 		}
@@ -1482,7 +1482,7 @@ inline ::std::size_t tls_client_sw_read_some(basic_tls_client<allocator_type, so
 			continue;
 		}
 		::std::size_t const take{rr.plaintext_size < buf_size ? rr.plaintext_size : buf_size};
-		::fast_io::freestanding::non_overlapped_copy_n(inner, take, buf);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(inner, take, buf);
 		if (rr.plaintext_size > take)
 		{
 			tls_client_rx_pending_stash(client, inner + take, rr.plaintext_size - take);
@@ -1496,7 +1496,7 @@ inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type
 {
 	::std::size_t const pend{tls_client_rx_pending(client)};
 	::std::size_t const take{pend < n ? pend : n};
-	::fast_io::freestanding::non_overlapped_copy_n(client->rx_pending_.data() + client->rx_pending_pos_,
+	::fast_io::algorithms::non_overlapped_copy_n_iters(client->rx_pending_.data() + client->rx_pending_pos_,
 												   take, buf);
 	client->rx_pending_pos_ += take;
 	if (client->rx_pending_pos_ == client->rx_pending_.size())
@@ -1516,7 +1516,7 @@ inline ::std::size_t tls_client_rx_pending_drain(basic_tls_client<allocator_type
 	{
 		auto const &e{sc[i]};
 		::std::size_t const take{tls_client_rx_pending(client) < e.len ? tls_client_rx_pending(client) : e.len};
-		::fast_io::freestanding::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			client->rx_pending_.data() + client->rx_pending_pos_, take,
 			const_cast<::std::byte *>(static_cast<::std::byte const *>(e.base)));
 		client->rx_pending_pos_ += take;
@@ -1535,7 +1535,7 @@ inline void tls_client_rx_pending_stash(basic_tls_client<allocator_type, socket_
 {
 	::std::size_t const old{client->rx_pending_.size()};
 	client->rx_pending_.resize(old + n);
-	::fast_io::freestanding::non_overlapped_copy_n(pt, n, client->rx_pending_.data() + old);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(pt, n, client->rx_pending_.data() + old);
 }
 
 /*
@@ -1626,7 +1626,7 @@ inline void tls_client_key_update_received(basic_tls_client<allocator_type, sock
 	::std::size_t const key_size{::fast_io::tls::details::cipher_suite_key_size(client->suite_)};
 	::fast_io::tls::details::hkdf_expand_label_to_ptr<crypto>(
 		md, next, client->secret_size_, client->rx_secret_, u8"traffic upd", 11, nullptr, 0);
-	::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->rx_secret_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(next, client->secret_size_, client->rx_secret_);
 	::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(
 		md, client->rx_key_, key_size, client->rx_iv_, client->rx_secret_);
 	if (client->offloaded_)
@@ -1661,7 +1661,7 @@ inline void tls_client_key_update_received(basic_tls_client<allocator_type, sock
 		}
 		::fast_io::tls::details::hkdf_expand_label_to_ptr<crypto>(
 			md, next, client->secret_size_, client->tx_secret_, u8"traffic upd", 11, nullptr, 0);
-		::fast_io::freestanding::non_overlapped_copy_n(next, client->secret_size_, client->tx_secret_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(next, client->secret_size_, client->tx_secret_);
 		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(
 			md, client->tx_key_, key_size, client->tx_iv_, client->tx_secret_);
 		if (client->offloaded_)
@@ -1770,12 +1770,12 @@ inline void tls_client_set_established(basic_tls_client<allocator_type, socket_o
 	client->suite_ = suite;
 	client->secret_size_ = secret_size;
 	client->offloaded_ = offloaded;
-	::fast_io::freestanding::non_overlapped_copy_n(tx_secret, secret_size, client->tx_secret_);
-	::fast_io::freestanding::non_overlapped_copy_n(rx_secret, secret_size, client->rx_secret_);
-	::fast_io::freestanding::non_overlapped_copy_n(tx_key_iv.key, sizeof(tx_key_iv.key), client->tx_key_);
-	::fast_io::freestanding::non_overlapped_copy_n(tx_key_iv.iv, sizeof(tx_key_iv.iv), client->tx_iv_);
-	::fast_io::freestanding::non_overlapped_copy_n(rx_key_iv.key, sizeof(rx_key_iv.key), client->rx_key_);
-	::fast_io::freestanding::non_overlapped_copy_n(rx_key_iv.iv, sizeof(rx_key_iv.iv), client->rx_iv_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(tx_secret, secret_size, client->tx_secret_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(rx_secret, secret_size, client->rx_secret_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(tx_key_iv.key, sizeof(tx_key_iv.key), client->tx_key_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(tx_key_iv.iv, sizeof(tx_key_iv.iv), client->tx_iv_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(rx_key_iv.key, sizeof(rx_key_iv.key), client->rx_key_);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(rx_key_iv.iv, sizeof(rx_key_iv.iv), client->rx_iv_);
 	client->tx_seq_ = client->rx_seq_ = 0;
 	client->rx_pending_pos_ = 0;
 	client->rx_pending_.clear();

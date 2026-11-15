@@ -208,7 +208,7 @@ inline auto async_iobuffer_print_decay(async_scheduler_type sched,
 	{
 		/* fits in the buffer (behind any pending bytes — order kept):
 		 * pure append, nothing submitted */
-		::fast_io::details::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			payload.data(), payload.size(), obuffer.buffer_curr);
 		obuffer.buffer_curr += payload.size();
 		return ret_awaiter{};
@@ -232,7 +232,7 @@ inline auto async_iobuffer_print_decay(async_scheduler_type sched,
 	{
 		/* fits the (fresh) buffer: only the detached pending bytes
 		 * need a submission, or nothing at all */
-		::fast_io::details::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			payload.data(), payload.size(), obuffer.buffer_curr);
 		obuffer.buffer_curr += payload.size();
 	}

@@ -1465,7 +1465,7 @@ inline constexpr parse_result<char_type const *> sc_int_ctx_digit_phase(State &s
 	if (first_it_diff < diff)
 	{
 		auto start{st.buffer.data() + st.size};
-		auto e{non_overlapped_copy_n(first, first_it_diff, start)};
+		auto e{::fast_io::algorithms::non_overlapped_copy_n_iters(first, first_it_diff, start)};
 		st.size += static_cast<::std::uint_least8_t>(first_it_diff);
 		if (it == last)
 		{

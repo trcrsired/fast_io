@@ -61,7 +61,7 @@ struct ec_mont_ctx
 	inline constexpr ec_mont_ctx(ec_limb const *m, ::std::size_t nl) noexcept
 		: nl{nl}
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(m, nl, modulus);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(m, nl, modulus);
 		n0inv = ::fast_io::details::rsa::montgomery_n0_inverse(m[0]);
 		ec_limb d[3 * ec_max_limbs + 1];
 		::fast_io::details::rsa::montgomery_r2_setup(r2, modulus, nl, d);
@@ -91,8 +91,8 @@ struct ec_curve
 		  pm2{c.pm2}, nm2{c.nm2}, nl{c.limb_count}, nbytes{c.byte_count},
 		  nbits{c.bit_count}
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(c.gx, nl, gx);
-		::fast_io::freestanding::non_overlapped_copy_n(c.gy, nl, gy);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(c.gx, nl, gx);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(c.gy, nl, gy);
 	}
 };
 
@@ -189,7 +189,7 @@ inline constexpr void ec_mul_plain(ec_mont_ctx const &ctx,
 	ec_limb xm[ec_max_limbs];
 	ec_to_mont(ctx, xm, x);
 	ec_mul(ctx, xm, xm, y);
-	::fast_io::freestanding::non_overlapped_copy_n(xm, ctx.nl, z);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(xm, ctx.nl, z);
 }
 
 /* ---------------- group law (Jacobian, a = -3) ---------------- */
@@ -239,7 +239,7 @@ inline constexpr void ec_double(ec_mont_ctx const &f, ec_point &pt) noexcept
 	ec_sqr(f, t1, t1);
 	ec_sub(t1, t1, gamma, f.modulus, f.nl);
 	ec_sub(t1, t1, delta, f.modulus, f.nl);
-	::fast_io::freestanding::non_overlapped_copy_n(t1, f.nl, pt.z);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(t1, f.nl, pt.z);
 	/* y' = alpha(4beta - x') - 8gamma^2 */
 	ec_sub(t0, t0, x3, f.modulus, f.nl); /* 4beta - x' */
 	ec_mul(f, t0, alpha, t0);
@@ -248,8 +248,8 @@ inline constexpr void ec_double(ec_mont_ctx const &f, ec_point &pt) noexcept
 	ec_add2(t1, t1, f.modulus, f.nl);
 	ec_add2(t1, t1, f.modulus, f.nl); /* 8gamma^2 */
 	ec_sub(t0, t0, t1, f.modulus, f.nl);
-	::fast_io::freestanding::non_overlapped_copy_n(x3, f.nl, pt.x);
-	::fast_io::freestanding::non_overlapped_copy_n(t0, f.nl, pt.y);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(x3, f.nl, pt.x);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(t0, f.nl, pt.y);
 }
 
 /*
@@ -293,9 +293,9 @@ inline constexpr void ec_add_point(ec_mont_ctx const &f,
 		else
 		{
 			/* p + (-p) = infinity */
-			::fast_io::freestanding::fill_n(a.x, f.nl, ec_limb{});
-			::fast_io::freestanding::fill_n(a.y, f.nl, ec_limb{});
-			::fast_io::freestanding::fill_n(a.z, f.nl, ec_limb{});
+			::fast_io::algorithms::fill_n_iters(a.x, f.nl, ec_limb{});
+			::fast_io::algorithms::fill_n_iters(a.y, f.nl, ec_limb{});
+			::fast_io::algorithms::fill_n_iters(a.z, f.nl, ec_limb{});
 		}
 		return;
 	}
@@ -314,9 +314,9 @@ inline constexpr void ec_add_point(ec_mont_ctx const &f,
 	ec_sub(y3, y3, t0, f.modulus, f.nl);
 	ec_mul(f, z3, a.z, b.z);
 	ec_mul(f, z3, z3, h);
-	::fast_io::freestanding::non_overlapped_copy_n(x3, f.nl, a.x);
-	::fast_io::freestanding::non_overlapped_copy_n(y3, f.nl, a.y);
-	::fast_io::freestanding::non_overlapped_copy_n(z3, f.nl, a.z);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(x3, f.nl, a.x);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(y3, f.nl, a.y);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(z3, f.nl, a.z);
 }
 
 /* scalar*P -- double-and-add, most significant bit first.
@@ -326,9 +326,9 @@ inline constexpr void ec_scalar_mul(ec_mont_ctx const &f,
 									::std::byte const *scalar, ::std::size_t scalar_size,
 									ec_point const &pt) noexcept
 {
-	::fast_io::freestanding::fill_n(out.x, ec_max_limbs, ec_limb{});
-	::fast_io::freestanding::fill_n(out.y, ec_max_limbs, ec_limb{});
-	::fast_io::freestanding::fill_n(out.z, ec_max_limbs, ec_limb{});
+	::fast_io::algorithms::fill_n_iters(out.x, ec_max_limbs, ec_limb{});
+	::fast_io::algorithms::fill_n_iters(out.y, ec_max_limbs, ec_limb{});
+	::fast_io::algorithms::fill_n_iters(out.z, ec_max_limbs, ec_limb{});
 	for (::std::size_t byte_i{}; byte_i != scalar_size; ++byte_i)
 	{
 		unsigned const b{static_cast<unsigned>(scalar[byte_i])};
@@ -374,7 +374,7 @@ inline constexpr bool ec_point_load(ec_curve const &c, ec_point &pt,
 	}
 	ec_to_mont(c.field, pt.x, x);
 	ec_to_mont(c.field, pt.y, y);
-	::fast_io::freestanding::non_overlapped_copy_n(c.field.one, c.nl, pt.z);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(c.field.one, c.nl, pt.z);
 	return true;
 }
 
@@ -644,8 +644,8 @@ struct ecdsa_rfc6979_drbg
 		}
 		::std::byte bh[details::ec_max_limbs * ::fast_io::details::rsa::limb_bytes];
 		nr::limbs_to_bytes_be(bh, zv, c.nbytes, c.nl);
-		::fast_io::freestanding::fill_n(v, hash_ctx::digest_size, ::std::byte{0x01});
-		::fast_io::freestanding::fill_n(k, hash_ctx::digest_size, ::std::byte{0x00});
+		::fast_io::algorithms::fill_n_iters(v, hash_ctx::digest_size, ::std::byte{0x01});
+		::fast_io::algorithms::fill_n_iters(k, hash_ctx::digest_size, ::std::byte{0x00});
 		/* K = HMAC(K, V || 0x00 || x || bh); V = HMAC(K, V);
 		   K = HMAC(K, V || 0x01 || x || bh); V = HMAC(K, V) */
 		for (unsigned phase{}; phase != 2; ++phase)
@@ -678,7 +678,7 @@ struct ecdsa_rfc6979_drbg
 				::std::size_t const take{curve->nbytes - gen < hash_ctx::digest_size
 											 ? curve->nbytes - gen
 											 : hash_ctx::digest_size};
-				::fast_io::freestanding::non_overlapped_copy_n(v, take, t + gen);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(v, take, t + gen);
 				gen += take;
 			}
 			/* bits2int(T): keep the leftmost qlen bits -- for qlen

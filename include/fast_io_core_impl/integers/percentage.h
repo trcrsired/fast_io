@@ -233,7 +233,7 @@ inline constexpr chartype *prrsv_percentage_main_common_impl(chartype *iter, T n
 			}
 			*iter = ::fast_io::char_literal_v<(comma ? u8',' : u8'.'), chartype>;
 			++iter;
-			::fast_io::details::non_overlapped_copy_n(tb + (quotientmod100 << 1u), 2u, iter);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (quotientmod100 << 1u), 2u, iter);
 			iter += 2u;
 		}
 		else
@@ -340,7 +340,7 @@ inline constexpr chartype *prrsv_percentage_main_common_impl(chartype *iter, T n
 			}
 			*iter = ::fast_io::char_literal_v<(comma ? u8',' : u8'.'), chartype>;
 			++iter;
-			::fast_io::details::non_overlapped_copy_n(tb + (quotientmod100 << 1u), 2u, iter);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (quotientmod100 << 1u), 2u, iter);
 			iter += 2u;
 		}
 		return iter;

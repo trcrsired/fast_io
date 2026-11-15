@@ -237,8 +237,8 @@ struct basic_schannel_tls_client
 		  stream_sizes_{other.stream_sizes_},
 		  have_ctx_{other.have_ctx_}, established_{other.established_}
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(other.pt_pending_, other.pt_pending_size_, pt_pending_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.ct_pending_, other.ct_pending_size_, ct_pending_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.pt_pending_, other.pt_pending_size_, pt_pending_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.ct_pending_, other.ct_pending_size_, ct_pending_);
 		other.have_ctx_ = false;
 		other.established_ = false;
 		other.pt_pending_size_ = 0;
@@ -256,8 +256,8 @@ struct basic_schannel_tls_client
 		ctx_ = other.ctx_;
 		pt_pending_size_ = other.pt_pending_size_;
 		ct_pending_size_ = other.ct_pending_size_;
-		::fast_io::freestanding::non_overlapped_copy_n(other.pt_pending_, other.pt_pending_size_, pt_pending_);
-		::fast_io::freestanding::non_overlapped_copy_n(other.ct_pending_, other.ct_pending_size_, ct_pending_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.pt_pending_, other.pt_pending_size_, pt_pending_);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(other.ct_pending_, other.ct_pending_size_, ct_pending_);
 		stream_sizes_ = other.stream_sizes_;
 		have_ctx_ = other.have_ctx_;
 		established_ = other.established_;

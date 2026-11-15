@@ -316,7 +316,7 @@ fixed_case1_integer_and_point(char_type *iter, typename fp_m10_type<flt>::type m
 		auto tmp{iter};
 		fp_m10_len(iter + 1, m10, static_cast<::std::uint_least32_t>(olength));
 		iter += olength + 1;
-		my_copy_n(tmp + 1, static_cast<::std::uint_least32_t>(eposition), tmp);
+		::fast_io::algorithms::copy_n_iters(tmp + 1, static_cast<::std::uint_least32_t>(eposition), tmp);
 		tmp[eposition] = char_literal_v<(comma ? u8',' : u8'.'), char_type>;
 	}
 	return iter;

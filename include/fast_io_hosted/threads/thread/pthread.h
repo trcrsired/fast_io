@@ -193,8 +193,8 @@ public:
 
 	inline constexpr void swap(pthread_thread &other) noexcept
 	{
-		::std::ranges::swap(this->id_, other.id_);
-		::std::ranges::swap(this->joinable_, other.joinable_);
+		::fast_io::algorithms::swap(this->id_, other.id_);
+		::fast_io::algorithms::swap(this->joinable_, other.joinable_);
 	}
 
 	[[nodiscard]]
