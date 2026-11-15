@@ -61,13 +61,13 @@ struct gnutls_evp_hash_ctx
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(o.digest, digest_size_, digest);
 	}
 	inline gnutls_evp_hash_ctx(gnutls_evp_hash_ctx &&o) noexcept
 		: mac_{o.mac_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}, ctx{o.ctx}
 	{
 		o.ctx = nullptr;
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(o.digest, digest_size_, digest);
 	}
 	inline ~gnutls_evp_hash_ctx()
 	{
@@ -108,7 +108,7 @@ struct gnutls_evp_hash_ctx
 	}
 	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size_, ptr);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(digest, digest_size_, ptr);
 	}
 };
 
@@ -299,7 +299,7 @@ public:
 			::fast_io::fast_terminate();
 		}
 		::std::byte inner[16641];
-		::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(pt, pt_size, inner);
 		inner[pt_size] = static_cast<::std::byte>(inner_type);
 		return record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 	}

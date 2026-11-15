@@ -354,7 +354,7 @@ struct cstr_guard FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 
 		::std::size_t str_size{::fast_io::cstr_len(others.cstr)};
 		cstr = Alloc::allocate(str_size + 1);
-		auto const lase_ptr{::fast_io::freestanding::non_overlapped_copy_n(others.cstr, str_size, cstr)};
+		auto const lase_ptr{::fast_io::algorithms::non_overlapped_copy_n_iters(others.cstr, str_size, cstr)};
 		*lase_ptr = ::fast_io::char_literal_v<u8'\0', char_type>;
 	}
 
@@ -375,7 +375,7 @@ struct cstr_guard FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 
 		::std::size_t str_size{::fast_io::cstr_len(others.cstr)};
 		cstr = Alloc::allocate(str_size + 1);
-		auto const lase_ptr{::fast_io::freestanding::non_overlapped_copy_n(others.cstr, str_size, cstr)};
+		auto const lase_ptr{::fast_io::algorithms::non_overlapped_copy_n_iters(others.cstr, str_size, cstr)};
 		*lase_ptr = ::fast_io::char_literal_v<u8'\0', char_type>;
 
 		return *this;
@@ -515,7 +515,7 @@ struct posix_process_args FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 			details::cstr_guard<replace_char_type> str;
 			::std::size_t str_size{::fast_io::cstr_len(*curr)};
 			str.cstr = details::cstr_guard<replace_char_type>::Alloc::allocate(str_size + 1);
-			auto const lase_ptr{::fast_io::freestanding::non_overlapped_copy_n(*curr, str_size, str.cstr)};
+			auto const lase_ptr{::fast_io::algorithms::non_overlapped_copy_n_iters(*curr, str_size, str.cstr)};
 			*lase_ptr = ::fast_io::char_literal_v<u8'\0', replace_char_type>;
 			arg_envs.push_back(::std::move(str));
 		}

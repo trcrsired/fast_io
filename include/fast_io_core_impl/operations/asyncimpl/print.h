@@ -207,7 +207,7 @@ strlike_reserve(::fast_io::io_strlike_type_t<char_type, async_print_strlike_buff
 	auto [newptr, newcap]{async_print_strlike_alloc<typed_allocator_type>(str.allochdl, n)};
 	if (used != 0)
 	{
-		::fast_io::details::non_overlapped_copy_n(str.begin_ptr, used, newptr);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(str.begin_ptr, used, newptr);
 	}
 	if (str.begin_ptr != nullptr)
 	{
@@ -244,7 +244,7 @@ inline constexpr auto strlike_construct_define(
 		auto [newptr, newcap]{
 			async_print_strlike_alloc<typed_allocator_type>(str.allochdl, n)};
 		str.begin_ptr = newptr;
-		str.curr_ptr = ::fast_io::details::non_overlapped_copy_n(first, n, newptr);
+		str.curr_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, n, newptr);
 		str.end_ptr = newptr + static_cast<::std::size_t>(newcap);
 	}
 	return str;

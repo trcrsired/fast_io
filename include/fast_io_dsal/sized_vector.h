@@ -14,7 +14,6 @@
 #include <initializer_list>
 #include <bit>
 #include <compare>
-#include <algorithm>
 #include "impl/misc/push_macros.h"
 #include "impl/misc/push_warnings.h"
 #include "../fast_io_core.h"

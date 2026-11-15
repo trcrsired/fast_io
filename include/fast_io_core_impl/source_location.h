@@ -44,7 +44,7 @@ prrsv_reserve_define_source_location_impl(char_type *iter, ::std::source_locatio
 {
 	char const *flnm{location.file_name()};
 	::std::size_t flnmlen{::fast_io::cstr_len(flnm)};
-	iter = ::fast_io::details::non_overlapped_copy_n(flnm, flnmlen, iter);
+	iter = ::fast_io::algorithms::non_overlapped_copy_n_iters(flnm, flnmlen, iter);
 	*iter = ::fast_io::char_literal_v<u8':', char_type>;
 	++iter;
 	iter = print_reserve_define(::fast_io::io_reserve_type<char_type, ::std::uint_least32_t>, iter, location.line());
@@ -55,7 +55,7 @@ prrsv_reserve_define_source_location_impl(char_type *iter, ::std::source_locatio
 	++iter;
 	char const *fnnm{location.function_name()};
 	::std::size_t fnnmlen{::fast_io::cstr_len(fnnm)};
-	return ::fast_io::details::non_overlapped_copy_n(fnnm, fnnmlen, iter);
+	return ::fast_io::algorithms::non_overlapped_copy_n_iters(fnnm, fnnmlen, iter);
 }
 
 } // namespace details

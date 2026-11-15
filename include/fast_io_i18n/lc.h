@@ -211,7 +211,7 @@ struct lc_write_sink
 	}
 	inline constexpr void put_units(char_type const *p, ::std::size_t len) noexcept
 	{
-		auto const n{::std::min(len, static_cast<::std::size_t>(dend - it))};
+		auto const n{::fast_io::algorithms::field_ops::minimum{}.compute(len, static_cast<::std::size_t>(dend - it))};
 		::fast_io::details::my_memcpy(it, p, n * sizeof(char_type));
 		it += n;
 	}

@@ -752,7 +752,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 			{
 				auto itr_begin{buffer_begin};
 				auto itr_end{
-					::fast_io::freestanding::non_overlapped_copy_n(begin, digitsm1 - buffer_size, buffer_begin)};
+					::fast_io::algorithms::non_overlapped_copy_n_iters(begin, digitsm1 - buffer_size, buffer_begin)};
 				auto digit_end{begin + (digitsm1 - buffer_size)};
 				auto [_, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(itr_begin, itr_end, t);
 				if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
@@ -766,7 +766,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 			{
 				auto itr_begin{buffer_begin};
 				auto itr_end{
-					::fast_io::freestanding::non_overlapped_copy_n(begin, frag_length, buffer_begin + buffer_size)};
+					::fast_io::algorithms::non_overlapped_copy_n_iters(begin, frag_length, buffer_begin + buffer_size)};
 				auto [_, ec] = chrono_scan_decimal_fraction_part_never_overflow_impl<false>(itr_begin, itr_end, t);
 				if (ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 				{
@@ -790,7 +790,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 		else
 		{
 			itr_begin = buffer_begin;
-			itr_end = ::fast_io::freestanding::non_overlapped_copy_n(begin, digitsm1 - buffer_size,
+			itr_end = ::fast_io::algorithms::non_overlapped_copy_n_iters(begin, digitsm1 - buffer_size,
 																	 buffer_begin + buffer_size);
 			digit_end = begin + (digitsm1 - buffer_size);
 		}
@@ -836,7 +836,7 @@ scn_ctx_decimal_fraction_part_never_overflow_impl(timestamp_scan_state_t<char_ty
 		// do not know the end of the number
 		// neither overflow the buffer
 		// so put it into the buffer
-		::fast_io::freestanding::non_overlapped_copy_n(begin, frag_length, buffer_begin + buffer_size);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(begin, frag_length, buffer_begin + buffer_size);
 		state.size += static_cast<::std::uint_least8_t>(frag_length);
 		return {end, ::fast_io::freestanding::parse_errc::partial};
 	}
@@ -1331,7 +1331,7 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 		}
 		else /*diff == 1*/
 		{
-			::fast_io::freestanding::non_overlapped_copy_n(begin, 1, buffer_begin);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(begin, 1, buffer_begin);
 			state.size = 1;
 			return {end, ::fast_io::freestanding::parse_errc::partial};
 		}
@@ -1339,7 +1339,7 @@ scan_iso8601_context_2_digits_phase(timestamp_scan_state_t<char_type> &state, ch
 	}
 	case 1:
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(begin, 1, buffer_begin + 1);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(begin, 1, buffer_begin + 1);
 		if (auto ec = chrono_scan_two_digits_unsafe_impl(buffer_begin, t); ec != ::fast_io::freestanding::parse_errc::ok) [[unlikely]]
 		{
 			return {begin, ec};

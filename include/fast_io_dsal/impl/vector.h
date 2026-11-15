@@ -90,13 +90,13 @@ inline void *grow_to_size_iter_impl(vector_model &imp, void *iter, ::std::size_t
 	::std::size_t mx{SIZE_MAX / size};
 	if (newcap > mx) [[unlikely]]
 	{
-		::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 	}
 	newcap *= size;
 #else
 	if (__builtin_mul_overflow(size, newcap, __builtin_addressof(newcap))) [[unlikely]]
 	{
-		::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 	}
 #endif
 	return grow_to_byte_size_iter_impl<allocator>(imp, iter, newcap, size, size, alignment);
@@ -126,13 +126,13 @@ inline constexpr void *grow_twice_iter_impl(vector_model &imp, void *iter, ::std
 		constexpr ::std::size_t mx{SIZE_MAX / 2};
 		if (diff > mx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 		toallocate = (diff << 1u);
 #else
 		if (__builtin_mul_overflow(diff, 2u, __builtin_addressof(toallocate))) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<allocator::throws_on_overflow>(::std::errc::value_too_large);
 		}
 #endif
 	}
@@ -159,7 +159,7 @@ inline constexpr void *move_backward_impl(vector_model &imp, void *iter, ::std::
 	}
 	auto currptr{imp.curr_ptr};
 	auto currptrp1{currptr + size};
-	static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1));
+	static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(reinterpret_cast<::std::byte *>(iter), currptr, currptrp1));
 	return iter;
 }
 
@@ -475,7 +475,7 @@ private:
 				size_type n{static_cast<size_type>(::fast_io::containers::details::vector::iter_distance(first, last))};
 				if (max_size() < n) [[unlikely]]
 				{
-					::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+					::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 				}
 				auto e{this->imp.end_ptr = (this->imp.curr_ptr = this->imp.begin_ptr =
 												this->allocate_elements(n)) +
@@ -535,7 +535,7 @@ private:
 	{
 		if (max_size() < n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		if constexpr (::fast_io::freestanding::is_zero_default_constructible_v<value_type>)
 		{
@@ -553,7 +553,7 @@ private:
 	{
 		if (max_size() < n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		if constexpr (::std::is_trivially_default_constructible_v<value_type>)
 		{
@@ -576,7 +576,7 @@ private:
 	{
 		if (max_size() < n) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		auto e{this->imp.end_ptr = (this->imp.curr_ptr = this->imp.begin_ptr =
 										this->allocate_elements(n)) +
@@ -790,7 +790,7 @@ private:
 	{
 		if (max_size() < newcap) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
 		{
@@ -823,7 +823,7 @@ private:
 					::std::size_t newcapbytes;
 					if (__builtin_mul_overflow(sizeof(value_type), newcap, __builtin_addressof(newcapbytes))) [[unlikely]]
 					{
-						::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+						::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 					}
 					return reinterpret_cast<pointer>(::fast_io::containers::details::vector::detemplate::grow_to_byte_size_iter_impl<allocator_type>(
 						*reinterpret_cast<::fast_io::containers::details::vector_model *>(__builtin_addressof(imp)),
@@ -949,7 +949,7 @@ private:
 		{
 			FAST_IO_IF_NOT_CONSTEVAL
 			{
-				static_cast<void>(::fast_io::freestanding::uninitialized_move_backward(iter, imp.curr_ptr, imp.curr_ptr + 1));
+				static_cast<void>(::fast_io::algorithms::uninitialized_move_backward_iters(iter, imp.curr_ptr, imp.curr_ptr + 1));
 				return;
 			}
 		}
@@ -966,7 +966,7 @@ private:
 	{
 		if (max_size() < newcap) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && !alloc_with_status)
 		{
@@ -1028,7 +1028,7 @@ public:
 	{
 		if (imp.curr_ptr == imp.begin_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		(--imp.curr_ptr)->~value_type();
 	}
@@ -1130,7 +1130,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (static_cast<::std::size_t>(curr_ptr - begin_ptr) <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return begin_ptr[pos];
 	}
@@ -1145,7 +1145,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (static_cast<::std::size_t>(curr_ptr - begin_ptr) <= pos) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return begin_ptr[pos];
 	}
@@ -1161,7 +1161,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return *begin_ptr;
 	}
@@ -1176,7 +1176,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return *begin_ptr;
 	}
@@ -1191,7 +1191,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return curr_ptr[-1];
 	}
@@ -1206,7 +1206,7 @@ public:
 		auto begin_ptr{imp.begin_ptr}, curr_ptr{imp.curr_ptr};
 		if (begin_ptr == curr_ptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return curr_ptr[-1];
 	}
@@ -1339,7 +1339,7 @@ public:
 			size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
 			if (max_size() - old_size < rgsize) [[unlikely]]
 			{
-				::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+				::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 			}
 			size_type const new_size{old_size + rgsize};
 			size_type const cap{static_cast<size_type>(imp.end_ptr - imp.begin_ptr)};
@@ -1483,7 +1483,7 @@ public:
 		size_type sz{static_cast<size_type>(imp.curr_ptr - beginptr)};
 		if (sz < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return *this->emplace(beginptr + idx, ::std::forward<Args>(args)...);
 	}
@@ -1536,7 +1536,7 @@ private:
 						p->~value_type();
 					}
 				}
-				::fast_io::freestanding::uninitialized_relocate(
+				::fast_io::algorithms::uninitialized_relocate_iters(
 					first + static_cast<::std::ptrdiff_t>(count), thisvec->imp.curr_ptr, first);
 				thisvec->imp.curr_ptr -= static_cast<::std::ptrdiff_t>(count);
 			}
@@ -1551,7 +1551,7 @@ private:
 		size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
 		if (max_size() - old_size < count) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		size_type const new_size{old_size + count};
 		if (static_cast<size_type>(imp.end_ptr - imp.curr_ptr) < count)
@@ -1560,13 +1560,13 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(count));
 		}
 		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
 		if constexpr (::std::is_nothrow_copy_constructible_v<value_type>)
 		{
-			::fast_io::freestanding::uninitialized_fill_n(it, count, val);
+			::fast_io::algorithms::uninitialized_fill_n_iters(it, count, val);
 		}
 		else
 		{
@@ -1588,7 +1588,7 @@ private:
 		size_type const old_size{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
 		if (max_size() - old_size < rgsize) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_overflow>(::std::errc::value_too_large);
+			::fast_io::containers::details::violation_report<throwing_overflow>(::std::errc::value_too_large);
 		}
 		size_type const new_size{old_size + rgsize};
 		if (static_cast<size_type>(imp.end_ptr - imp.curr_ptr) < rgsize)
@@ -1597,7 +1597,7 @@ private:
 		}
 		else
 		{
-			::fast_io::freestanding::uninitialized_relocate_backward(
+			::fast_io::algorithms::uninitialized_relocate_backward_iters(
 				it, imp.curr_ptr, imp.curr_ptr + static_cast<::std::ptrdiff_t>(rgsize));
 		}
 		imp.curr_ptr = imp.begin_ptr + static_cast<::std::ptrdiff_t>(new_size);
@@ -1632,7 +1632,7 @@ private:
 			while (b < e)
 			{
 				--e;
-				::fast_io::freestanding::iter_swap(b, e);
+				::fast_io::algorithms::iter_swap(b, e);
 				++b;
 			}
 		}};
@@ -1671,7 +1671,7 @@ public:
 		size_type const sz{static_cast<size_type>(imp.curr_ptr - beginptr)};
 		if (sz < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		if (!count)
 		{
@@ -1727,7 +1727,7 @@ public:
 		size_type const sz{static_cast<size_type>(imp.curr_ptr - imp.begin_ptr)};
 		if (sz < idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<size_type>(this->insert_range(imp.begin_ptr + static_cast<::std::ptrdiff_t>(idx), ::std::forward<R>(rg)) - imp.begin_ptr);
 	}
@@ -1746,7 +1746,7 @@ private:
 				{
 					it->~value_type();
 				}
-				::fast_io::freestanding::uninitialized_relocate(it + 1, lastele, it);
+				::fast_io::algorithms::uninitialized_relocate_iters(it + 1, lastele, it);
 				imp.curr_ptr = lastele - 1;
 				return it;
 			}
@@ -1780,7 +1780,7 @@ private:
 				}
 				// relocation consumes the source images; the stale tail bytes
 				// must not be destroyed
-				imp.curr_ptr = ::fast_io::freestanding::uninitialized_relocate(last, currptr, first);
+				imp.curr_ptr = ::fast_io::algorithms::uninitialized_relocate_iters(last, currptr, first);
 				return first;
 			}
 		}
@@ -1822,7 +1822,7 @@ public:
 		size_type sz{static_cast<size_type>(currptr - beginptr)};
 		if (sz <= idx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		static_cast<void>(this->erase_common(beginptr + idx));
 		return idx;
@@ -1849,7 +1849,7 @@ public:
 		size_type sz{static_cast<size_type>(currptr - beginptr)};
 		if (lastidx < firstidx || sz < lastidx) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		static_cast<void>(this->erase_iters_common(beginptr + firstidx, beginptr + lastidx));
 		return firstidx;
@@ -1963,10 +1963,10 @@ public:
 
 	inline constexpr void swap(vector &other) noexcept
 	{
-		::std::swap(imp, other.imp);
+		::fast_io::algorithms::swap(imp, other.imp);
 		if constexpr (alloc_with_status)
 		{
-			::std::swap(allochdl, other.allochdl);
+			::fast_io::algorithms::swap(allochdl, other.allochdl);
 		}
 	}
 };
@@ -1976,16 +1976,16 @@ template <typename T, typename allocator1, typename allocator2>
 inline constexpr bool operator==(vector<T, allocator1> const &lhs, vector<T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(*lhs.imp.begin_ptr == *rhs.imp.begin_ptr)
 {
-	return ::fast_io::freestanding::equal(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr);
+	return ::fast_io::algorithms::equal_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr);
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
 template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(vector<T, allocator1> const &lhs, vector<T, allocator2> const &rhs)
-	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::freestanding::compare_three_way{}))
+	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::algorithms::compare_three_way{}))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::freestanding::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.imp.begin_ptr, lhs.imp.curr_ptr, rhs.imp.begin_ptr, rhs.imp.curr_ptr, ::fast_io::algorithms::compare_three_way{});
 }
 #endif
 

@@ -13,17 +13,17 @@
 namespace fast_io
 {
 
-template <typename T, typename Cmp = ::std::ranges::less, typename Container = ::fast_io::vector<T>>
+template <typename T, typename Cmp = ::fast_io::algorithms::compare_three_way, typename Container = ::fast_io::vector<T>>
 using priority_queue = ::fast_io::containers::priority_queue<Cmp, Container>;
 
-using zu_priority_queue = ::fast_io::containers::priority_queue<::std::ranges::less, ::fast_io::vector<::std::size_t>>;
+using zu_priority_queue = ::fast_io::containers::priority_queue<::fast_io::algorithms::compare_three_way, ::fast_io::vector<::std::size_t>>;
 
 namespace tlc
 {
-template <typename T, typename Cmp = ::std::ranges::less, typename Container = ::fast_io::tlc::vector<T>>
+template <typename T, typename Cmp = ::fast_io::algorithms::compare_three_way, typename Container = ::fast_io::tlc::vector<T>>
 using priority_queue = ::fast_io::containers::priority_queue<Cmp, Container>;
 
-using zu_priority_queue = ::fast_io::containers::priority_queue<::std::ranges::less, ::fast_io::tlc::vector<::std::size_t>>;
+using zu_priority_queue = ::fast_io::containers::priority_queue<::fast_io::algorithms::compare_three_way, ::fast_io::tlc::vector<::std::size_t>>;
 } // namespace tlc
 
 } // namespace fast_io

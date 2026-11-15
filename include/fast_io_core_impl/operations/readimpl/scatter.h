@@ -177,7 +177,7 @@ scatter_read_some_impl(instmtype insm, basic_io_scatter_t<typename instmtype::in
 			if (len < buffptrdiff)
 				[[likely]]
 			{
-				::fast_io::details::non_overlapped_copy_n(curr, len, base);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, len, base);
 				curr += len;
 				buffptrdiff -= len;
 			}
@@ -327,7 +327,7 @@ inline constexpr void scatter_read_all_impl(instmtype insm,
 			if (len < buffptrdiff)
 				[[likely]]
 			{
-				::fast_io::details::non_overlapped_copy_n(curr, len, base);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(curr, len, base);
 				curr += len;
 				buffptrdiff -= len;
 			}

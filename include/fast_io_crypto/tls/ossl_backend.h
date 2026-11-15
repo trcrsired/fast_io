@@ -66,13 +66,13 @@ struct ossl_evp_hash_ctx
 				::fast_io::fast_terminate();
 			}
 		}
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(o.digest, digest_size_, digest);
 	}
 	inline ossl_evp_hash_ctx(ossl_evp_hash_ctx &&o) noexcept
 		: md_{o.md_}, digest_size_{o.digest_size_}, block_size_{o.block_size_}, ctx{o.ctx}
 	{
 		o.ctx = nullptr;
-		::fast_io::freestanding::non_overlapped_copy_n(o.digest, digest_size_, digest);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(o.digest, digest_size_, digest);
 	}
 	inline ~ossl_evp_hash_ctx()
 	{
@@ -120,12 +120,12 @@ struct ossl_evp_hash_ctx
 		{
 			::fast_io::fast_terminate();
 		}
-		::fast_io::freestanding::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			reinterpret_cast<::std::byte *>(out), digest_size_, digest);
 	}
 	inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(digest, digest_size_, ptr);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(digest, digest_size_, ptr);
 	}
 };
 
@@ -437,7 +437,7 @@ public:
 			::fast_io::fast_terminate();
 		}
 		::std::byte *tag_out{p + l + l2};
-		::fast_io::freestanding::non_overlapped_copy_n(tag, 16, tag_out);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(tag, 16, tag_out);
 		return static_cast<::std::size_t>(tag_out - out) + 16;
 	}
 
@@ -451,7 +451,7 @@ public:
 			::fast_io::fast_terminate();
 		}
 		::std::byte inner[16641];
-		::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(pt, pt_size, inner);
 		inner[pt_size] = static_cast<::std::byte>(inner_type);
 		return record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 	}

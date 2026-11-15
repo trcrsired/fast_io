@@ -39,6 +39,18 @@ struct win32_registry_guard
 };
 
 template <typename T>
+struct win32_regtz_compare
+{
+	inline constexpr auto compare(
+		::fast_io::basic_io_scatter_t<T> const &a,
+		::fast_io::basic_io_scatter_t<T> const &b) const noexcept
+	{
+		return ::fast_io::algorithms::lexicographical_compare_three_way_iters(
+			a.base, a.base + a.len, b.base, b.base + b.len);
+	}
+};
+
+template <typename T>
 	requires(::std::same_as<T, char8_t> || ::std::same_as<T, char16_t>)
 inline constexpr win32_timezone_name find_win32_regtz_position_impl(T const *str, ::std::size_t len) noexcept
 {
@@ -55,13 +67,13 @@ inline constexpr win32_timezone_name find_win32_regtz_position_impl(T const *str
 		first = win32_registry_timezone_9xa;
 		last = win32_registry_timezone_9xa + ::std::ranges::size(win32_registry_timezone_9xa);
 	}
-	auto it{::fast_io::freestanding::lower_bound(
-		first, last, scatter, [](::fast_io::basic_io_scatter_t<T> const &a, ::fast_io::basic_io_scatter_t<T> const &b) { return ::fast_io::freestanding::lexicographical_compare(a.base, a.base + a.len, b.base, b.base + b.len); })};
+	auto it{::fast_io::algorithms::lower_bound_iters(
+		first, last, scatter, win32_regtz_compare<T>{})};
 	if (it == last) [[unlikely]]
 	{
 		return {};
 	}
-	if (!::fast_io::freestanding::equal(it->base, it->base + it->len, str, str + len)) [[unlikely]]
+	if (!::fast_io::algorithms::equal_iters(it->base, it->base + it->len, str, str + len)) [[unlikely]]
 	{
 		return {};
 	}

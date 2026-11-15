@@ -102,12 +102,12 @@ write_all_overflow_define_impl(basic_generic_dynamic_output_buffer<char_type, bu
 	{
 		// Stack buffer to heap
 		pbuffer = typed_allocator::allocate(to_allocate);
-		::fast_io::details::non_overlapped_copy_n(bob.buffer, buffersize, pbuffer);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(bob.buffer, buffersize, pbuffer);
 	}
 	bob.begin_ptr = pbuffer;
 	bob.end_ptr = pbuffer + to_allocate;
 	auto curit{pbuffer + rlsz};
-	bob.curr_ptr = ::fast_io::details::non_overlapped_copy_n(first, count, curit);
+	bob.curr_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, count, curit);
 }
 
 template <::std::integral char_type, ::std::size_t buffersize, typename allocatortype>
@@ -145,7 +145,7 @@ grow_twice_define_impl(basic_generic_dynamic_output_buffer<char_type, buffersize
 	{
 		// Stack buffer to heap
 		pbuffer = typed_allocator::allocate(twicebfsz);
-		::fast_io::details::non_overlapped_copy_n(bob.buffer, buffersize, pbuffer);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(bob.buffer, buffersize, pbuffer);
 	}
 
 	bob.begin_ptr = pbuffer;

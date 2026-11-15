@@ -362,7 +362,10 @@ inline
 			{
 				::fast_io::freestanding::array<::std::byte, sizeof(range_type)> arr{
 					::std::bit_cast<::fast_io::freestanding::array<::std::byte, sizeof(range_type)>>(*i)};
-				j = non_overlapped_copy_n(arr.data(), arr.size(), j);
+				for (auto b{arr.data()}, be{arr.data() + arr.size()}; b != be; ++b, ++j)
+				{
+					*j = *b;
+				}
 			}
 		}
 	}
@@ -383,7 +386,11 @@ inline constexpr output_iter my_fill_n(output_iter first, ::std::size_t count, T
 {
 	if (__builtin_is_constant_evaluated())
 	{
-		::fast_io::freestanding::fill_n(first, count, value);
+		auto it{first};
+		for (auto n{count}; n != 0; --n, ++it)
+		{
+			*it = value;
+		}
 	}
 	else
 	{
@@ -399,7 +406,11 @@ inline constexpr output_iter my_fill_n(output_iter first, ::std::size_t count, T
 		}
 		else
 		{
-			::fast_io::freestanding::fill_n(first, count, value);
+			auto it{first};
+			for (auto n{count}; n != 0; --n, ++it)
+			{
+				*it = value;
+			}
 		}
 	}
 	return first + count;
@@ -411,14 +422,9 @@ inline constexpr void my_fill(fwd_iter first, fwd_iter last, T value)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*first = value))
 {
 	using fwd_iter_value_type = ::std::iter_value_t<fwd_iter>;
-	if constexpr (::std::contiguous_iterator<fwd_iter> && ::std::is_trivially_copyable_v<fwd_iter_value_type> &&
-				  ::std::integral<fwd_iter_value_type> && sizeof(fwd_iter_value_type) == 1)
+	for (; first != last; ++first)
 	{
-		::fast_io::freestanding::fill_n(first, last - first, value);
-	}
-	else
-	{
-		::fast_io::freestanding::fill(first, last, value);
+		*first = value;
 	}
 }
 
@@ -434,7 +440,10 @@ template <::std::integral char_type, ::std::size_t n, ::std::random_access_itera
 inline constexpr output_iter copy_string_literal(char_type const (&s)[n], output_iter result)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*result = s[0]))
 {
-	details::non_overlapped_copy_n(s, n - 1, result);
+	for (::std::size_t i{}; i != n - 1; ++i)
+	{
+		result[i] = s[i];
+	}
 	return result + (n - 1);
 }
 
@@ -443,7 +452,12 @@ inline constexpr output_iter copy_scatter(basic_io_scatter_t<::std::iter_value_t
 										  output_iter result)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(*result = *scatter.base))
 {
-	return details::non_overlapped_copy_n(scatter.base, scatter.len, result);
+	auto p{scatter.base};
+	for (::std::size_t i{}; i != scatter.len; ++i, ++p, ++result)
+	{
+		*result = *p;
+	}
+	return result;
 }
 
 template <my_integral T>

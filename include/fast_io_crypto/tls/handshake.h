@@ -144,7 +144,7 @@ inline constexpr ::std::byte *client_hello_write_body(::std::byte *p, client_hel
 		q = wire_put_u16(q, static_cast<::std::uint_least16_t>(1 + 2 + params.hostname_size));
 		*q++ = ::std::byte{0}; /* host_name */
 		q = wire_put_u16(q, static_cast<::std::uint_least16_t>(params.hostname_size));
-		::fast_io::details::non_overlapped_copy_n(params.hostname, params.hostname_size,
+		::fast_io::algorithms::non_overlapped_copy_n_iters(params.hostname, params.hostname_size,
 												  reinterpret_cast<char8_t *>(q));
 		p = q + params.hostname_size;
 	}
@@ -417,9 +417,9 @@ inline constexpr void certificate_verify_content_write(::std::byte *out, ::std::
 	}
 	char8_t const *ctx_str{client_side ? u8"TLS 1.3, client CertificateVerify"
 									   : u8"TLS 1.3, server CertificateVerify"};
-	::fast_io::details::non_overlapped_copy_n(ctx_str, 33, reinterpret_cast<char8_t *>(out + 64));
+	::fast_io::algorithms::non_overlapped_copy_n_iters(ctx_str, 33, reinterpret_cast<char8_t *>(out + 64));
 	out[97] = ::std::byte{0};
-	::fast_io::details::non_overlapped_copy_n(transcript_digest, digest_size, out + 98);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(transcript_digest, digest_size, out + 98);
 }
 
 /* an EncryptedExtensions body's extension whitelist -- the SH-only
@@ -473,7 +473,7 @@ inline bool cr_context_copy(::std::byte const *body, ::std::size_t body_size,
 	{
 		return false;
 	}
-	::fast_io::freestanding::non_overlapped_copy_n(ctx, ctx_size, ctx_out);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(ctx, ctx_size, ctx_out);
 	*ctx_size_out = ctx_size;
 	return true;
 }

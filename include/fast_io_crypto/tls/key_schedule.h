@@ -61,7 +61,7 @@ inline constexpr void hkdf_expand_to_ptr(::std::byte *out, ::std::size_t out_siz
 		h.digest_to_byte_ptr(t);
 		t_size = digest_size;
 		::std::size_t const chunk{out_size - written < digest_size ? out_size - written : digest_size};
-		::fast_io::details::non_overlapped_copy_n(t, chunk, out + written);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(t, chunk, out + written);
 		written += chunk;
 	}
 }
@@ -81,9 +81,9 @@ inline constexpr void hkdf_expand_label_to_ptr(::std::byte *out, ::std::size_t o
 	::std::byte *p{hkdf_label};
 	p = ::fast_io::tls::wire_put_u16(p, static_cast<::std::uint_least16_t>(out_size));
 	*p++ = static_cast<::std::byte>(6u + label_size);
-	::fast_io::details::non_overlapped_copy_n(u8"tls13 ", 6, reinterpret_cast<char8_t *>(p));
+	::fast_io::algorithms::non_overlapped_copy_n_iters(u8"tls13 ", 6, reinterpret_cast<char8_t *>(p));
 	p += 6;
-	::fast_io::details::non_overlapped_copy_n(label, label_size, reinterpret_cast<char8_t *>(p));
+	::fast_io::algorithms::non_overlapped_copy_n_iters(label, label_size, reinterpret_cast<char8_t *>(p));
 	p += label_size;
 	*p++ = static_cast<::std::byte>(context_size);
 	p = ::fast_io::tls::wire_put_bytes(p, context, context_size);
@@ -165,9 +165,9 @@ inline constexpr void hkdf_expand_label_to_ptr(typename crypto::md md,
 	::std::byte *p{hkdf_label};
 	p = ::fast_io::tls::wire_put_u16(p, static_cast<::std::uint_least16_t>(out_size));
 	*p++ = static_cast<::std::byte>(6u + label_size);
-	::fast_io::details::non_overlapped_copy_n(u8"tls13 ", 6, reinterpret_cast<char8_t *>(p));
+	::fast_io::algorithms::non_overlapped_copy_n_iters(u8"tls13 ", 6, reinterpret_cast<char8_t *>(p));
 	p += 6;
-	::fast_io::details::non_overlapped_copy_n(label, label_size, reinterpret_cast<char8_t *>(p));
+	::fast_io::algorithms::non_overlapped_copy_n_iters(label, label_size, reinterpret_cast<char8_t *>(p));
 	p += label_size;
 	*p++ = static_cast<::std::byte>(context_size);
 	p = ::fast_io::tls::wire_put_bytes(p, context, context_size);
@@ -253,14 +253,14 @@ public:
 		hkdf_expand_label_to_ptr<crypto>(md_, next, crypto::md_digest_size(md_), secret,
 										 u8"derived", 7, empty_digest,
 										 crypto::md_digest_size(md_));
-		::fast_io::details::non_overlapped_copy_n(next, crypto::md_digest_size(md_), secret);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(next, crypto::md_digest_size(md_), secret);
 	}
 
 	inline constexpr void extract_into(::std::byte const *ikm, ::std::size_t ikm_size) noexcept
 	{
 		::std::byte next[64];
 		crypto::hkdf_extract(md_, next, secret, crypto::md_digest_size(md_), ikm, ikm_size);
-		::fast_io::details::non_overlapped_copy_n(next, crypto::md_digest_size(md_), secret);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(next, crypto::md_digest_size(md_), secret);
 	}
 
 	inline constexpr void derive_to_ptr(::std::byte *out, char8_t const *label,

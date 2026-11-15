@@ -34,7 +34,7 @@ struct basic_posix_api_encoding_converter
 		basic_posix_api_encoding_converter(from_char_type const *p, ::std::size_t sz) noexcept
 		: buffer_capacity(sz), buffer_data(details::allocate_iobuf_space<char_type, allocator_type>(
 								   ::fast_io::details::intrinsics::add_or_overflow_die(buffer_capacity, 1))),
-		  buffer_data_end(details::non_overlapped_copy_n(p, sz, buffer_data))
+		  buffer_data_end(::fast_io::algorithms::non_overlapped_copy_n_iters(p, sz, buffer_data))
 	{
 		*buffer_data_end = 0;
 	}

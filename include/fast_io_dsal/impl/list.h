@@ -229,7 +229,7 @@ inline constexpr void list_reverse_common(void *firstptr, void *lastptr) noexcep
 	{
 		auto first{static_cast<::fast_io::containers::details::list_node_common *>(firstptr)};
 		auto nextptr(first->next);
-		::std::ranges::swap(first->next, first->prev);
+		::fast_io::algorithms::swap(first->next, first->prev);
 		firstptr = nextptr;
 	}
 }
@@ -297,7 +297,7 @@ inline constexpr void *list_ptr_advance(void *firstptr, ::std::size_t n) noexcep
 
 template <typename T, typename Cmp>
 inline constexpr void list_merge_common(void *leftfirstptr, void *leftlastptr, void *rightfirstptr, void *rightlastptr, Cmp cmp)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	for (; leftfirstptr != leftlastptr;)
 	{
@@ -305,7 +305,7 @@ inline constexpr void list_merge_common(void *leftfirstptr, void *leftlastptr, v
 		auto rightcurrptr{rightfirstptr};
 		auto &leftfirstele{static_cast<list_node<T> *>(leftfirstptr)->element};
 
-		for (; rightcurrptr != rightlastptr && cmp(static_cast<list_node<T> *>(rightcurrptr)->element, leftfirstele);
+		for (; rightcurrptr != rightlastptr && cmp.compare(static_cast<list_node<T> *>(rightcurrptr)->element, leftfirstele) < 0;
 			 rightcurrptr = static_cast<::fast_io::containers::details::list_node_common *>(rightcurrptr)->next)
 		{
 		}
@@ -321,7 +321,7 @@ inline constexpr void list_merge_common(void *leftfirstptr, void *leftlastptr, v
 
 template <typename T, typename Cmp>
 inline constexpr void list_sort_n_common(void *firstptr, void *lastptr, ::std::size_t n, Cmp cmp)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	switch (n)
 	{
@@ -329,7 +329,7 @@ inline constexpr void list_sort_n_common(void *firstptr, void *lastptr, ::std::s
 	{
 		auto first{static_cast<::fast_io::containers::details::list_node_common *>(firstptr)};
 		auto firstnextptr{first->next};
-		if (cmp(static_cast<list_node<T> *>(firstnextptr)->element, static_cast<list_node<T> *>(firstptr)->element))
+		if (cmp.compare(static_cast<list_node<T> *>(firstnextptr)->element, static_cast<list_node<T> *>(firstptr)->element) < 0)
 		{
 			auto firstprev{static_cast<::fast_io::containers::details::list_node_common *>(first->prev)};
 			auto firstnext{static_cast<::fast_io::containers::details::list_node_common *>(firstnextptr)};
@@ -385,7 +385,7 @@ inline constexpr void list_sort_n_common(void *firstptr, void *lastptr, ::std::s
 
 template <typename T, typename Cmp>
 inline constexpr void list_sort_common(void *firstptr, void *lastptr, Cmp cmp)
-	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	if (firstptr == lastptr)
 	{
@@ -801,7 +801,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.prev);
 		if (node == __builtin_addressof(imp))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 #if 0
 		auto prev = static_cast<::fast_io::containers::details::list_node_common *>(node->prev);
@@ -819,7 +819,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.next);
 		if (node == __builtin_addressof(imp))
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 #if 0
 		auto next = static_cast<::fast_io::containers::details::list_node_common *>(node->next);
@@ -856,7 +856,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -867,7 +867,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -879,7 +879,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -890,7 +890,7 @@ public:
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(nodeptr);
 		if (node == __builtin_addressof(imp)) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
@@ -1035,12 +1035,12 @@ public:
 	inline constexpr void reverse() noexcept
 	{
 		::fast_io::containers::details::list_reverse_common(imp.next, __builtin_addressof(imp));
-		::std::ranges::swap(imp.prev, imp.next);
+		::fast_io::algorithms::swap(imp.prev, imp.next);
 	}
 
 	template <typename Cmp>
 	inline constexpr void merge(list &&other, Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		if (__builtin_addressof(other) == this)
 		{
@@ -1052,31 +1052,31 @@ public:
 
 	inline constexpr void merge(list &&other) noexcept
 	{
-		this->merge(::std::move(other), ::std::ranges::less{});
+		this->merge(::std::move(other), ::fast_io::algorithms::compare_three_way{});
 	}
 
 	template <typename Cmp>
 	inline constexpr void sort(Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		::fast_io::containers::details::list_sort_common<value_type, Cmp>(imp.next, __builtin_addressof(imp), cmp);
 	}
 
 	inline constexpr void sort() noexcept
 	{
-		this->sort(::std::ranges::less{});
+		this->sort(::fast_io::algorithms::compare_three_way{});
 	}
 
 	template <typename Cmp>
 	inline constexpr void sort(const_iterator first, const_iterator last, Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		::fast_io::containers::details::list_sort_common<value_type, Cmp>(first.iter, last.iter, cmp);
 	}
 
 	inline constexpr void sort(const_iterator first, const_iterator last) noexcept
 	{
-		this->sort(first, last, ::std::ranges::less{});
+		this->sort(first, last, ::fast_io::algorithms::compare_three_way{});
 	}
 
 	inline constexpr ~list() noexcept
@@ -1090,7 +1090,7 @@ template <typename T, typename allocator1, typename allocator2>
 inline constexpr bool operator==(list<T, allocator1> const &lhs, list<T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<T const &>() == ::std::declval<T const &>()))
 {
-	return ::fast_io::freestanding::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 #if __cpp_impl_three_way_comparison >= 201907L
@@ -1100,7 +1100,7 @@ template <typename T, typename allocator1, typename allocator2>
 inline constexpr auto operator<=>(list<T, allocator1> const &lhs, list<T, allocator2> const &rhs)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<T const &>() <=> ::std::declval<T const &>()))
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

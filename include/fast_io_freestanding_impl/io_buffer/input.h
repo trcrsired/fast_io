@@ -77,7 +77,7 @@ inline constexpr ::std::size_t read_some_underflow_size_impl(::fast_io::details:
 {
 	::std::size_t const buffered{static_cast<::std::size_t>(pointers.buffer_end - pointers.buffer_curr)};
 	::std::size_t const take{buffered < count ? buffered : count};
-	::fast_io::details::non_overlapped_copy_n(pointers.buffer_curr, take, first);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(pointers.buffer_curr, take, first);
 	pointers.buffer_curr += take;
 	if (take == count)
 	{

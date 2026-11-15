@@ -425,7 +425,7 @@ inline constexpr ::fast_io::details::str_swiss_set_imp_common<chtype> str_swiss_
 	auto slots{typed_slot_allocator_type::allocate(cap)};
 	ctrlguard.controls = nullptr;
 
-	::fast_io::freestanding::non_overlapped_copy_n(othercontrols, ctrlsz, controls);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(othercontrols, ctrlsz, controls);
 	::fast_io::details::str_swiss_set_clone_guard<allocator_type, char_type> guard{controls, slots, cap, {}};
 	for (::std::size_t i{}; i != cap; ++i)
 	{
@@ -772,8 +772,8 @@ public:
 	}
 	constexpr void swap(basic_str_swiss_set &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<hasher>)
 	{
-		::std::ranges::swap(this->imp, other.imp);
-		::std::ranges::swap(this->hash, other.hash);
+		::fast_io::algorithms::swap(this->imp, other.imp);
+		::fast_io::algorithms::swap(this->hash, other.hash);
 	}
 };
 
@@ -790,7 +790,7 @@ constexpr bool operator==(basic_str_swiss_set<chtype, Hash, Allocator> const &lh
 	{
 		return false;
 	}
-	return ::std::is_permutation(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::is_permutation_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 } // namespace containers

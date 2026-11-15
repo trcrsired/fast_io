@@ -47,7 +47,7 @@ inline constexpr void omemory_map_write_impl(basic_omemory_map<char_type>& bomp,
 	::std::size_t const to_write(end-begin);
 	if(static_cast<::std::size_t>(bomp.end_ptr-bomp.curr_ptr)<to_write)
 		fast_terminate();
-	non_overlapped_copy_n(begin,to_write,bomp.curr_ptr);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(begin,to_write,bomp.curr_ptr);
 	bomp.curr_ptr+=to_write;
 }
 }
@@ -131,7 +131,7 @@ inline constexpr Iter read(basic_imemory_map<char_type>& bomp,Iter begin,Iter en
 	::std::size_t const remain_space(bomp.end_ptr-bomp.curr_ptr);
 	if(remain_space<to_read)[[unlikely]]
 		to_read=remain_space;
-	non_overlapped_copy_n(bomp.curr_ptr,to_read,begin);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(bomp.curr_ptr,to_read,begin);
 	bomp.curr_ptr+=to_read;
 	return begin+to_read;
 }

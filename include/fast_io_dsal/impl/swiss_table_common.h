@@ -456,7 +456,7 @@ inline constexpr ::std::size_t swiss_table_size_to_capacity(::std::size_t size) 
 			: 63u};
 	if (size >= (::std::numeric_limits<::std::size_t>::max() >> 3u))
 	{
-		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 	}
 	auto leading_zeros{::std::countl_zero(size + (size >= ::fast_io::details::swiss_table_group_counts / 2u))};
 	::std::size_t cap;
@@ -485,7 +485,7 @@ inline constexpr ::std::size_t str_swiss_table_grow_compute_newcap(::std::size_t
 	constexpr ::std::size_t mxdv2{(mx - 1u) >> 1u};
 	if (mxdv2 < oldcap)
 	{
-		::fast_io::containers::details::contract_violation_report<throwing>(::std::errc::value_too_large);
+		::fast_io::containers::details::violation_report<throwing>(::std::errc::value_too_large);
 	}
 	return (oldcap << 1u) | 1u;
 }

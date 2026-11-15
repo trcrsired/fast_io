@@ -121,14 +121,14 @@ inline char *iconv_dst_impl(iconv_deco_t &icdt, char const *first, char const *l
 			to_copy = diff;
 		}
 		::std::size_t total_len{len + to_copy};
-		non_overlapped_copy_n(first, to_copy, icdt.buffer + len);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(first, to_copy, icdt.buffer + len);
 		auto buffer_total_ed{icdt.buffer + total_len};
 		auto [src_it, dst_it] = iconv_do_impl(icdt.cd, icdt.buffer, buffer_total_ed, dst_first, dst_last);
 		::std::size_t converted{static_cast<::std::size_t>(src_it - icdt.buffer)};
 		if (converted < len)
 		{
 			::std::size_t remained{static_cast<::std::size_t>(buffer_total_ed - src_it)};
-			my_copy_n(src_it, remained, icdt.buffer);
+			::fast_io::algorithms::copy_n_iters(src_it, remained, icdt.buffer);
 			return dst_it;
 		}
 		else
@@ -140,7 +140,7 @@ inline char *iconv_dst_impl(iconv_deco_t &icdt, char const *first, char const *l
 	}
 	auto [src2_it, dst2_it] = iconv_do_impl(icdt.cd, first, last, dst_first, dst_last);
 	diff = static_cast<::std::size_t>(last - src2_it);
-	non_overlapped_copy_n(src2_it, diff, icdt.buffer);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(src2_it, diff, icdt.buffer);
 	icdt.len = diff;
 	return dst2_it;
 }

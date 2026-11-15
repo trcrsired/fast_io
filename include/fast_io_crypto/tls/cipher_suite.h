@@ -74,7 +74,7 @@ inline constexpr char_type *print_reserve_define(::fast_io::io_reserve_type_t<ch
 		}
 	}
 	*ptr++ = ::fast_io::char_literal_v<u8' ', char_type>;
-	return ::fast_io::details::non_overlapped_copy_n(name, ::fast_io::cstr_len(name), ptr);
+	return ::fast_io::algorithms::non_overlapped_copy_n_iters(name, ::fast_io::cstr_len(name), ptr);
 }
 
 } // namespace fast_io

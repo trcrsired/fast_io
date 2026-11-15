@@ -280,7 +280,7 @@ inline constexpr void print_control_single(output outstm, T t)
 				::std::size_t const len{scatter.len};
 				if(sz<static_cast<::std::ptrdiff_t>(len))
 					fast_terminate();
-				curr=non_overlapped_copy_n(scatter.base,scatter.len,curr);
+				curr=::fast_io::algorithms::non_overlapped_copy_n_iters(scatter.base,scatter.len,curr);
 				*curr=lfch;
 				++curr;
 				obuffer_set_curr(outstm,curr);
@@ -293,7 +293,7 @@ inline constexpr void print_control_single(output outstm, T t)
 				::std::ptrdiff_t sz(end-curr-1);
 				if(static_cast<::std::ptrdiff_t>(len)<sz)[[likely]]
 				{
-					curr=details::non_overlapped_copy_n(scatter.base,len,curr);
+					curr=::fast_io::algorithms::non_overlapped_copy_n_iters(scatter.base,len,curr);
 					*curr=lfch;
 					++curr;
 					obuffer_set_curr(outstm,curr);

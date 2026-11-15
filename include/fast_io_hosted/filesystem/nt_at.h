@@ -623,12 +623,12 @@ inline void nt_symlinkat_impl([[maybe_unused]] char16_t const *oldpath_c_str, [[
 
 	pReparseData->u.SymbolicLinkReparseBuffer.SubstituteNameOffset = 0;
 	pReparseData->u.SymbolicLinkReparseBuffer.SubstituteNameLength = static_cast<::std::uint_least16_t>(oldpath_real_size * sizeof(char16_t));
-	::fast_io::freestanding::non_overlapped_copy_n(oldpath_real_c_str, oldpath_real_size, pBufTail);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(oldpath_real_c_str, oldpath_real_size, pBufTail);
 
 	pReparseData->u.SymbolicLinkReparseBuffer.PrintNameOffset = static_cast<::std::uint_least16_t>(oldpath_real_size * sizeof(char16_t));
 	pReparseData->u.SymbolicLinkReparseBuffer.PrintNameLength = static_cast<::std::uint_least16_t>(oldpath_real_size * sizeof(char16_t));
 	pBufTail += oldpath_real_size;
-	::fast_io::freestanding::non_overlapped_copy_n(oldpath_real_c_str, oldpath_real_size, pBufTail);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(oldpath_real_c_str, oldpath_real_size, pBufTail);
 
 	// Check whether it is the root directory
 	pReparseData->u.SymbolicLinkReparseBuffer.Flags = static_cast<::std::uint_least32_t>(!is_root);

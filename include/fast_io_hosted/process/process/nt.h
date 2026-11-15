@@ -396,7 +396,7 @@ inline nt_user_process_information nt_6x_process_create_impl(void *__restrict fh
 
 			native_name[0] = u'\\';
 
-			::fast_io::freestanding::non_overlapped_copy(NtImagePath_c16_buffer + 11, NtImagePath_c16_buffer + NtImagePath_u16_length, native_name + 1);
+			::fast_io::algorithms::non_overlapped_copy_iters(NtImagePath_c16_buffer + 11, NtImagePath_c16_buffer + NtImagePath_u16_length, native_name + 1);
 			native_name[NtImagePath_u16_length - 10] = 0;
 			str_uni.Buffer = native_name;
 			str_uni.Length = static_cast<::std::uint_least16_t>(native_name_alloc_length - sizeof(char16_t));
@@ -417,7 +417,7 @@ inline nt_user_process_information nt_6x_process_create_impl(void *__restrict fh
 			// find device name "\Device\???????\......"
 			auto const NtImagePath_c16_buffer_end{NtImagePath_c16_buffer + NtImagePath_u16_length};
 			auto find_next_rl_end{NtImagePath_c16_buffer_end};
-			auto const find_next_rl{::fast_io::freestanding::find(NtImagePath_c16_buffer + 8, find_next_rl_end, u'\\')};
+			auto const find_next_rl{::fast_io::algorithms::find_iters(NtImagePath_c16_buffer + 8, find_next_rl_end, u'\\')};
 			// not found: find_next_rl == find_next_rl_end
 			find_next_rl_end = find_next_rl;
 
@@ -480,8 +480,8 @@ inline nt_user_process_information nt_6x_process_create_impl(void *__restrict fh
 				char16_t *native_name{static_cast<char16_t *>(native_name_temp_guard.ptr)};
 
 				auto native_name_curr{native_name};
-				native_name_curr = ::fast_io::freestanding::non_overlapped_copy_n(QueryOutBuffer->MultiSz, MultiSz_strlen, native_name_curr);
-				native_name_curr = ::fast_io::freestanding::non_overlapped_copy(NtImagePath_c16_buffer + find_res_strlen, NtImagePath_c16_buffer_end, native_name_curr);
+				native_name_curr = ::fast_io::algorithms::non_overlapped_copy_n_iters(QueryOutBuffer->MultiSz, MultiSz_strlen, native_name_curr);
+				native_name_curr = ::fast_io::algorithms::non_overlapped_copy_iters(NtImagePath_c16_buffer + find_res_strlen, NtImagePath_c16_buffer_end, native_name_curr);
 				*native_name_curr = 0;
 
 				str_uni.Buffer = native_name;

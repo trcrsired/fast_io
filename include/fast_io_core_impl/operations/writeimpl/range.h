@@ -33,7 +33,7 @@ bytes_copy_punning_impl(FromItbg fromfirst, FromIted fromlast, ToIter tofirst, T
 			if (__builtin_is_constant_evaluated())
 			{
 				auto arr{::std::bit_cast<::fast_io::freestanding::array<fromvaluetype, quoti>>(*fromfirst)};
-				::fast_io::details::non_overlapped_copy(arr.data(), arr.data() + arr.size(), tofirst);
+				::fast_io::algorithms::non_overlapped_copy_iters(arr.data(), arr.data() + arr.size(), tofirst);
 			}
 			else
 			{

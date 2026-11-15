@@ -182,7 +182,7 @@ inline ::std::size_t tls_record_seal(::std::byte *out,
 		::fast_io::fast_terminate();
 	}
 	::std::byte inner[16641];
-	::fast_io::freestanding::non_overlapped_copy_n(pt, pt_size, inner);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(pt, pt_size, inner);
 	inner[pt_size] = static_cast<::std::byte>(inner_type);
 	return tls_record_seal_inner(out, inner, pt_size + 1, suite, key, iv, seq);
 }

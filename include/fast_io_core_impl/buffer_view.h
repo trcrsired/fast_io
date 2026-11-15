@@ -48,7 +48,7 @@ requires ::std::same_as<::std::iter_value_t<Iter>,ch_type>
 	auto view_diff{view.end_ptr-view.curr_ptr};
 	if(view_diff<diff)
 		diff=view_diff;
-	auto it{::fast_io::details::non_overlapped_copy_n(view.curr_ptr,static_cast<::std::size_t>(view_diff),first)};
+	auto it{::fast_io::algorithms::non_overlapped_copy_n_iters(view.curr_ptr,static_cast<::std::size_t>(view_diff),first)};
 	view.curr_ptr+=diff;
 	return it;
 }
@@ -113,7 +113,7 @@ template <::std::integral ch_type>
 	{
 		diff = itdiff;
 	}
-	::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(diff), first);
 	view.ptr->curr_ptr = curr + diff;
 	return static_cast<::std::size_t>(diff);
 }
@@ -128,11 +128,11 @@ inline constexpr void read_all_underflow_define(basic_ibuffer_view_ref<ch_type> 
 	::std::ptrdiff_t itdiff{static_cast<::std::ptrdiff_t>(count)};
 	if (diff < itdiff) [[unlikely]]
 	{
-		::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(diff), first);
 		view.ptr->curr_ptr = ed;
 		::fast_io::herbceptions::throws_parse_errc(::fast_io::freestanding::parse_errc::end_of_file);
 	}
-	::fast_io::details::non_overlapped_copy_n(curr, static_cast<::std::size_t>(itdiff), first);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(itdiff), first);
 	view.ptr->curr_ptr = curr + itdiff;
 }
 
@@ -247,7 +247,7 @@ inline constexpr void write(basic_obuffer_view<ch_type>& view,Iter first,Iter la
 	auto view_diff{view.end_ptr-view.curr_ptr};
 	if(view_diff<diff)
 		fast_terminate();
-	view.curr_ptr=::fast_io::details::non_overlapped_copy_n(first,static_cast<::std::size_t>(diff),view.curr_ptr);
+	view.curr_ptr=::fast_io::algorithms::non_overlapped_copy_n_iters(first,static_cast<::std::size_t>(diff),view.curr_ptr);
 }
 #endif
 

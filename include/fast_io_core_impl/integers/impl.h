@@ -1163,7 +1163,7 @@ inline constexpr char_type *print_reserve_show_base_impl(char_type *iter) noexce
 	{
 		constexpr auto arr{base_prefix_array<char_type, base>};
 		constexpr ::std::size_t sz{arr.size()};
-		iter = non_overlapped_copy_n(arr.data(), sz, iter);
+		iter = ::fast_io::algorithms::non_overlapped_copy_n_iters(arr.data(), sz, iter);
 	}
 	return iter;
 }
@@ -1221,7 +1221,7 @@ inline constexpr void print_reserve_integral_main_impl(char_type *iter, T t, ::s
 						if (len == basetdigits)
 						{
 							constexpr auto tb{::fast_io::details::digits_table<char_type, base, uppercase>};
-							non_overlapped_copy_n(tb + (rem << 1), 2, iter - basetdigits);
+							::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (rem << 1), 2, iter - basetdigits);
 							len -= 2u;
 						}
 						else
@@ -1263,7 +1263,7 @@ inline constexpr void print_reserve_integral_main_impl(char_type *iter, T t, ::s
 			{
 				auto const rem{t % pw};
 				t /= pw;
-				non_overlapped_copy_n(tb + (rem << 1), 2, iter -= 2);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (rem << 1), 2, iter -= 2);
 			}
 			if ((len & 1))
 			{
@@ -2117,7 +2117,7 @@ print_reserve_define(io_reserve_type_t<char_type, ::fast_io::manipulators::scala
 																			 flags.uppercase_showbase, flags.showpos,
 																			 flags.uppercase, flags.full>};
 		constexpr ::std::size_t n{cache.size()};
-		return details::non_overlapped_copy_n(cache.element, n, iter);
+		return ::fast_io::algorithms::non_overlapped_copy_n_iters(cache.element, n, iter);
 	}
 	else if constexpr (::std::same_as<::std::remove_cv_t<T>, ::std::byte>)
 	{

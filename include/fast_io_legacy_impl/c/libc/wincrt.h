@@ -202,7 +202,7 @@ inline ::std::byte const *wincrt_fp_write_some_cold_normal_case_impl(FILE *__res
 
 	if (::std::size_t const remain{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_cnt))}; diff < remain)
 	{
-		fp->_ptr = non_overlapped_copy_n(first, diff, fp->_ptr);
+		fp->_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, fp->_ptr);
 		fp->_cnt -= static_cast<::std::int_least32_t>(diff);
 	}
 	else
@@ -223,7 +223,7 @@ inline ::std::byte const *wincrt_fp_write_some_cold_normal_case_impl(FILE *__res
 		else
 		{
 			// Write from buffer begin
-			fp->_ptr = non_overlapped_copy_n(first, diff, fp->_base);
+			fp->_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, fp->_base);
 			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz - diff);
 		}
 	}
@@ -275,7 +275,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 
 	if (::std::size_t const remain{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_cnt))}; diff < remain)
 	{
-		fp->_ptr = non_overlapped_copy_n(first, diff, fp->_ptr);
+		fp->_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, fp->_ptr);
 		fp->_cnt -= static_cast<::std::int_least32_t>(diff);
 	}
 	else
@@ -296,7 +296,7 @@ inline void wincrt_fp_write_cold_normal_case_impl(FILE *__restrict fpp, char con
 		else
 		{
 			// Write from buffer begin
-			fp->_ptr = non_overlapped_copy_n(first, diff, fp->_base);
+			fp->_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, fp->_base);
 			fp->_cnt = static_cast<::std::int_least32_t>(bufsiz - diff);
 		}
 	}
@@ -481,7 +481,7 @@ inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::
 {
 	::fast_io::details::crt_iobuf *fp{reinterpret_cast<::fast_io::details::crt_iobuf *>(fpp)};
 	::std::size_t cnt{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_cnt))};
-	non_overlapped_copy_n(fp->_ptr, cnt, first);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(fp->_ptr, cnt, first);
 	first += cnt;
 	diff -= cnt;
 	::std::size_t allocated_buffer_size{static_cast<::std::size_t>(static_cast<::std::uint_least32_t>(fp->_bufsiz))};
@@ -516,7 +516,7 @@ inline char *wincrt_fp_read_cold_impl(FILE *__restrict fpp, char *first, ::std::
 		{
 			diff = readed;
 		}
-		non_overlapped_copy_n(fp->_base, diff, first);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(fp->_base, diff, first);
 		fp->_ptr += diff;
 		fp->_cnt -= static_cast<::std::int_least32_t>(static_cast<::std::uint_least32_t>(diff));
 		return first + diff;

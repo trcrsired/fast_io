@@ -14,7 +14,6 @@
 #include <initializer_list>
 #include <bit>
 #include <compare>
-#include <algorithm>
 #include "impl/misc/push_macros.h"
 #include "impl/misc/push_warnings.h"
 #include "../fast_io_core.h"
@@ -23,6 +22,7 @@
 #include "impl/common.h"
 #include "span.h"
 #include "impl/deque.h"
+#include "impl/deque_algo.h"
 
 #if ((__STDC_HOSTED__ == 1 && (!defined(_GLIBCXX_HOSTED) || _GLIBCXX_HOSTED == 1) && \
 	  !defined(_LIBCPP_FREESTANDING)) ||                                             \

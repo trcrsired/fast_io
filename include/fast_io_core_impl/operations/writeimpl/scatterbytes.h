@@ -130,7 +130,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_impl(outstmtype ou
 #endif
 					= char_type const *;
 				curr =
-					::fast_io::details::non_overlapped_copy_n(reinterpret_cast<char_type_const_ptr>(base), len, curr);
+					::fast_io::algorithms::non_overlapped_copy_n_iters(reinterpret_cast<char_type_const_ptr>(base), len, curr);
 				buffptrdiff -= len;
 			}
 			else
@@ -297,7 +297,7 @@ inline constexpr void scatter_write_all_bytes_impl(outstmtype outsm, io_scatter_
 #endif
 					= char_type const *;
 				curr =
-					::fast_io::details::non_overlapped_copy_n(reinterpret_cast<char_type_const_ptr>(base), len, curr);
+					::fast_io::algorithms::non_overlapped_copy_n_iters(reinterpret_cast<char_type_const_ptr>(base), len, curr);
 				buffptrdiff -= len;
 			}
 			else

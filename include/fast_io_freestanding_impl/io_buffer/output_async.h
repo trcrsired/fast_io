@@ -110,7 +110,7 @@ inline void async_iobuffer_pwrite_step(void *vst, ::std::cxx_std_error err) noex
 	{
 		/* the now-empty window takes the whole range without
 		 * touching the device — same as a fresh sync write */
-		::fast_io::details::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			state->first, state->count,
 			reinterpret_cast<::std::byte *>(obuffer.buffer_begin));
 		obuffer.buffer_curr = obuffer.buffer_begin + state->count;
@@ -367,7 +367,7 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 				auto begin{::fast_io::details::io_buffer::iobuffer_allocate<
 					char_type, typename io_buffer_type::traits_type::allocator_type>(
 					iobref.iobptr->allocator_handle, bfsz)};
-				::fast_io::details::non_overlapped_copy_n(first, count,
+				::fast_io::algorithms::non_overlapped_copy_n_iters(first, count,
 														  reinterpret_cast<::std::byte *>(begin));
 				obuffer.buffer_begin = begin;
 				obuffer.buffer_curr = begin + count;
@@ -389,7 +389,7 @@ inline void async_pwrite_some_bytes_overflow_callback_define(
 		static_cast<::std::size_t>(obuffer.buffer_end - obuffer.buffer_curr)};
 	if (space >= count)
 	{
-		::fast_io::details::non_overlapped_copy_n(
+		::fast_io::algorithms::non_overlapped_copy_n_iters(
 			first, count, reinterpret_cast<::std::byte *>(obuffer.buffer_curr));
 		obuffer.buffer_curr += count;
 		callback(::std::cxx_std_error{}, count);

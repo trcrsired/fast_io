@@ -81,7 +81,7 @@ general_code_cvt(src_char_type const *src_first, src_char_type const *src_last, 
 	else if constexpr (sizeof(src_char_type) == sizeof(dest_char_type) && src_encoding == encoding)
 	{
 		::std::size_t diff{static_cast<::std::size_t>(src_last - src_first)};
-		non_overlapped_copy_n(src_first, diff, dst);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(src_first, diff, dst);
 		return {src_last, dst + diff};
 	}
 	else if constexpr (sizeof(src_char_type) == sizeof(dest_char_type) &&
@@ -444,19 +444,19 @@ inline constexpr dest_char_type *general_code_cvt(state_type &__restrict state, 
 			constexpr ::std::size_t state_bytesm1{state_bytes - 1};
 			::std::size_t remain_unsolved{state_bytes - state_size};
 			char8_t bytes[state_bytes];
-			non_overlapped_copy_n(state.bytes, state_bytesm1, bytes);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(state.bytes, state_bytesm1, bytes);
 			if (src_diff < remain_unsolved)
 			{
 				remain_unsolved = src_diff;
 			}
-			non_overlapped_copy_n(src_first, remain_unsolved, bytes + state_size);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(src_first, remain_unsolved, bytes + state_size);
 			::std::size_t total_bytes{state_size + remain_unsolved};
 			if constexpr (src_encoding == encoding_scheme::utf)
 			{
 				auto [failed, bytes_src, code] = advance_with_big_table(bytes, bytes + total_bytes);
 				if (failed)
 				{
-					non_overlapped_copy_n(bytes, state_bytesm1, state.bytes);
+					::fast_io::algorithms::non_overlapped_copy_n_iters(bytes, state_bytesm1, state.bytes);
 					state.size = static_cast<char8_t>(static_cast<::std::uint_least8_t>(total_bytes));
 					return dst;
 				}
@@ -480,7 +480,7 @@ inline constexpr dest_char_type *general_code_cvt(state_type &__restrict state, 
 				auto [code, adv] = general_advance<src_encoding>(bytes, total_bytes);
 				if (adv == static_cast<char8_t>(static_cast<::std::uint_least8_t>(-1)))
 				{
-					non_overlapped_copy_n(bytes, state_bytesm1, state.bytes);
+					::fast_io::algorithms::non_overlapped_copy_n_iters(bytes, state_bytesm1, state.bytes);
 					state.size = static_cast<char8_t>(static_cast<::std::uint_least8_t>(total_bytes));
 					return dst;
 				}
@@ -503,7 +503,7 @@ inline constexpr dest_char_type *general_code_cvt(state_type &__restrict state, 
 		auto [new_src, new_dst] = general_code_cvt<src_encoding, encoding>(src_first, src_last, dst);
 		::std::size_t diff{static_cast<::std::size_t>(src_last - new_src)};
 		state.size = static_cast<char8_t>(static_cast<::std::uint_least8_t>(diff));
-		non_overlapped_copy_n(new_src, diff, state.bytes);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(new_src, diff, state.bytes);
 		return new_dst;
 	}
 	else

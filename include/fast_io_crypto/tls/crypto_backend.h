@@ -121,7 +121,7 @@ struct fast_io_crypto_backend
 		}
 		inline void digest_to_byte_ptr(::std::byte *ptr) const noexcept
 		{
-			::fast_io::freestanding::non_overlapped_copy_n(digest, md_digest_size(a), ptr);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(digest, md_digest_size(a), ptr);
 		}
 	};
 

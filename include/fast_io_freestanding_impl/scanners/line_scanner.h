@@ -105,8 +105,8 @@ inline constexpr void copy_to_next_line_buffer_internal_impl(basic_line_scanner_
 		new_capacity = elementswithnewbuff;
 	}
 	auto new_begin_ptr{::fast_io::details::allocate_iobuf_space<char_type>(new_capacity)};
-	auto new_curr_ptr{non_overlapped_copy_n(bg_ptr, elements, new_begin_ptr)};
-	new_curr_ptr = non_overlapped_copy_n(first, sz, new_curr_ptr);
+	auto new_curr_ptr{::fast_io::algorithms::non_overlapped_copy_n_iters(bg_ptr, elements, new_begin_ptr)};
+	new_curr_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, sz, new_curr_ptr);
 	::fast_io::details::deallocate_iobuf_space<false, char_type>(bg_ptr, old_capacity);
 	buf.buffer.begin_ptr = new_begin_ptr;
 	buf.buffer.curr_ptr = new_curr_ptr;
@@ -125,7 +125,7 @@ inline constexpr void copy_to_next_line_buffer_impl(basic_line_scanner_buffer<ch
 		copy_to_next_line_buffer_internal_impl(buf, first, diff);
 		return;
 	}
-	buf.buffer.curr_ptr = non_overlapped_copy_n(first, diff, curr_ptr);
+	buf.buffer.curr_ptr = ::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, curr_ptr);
 }
 
 template <::std::integral char_type>

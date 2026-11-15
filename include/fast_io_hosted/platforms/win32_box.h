@@ -106,9 +106,9 @@ inline void win32_box_converter_scatter_path_impl(basic_win32_family_box_t<famil
 		for (auto i{scatters}, e{i + n}; i != e; ++i)
 		{
 			auto [scbs, sclen] = *i;
-			dest = ::fast_io::details::non_overlapped_copy_n(scbs, sclen, dest);
+			dest = ::fast_io::algorithms::non_overlapped_copy_n_iters(scbs, sclen, dest);
 		}
-		dest = ::fast_io::freestanding::remove(buffer.ptr, dest, 0);
+		dest = ::fast_io::algorithms::remove_iters(buffer.ptr, dest, 0);
 		if constexpr (family == ::fast_io::win32_family::ansi_9x &&
 					  (sizeof(chtypenocref) == sizeof(char8_t) &&
 					   ::fast_io::execution_charset_encoding_scheme<chtypenocref>() == ::fast_io::encoding_scheme::utf))

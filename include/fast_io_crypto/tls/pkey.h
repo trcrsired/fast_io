@@ -132,7 +132,7 @@ inline constexpr bool tls_sec1_pkey_parse_body(tls_pkey *key, wire_reader &r) no
 	{
 		return false;
 	}
-	::fast_io::freestanding::non_overlapped_copy_n(d.value, d.value_size, key->ec_d);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(d.value, d.value_size, key->ec_d);
 	key->ec_d_size = d.value_size;
 	key->kind = tls_pkey_kind::ec;
 	return true;
@@ -286,7 +286,7 @@ inline constexpr bool tls_pkey_parse(tls_pkey *key,
 	}
 	if (der_size == 64)
 	{
-		::fast_io::freestanding::non_overlapped_copy_n(der, 64, key->ed25519_key);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(der, 64, key->ed25519_key);
 		key->kind = tls_pkey_kind::ed25519;
 		return true;
 	}

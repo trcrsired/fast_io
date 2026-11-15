@@ -679,7 +679,7 @@ inline ::std::size_t tls_ticket_seal(::std::byte *out, ::std::byte const (&key)[
 	}
 	::std::byte nonce[12];
 	details::tls_fill_random(nonce, 12);
-	::fast_io::freestanding::non_overlapped_copy_n(nonce, 12, out);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(nonce, 12, out);
 	::fast_io::aes_gcm_seal_to_ptr<16>(out + 12, out + 12 + tls_ticket_blob_size,
 									   key, nonce, nullptr, 0, blob, tls_ticket_blob_size);
 	::fast_io::secure_clear(blob, sizeof(blob));
@@ -696,10 +696,10 @@ inline bool tls_ticket_open(::std::byte *psk_out, cipher_suite *suite_out,
 		return false;
 	}
 	::std::byte nonce[12];
-	::fast_io::freestanding::non_overlapped_copy_n(ticket, 12, nonce);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(ticket, 12, nonce);
 	::std::byte blob[tls_ticket_blob_size];
 	::std::byte tag[16];
-	::fast_io::freestanding::non_overlapped_copy_n(ticket + 12 + tls_ticket_blob_size, 16, tag);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(ticket + 12 + tls_ticket_blob_size, 16, tag);
 	if (!::fast_io::aes_gcm_open_to_ptr<16>(blob, key, nonce, nullptr, 0,
 											ticket + 12, tls_ticket_blob_size, tag))
 	{
@@ -715,7 +715,7 @@ inline bool tls_ticket_open(::std::byte *psk_out, cipher_suite *suite_out,
 	}
 	*suite_out = static_cast<cipher_suite>(suite);
 	*issue_out = (static_cast<::std::uint_least64_t>(hi) << 32) | lo;
-	::fast_io::freestanding::non_overlapped_copy_n(r.cur, 64, psk_out);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(r.cur, 64, psk_out);
 	::fast_io::secure_clear(blob, sizeof(blob));
 	return true;
 }
@@ -893,7 +893,7 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 				h1.update(ch_raw, ch_raw + ch_raw_size);
 				::fast_io::tls::details::transcript_digest_to_ptr<crypto>(h1, ch1_hash);
 				ch1_sid_size = cand.session_id_size;
-				::fast_io::freestanding::non_overlapped_copy_n(
+				::fast_io::algorithms::non_overlapped_copy_n_iters(
 					cand.session_id, ch1_sid_size, ch1_sid);
 				ch1_suite = cand.cipher_suite;
 				::std::byte hrr[160];
@@ -912,7 +912,7 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 					details::tls_fail(client->sock_, alert_description::internal_error, false);
 				}
 				details::tls_write_full(client->sock_, hrr, hrr_size);
-				::fast_io::freestanding::non_overlapped_copy_n(hmsg, hmsg_size, hrr_transcript);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(hmsg, hmsg_size, hrr_transcript);
 				hrr_transcript_size = hmsg_size;
 				hrr_sent = true;
 				continue;
@@ -1036,7 +1036,7 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 					::fast_io::secure_clear(psk, sizeof(psk));
 					continue;
 				}
-				::fast_io::freestanding::non_overlapped_copy_n(psk, digest_size, resumed_psk);
+				::fast_io::algorithms::non_overlapped_copy_n_iters(psk, digest_size, resumed_psk);
 				::fast_io::secure_clear(psk, sizeof(psk));
 				psk_selected = static_cast<::std::uint_least16_t>(i);
 			}
@@ -1134,11 +1134,11 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 		::std::byte key[32], iv[12];
 		::std::byte hs_tx_key[32], hs_tx_iv[12], hs_rx_key[32], hs_rx_iv[12];
 		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, s_hs);
-		::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_tx_key);
-		::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_tx_iv);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, hs_tx_key);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, hs_tx_iv);
 		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_hs);
-		::fast_io::freestanding::non_overlapped_copy_n(key, key_size, hs_rx_key);
-		::fast_io::freestanding::non_overlapped_copy_n(iv, 12, hs_rx_iv);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, hs_rx_key);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, hs_rx_iv);
 		::fast_io::secure_clear(key, sizeof(key));
 
 		/* from here on an abort must seal its alert under s_hs */
@@ -1277,11 +1277,11 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 		   an undecryptable record to it */
 		details::app_traffic_key_iv tx_ki{}, rx_ki{};
 		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, s_ap);
-		::fast_io::freestanding::non_overlapped_copy_n(key, key_size, tx_ki.key);
-		::fast_io::freestanding::non_overlapped_copy_n(iv, 12, tx_ki.iv);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, tx_ki.key);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, tx_ki.iv);
 		::fast_io::tls::details::traffic_key_iv_to_ptr<crypto>(md, key, key_size, iv, c_ap);
-		::fast_io::freestanding::non_overlapped_copy_n(key, key_size, rx_ki.key);
-		::fast_io::freestanding::non_overlapped_copy_n(iv, 12, rx_ki.iv);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(key, key_size, rx_ki.key);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iv, 12, rx_ki.iv);
 		::fast_io::secure_clear(key, sizeof(key));
 		::fast_io::secure_clear(iv, sizeof(iv));
 		epoch.key = tx_ki.key;
@@ -1449,7 +1449,7 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 						/* keep the message bytes: the resumption
 						   master secret runs over CH..client Finished
 						   and the queue storage dies with this block */
-						::fast_io::freestanding::non_overlapped_copy_n(
+						::fast_io::algorithms::non_overlapped_copy_n_iters(
 							raw, raw_size, fin_copy);
 						fin_copy_size = raw_size;
 						goto established;
@@ -1508,8 +1508,8 @@ inline void tls_server_handshake(basic_tls_client<allocator_type, socket_observe
 			details::ktls_offload_key(client->sock_, details::tls_rx, suite, rx_ki.key, rx_ki.iv);
 		}
 		::std::byte tx_secret[48], rx_secret[48];
-		::fast_io::freestanding::non_overlapped_copy_n(s_ap, digest_size, tx_secret);
-		::fast_io::freestanding::non_overlapped_copy_n(c_ap, digest_size, rx_secret);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(s_ap, digest_size, tx_secret);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(c_ap, digest_size, rx_secret);
 		tls_client_set_established(client, suite, tx_secret, rx_secret, digest_size, offload, tx_ki, rx_ki);
 		::fast_io::secure_clear(tx_secret, sizeof(tx_secret));
 

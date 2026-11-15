@@ -372,7 +372,7 @@ inline
 	if (__builtin_is_constant_evaluated())
 	{
 		char_type buffer[n];
-		non_overlapped_copy_n(iter, n, buffer);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(iter, n, buffer);
 		t = ::std::bit_cast<int_type>(buffer);
 	}
 	else
@@ -555,7 +555,7 @@ inline
 	{
 		::fast_io::freestanding::array<char unsigned, n> buffer{
 			::std::bit_cast<::fast_io::freestanding::array<char unsigned, n>>(u)};
-		non_overlapped_copy_n(buffer.data(), n, iter);
+		::fast_io::algorithms::non_overlapped_copy_n_iters(buffer.data(), n, iter);
 	}
 	else
 #endif
@@ -563,7 +563,7 @@ inline
 		if constexpr (1 < sizeof(uint_type))
 		{
 			auto buffer{::std::bit_cast<::fast_io::freestanding::array<char unsigned, n>>(u)};
-			non_overlapped_copy_n(buffer.data(), n, iter);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(buffer.data(), n, iter);
 		}
 		else
 		{

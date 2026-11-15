@@ -48,7 +48,7 @@ inline constexpr void read_all_impl_decay(input in, typename input::char_type *f
 		::std::ptrdiff_t remain_space{end - curr};
 		if (diff < remain_space) [[likely]]
 		{
-			non_overlapped_copy_n(curr, static_cast<::std::size_t>(diff), first);
+			::fast_io::algorithms::non_overlapped_copy_n_iters(curr, static_cast<::std::size_t>(diff), first);
 			curr += diff;
 			ibuffer_set_curr(in, curr);
 		}

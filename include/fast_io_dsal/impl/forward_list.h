@@ -216,7 +216,7 @@ inline constexpr void *forward_list_ptr_advance(void *firstptr, ::std::size_t n)
 }
 
 template <typename T, typename Cmp>
-inline constexpr void *forward_list_merge_common(void *b1, void *b2, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+inline constexpr void *forward_list_merge_common(void *b1, void *b2, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	auto bb1{static_cast<fast_io::containers::details::forward_list_node<T> *>(b1)};
 	auto bb2{static_cast<fast_io::containers::details::forward_list_node<T> *>(b2)};
@@ -224,7 +224,7 @@ inline constexpr void *forward_list_merge_common(void *b1, void *b2, Cmp cmp) FA
 	void *tail{__builtin_addressof(dummy)};
 	while (bb1 && bb2)
 	{
-		if (cmp(bb1->element, bb2->element))
+		if (cmp.compare(bb1->element, bb2->element) < 0)
 		{
 			static_cast<::fast_io::containers::details::forward_list_node_common *>(tail)->next = bb1;
 			bb1 = static_cast<fast_io::containers::details::forward_list_node<T> *>(bb1->next);
@@ -250,7 +250,7 @@ inline constexpr void *forward_list_ptr_advance_remove(void *firstptr, ::std::si
 }
 
 template <typename T, typename Cmp>
-inline void *forward_list_sort_common_n(void *firstptr, ::std::size_t n, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+inline void *forward_list_sort_common_n(void *firstptr, ::std::size_t n, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	switch (n)
 	{
@@ -258,7 +258,7 @@ inline void *forward_list_sort_common_n(void *firstptr, ::std::size_t n, Cmp cmp
 	{
 		auto it1{static_cast<::fast_io::containers::details::forward_list_node<T> *>(firstptr)};
 		auto it2{static_cast<::fast_io::containers::details::forward_list_node<T> *>(it1->next)};
-		if (cmp(it2->element, it1->element))
+		if (cmp.compare(it2->element, it1->element) < 0)
 		{
 			it1->next = it2->next;
 			it2->next = it1;
@@ -287,14 +287,14 @@ inline void *forward_list_sort_common_n(void *firstptr, ::std::size_t n, Cmp cmp
 }
 
 template <typename T, typename Cmp>
-inline constexpr void *forward_list_sort_common(void *firstptr, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+inline constexpr void *forward_list_sort_common(void *firstptr, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	return ::fast_io::containers::details::forward_list_sort_common_n<T, Cmp>(firstptr,
 																			  ::fast_io::containers::details::forward_list_ptr_distance(firstptr), cmp);
 }
 
 template <typename T, typename Cmp>
-inline constexpr void forward_list_sort_common_before(void *beforefirstptr, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<T &>(), ::std::declval<T &>())))
+inline constexpr void forward_list_sort_common_before(void *beforefirstptr, Cmp cmp) FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
 	auto bf{static_cast<::fast_io::containers::details::forward_list_node_common *>(beforefirstptr)};
 	bf->next = ::fast_io::containers::details::forward_list_sort_common<T, Cmp>(bf->next, cmp);
@@ -616,7 +616,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->imp->element;
 	}
@@ -625,7 +625,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		return this->imp->element;
 	}
@@ -677,7 +677,7 @@ public:
 	{
 		if (this->imp == nullptr) [[unlikely]]
 		{
-			::fast_io::containers::details::contract_violation_report<throwing_violations>(::std::errc::invalid_argument);
+			::fast_io::containers::details::violation_report_on_invalid_argument<throwing_violations>();
 		}
 		this->erase_after_impl(__builtin_addressof(this->imp));
 	}
@@ -811,7 +811,7 @@ public:
 	}
 	template <typename Cmp>
 	inline constexpr void sort(Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		::fast_io::containers::details::forward_list_sort_common_before<value_type, Cmp>(
 			__builtin_addressof(this->imp), cmp);
@@ -819,12 +819,12 @@ public:
 
 	inline constexpr void sort() noexcept
 	{
-		this->sort(::std::ranges::less{});
+		this->sort(::fast_io::algorithms::compare_three_way{});
 	}
 
 	template <typename Cmp>
 	inline constexpr void sort_after(const_iterator beforeit, Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		::fast_io::containers::details::forward_list_sort_common_before<value_type, Cmp>(
 			beforeit->next, cmp);
@@ -832,12 +832,12 @@ public:
 
 	inline constexpr void sort_after(const_iterator beforeit) noexcept
 	{
-		this->sort_after(beforeit, ::std::ranges::less{});
+		this->sort_after(beforeit, ::fast_io::algorithms::compare_three_way{});
 	}
 
 	template <typename Cmp>
 	inline constexpr void merge(forward_list &&other, Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		if (__builtin_addressof(other) == this)
 		{
@@ -850,12 +850,12 @@ public:
 
 	inline constexpr void merge(forward_list &&other) noexcept
 	{
-		this->merge(::std::move(other), ::std::ranges::less{});
+		this->merge(::std::move(other), ::fast_io::algorithms::compare_three_way{});
 	}
 
 	template <typename Cmp>
 	inline constexpr void merge_after(const_iterator beforeit, forward_list &&other, Cmp cmp)
-		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>()(::std::declval<value_type &>(), ::std::declval<value_type &>())))
+		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		if (__builtin_addressof(other) == this)
 		{
@@ -870,7 +870,7 @@ public:
 
 	inline constexpr void merge_after(const_iterator beforeit, forward_list &&other) noexcept
 	{
-		this->merge_after(beforeit, ::std::move(other), ::std::ranges::less{});
+		this->merge_after(beforeit, ::std::move(other), ::fast_io::algorithms::compare_three_way{});
 	}
 
 	inline constexpr void clear_destroy() noexcept
@@ -889,7 +889,7 @@ template <typename T, typename allocator1, typename allocator2>
 	requires ::std::equality_comparable<T>
 inline constexpr bool operator==(::fast_io::containers::forward_list<T, allocator1> const &lhs, ::fast_io::containers::forward_list<T, allocator2> const &rhs) noexcept
 {
-	return ::std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+	return ::fast_io::algorithms::equal_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 #if defined(__cpp_lib_three_way_comparison)
@@ -898,7 +898,7 @@ template <typename T, typename allocator1, typename allocator2>
 	requires ::std::three_way_comparable<T>
 inline constexpr auto operator<=>(::fast_io::containers::forward_list<T, allocator1> const &lhs, ::fast_io::containers::forward_list<T, allocator2> const &rhs) noexcept
 {
-	return ::fast_io::freestanding::lexicographical_compare_three_way(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::std::compare_three_way{});
+	return ::fast_io::algorithms::lexicographical_compare_three_way_iters(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ::fast_io::algorithms::compare_three_way{});
 }
 
 #endif

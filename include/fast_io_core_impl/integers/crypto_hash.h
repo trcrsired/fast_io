@@ -14,7 +14,7 @@ inline constexpr char_type *crypto_hash_pr_df_impl(::std::byte const *first, ::s
 	constexpr ::std::size_t two{2};
 	for (; first != last; ++first)
 	{
-		iter = non_overlapped_copy_n(tb + (static_cast<::std::uint_least8_t>(*first) << 1), two, iter);
+		iter = ::fast_io::algorithms::non_overlapped_copy_n_iters(tb + (static_cast<::std::uint_least8_t>(*first) << 1), two, iter);
 	}
 	return iter;
 }
@@ -345,7 +345,7 @@ inline constexpr char_type *copy_to_hash_df_commom_impl(char_type *iter, ::std::
 		else
 #endif
 		{
-			return ::fast_io::details::non_overlapped_copy_n(reinterpret_cast<char unsigned const *>(buffer),
+			return ::fast_io::algorithms::non_overlapped_copy_n_iters(reinterpret_cast<char unsigned const *>(buffer),
 															 digest_size, iter);
 		}
 	}

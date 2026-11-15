@@ -49,7 +49,7 @@ inline constexpr ::std::byte *wire_put_u64(::std::byte *p, ::std::uint_least64_t
 
 inline constexpr ::std::byte *wire_put_bytes(::std::byte *p, ::std::byte const *q, ::std::size_t n) noexcept
 {
-	return ::fast_io::details::non_overlapped_copy_n(q, n, p);
+	return ::fast_io::algorithms::non_overlapped_copy_n_iters(q, n, p);
 }
 
 struct wire_reader

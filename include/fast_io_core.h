@@ -43,6 +43,18 @@ namespace fast_io
 }
 #include "fast_io_core_impl/allocation/impl.h"
 #include "fast_io_dsal/impl/common.h"
+
+// A small core subset is needed before array.h, which defines comparison
+// operators in terms of it. The full umbrella is included after the SIMD
+// primitives; `#pragma once` makes the second inclusion free.
+#include "fast_io_dsal/algorithms/common.h"
+#include "fast_io_dsal/algorithms/customization.h"
+#include "fast_io_dsal/algorithms/compare.h"
+#include "fast_io_dsal/algorithms/operations.h"
+#include "fast_io_dsal/algorithms/swap.h"
+#include "fast_io_dsal/algorithms/equal.h"
+#include "fast_io_dsal/algorithms/lexicographical_compare.h"
+
 #include "fast_io_dsal/impl/array.h"
 
 #include "fast_io_core_impl/asan_support.h"
@@ -53,8 +65,17 @@ namespace fast_io
 
 #include "fast_io_core_impl/ebcdic.h"
 #include "fast_io_core_impl/literals/literal.h"
-#include "fast_io_core_impl/char_category/impl.h"
 #include "fast_io_core_impl/simd/impl.h"
+
+// The single algorithm implementation for the whole project. It is included
+// here, after the SIMD primitives that find.h uses, so the core itself can
+// call fast_io::algorithms instead of carrying a second implementation.
+#include "fast_io_dsal/algorithms/impl.h"
+
+#include "fast_io_core_impl/char_category/impl.h"
+// simd/prrsv.h uses char_literal_v, so it comes after literals and the
+// algorithms, which char_category uses.
+#include "fast_io_core_impl/simd/prrsv.h"
 #include "fast_io_core_impl/simd_find.h"
 #include "fast_io_core_impl/codecvt/impl.h"
 

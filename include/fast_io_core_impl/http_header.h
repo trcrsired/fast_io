@@ -71,7 +71,7 @@ inline bool try_copy_into_buffer(basic_http_header_buffer<ch_type, buffer_size> 
 	{
 		return false;
 	}
-	non_overlapped_copy_n(first, diff, b.buffer + b.header_length);
+	::fast_io::algorithms::non_overlapped_copy_n_iters(first, diff, b.buffer + b.header_length);
 	b.header_length += diff;
 	return true;
 }
