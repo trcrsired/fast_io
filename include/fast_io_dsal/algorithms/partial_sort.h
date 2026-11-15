@@ -140,6 +140,8 @@ namespace fast_io::algorithms
 // middle)`.
 template<::std::random_access_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void partial_sort_iters(
   Iter first, Iter middle, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -191,6 +193,8 @@ inline constexpr void partial_sort_index_range(
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   ::std::random_access_iterator OIter, ::std::sentinel_for<OIter> OSnt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<OIter>>
 inline constexpr OIter partial_sort_copy_iters(
   Iter first, Snt last, OIter d_first, OSnt d_last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

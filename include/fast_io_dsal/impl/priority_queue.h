@@ -23,11 +23,8 @@ template <typename Cmp, typename Container>
 			 ::std::is_empty_v<Cmp> &&
 			 ::std::is_nothrow_default_constructible_v<Cmp> &&
 			 ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
-			 requires(Cmp cmp, typename Container::value_type const &a,
-					  typename Container::value_type const &b)
-{
-	{ cmp.compare(a, b) < 0 } noexcept;
-}
+			 ::fast_io::details::algorithms::three_way_comparator_for<
+				 Cmp, typename Container::value_type>
 class priority_queue
 {
 public:

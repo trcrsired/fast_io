@@ -10,10 +10,7 @@ inline constexpr bool heap_move_no_throw{
 
 template<typename Cmp, typename T>
 concept heap_compare_no_throw =
-  requires(Cmp &cmp, T const &a, T const &b)
-{
-  { cmp.compare(a, b) < 0 } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_comparator_for<Cmp, T>;
 
 template<typename Cmp>
 concept heap_comparator_pass_no_throw =
@@ -249,6 +246,8 @@ namespace fast_io::algorithms
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter is_heap_until_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::is_heap_iters_no_throw<Iter, Cmp> &&
@@ -274,6 +273,8 @@ inline constexpr ::std::ranges::iterator_t<R> is_heap_until(R &&r, Cmp cmp = Cmp
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr bool is_heap_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::is_heap_iters_no_throw<Iter, Cmp> &&
@@ -299,6 +300,8 @@ inline constexpr bool is_heap(R &&r, Cmp cmp = Cmp{})
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void make_heap_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::heap_iters_no_throw<Iter, Cmp> &&
@@ -324,6 +327,8 @@ inline constexpr void make_heap(R &&r, Cmp cmp = Cmp{})
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void push_heap_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::heap_iters_no_throw<Iter, Cmp> &&
@@ -349,6 +354,8 @@ inline constexpr void push_heap(R &&r, Cmp cmp = Cmp{})
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void pop_heap_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::heap_iters_no_throw<Iter, Cmp> &&
@@ -374,6 +381,8 @@ inline constexpr void pop_heap(R &&r, Cmp cmp = Cmp{})
 
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void sort_heap_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::heap_iters_no_throw<Iter, Cmp> &&

@@ -19,6 +19,14 @@ inline constexpr auto operator<=>(node const& a, node const& b) noexcept
 	return a.to<=>b.to;
 }
 
+struct node_greater
+{
+	inline constexpr auto compare(node const& a, node const& b) const noexcept
+	{
+		return b<=>a;
+	}
+};
+
 using namespace fast_io::io;
 
 int main()
@@ -39,7 +47,7 @@ int main()
 		scan(ibf, a, b, w);
 		graph[a].push_back({b, w});
 	}
-	::fast_io::priority_queue<node, ::std::ranges::greater> queue;
+	::fast_io::priority_queue<node, node_greater> queue;
 	::fast_io::vector<std::size_t> relax(n, SIZE_MAX);
 	for (queue.push({relax.front() = 0, 0}); !queue.is_empty();)
 	{

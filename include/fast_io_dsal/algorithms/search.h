@@ -251,6 +251,8 @@ namespace fast_io::algorithms
 // Find the first pair of adjacent elements that compare equal.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter adjacent_find_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -306,6 +308,8 @@ inline constexpr ::std::size_t adjacent_find_index_of(
 template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::forward_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr Iter1 find_end_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -369,6 +373,8 @@ inline constexpr ::std::size_t find_end_index_of(
 template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::forward_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr Iter1 find_first_of_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -431,6 +437,8 @@ inline constexpr ::std::size_t find_first_of_index_of(
 template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::forward_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr Iter1 search_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -492,6 +500,8 @@ inline constexpr ::std::size_t search_index_of(
 // Find `count` consecutive elements equal to `value`.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter>, T>
 inline constexpr Iter search_n_iters(
   Iter first, Snt last, ::std::size_t count, T const &value,
   Cmp cmp = Cmp{})

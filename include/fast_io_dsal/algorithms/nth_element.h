@@ -171,6 +171,8 @@ namespace fast_io::algorithms
 // after it.
 template<::std::random_access_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void nth_element_iters(
   Iter first, Iter nth, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

@@ -11,10 +11,7 @@ concept lexicographical_compare_pass_no_throw =
 
 template<typename Cmp, typename T, typename U>
 concept lexicographical_compare_call_no_throw =
-  requires(Cmp cmp, T const &a, U const &b)
-{
-  { cmp.compare(a, b) } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_compare_no_throw<Cmp, T, U>;
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
@@ -111,6 +108,8 @@ namespace fast_io::algorithms
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_compare<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr bool lexicographical_compare_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -161,6 +160,8 @@ inline constexpr bool lexicographical_compare_index_range(
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_compare<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr auto lexicographical_compare_three_way_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

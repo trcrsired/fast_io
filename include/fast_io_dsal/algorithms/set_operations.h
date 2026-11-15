@@ -11,8 +11,10 @@ concept set_iters_no_throw =
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
   requires(Cmp cmp, Iter1 &it1, Iter2 &it2)
 {
-  { 0 > cmp.compare(*it1, *it2) } noexcept;
-  { 0 > cmp.compare(*it2, *it1) } noexcept;
+  { cmp.compare(*it1, *it2) } noexcept
+    -> ::fast_io::details::algorithms::three_way_result;
+  { cmp.compare(*it2, *it1) } noexcept
+    -> ::fast_io::details::algorithms::three_way_result;
 };
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
@@ -249,6 +251,8 @@ namespace fast_io::algorithms
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr bool includes_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -295,6 +299,8 @@ inline constexpr bool includes_index_range(
   template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,     \
     ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,            \
     typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way> \
+  requires ::fast_io::details::algorithms::three_way_comparator<             \
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>             \
   inline constexpr OIter name##_iters(                                       \
     Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest,          \
     Cmp cmp = Cmp{})                                                         \

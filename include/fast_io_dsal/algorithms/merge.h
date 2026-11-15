@@ -13,7 +13,8 @@ concept merge_iters_no_throw =
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
   requires(Cmp cmp, Iter1 &it1, Iter2 &it2, OIter &dest)
 {
-  { 0 > cmp.compare(*it1, *it2) } noexcept;
+  { cmp.compare(*it1, *it2) } noexcept
+    -> ::fast_io::details::algorithms::three_way_result;
   { *dest = *it1 } noexcept;
   { *dest = *it2 } noexcept;
 };
@@ -65,10 +66,8 @@ template<typename Iter, typename Snt, typename Cmp>
 concept inplace_merge_iters_no_throw =
   ::fast_io::details::algorithms::sentinel_no_throw<Iter, Snt> &&
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
-  requires(Cmp cmp, Iter &a, Iter &b)
-{
-  { 0 > cmp.compare(*b, *a) } noexcept;
-} &&
+  ::fast_io::details::algorithms::three_way_comparator_for<
+    Cmp, ::std::iter_reference_t<Iter>> &&
   ::fast_io::details::algorithms::rotate_iters_no_throw<Iter, Iter>;
 
 template<typename R, typename Cmp>
@@ -117,6 +116,8 @@ namespace fast_io::algorithms
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_compare<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr OIter merge_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest,
   Cmp cmp = Cmp{})
@@ -147,6 +148,8 @@ inline constexpr OIter merge(
 // Merge two adjacent sorted subranges in place.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_compare<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void inplace_merge_iters(
   Iter first, Iter middle, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

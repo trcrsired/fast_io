@@ -810,6 +810,7 @@ public:
 		::fast_io::containers::details::forward_list_reverse_common_before(beforeit->iter);
 	}
 	template <typename Cmp>
+		requires ::fast_io::details::algorithms::three_way_comparator<Cmp, value_type>
 	inline constexpr void sort(Cmp cmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
@@ -823,6 +824,7 @@ public:
 	}
 
 	template <typename Cmp>
+		requires ::fast_io::details::algorithms::three_way_comparator<Cmp, value_type>
 	inline constexpr void sort_after(const_iterator beforeit, Cmp cmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
@@ -836,6 +838,7 @@ public:
 	}
 
 	template <typename Cmp>
+		requires ::fast_io::details::algorithms::three_way_comparator<Cmp, value_type>
 	inline constexpr void merge(forward_list &&other, Cmp cmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
@@ -854,6 +857,7 @@ public:
 	}
 
 	template <typename Cmp>
+		requires ::fast_io::details::algorithms::three_way_comparator<Cmp, value_type>
 	inline constexpr void merge_after(const_iterator beforeit, forward_list &&other, Cmp cmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{

@@ -6,11 +6,7 @@ namespace fast_io::details::algorithms
 template<typename Cmp, typename T, typename U>
 concept binary_search_compare_no_throw =
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
-  requires(Cmp cmp, T const &a, U const &b)
-{
-  { 0 > cmp.compare(a, b) } noexcept;
-  { 0 > cmp.compare(b, a) } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_comparator_for<Cmp, T, U>;
 
 template<typename Iter, typename Snt, typename T, typename Cmp>
 concept lower_bound_iters_no_throw =
@@ -108,6 +104,8 @@ namespace fast_io::algorithms
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>, T>
 inline constexpr Iter lower_bound_iters(
   Iter first, Snt last, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -165,6 +163,8 @@ inline constexpr ::std::size_t lower_bound_index_of(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>, T>
 inline constexpr Iter upper_bound_iters(
   Iter first, Snt last, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -222,6 +222,8 @@ inline constexpr ::std::size_t upper_bound_index_of(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>, T>
 inline constexpr ::std::pair<Iter, Iter> equal_range_iters(
   Iter first, Snt last, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -289,6 +291,8 @@ equal_range_index_of(R &&r, T const &value, Cmp cmp = Cmp{})
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>, T>
 inline constexpr bool binary_search_iters(
   Iter first, Snt last, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

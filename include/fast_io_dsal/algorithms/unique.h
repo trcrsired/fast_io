@@ -115,6 +115,8 @@ namespace fast_io::algorithms
 // Remove consecutive equal elements. Returns the new logical end.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter unique_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -169,6 +171,8 @@ inline constexpr ::std::size_t unique_index_of(R &&r, Cmp cmp = Cmp{})
 // Copy the first element of each run of equal elements.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr OIter unique_copy_iters(
   Iter first, Snt last, OIter dest, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

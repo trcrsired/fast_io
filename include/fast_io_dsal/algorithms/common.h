@@ -208,6 +208,74 @@ concept comparator_pass_no_throw =
   ::std::is_nothrow_move_constructible_v<Cmp> &&
   ::std::is_nothrow_default_constructible_v<Cmp>;
 
+// A comparator reports ordering through a three-way result: one of the
+// comparison categories. A bool is the trap. It satisfies every expression the
+// algorithms spell -- `0 > false` is always false and `false == 0` is always
+// true -- so a predicate-shaped `compare` compiles and then turns the
+// algorithm into a silent no-op. The result type is constrained here instead,
+// which makes such a comparator a hard error at the call site.
+#if defined(__cpp_lib_three_way_comparison) && __cpp_lib_three_way_comparison >= 201907L
+template<typename T>
+concept three_way_result =
+  ::std::same_as<::std::remove_cvref_t<T>, ::std::strong_ordering> ||
+  ::std::same_as<::std::remove_cvref_t<T>, ::std::weak_ordering> ||
+  ::std::same_as<::std::remove_cvref_t<T>, ::std::partial_ordering>;
+#else
+// Without <compare> no category type can be named. Require the shape of a
+// three-way result instead: comparable to literal zero both ways and not a
+// bool.
+template<typename T>
+concept three_way_result =
+  !::std::same_as<::std::remove_cvref_t<T>, bool> &&
+  requires(::std::remove_cvref_t<T> const r)
+{
+  { 0 < r } -> ::std::convertible_to<bool>;
+  { 0 > r } -> ::std::convertible_to<bool>;
+  { r == 0 } -> ::std::convertible_to<bool>;
+};
+#endif
+
+// `compare(a, b)` must yield a three-way result and must not throw. This is the
+// one-direction form; algorithms that compare both ways also instantiate the
+// reversed form below.
+template<typename Cmp, typename T, typename U>
+concept three_way_compare_no_throw =
+  requires(Cmp cmp, T const &a, U const &b)
+{
+  { cmp.compare(a, b) } noexcept -> three_way_result;
+};
+
+// Both operand orders the ordering algorithms use. A throwing `compare` is
+// excluded, matching the `FAST_IO_HERBCEPTIONS_THROWS_IF` contracts.
+template<typename Cmp, typename T, typename U = T>
+concept three_way_comparator_for =
+  ::fast_io::details::algorithms::three_way_compare_no_throw<Cmp, T, U> &&
+  ::fast_io::details::algorithms::three_way_compare_no_throw<Cmp, U, T>;
+
+// The same result contract without the nothrow requirement. Algorithms use
+// this one in a requires-clause: a throwing comparator is still allowed (its
+// `throws` contract just says so), but a bool-returning one is rejected before
+// the body is instantiated, where it would otherwise sort nothing.
+template<typename Cmp, typename T, typename U = T>
+concept three_way_compare =
+  requires(Cmp &cmp, T const &a, U const &b)
+{
+  { cmp.compare(a, b) } -> three_way_result;
+};
+
+template<typename Cmp, typename T, typename U = T>
+concept three_way_comparator =
+  ::fast_io::details::algorithms::three_way_compare<Cmp, T, U> &&
+  ::fast_io::details::algorithms::three_way_compare<Cmp, U, T>;
+
+// Equality may be spelled as `equal(a, b)` or as `compare(a, b) == 0`. The
+// latter is only meaningful for a three-way result, so a comparator that only
+// offers a bool `compare` is rejected.
+template<typename Cmp, typename T, typename U = T>
+concept equality_comparator =
+  requires(Cmp &cmp, T const &a, U const &b) { cmp.equal(a, b); } ||
+  ::fast_io::details::algorithms::three_way_compare<Cmp, T, U>;
+
 // Operations are passed by value and invoked through their `compute` member,
 // mirroring comparators. A closure has no `compute` member, so lambdas are
 // rejected rather than adapted.
@@ -231,7 +299,8 @@ inline constexpr bool equal_call_no_throw_v = []() constexpr
   }
   else
   {
-    return requires(Cmp cmp, T const &a, U const &b)
+    return ::fast_io::details::algorithms::three_way_compare_no_throw<Cmp, T, U> &&
+           requires(Cmp cmp, T const &a, U const &b)
     {
       { cmp.compare(a, b) == 0 } noexcept;
     };

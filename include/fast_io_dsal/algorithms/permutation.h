@@ -44,10 +44,8 @@ concept next_permutation_iters_no_throw =
   ::fast_io::details::algorithms::reverse_iters_no_throw<Iter, Iter> &&
   ::fast_io::details::algorithms::swap_nothrow<
     ::std::iter_reference_t<Iter>, ::std::iter_reference_t<Iter>>() &&
-  requires(Cmp cmp, Iter &a, Iter &b)
-{
-  { 0 > cmp.compare(*a, *b) } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_comparator_for<
+    Cmp, ::std::iter_reference_t<Iter>>;
 
 template<typename R, typename Cmp>
 concept next_permutation_ranges_no_throw =
@@ -210,6 +208,8 @@ namespace fast_io::algorithms
 template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::forward_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr bool is_permutation_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -261,6 +261,8 @@ inline constexpr bool is_permutation_index_range(
 template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::forward_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr bool is_permutation_prefix_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -299,7 +301,9 @@ inline constexpr bool is_permutation_prefix(
 
 // Rearrange into the next lexicographically greater permutation.
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt,
-  typename Cmp = ::fast_io::algorithms::equal_to>
+  typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr bool next_permutation_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -341,6 +345,8 @@ inline constexpr bool next_permutation_index_range(
 // Rearrange into the next lexicographically smaller permutation.
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr bool prev_permutation_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

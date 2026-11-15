@@ -7,10 +7,8 @@ template<typename Iter, typename Cmp>
 concept minmax_element_iters_no_throw =
   ::fast_io::details::algorithms::iter_no_throw<Iter> &&
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
-  requires(Cmp cmp, Iter &a, Iter &b)
-{
-  { 0 > cmp.compare(*a, *b) } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_comparator_for<
+    Cmp, ::std::iter_reference_t<Iter>>;
 
 template<typename Iter, typename Snt, typename Cmp>
 concept minmax_element_sentinel_no_throw =
@@ -113,6 +111,8 @@ namespace fast_io::algorithms
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter min_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -167,6 +167,8 @@ inline constexpr ::std::size_t min_element_index_of(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter max_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -221,6 +223,8 @@ inline constexpr ::std::size_t max_element_index_of(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr ::std::pair<Iter, Iter> minmax_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

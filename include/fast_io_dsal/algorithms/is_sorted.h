@@ -7,10 +7,8 @@ template<typename Iter, typename Cmp>
 concept is_sorted_iters_no_throw =
   ::fast_io::details::algorithms::iter_no_throw<Iter> &&
   ::fast_io::details::algorithms::comparator_pass_no_throw<Cmp> &&
-  requires(Cmp cmp, Iter &a, Iter &b)
-{
-  { 0 > cmp.compare(*b, *a) } noexcept;
-};
+  ::fast_io::details::algorithms::three_way_comparator_for<
+    Cmp, ::std::iter_reference_t<Iter>>;
 
 template<typename Iter, typename Snt, typename Cmp>
 concept is_sorted_until_iters_no_throw =
@@ -64,6 +62,8 @@ namespace fast_io::algorithms
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr Iter is_sorted_until_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -118,6 +118,8 @@ inline constexpr ::std::size_t is_sorted_until_index_of(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr bool is_sorted_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

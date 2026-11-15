@@ -63,6 +63,8 @@ namespace fast_io::algorithms
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+  requires ::fast_io::details::algorithms::equality_comparator<
+    Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
 inline constexpr ::std::pair<Iter1, Iter2> mismatch_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

@@ -32,8 +32,10 @@ template<typename Cmp, typename T>
 concept sort_compare_no_throw =
   requires(Cmp cmp, T const &a, T const &b)
 {
-  { 0 > cmp.compare(a, b) } noexcept;
-  { 0 > cmp.compare(b, a) } noexcept;
+  { cmp.compare(a, b) } noexcept
+    -> ::fast_io::details::algorithms::three_way_result;
+  { cmp.compare(b, a) } noexcept
+    -> ::fast_io::details::algorithms::three_way_result;
 };
 
 // Comparators may provide `equal(a, b)` as a cheaper equality test. When it is
@@ -52,6 +54,7 @@ inline constexpr bool sort_equal_no_throw_v = []() constexpr
   else
   {
     return ::fast_io::details::algorithms::sort_comparator_pass_no_throw<Cmp> &&
+           ::fast_io::details::algorithms::three_way_compare_no_throw<Cmp, T, T> &&
            requires(Cmp cmp, T const &a, T const &b)
     {
       { cmp.compare(a, b) == 0 } noexcept;
@@ -1302,6 +1305,8 @@ namespace fast_io::algorithms
 // Unstable, in-place, O(N log N) worst-case sort.
 template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+  requires ::fast_io::details::algorithms::three_way_comparator<
+    Cmp, ::std::iter_value_t<Iter>>
 inline constexpr void sort_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::sort_iters_no_throw<Iter, Cmp> &&
