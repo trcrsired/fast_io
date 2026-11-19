@@ -1,0 +1,103 @@
+# fast_io × safe C++ — vector experiment
+
+This branch is a **diagnostic experiment**, not a finished safe fast_io. It uses
+`fast_io::containers::vector` to find out what is wrong with our safe C++ rules
+and what it would take to mark an existing container safe.
+
+## What changed
+
+`include/fast_io_dsal/impl/vector.h`:
+
+- the container kernel (raw storage, pointers, internal helpers) is wrapped in
+  a header-local `[[unsafe]] { ... }` fence. A fence is a **syntax relaxation**
+  for its own source range; it is not a call restriction for the resulting API.
+- iterator-based and unchecked operations carry `FAST_IO_DSAL_UNSAFE`
+  (`[[unsafe]]` under `__SAFECXX__`, empty otherwise):
+  `begin/end/cbegin/cend/rbegin/rend/crbegin/crend`, `data`,
+  `insert/emplace/erase(const_iterator, ...)`, `*_unchecked`,
+  `grow_*`/`move_backward_*` helpers.
+- index-based and bounds-checked operations stay **safe** and are callable
+  directly: `operator[]`, `front`, `back`, `size/capacity/max_size`,
+  `push_back/emplace_back/pop_back`, `reserve/resize/clear`,
+  `insert_index/emplace_index/erase_index/insert_range_index`, `swap`,
+  `operator==`/`<=>`, `erase_if`.
+
+`include/fast_io_dsal/vector.h`: deduction guides are fenced because they must
+repeat a constructor's parameter types verbatim (a guide declares no runtime
+entity, so it should arguably be exempt from the pointer/reference ban — see
+below).
+
+All new spellings are guarded by `__SAFECXX__`, so an ordinary compiler sees
+plain C++.
+
+## Running the experiment
+
+The support headers are imported as legacy through a main-file fence, then the
+vector itself is parsed under safe-source rules:
+
+```cpp
+[[unsafe]] {
+#include <fast_io_dsal/impl/misc/push_macros.h>
+#include <fast_io_dsal/impl/misc/push_warnings.h>
+#include <fast_io_core.h>
+#include <fast_io_dsal/impl/freestanding.h>
+#include <fast_io_dsal/impl/common.h>
+}
+#include <fast_io_dsal/vector.h>
+```
+
+Build with the safe compiler (verbatim flag spellings):
+
+```sh
+clang++ --config=$HOME/cfgs/x86_64-linux-gnu-libcxx.cfg \
+  -fsafecxx -fherbceptions -lherbceptions -O3 -s -flto=thin \
+  safecxx_examples/vector_index.cc -o /tmp/vector_index
+```
+
+`safecxx_examples/vector_index.cc` compiles, links and runs successfully.
+
+Calling an iterator API from safe code is rejected:
+
+```
+error: call to 'begin' is unsafe: it is declared [[unsafe]] and may only be
+  called from inside a [[unsafe]] block
+error: call to 'data' is unsafe: ...
+```
+
+Wrapping the call / loop in `[[unsafe]] { ... }` makes it work.
+
+## What this exposed about safe C++
+
+Fixed in the compiler (`safecxx` branch of the LLVM fork):
+
+1. Nine safe-mode rules (RTTI, legacy EH, virtual marks, rule-of-five, raw
+   pointer/reference) used the parse-time fence depth, so they diagnosed
+   system headers (libc++/herbceptions) and fenced headers whose templates were
+   instantiated later.
+2. A fence in a library header must not implicitly call-restrict its whole API;
+   only a fence written in the main file around an `#include` is a legacy
+   import. Otherwise a safe facade over an unsafe kernel is impossible.
+3. A fence is a precise source range, not a whole file; code after the closing
+   brace is checked again.
+4. Macro-expanded fence braces had mismatched FileIDs, so a header-local fence
+   failed to exempt its own kernel.
+5. Range-for builds `begin()`/`end()` through `BuildCallExpr`, bypassing
+   `ActOnCallExpr`; `[[unsafe]]` iterator APIs were callable via
+   `for (...) : v` until the check was added to `BuildForRangeBeginEndCall`.
+
+Still open / design notes:
+
+- Deduction guides cannot be written in safe source because they must mirror a
+  constructor's `R &&` parameter. Arguably the raw-pointer/reference ban
+  should skip deduction guides entirely (they declare no runtime entity).
+- `in auto &x` is rejected while `in auto x` is accepted. The diagnostic is
+  contradictory: the raw-reference rule says "use in/inout", the range-for
+  rule says "use 'in auto'". Either accept the explicit `&` or give one clear
+  message ("write `in auto` without `&`").
+- Making fast_io safe for real still requires marking its *other* headers:
+  `freestanding/herbceptions.h`, `freestanding/addressof.h`,
+  `concepts/type.h`, etc. The isolated run produced 204 diagnostics, all in
+  the vector implementation once those support headers were fenced.
+- The driver config includes fast_io with `-I`, so fast_io is not a system
+  header. Fencing it is the user's trust declaration; system headers stay
+  directly usable.

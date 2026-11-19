@@ -41,6 +41,11 @@ using zu_vector = ::fast_io::containers::vector<::std::size_t, ::fast_io::native
 namespace containers
 {
 
+// Safe C++ experiment: deduction guides must repeat a constructor's parameter
+// types verbatim (including forwarding references), so they are fenced.
+#if defined(__SAFECXX__)
+[[unsafe]] {
+#endif
 template <::std::input_iterator InputIt>
 vector(InputIt, InputIt) -> vector<typename ::std::iterator_traits<InputIt>::value_type, ::fast_io::native_global_allocator>;
 #ifdef __cpp_lib_containers_ranges
@@ -52,6 +57,9 @@ vector(::std::from_range_t, R &&) -> vector<::std::ranges::range_value_t<R>, ::f
 template <typename T, typename... U>
 	requires(::std::constructible_from<T, U> && ...)
 vector(T, U...) -> vector<T, ::fast_io::native_global_allocator>;
+#if defined(__SAFECXX__)
+}
+#endif
 
 } // namespace containers
 
