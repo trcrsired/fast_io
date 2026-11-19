@@ -56,7 +56,7 @@ clang++ --config=$HOME/cfgs/x86_64-linux-gnu-libcxx.cfg \
 
 `safecxx_examples/vector_index.cc` compiles, links and runs successfully.
 
-Calling an iterator API from safe code is rejected:
+Calling an iterator API written in source from safe code is rejected:
 
 ```
 error: call to 'begin' is unsafe: it is declared [[unsafe]] and may only be
@@ -64,7 +64,20 @@ error: call to 'begin' is unsafe: it is declared [[unsafe]] and may only be
 error: call to 'data' is unsafe: ...
 ```
 
-Wrapping the call / loop in `[[unsafe]] { ... }` makes it work.
+But a range-for does **not** need a fence:
+
+```cpp
+for (in auto x : v)   // OK: begin()/end() are compiler-generated
+    sum += x;
+v.begin();            // error: source-written call is restricted
+[[unsafe]] { v.begin(); }   // OK
+```
+
+The compiler-generated `begin()`/`end()` calls are exempt because the user
+never names the iterator and the loop variable is a checked `in`/`inout`
+borrow, so no raw pointer/reference escapes into safe source. This matches the
+existing rule that compiler-generated range-for variables bypass the pointer
+ban (D24).
 
 ## What this exposed about safe C++
 
@@ -82,8 +95,11 @@ Fixed in the compiler (`safecxx` branch of the LLVM fork):
 4. Macro-expanded fence braces had mismatched FileIDs, so a header-local fence
    failed to exempt its own kernel.
 5. Range-for builds `begin()`/`end()` through `BuildCallExpr`, bypassing
-   `ActOnCallExpr`; `[[unsafe]]` iterator APIs were callable via
-   `for (...) : v` until the check was added to `BuildForRangeBeginEndCall`.
+   `ActOnCallExpr`; the `[[unsafe]]` restriction was therefore invisible to
+   the `BuildForRangeBeginEndCall` check. Resolved by **deliberately exempting**
+   compiler-generated `begin()`/`end()` calls: the iterator never escapes into
+   safe source and the loop variable must be an `in`/`inout` borrow. A
+   source-written `v.begin()` is still restricted.
 
 Still open / design notes:
 

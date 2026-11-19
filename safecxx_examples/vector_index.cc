@@ -42,13 +42,14 @@ int main()
 	(void)v.max_size();
 	(void)v.is_empty();
 
-	// Iterator API: only callable inside a fence.
-	[[unsafe]] {
-		for (in auto x : v)
-			sum += x;
-	}
+	// Iterator API: begin()/end() are [[unsafe]], but a range-for's
+	// compiler-generated calls are exempt and the loop variable is a checked
+	// `in` borrow, so no fence is needed here. Source-written `v.begin()`
+	// would still require a fence.
+	for (in auto x : v)
+		sum += x;
 
-	// Expected: 1+42+2+3+9 = 57, plus the fenced pass over the same 5
+	// Expected: 1+42+2+3+9 = 57, plus the range-for pass over the same 5
 	// elements = 114.
 	return sum == 114 ? 0 : 1;
 }
