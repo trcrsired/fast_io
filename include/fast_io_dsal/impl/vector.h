@@ -738,11 +738,13 @@ public:
 		return *this;
 	}
 
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr vector(vector &&vec) noexcept
 		: imp(vec.imp), allochdl{vec.allochdl}
 	{
 		vec.imp = {};
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr vector &operator=(vector &&vec) noexcept
 	{
 		if (__builtin_addressof(vec) == this) [[unlikely]]
@@ -2023,6 +2025,7 @@ public:
 		this->swap(temp);
 	}
 
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr void swap(vector &other) noexcept
 	{
 		::fast_io::algorithms::swap(imp, other.imp);
@@ -2052,6 +2055,7 @@ inline constexpr auto operator<=>(vector<T, allocator1> const &lhs, vector<T, al
 #endif
 
 template <typename T, typename allocator>
+FAST_IO_DSAL_UNSAFE
 inline constexpr void swap(vector<T, allocator> &lhs, vector<T, allocator> &rhs) noexcept
 {
 	lhs.swap(rhs);

@@ -87,6 +87,12 @@ for (in auto x : v) {
 This is a purely lexical rule (no provenance/dataflow/contracts) that rejects
 the unprovable case of mutating a container while it is being iterated.
 
+Derived from the same rule, the container's **move constructor, move
+assignment, member `swap` and free `swap` are `[[unsafe]]`**: safe code cannot
+move or swap a vector. `destructive_move` remains the safe consuming path
+(where the type is trivially relocatable). This is much simpler than proving
+that a move or swap did not invalidate any outstanding view.
+
 ## What this exposed about safe C++
 
 Fixed in the compiler (`safecxx` branch of the LLVM fork):
