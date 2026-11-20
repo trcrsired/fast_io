@@ -64,7 +64,7 @@ error: call to 'begin' is unsafe: it is declared [[unsafe]] and may only be
 error: call to 'data' is unsafe: ...
 ```
 
-But a range-for does **not** need a fence:
+But a range-for does **not** need a fence — the loop itself stays safe:
 
 ```cpp
 for (in auto x : v)   // OK: begin()/end() are compiler-generated
@@ -73,11 +73,19 @@ v.begin();            // error: source-written call is restricted
 [[unsafe]] { v.begin(); }   // OK
 ```
 
-The compiler-generated `begin()`/`end()` calls are exempt because the user
-never names the iterator and the loop variable is a checked `in`/`inout`
-borrow, so no raw pointer/reference escapes into safe source. This matches the
-existing rule that compiler-generated range-for variables bypass the pointer
-ban (D24).
+The range object is **frozen** for the loop's duration: any use of `v` inside
+the body is an error in safe source. Put those uses in a fence:
+
+```cpp
+for (in auto x : v) {
+    // v.push_back(4);   // error: v is frozen by the range-for
+    [[unsafe]] { v.push_back(4); }   // OK
+    sum += x;
+}
+```
+
+This is a purely lexical rule (no provenance/dataflow/contracts) that rejects
+the unprovable case of mutating a container while it is being iterated.
 
 ## What this exposed about safe C++
 

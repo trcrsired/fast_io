@@ -44,8 +44,9 @@ int main()
 
 	// Iterator API: begin()/end() are [[unsafe]], but a range-for's
 	// compiler-generated calls are exempt and the loop variable is a checked
-	// `in` borrow, so no fence is needed here. Source-written `v.begin()`
-	// would still require a fence.
+	// `in` borrow, so no fence is needed for the loop itself. The range object
+	// v is frozen while the loop runs: touching v inside the body would
+	// require an [[unsafe]] block.
 	for (in auto x : v)
 		sum += x;
 
