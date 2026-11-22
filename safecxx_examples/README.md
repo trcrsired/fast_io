@@ -102,14 +102,15 @@ checked `operator[]`, `front`/`back` and size queries stay callable.
 The `from_range` constructor is declared in safe source as
 
 ```cpp
-span(from_range_t, forward R range [[clang::lifetimebound]])
+span(from_range_t, forward R range [[lifetime("this")]])
 ```
 
 `forward` is the d0708 "pass along" parameter kind (D0708 R0 draft 32): it
 preserves the range's cv-qualification and value category without writing
-`&&`, and lowers to `R&`. `[[clang::lifetimebound]]` ties the resulting span to
-the range, and Clang's lifetime-safety analysis is already an error under
-`-fsafecxx`. No compiler change was needed — only the library annotation.
+`&&`, and lowers to `R&`. `[[lifetime("this")]]` is the P1179 public provenance
+mark; the compiler translates it to its internal lifetimebound attribute under
+the lifetime-protocol toggle, so the Clang attribute never appears in source.
+`vector` is marked `[[owner]]`: its pointer fields are owned by the object.
 Note that a fenced `[[unsafe]] { ... }` region does **not** suppress the
 lifetime analysis.
 

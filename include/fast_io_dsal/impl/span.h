@@ -12,11 +12,11 @@
 // `forward` is the d0708 (draft 32) parameter kind for an argument the callee
 // passes along: it preserves the argument's cv-qualification and value
 // category. Here it keeps the range's constness without a `const_cast`.
-// lifetimebound tells clang's lifetime-safety analysis that the constructed
-// span refers to the range; under -fsafecxx that analysis is an error.
+// [[lifetime("this")]] is the public P1179 mark: the compiler translates it
+// to the internal lifetimebound attribute under the lifetime-protocol toggle.
 #define FAST_IO_DSAL_FORWARD forward
 #define FAST_IO_DSAL_FWD_TYPE(R) R
-#define FAST_IO_DSAL_LIFETIMEBOUND [[clang::lifetimebound]]
+#define FAST_IO_DSAL_LIFETIME [[lifetime("this")]]
 #else
 #define FAST_IO_DSAL_UNSAFE
 #define FAST_IO_DSAL_KERNEL_BEGIN
@@ -24,7 +24,7 @@
 // Plain C++ has no `forward` keyword; use a forwarding reference instead.
 #define FAST_IO_DSAL_FORWARD
 #define FAST_IO_DSAL_FWD_TYPE(R) R &&
-#define FAST_IO_DSAL_LIFETIMEBOUND
+#define FAST_IO_DSAL_LIFETIME
 #endif
 
 FAST_IO_DSAL_KERNEL_BEGIN
@@ -80,12 +80,12 @@ public:
 	{}
 	// `forward R` is d0708's kind for an argument the callee passes along:
 	// it preserves the range's constness (no const_cast needed) and value
-	// category. lifetimebound ties the borrowed range to the resulting span,
-	// so clang's lifetime-safety analysis rejects a span outliving its owner.
+	// category. [[lifetime("this")]] ties the borrowed range to the resulting
+	// span, so the P1179 protocol rejects a span outliving its owner.
 	template <::std::ranges::contiguous_range R>
 		requires ::std::same_as<value_type, ::std::ranges::range_value_t<R>>
 	inline constexpr explicit span(::fast_io::freestanding::from_range_t,
-		FAST_IO_DSAL_FORWARD FAST_IO_DSAL_FWD_TYPE(R) range FAST_IO_DSAL_LIFETIMEBOUND)
+		FAST_IO_DSAL_FORWARD FAST_IO_DSAL_FWD_TYPE(R) range FAST_IO_DSAL_LIFETIME)
 		noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range)))
 		: ptr{::std::ranges::data(range)}, n{::std::ranges::size(range)}
 	{}
@@ -252,7 +252,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -267,7 +267,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_front_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan_front_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return span(this->ptr, count);
 	}
@@ -277,7 +277,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -292,7 +292,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return span(this->ptr + (this->n - count), count);
 	}
@@ -302,7 +302,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < pos) [[unlikely]]
 		{
@@ -325,7 +325,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
+	inline constexpr span subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		size_type const val{this->n - pos};
 		if (count == ::fast_io::containers::npos)
@@ -419,4 +419,4 @@ FAST_IO_DSAL_KERNEL_END
 #undef FAST_IO_DSAL_KERNEL_END
 #undef FAST_IO_DSAL_FORWARD
 #undef FAST_IO_DSAL_FWD_TYPE
-#undef FAST_IO_DSAL_LIFETIMEBOUND
+#undef FAST_IO_DSAL_LIFETIME

@@ -9,10 +9,15 @@
 #define FAST_IO_DSAL_UNSAFE [[unsafe]]
 #define FAST_IO_DSAL_KERNEL_BEGIN [[unsafe]] {
 #define FAST_IO_DSAL_KERNEL_END }
+// P1179 public provenance mark: the pointer fields of vector are owned by the
+// vector object itself. The compiler translates this to its internal owner
+// attribute under the lifetime-protocol toggle.
+#define FAST_IO_DSAL_OWNER [[owner]]
 #else
 #define FAST_IO_DSAL_UNSAFE
 #define FAST_IO_DSAL_KERNEL_BEGIN
 #define FAST_IO_DSAL_KERNEL_END
+#define FAST_IO_DSAL_OWNER
 #endif
 
 FAST_IO_DSAL_KERNEL_BEGIN
@@ -298,7 +303,7 @@ struct vector_alloc_handle_internal
 } // namespace details
 
 template <typename T, typename allocator>
-class vector FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
+class FAST_IO_DSAL_OWNER vector FAST_IO_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
 {
 public:
 	using allocator_type = allocator;
@@ -2139,3 +2144,4 @@ FAST_IO_DSAL_KERNEL_END
 #undef FAST_IO_DSAL_UNSAFE
 #undef FAST_IO_DSAL_KERNEL_BEGIN
 #undef FAST_IO_DSAL_KERNEL_END
+#undef FAST_IO_DSAL_OWNER
