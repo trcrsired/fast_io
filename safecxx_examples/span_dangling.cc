@@ -2,8 +2,8 @@
 //
 // fast_io_dsal/impl/span.h classifies its API for safe source: iterator and
 // unchecked operations are [[unsafe]] (call-restricted), while checked
-// indexing and size queries stay callable. This file exercises that split and
-// probes the two ways a span can outlive its owner.
+// indexing and size queries stay callable. This file exercises that split;
+// the owner-lifetime rejection cases live in span_dangling_reject.cc.
 //
 // Build with the safe compiler:
 //   clang++ --config=$HOME/cfgs/x86_64-linux-gnu-libcxx.cfg \
@@ -39,23 +39,11 @@ int main()
 		(void)s.front_unchecked();
 	}
 
-	// A span over a temporary owner is rejected by span's own constraint
-	// (`!is_rvalue_reference_v<R&&>`), so it cannot be formed in safe source:
-	//
-	//   fast_io::span<int> bad(fast_io::freestanding::from_range,
-	//                          fast_io::vector<int>{1, 2, 3});  // error
-
-	// A span over a *local* owner that dies before the span is used is NOT
-	// diagnosed by the compiler today: the span stores an opaque pointer, and
-	// no lifetime provenance connects it back to `v`. Fence it explicitly.
-	[[unsafe]] {
-		auto local = []() noexcept {
-			fast_io::vector<int> tmp;
-			tmp.push_back(9);
-			return fast_io::span<int>(fast_io::freestanding::from_range, tmp);
-		};
-		(void)local;
-	}
+	// The from_range constructor is declared
+	//   forward R range [[clang::lifetimebound]]
+	// so the span borrows the range. The lifetime-safety analysis is an error
+	// under -fsafecxx, even inside an [[unsafe]] fence — see the rejection
+	// cases in span_dangling_reject.cc. Here v outlives s, so this is fine.
 
 	return sum == 6 ? 0 : 1;
 }

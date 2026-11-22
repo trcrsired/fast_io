@@ -93,6 +93,35 @@ move or swap a vector. `destructive_move` remains the safe consuming path
 (where the type is trivially relocatable). This is much simpler than proving
 that a move or swap did not invalidate any outstanding view.
 
+### span and owner lifetime
+
+`span.h` follows the same split: the kernel (raw pointer + length) is fenced;
+iterator accessors, `*_unchecked` operations and byte views are `[[unsafe]]`;
+checked `operator[]`, `front`/`back` and size queries stay callable.
+
+The `from_range` constructor is declared in safe source as
+
+```cpp
+span(from_range_t, forward R range [[clang::lifetimebound]])
+```
+
+`forward` is the d0708 "pass along" parameter kind (D0708 R0 draft 32): it
+preserves the range's cv-qualification and value category without writing
+`&&`, and lowers to `R&`. `[[clang::lifetimebound]]` ties the resulting span to
+the range, and Clang's lifetime-safety analysis is already an error under
+`-fsafecxx`. No compiler change was needed — only the library annotation.
+Note that a fenced `[[unsafe]] { ... }` region does **not** suppress the
+lifetime analysis.
+
+`span_dangling.cc` is the passing smoke test. `span_dangling_reject.cc`
+documents the now-rejected cases:
+
+- a local owner dying at `return` →
+  `-Werror,-Wlifetime-safety-return-stack-addr`;
+- a temporary owner → no viable constructor (`forward R` is `R&`, so rvalues
+  do not bind — `&`/`&&` never changes the borrow semantics);
+- iterator construction (`v.begin()`, `span(begin, end)`) → `[[unsafe]]` calls.
+
 ## What this exposed about safe C++
 
 Fixed in the compiler (`safecxx` branch of the LLVM fork):

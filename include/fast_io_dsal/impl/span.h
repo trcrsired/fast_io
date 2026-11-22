@@ -9,10 +9,22 @@
 #define FAST_IO_DSAL_UNSAFE [[unsafe]]
 #define FAST_IO_DSAL_KERNEL_BEGIN [[unsafe]] {
 #define FAST_IO_DSAL_KERNEL_END }
+// `forward` is the d0708 (draft 32) parameter kind for an argument the callee
+// passes along: it preserves the argument's cv-qualification and value
+// category. Here it keeps the range's constness without a `const_cast`.
+// lifetimebound tells clang's lifetime-safety analysis that the constructed
+// span refers to the range; under -fsafecxx that analysis is an error.
+#define FAST_IO_DSAL_FORWARD forward
+#define FAST_IO_DSAL_FWD_TYPE(R) R
+#define FAST_IO_DSAL_LIFETIMEBOUND [[clang::lifetimebound]]
 #else
 #define FAST_IO_DSAL_UNSAFE
 #define FAST_IO_DSAL_KERNEL_BEGIN
 #define FAST_IO_DSAL_KERNEL_END
+// Plain C++ has no `forward` keyword; use a forwarding reference instead.
+#define FAST_IO_DSAL_FORWARD
+#define FAST_IO_DSAL_FWD_TYPE(R) R &&
+#define FAST_IO_DSAL_LIFETIMEBOUND
 #endif
 
 FAST_IO_DSAL_KERNEL_BEGIN
@@ -52,20 +64,29 @@ public:
 	pointer ptr{};
 	size_type n{};
 	inline constexpr explicit span() noexcept = default;
+	// Raw iterator construction is unsafe: an iterator carries no owner to
+	// borrow from, so the lifetime analysis cannot protect the resulting span.
 	template <::std::contiguous_iterator Iter>
 		requires ::std::same_as<value_type, ::std::iter_value_t<Iter>>
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr explicit span(Iter first, size_type count) noexcept(noexcept(::std::to_address(first)))
 		: ptr{::std::to_address(first)}, n{count}
 	{}
 	template <::std::contiguous_iterator Iter, ::std::sentinel_for<Iter> S>
 		requires ::std::same_as<value_type, ::std::iter_value_t<Iter>>
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr explicit span(Iter first, S snt) noexcept(noexcept(::std::to_address(first)))
 		: ptr{::std::to_address(first)}, n{static_cast<size_type>(snt - first)}
 	{}
+	// `forward R` is d0708's kind for an argument the callee passes along:
+	// it preserves the range's constness (no const_cast needed) and value
+	// category. lifetimebound ties the borrowed range to the resulting span,
+	// so clang's lifetime-safety analysis rejects a span outliving its owner.
 	template <::std::ranges::contiguous_range R>
-		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> &&
-				 !::std::is_rvalue_reference_v<R &&>)
-	inline constexpr explicit span(::fast_io::freestanding::from_range_t, R &&range) noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range)))
+		requires ::std::same_as<value_type, ::std::ranges::range_value_t<R>>
+	inline constexpr explicit span(::fast_io::freestanding::from_range_t,
+		FAST_IO_DSAL_FORWARD FAST_IO_DSAL_FWD_TYPE(R) range FAST_IO_DSAL_LIFETIMEBOUND)
+		noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range)))
 		: ptr{::std::ranges::data(range)}, n{::std::ranges::size(range)}
 	{}
 
@@ -396,3 +417,6 @@ FAST_IO_DSAL_KERNEL_END
 #undef FAST_IO_DSAL_UNSAFE
 #undef FAST_IO_DSAL_KERNEL_BEGIN
 #undef FAST_IO_DSAL_KERNEL_END
+#undef FAST_IO_DSAL_FORWARD
+#undef FAST_IO_DSAL_FWD_TYPE
+#undef FAST_IO_DSAL_LIFETIMEBOUND
