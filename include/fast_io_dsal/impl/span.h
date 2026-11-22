@@ -1,5 +1,22 @@
 ﻿#pragma once
 
+// Safe C++ experiment: the span kernel stores an opaque pointer and a length.
+// It lives in an [[unsafe]] fence so it may name pointer/reference types; the
+// public API is classified explicitly, as for vector.h. Iterator accessors,
+// unchecked operations and raw-pointer/byte views are call-restricted; checked
+// indexing and size queries stay callable from safe source.
+#if defined(__SAFECXX__)
+#define FAST_IO_DSAL_UNSAFE [[unsafe]]
+#define FAST_IO_DSAL_KERNEL_BEGIN [[unsafe]] {
+#define FAST_IO_DSAL_KERNEL_END }
+#else
+#define FAST_IO_DSAL_UNSAFE
+#define FAST_IO_DSAL_KERNEL_BEGIN
+#define FAST_IO_DSAL_KERNEL_END
+#endif
+
+FAST_IO_DSAL_KERNEL_BEGIN
+
 namespace fast_io::containers
 {
 
@@ -52,39 +69,48 @@ public:
 		: ptr{::std::ranges::data(range)}, n{::std::ranges::size(range)}
 	{}
 
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr pointer data() const noexcept
 	{
 		return ptr;
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr iterator begin() const noexcept
 	{
 		return iterator(ptr);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr const_iterator cbegin() const noexcept
 	{
 		return const_iterator(ptr);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr iterator end() const noexcept
 	{
 		return iterator(ptr + n);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr const_iterator cend() const noexcept
 	{
 		return const_iterator(ptr + n);
 	}
 
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr reverse_iterator rbegin() const noexcept
 	{
 		return reverse_iterator(ptr + n);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(ptr + n);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr reverse_iterator rend() const noexcept
 	{
 		return reverse_iterator(ptr);
 	}
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(ptr);
@@ -109,6 +135,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr reference
 	index_unchecked(size_type idx) const noexcept
 	{
@@ -136,6 +163,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr reference
 	back_unchecked() const noexcept
 	{
@@ -163,6 +191,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr reference
 	front_unchecked() const noexcept
 	{
@@ -216,6 +245,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr span subspan_front_unchecked(size_type count) const noexcept
 	{
 		return span(this->ptr, count);
@@ -240,6 +270,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr span subspan_back_unchecked(size_type count) const noexcept
 	{
 		return span(this->ptr + (this->n - count), count);
@@ -272,6 +303,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr span subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
 	{
 		size_type const val{this->n - pos};
@@ -301,6 +333,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_DSAL_UNSAFE
 	inline constexpr size_type copy_unchecked(element_type *dest, size_type count, size_type pos = 0) const noexcept
 	{
 		size_type const thisn{this->n};
@@ -322,6 +355,7 @@ template <::std::contiguous_iterator Iter, ::std::sentinel_for<Iter> S>
 span(Iter, S) -> span<::std::remove_reference_t<::std::iter_reference_t<Iter>>>;
 
 template <typename T, ::fast_io::allocator_adapter_flags flags>
+FAST_IO_DSAL_UNSAFE
 inline constexpr ::fast_io::containers::span<::std::byte const, flags> as_bytes(::fast_io::containers::span<T, flags> sp) noexcept
 {
 	return ::fast_io::containers::span<::std::byte const, flags>(static_cast<::std::byte const *>(static_cast<void const *>(sp.ptr)), sp.n * sizeof(T));
@@ -329,6 +363,7 @@ inline constexpr ::fast_io::containers::span<::std::byte const, flags> as_bytes(
 
 template <typename T, ::fast_io::allocator_adapter_flags flags>
 	requires(!::std::is_const_v<T>)
+FAST_IO_DSAL_UNSAFE
 inline constexpr ::fast_io::containers::span<::std::byte, flags> as_writable_bytes(::fast_io::containers::span<T, flags> sp) noexcept
 {
 	return ::fast_io::containers::span<::std::byte, flags>(static_cast<::std::byte *>(static_cast<void *>(sp.ptr)), sp.n * sizeof(T));
@@ -355,3 +390,9 @@ inline constexpr auto operator<=>(::fast_io::containers::span<T, f1> a, ::fast_i
 #endif
 
 } // namespace fast_io::containers
+
+FAST_IO_DSAL_KERNEL_END
+
+#undef FAST_IO_DSAL_UNSAFE
+#undef FAST_IO_DSAL_KERNEL_BEGIN
+#undef FAST_IO_DSAL_KERNEL_END
