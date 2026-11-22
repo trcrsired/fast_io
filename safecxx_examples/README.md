@@ -122,6 +122,14 @@ documents the now-rejected cases:
   do not bind — `&`/`&&` never changes the borrow semantics);
 - iterator construction (`v.begin()`, `span(begin, end)`) → `[[unsafe]]` calls.
 
+The `subspan` family also carries `[[clang::lifetimebound]]` on its implicit
+object parameter, so a subspan inherits the borrow of the span it was cut from.
+Clang cannot express "borrows what `*this` borrows" — only "borrows `*this`" —
+so a subspan is tied to the span object as well as to its owner. Source rule:
+do not return a subspan of a local span or by-value span parameter; return the
+original span and let the caller cut it. GSL `[[gsl::Pointer]]` would avoid the
+false positive, but GSL attributes are deliberately not part of this dialect.
+
 ## What this exposed about safe C++
 
 Fixed in the compiler (`safecxx` branch of the LLVM fork):

@@ -252,7 +252,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -267,7 +267,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_front_unchecked(size_type count) const noexcept
+	inline constexpr span subspan_front_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		return span(this->ptr, count);
 	}
@@ -277,7 +277,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -292,7 +292,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_back_unchecked(size_type count) const noexcept
+	inline constexpr span subspan_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		return span(this->ptr + (this->n - count), count);
 	}
@@ -302,7 +302,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		if (this->n < pos) [[unlikely]]
 		{
@@ -325,7 +325,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	FAST_IO_DSAL_UNSAFE
-	inline constexpr span subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
+	inline constexpr span subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept FAST_IO_DSAL_LIFETIMEBOUND
 	{
 		size_type const val{this->n - pos};
 		if (count == ::fast_io::containers::npos)

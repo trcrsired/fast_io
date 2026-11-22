@@ -9,7 +9,7 @@
 //     safecxx_examples/span_dangling_reject.cc
 //
 // Expected diagnostics:
-//   make_dangling: -Werror,-Wlifetime-safety-return-stack-addr
+//   make_dangling / escape_subspan: -Werror,-Wlifetime-safety-return-stack-addr
 //   make_temporary: no matching constructor (forward R is R&, rvalues do not bind)
 //   iter_ctor: call to unsafe 'begin' / unsafe iterator constructor
 
@@ -22,6 +22,16 @@
 }
 #include <fast_io_dsal/vector.h>
 #include <fast_io_dsal/span.h>
+
+// subspan propagates the borrow: returning a subspan of a local span dies
+// with that span (and its owner).
+static fast_io::span<int> escape_subspan() noexcept
+{
+	fast_io::vector<int> v;
+	v.push_back(1);
+	fast_io::span<int> s(fast_io::freestanding::from_range, v);
+	return s.subspan(0, 1);
+}
 
 // Local owner dies at return: the span dangles.
 static fast_io::span<int> make_dangling() noexcept
