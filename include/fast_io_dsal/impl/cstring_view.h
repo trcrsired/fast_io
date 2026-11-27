@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "safecxx_marks.h"
+
+FAST_IO_DSAL_KERNEL_BEGIN
+
 namespace fast_io::containers
 {
 
@@ -47,7 +51,7 @@ public:
 	{}
 
 	template <size_type N>
-	inline constexpr basic_cstring_view(char_type const (&buffer)[N]) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr basic_cstring_view(char_type const (&buffer)[N] FAST_IO_DSAL_LIFETIME) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 		: string_view_type(buffer)
 	{
 		constexpr size_type nm1{N - 1};
@@ -57,7 +61,7 @@ public:
 		}
 	}
 
-	inline explicit constexpr basic_cstring_view(::fast_io::containers::null_terminated_t, string_view_type stvw) noexcept
+	inline explicit constexpr basic_cstring_view(::fast_io::containers::null_terminated_t, string_view_type stvw FAST_IO_DSAL_LIFETIME) noexcept
 		: string_view_type(stvw)
 	{
 	}
@@ -65,7 +69,8 @@ public:
 	template <::std::ranges::contiguous_range rg>
 		requires(::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
 				 !::std::is_rvalue_reference_v<rg &&>)
-	inline explicit constexpr basic_cstring_view(::fast_io::containers::null_terminated_t, ::fast_io::freestanding::from_range_t, rg &&r) noexcept
+	inline explicit constexpr basic_cstring_view(::fast_io::containers::null_terminated_t, ::fast_io::freestanding::from_range_t,
+		rg &&r FAST_IO_DSAL_LIFETIME) noexcept
 		: string_view_type(::fast_io::freestanding::from_range, ::std::forward<rg>(r))
 	{
 	}
@@ -74,15 +79,16 @@ public:
 			{ r.c_str() } -> ::std::convertible_to<const_pointer>;
 		} && ::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
 				 !::std::is_rvalue_reference_v<rg &&>)
-	inline explicit constexpr basic_cstring_view(::fast_io::freestanding::from_range_t, rg &&r) noexcept
+	inline explicit constexpr basic_cstring_view(::fast_io::freestanding::from_range_t,
+		rg &&r FAST_IO_DSAL_LIFETIME) noexcept
 		: string_view_type(::fast_io::freestanding::from_range, ::std::forward<rg>(r))
 	{
 	}
 
-	inline constexpr basic_cstring_view(::fast_io::manipulators::basic_os_c_str<char_type> osstr) noexcept
+	inline constexpr basic_cstring_view(::fast_io::manipulators::basic_os_c_str<char_type> osstr FAST_IO_DSAL_LIFETIME) noexcept
 		: string_view_type(osstr)
 	{}
-	inline constexpr basic_cstring_view(::fast_io::manipulators::basic_os_c_str_with_known_size<char_type> osstr) noexcept
+	inline constexpr basic_cstring_view(::fast_io::manipulators::basic_os_c_str_with_known_size<char_type> osstr FAST_IO_DSAL_LIFETIME) noexcept
 		: string_view_type(osstr)
 	{}
 
@@ -135,7 +141,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_cstring_view subview_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr basic_cstring_view subview_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -149,7 +155,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_cstring_view subview_back_unchecked(size_type count) const noexcept
+	inline constexpr basic_cstring_view subview_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return basic_cstring_view(this->ptr + (this->n - count), count);
 	}
@@ -176,13 +182,13 @@ public:
 		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
 			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_cstring_view trim_prefix_subview(charcate traits) const noexcept
+	inline constexpr basic_cstring_view trim_prefix_subview(charcate traits) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		using string_view_type::trim_prefix_subview;
 		auto csvw{string_view_type::trim_prefix_subview(traits)};
 		return basic_cstring_view(csvw.ptr, csvw.n);
 	}
-	inline constexpr basic_cstring_view trim_prefix_subview_c_space() const noexcept
+	inline constexpr basic_cstring_view trim_prefix_subview_c_space() const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return trim_prefix_subview(::fast_io::char_category::c_space{});
 	}
@@ -269,3 +275,5 @@ inline constexpr auto operator<=>(::fast_io::containers::basic_string_view<char_
 #endif
 
 } // namespace fast_io::containers
+
+FAST_IO_DSAL_KERNEL_END

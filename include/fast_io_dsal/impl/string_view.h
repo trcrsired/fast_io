@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "safecxx_marks.h"
+
+FAST_IO_DSAL_KERNEL_BEGIN
+
 namespace fast_io::containers
 {
 template <::std::integral char_type, ::fast_io::allocator_adapter_flags flags = ::fast_io::allocator_adapter_flags::none>
@@ -33,13 +37,13 @@ public:
 	{}
 
 	template <::fast_io::allocator_adapter_flags flags2>
-	inline constexpr basic_string_view(basic_cstring_view<char_type, flags2> csv) noexcept
+	inline constexpr basic_string_view(basic_cstring_view<char_type, flags2> csv FAST_IO_DSAL_LIFETIME) noexcept
 		: ptr{csv.data()}, n{csv.size()}
 	{
 	}
 
 	template <::std::size_t N>
-	inline constexpr basic_string_view(char_type const (&buffer)[N]) noexcept
+	inline constexpr basic_string_view(char_type const (&buffer)[N] FAST_IO_DSAL_LIFETIME) noexcept
 	{
 		constexpr ::std::size_t nm1{N - 1u};
 		ptr = buffer;
@@ -49,18 +53,19 @@ public:
 	template <::std::ranges::contiguous_range rg>
 		requires(::std::same_as<::std::ranges::range_value_t<rg>, char_type> && !::std::is_array_v<::std::remove_cvref_t<rg>> &&
 				 !::std::is_rvalue_reference_v<rg &&>)
-	inline explicit constexpr basic_string_view(::fast_io::freestanding::from_range_t, rg &&r) noexcept
+	inline explicit constexpr basic_string_view(::fast_io::freestanding::from_range_t,
+		rg &&r FAST_IO_DSAL_LIFETIME) noexcept
 		: ptr{::std::ranges::cdata(r)}, n{::std::ranges::size(r)}
 	{
 	}
 
-	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_c_str<char_type> osstr) noexcept
+	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_c_str<char_type> osstr FAST_IO_DSAL_LIFETIME) noexcept
 		: ptr(osstr.ptr), n(::fast_io::cstr_len(osstr.ptr))
 	{}
-	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_c_str_with_known_size<char_type> osstr) noexcept
+	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_c_str_with_known_size<char_type> osstr FAST_IO_DSAL_LIFETIME) noexcept
 		: ptr(osstr.ptr), n(osstr.n)
 	{}
-	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_str_known_size_without_null_terminated<char_type> osstr) noexcept
+	inline constexpr basic_string_view(::fast_io::manipulators::basic_os_str_known_size_without_null_terminated<char_type> osstr FAST_IO_DSAL_LIFETIME) noexcept
 		: ptr(osstr.ptr), n(osstr.n)
 	{}
 
@@ -315,7 +320,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr basic_string_view subview_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -329,7 +334,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview_front_unchecked(size_type count) const noexcept
+	inline constexpr basic_string_view subview_front_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return basic_string_view(this->ptr, count);
 	}
@@ -339,7 +344,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr basic_string_view subview_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < count) [[unlikely]]
 		{
@@ -353,7 +358,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview_back_unchecked(size_type count) const noexcept
+	inline constexpr basic_string_view subview_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return basic_string_view(this->ptr + (this->n - count), count);
 	}
@@ -363,7 +368,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr basic_string_view subview(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (this->n < pos) [[unlikely]]
 		{
@@ -385,7 +390,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr basic_string_view subview_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
+	inline constexpr basic_string_view subview_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		size_type const val{this->n - pos};
 		if (count == ::fast_io::containers::npos)
@@ -673,7 +678,7 @@ public:
 			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string_view trim_subview(charcate traits) const noexcept
+	inline constexpr basic_string_view trim_subview(charcate traits) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		auto beginptr{this->ptr};
 		auto currptr{this->ptr + this->n};
@@ -681,7 +686,7 @@ public:
 		auto backit{traits.find_last_not(frontit, currptr)};
 		return basic_string_view(frontit, static_cast<size_type>(backit - frontit));
 	}
-	inline constexpr basic_string_view trim_subview_c_space() noexcept
+	inline constexpr basic_string_view trim_subview_c_space() noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return trim_subview(::fast_io::char_category::c_space{});
 	}
@@ -689,14 +694,14 @@ public:
 		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
 			{ traits.find_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string_view trim_prefix_subview(charcate traits) const noexcept
+	inline constexpr basic_string_view trim_prefix_subview(charcate traits) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		auto beginptr{this->ptr};
 		auto currptr{this->ptr + this->n};
 		auto frontit{traits.find_not(beginptr, currptr)};
 		return basic_string_view(frontit, static_cast<size_type>(currptr - frontit));
 	}
-	inline constexpr basic_string_view trim_prefix_subview_c_space() const noexcept
+	inline constexpr basic_string_view trim_prefix_subview_c_space() const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return trim_prefix_subview(::fast_io::char_category::c_space{});
 	}
@@ -705,14 +710,14 @@ public:
 		requires requires(charcate traits, const_pointer beginptr, const_pointer currptr) {
 			{ traits.find_last_not(beginptr, currptr) } -> ::std::convertible_to<const_pointer>;
 		}
-	inline constexpr basic_string_view trim_suffix_subview(charcate traits) const noexcept
+	inline constexpr basic_string_view trim_suffix_subview(charcate traits) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		auto beginptr{this->ptr};
 		auto currptr{this->ptr + this->n};
 		auto backit{traits.find_last_not(beginptr, currptr)};
 		return basic_string_view(beginptr, static_cast<size_type>(backit - beginptr));
 	}
-	inline constexpr basic_string_view trim_suffix_subview_c_space() const noexcept
+	inline constexpr basic_string_view trim_suffix_subview_c_space() const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return trim_suffix_subview(::fast_io::char_category::c_space{});
 	}
@@ -774,3 +779,5 @@ inline constexpr auto operator<=>(char_type const (&buffer)[n], ::fast_io::conta
 #endif
 
 } // namespace fast_io::containers
+
+FAST_IO_DSAL_KERNEL_END

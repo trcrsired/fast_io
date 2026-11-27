@@ -131,6 +131,24 @@ do not return a subspan of a local span or by-value span parameter; return the
 original span and let the caller cut it. GSL `[[gsl::Pointer]]` would avoid the
 false positive, but GSL attributes are deliberately not part of this dialect.
 
+### string_view, cstring_view and index_span
+
+These three headers use the same split as `span.h`: a header-local `[[unsafe]]`
+fence for the kernel, with `[[lifetime("this")]]` on the borrowing constructors
+(`from_range`, array, cstring-view and manipulator conversions) and on the
+`subview`/`subspan` families. The fence macros now live in
+`impl/safecxx_marks.h`, shared with `span.h`; each definition is individually
+guarded so a kernel that undefines them at its end cannot leave a later header
+without them.
+
+`view_families.cc` is the passing smoke test. `view_families_reject.cc`
+documents the rejected cases: a view of a local owner returned from a function,
+including through `subview`. Because these headers now fence themselves, they
+can be included directly after the usual support-header fence.
+
+All spellings are guarded by `__SAFECXX__`, so an ordinary compiler sees plain
+C++ and no lifetime attributes.
+
 ## What this exposed about safe C++
 
 Fixed in the compiler (`safecxx` branch of the LLVM fork):

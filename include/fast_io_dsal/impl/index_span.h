@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "safecxx_marks.h"
+
+FAST_IO_DSAL_KERNEL_BEGIN
+
 namespace fast_io::containers
 {
 
@@ -50,12 +54,14 @@ public:
 	template <::std::ranges::contiguous_range R>
 		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> &&
 				 !::std::is_rvalue_reference_v<R &&>)
-	inline explicit constexpr index_span(::fast_io::containers::index_unchecked_t, ::fast_io::freestanding::from_range_t, R &&range) noexcept(noexcept(::std::ranges::data(range)))
+	inline explicit constexpr index_span(::fast_io::containers::index_unchecked_t, ::fast_io::freestanding::from_range_t,
+		R &&range FAST_IO_DSAL_LIFETIME) noexcept(noexcept(::std::ranges::data(range)))
 		: ptr{::std::ranges::data(range)}
 	{}
 	template <::std::ranges::contiguous_range R>
 		requires(::std::same_as<value_type, ::std::ranges::range_value_t<R>> && !::std::is_rvalue_reference_v<R &&>)
-	inline constexpr index_span(::fast_io::freestanding::from_range_t, R &&range) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || !noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range))))
+	inline constexpr index_span(::fast_io::freestanding::from_range_t,
+		R &&range FAST_IO_DSAL_LIFETIME) FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations || !noexcept(noexcept(::std::ranges::data(range)) && noexcept(::std::ranges::size(range))))
 		: ptr{::std::ranges::data(range)}
 	{
 		if (::std::ranges::size(range) < N) [[unlikely]]
@@ -221,7 +227,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span_type subspan_front(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (N < count) [[unlikely]]
 		{
@@ -235,7 +241,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan_front_unchecked(size_type count) const noexcept
+	inline constexpr span_type subspan_front_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return span_type(this->ptr, count);
 	}
@@ -245,7 +251,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span_type subspan_back(size_type count) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (N < count) [[unlikely]]
 		{
@@ -259,7 +265,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan_back_unchecked(size_type count) const noexcept
+	inline constexpr span_type subspan_back_unchecked(size_type count) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		return span_type(this->ptr + (N - count), count);
 	}
@@ -269,7 +275,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
+	inline constexpr span_type subspan(size_type pos, size_type count = ::fast_io::containers::npos) const FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations) FAST_IO_DSAL_LIFETIME
 	{
 		if (N < pos) [[unlikely]]
 		{
@@ -291,7 +297,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
-	inline constexpr span_type subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
+	inline constexpr span_type subspan_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept FAST_IO_DSAL_LIFETIME
 	{
 		size_type const val{N - pos};
 		if (count == ::fast_io::containers::npos)
@@ -392,3 +398,5 @@ inline constexpr auto operator<=>(::fast_io::containers::index_span<T, N1> a, ::
 #endif
 
 } // namespace fast_io::containers
+
+FAST_IO_DSAL_KERNEL_END

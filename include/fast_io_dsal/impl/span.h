@@ -5,27 +5,7 @@
 // public API is classified explicitly, as for vector.h. Iterator accessors,
 // unchecked operations and raw-pointer/byte views are call-restricted; checked
 // indexing and size queries stay callable from safe source.
-#if defined(__SAFECXX__)
-#define FAST_IO_DSAL_UNSAFE [[unsafe]]
-#define FAST_IO_DSAL_KERNEL_BEGIN [[unsafe]] {
-#define FAST_IO_DSAL_KERNEL_END }
-// `forward` is the d0708 (draft 32) parameter kind for an argument the callee
-// passes along: it preserves the argument's cv-qualification and value
-// category. Here it keeps the range's constness without a `const_cast`.
-// [[lifetime("this")]] is the public P1179 mark: the compiler translates it
-// to the internal lifetimebound attribute under the lifetime-protocol toggle.
-#define FAST_IO_DSAL_FORWARD forward
-#define FAST_IO_DSAL_FWD_TYPE(R) R
-#define FAST_IO_DSAL_LIFETIME [[lifetime("this")]]
-#else
-#define FAST_IO_DSAL_UNSAFE
-#define FAST_IO_DSAL_KERNEL_BEGIN
-#define FAST_IO_DSAL_KERNEL_END
-// Plain C++ has no `forward` keyword; use a forwarding reference instead.
-#define FAST_IO_DSAL_FORWARD
-#define FAST_IO_DSAL_FWD_TYPE(R) R &&
-#define FAST_IO_DSAL_LIFETIME
-#endif
+#include "safecxx_marks.h"
 
 FAST_IO_DSAL_KERNEL_BEGIN
 
@@ -413,10 +393,3 @@ inline constexpr auto operator<=>(::fast_io::containers::span<T, f1> a, ::fast_i
 } // namespace fast_io::containers
 
 FAST_IO_DSAL_KERNEL_END
-
-#undef FAST_IO_DSAL_UNSAFE
-#undef FAST_IO_DSAL_KERNEL_BEGIN
-#undef FAST_IO_DSAL_KERNEL_END
-#undef FAST_IO_DSAL_FORWARD
-#undef FAST_IO_DSAL_FWD_TYPE
-#undef FAST_IO_DSAL_LIFETIME
