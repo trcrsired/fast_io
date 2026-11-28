@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_fence.h"
+
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "impl/misc/push_macros.h"
 #include "impl/misc/push_warnings.h"
 #include "deque.h"
@@ -28,3 +31,4 @@ using zu_queue = ::fast_io::containers::queue<::fast_io::tlc::deque<::std::size_
 
 } // namespace fast_io
 #endif
+FAST_IO_SAFECXX_IMPL_END

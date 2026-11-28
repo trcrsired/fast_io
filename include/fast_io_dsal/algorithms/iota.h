@@ -32,6 +32,7 @@ concept iota_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, T>;
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T iota_iters_impl(Iter first, Snt last, T value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::iota_iters_no_throw<Iter, Snt, T>)
@@ -69,6 +70,7 @@ namespace fast_io::algorithms
 // Write `value`, `++value`, ... into `[first, last)` and return the value after
 // the last increment. An empty range returns `value` unchanged.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T iota_iters(Iter first, Snt last, T value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::iota_iters_no_throw<Iter, Snt, T>)

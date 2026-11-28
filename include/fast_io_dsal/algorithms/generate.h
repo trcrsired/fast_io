@@ -32,6 +32,7 @@ concept generate_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, G>;
 
 template<typename Iter, typename Snt, typename G>
+FAST_IO_UNSAFE_API
 inline constexpr void generate_iters_impl(Iter first, Snt last, G &g)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::generate_iters_no_throw<
@@ -44,6 +45,7 @@ inline constexpr void generate_iters_impl(Iter first, Snt last, G &g)
 }
 
 template<typename Iter, typename G>
+FAST_IO_UNSAFE_API
 inline constexpr Iter generate_n_iters_impl(
   Iter first, ::std::size_t count, G &g)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -64,6 +66,7 @@ namespace fast_io::algorithms
 // Assign the result of `g()` to every element of `[first, last)`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename G>
+FAST_IO_UNSAFE_API
 inline constexpr void generate_iters(Iter first, Snt last, G g)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::generate_iters_no_throw<
@@ -98,6 +101,7 @@ inline constexpr void generate_index_range(
 // Assign the result of `g()` to the first `count` elements.
 template<typename Iter, typename G>
   requires ::std::input_or_output_iterator<Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter generate_n_iters(Iter first, ::std::size_t count, G g)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::generate_iter_no_throw<Iter, G>)

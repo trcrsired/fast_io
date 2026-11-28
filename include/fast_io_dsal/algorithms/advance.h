@@ -18,6 +18,7 @@ concept advance_iters_no_throw =
    ::fast_io::details::algorithms::decrement_iter_no_throw<Iter>);
 
 template<typename Iter>
+FAST_IO_UNSAFE_API
 inline constexpr void advance_iters_impl(
   Iter &it, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -53,6 +54,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::input_iterator Iter>
+FAST_IO_UNSAFE_API
 inline constexpr void advance_iters(
   Iter &it, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

@@ -71,6 +71,7 @@ inline constexpr bool find_bitwise_equal(T const& a, T const& b) noexcept
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T* find_ptr_simd(T* first, T* last, ::std::remove_cv_t<T> const& value) noexcept
 {
   using value_type = ::std::remove_cv_t<T>;
@@ -190,6 +191,7 @@ inline constexpr bool find_ptr_no_throw =
   noexcept(*::std::declval<T*>() == ::std::declval<V const&>());
 
 template<typename T, typename V>
+FAST_IO_UNSAFE_API
 inline constexpr T* find_ptr(T* first, T* last, V const& value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::find_ptr_no_throw<T, V>)
 {
@@ -266,6 +268,7 @@ concept find_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, T>;
 
 template<typename Iter, typename Snt, typename V>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_iters_value_impl(Iter first, Snt last, V const& value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::find_iters_no_throw<Iter, Snt, V>)
 {
@@ -304,6 +307,7 @@ inline constexpr Iter find_iters_value_impl(Iter first, Snt last, V const& value
 }
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_iters_impl(Iter first, Snt last, T const& value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::find_iters_no_throw<Iter, Snt, T>)
 {
@@ -348,6 +352,7 @@ concept find_if_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, F>;
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_if_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_iters_no_throw<Iter, Snt, F>)
@@ -363,6 +368,7 @@ inline constexpr Iter find_if_iters_impl(Iter first, Snt last, F &f)
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_if_not_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_iters_no_throw<Iter, Snt, F>)
@@ -382,6 +388,7 @@ inline constexpr Iter find_if_not_iters_impl(Iter first, Snt last, F &f)
 namespace fast_io::algorithms
 {
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_iters(Iter first, Snt last, T const& value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::find_iters_no_throw<Iter, Snt, T>)
 {
@@ -421,6 +428,7 @@ inline constexpr ::std::size_t find_index_of(R &&r, T const &value)
 // Find the first element for which `f` returns true.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_if_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_iters_no_throw<Iter, Snt, F>)
@@ -467,6 +475,7 @@ inline constexpr ::std::size_t find_if_index_of(R &&r, F f)
 // Find the first element for which `f` returns false.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter find_if_not_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_iters_no_throw<Iter, Snt, F>)

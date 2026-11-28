@@ -45,6 +45,7 @@ concept for_each_n_ranges_no_throw =
     ::std::ranges::iterator_t<R>, F>;
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr void for_each_iters_impl(Iter first, Snt last, F& f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::for_each_iters_no_throw<Iter, Snt, F>)
 {
@@ -77,6 +78,7 @@ inline constexpr void for_each_iters_impl(Iter first, Snt last, F& f)
 }
 
 template<typename Iter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter for_each_n_iters_impl(
   Iter first, ::std::size_t count, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -94,6 +96,7 @@ inline constexpr Iter for_each_n_iters_impl(
 namespace fast_io::algorithms
 {
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr void for_each_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::for_each_iters_no_throw<Iter, Snt, F>)
 {
@@ -121,6 +124,7 @@ inline constexpr void for_each_index_range(R&& r, ::std::size_t firstidx, ::std:
 // Invoke `f` on the first `count` elements starting at `first` and return the
 // iterator one past the last visited element.
 template<::std::input_iterator Iter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter for_each_n_iters(Iter first, ::std::size_t count, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::for_each_n_iters_no_throw<Iter, F>)

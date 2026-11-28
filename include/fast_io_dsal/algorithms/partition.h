@@ -81,6 +81,7 @@ concept stable_partition_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, F>;
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool is_partitioned_iters_impl(
   Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -106,6 +107,7 @@ inline constexpr bool is_partitioned_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter partition_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::partition_swap_iters_no_throw<
@@ -135,6 +137,7 @@ inline constexpr Iter partition_iters_impl(Iter first, Snt last, F &f)
 
 template<typename Iter, typename Snt, typename OIter1, typename OIter2,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::pair<OIter1, OIter2> partition_copy_iters_impl(
   Iter first, Snt last, OIter1 dest_true, OIter2 dest_false, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -158,6 +161,7 @@ inline constexpr ::std::pair<OIter1, OIter2> partition_copy_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter stable_partition_iters_impl(
   Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -198,6 +202,7 @@ inline constexpr Iter stable_partition_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter partition_point_iters_impl(
   Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -238,6 +243,7 @@ namespace fast_io::algorithms
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool is_partitioned_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::partition_iters_no_throw<
@@ -273,6 +279,7 @@ inline constexpr bool is_partitioned_index_range(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter partition_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::partition_swap_iters_no_throw<
@@ -322,6 +329,7 @@ inline constexpr ::std::size_t partition_index_of(R &&r, F f)
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter1, typename OIter2, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::pair<OIter1, OIter2> partition_copy_iters(
   Iter first, Snt last, OIter1 dest_true, OIter2 dest_false, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -337,6 +345,7 @@ inline constexpr ::std::pair<OIter1, OIter2> partition_copy_iters(
 
 template<::std::ranges::forward_range R, typename OIter1, typename OIter2,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::pair<OIter1, OIter2> partition_copy(
   R &&r, OIter1 dest_true, OIter2 dest_false, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -350,6 +359,7 @@ inline constexpr ::std::pair<OIter1, OIter2> partition_copy(
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter stable_partition_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::stable_partition_iters_no_throw<
@@ -399,6 +409,7 @@ inline constexpr ::std::size_t stable_partition_index_of(R &&r, F f)
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter partition_point_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::partition_iters_no_throw<

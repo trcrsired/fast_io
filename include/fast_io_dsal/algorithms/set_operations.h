@@ -76,6 +76,7 @@ concept set_output_index_range_no_throw =
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr bool includes_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -99,6 +100,7 @@ inline constexpr bool includes_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename Cmp>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr OIter set_difference_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -136,6 +138,7 @@ inline constexpr OIter set_difference_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename Cmp>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr OIter set_intersection_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -165,6 +168,7 @@ inline constexpr OIter set_intersection_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename Cmp>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr OIter set_symmetric_difference_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -204,6 +208,7 @@ inline constexpr OIter set_symmetric_difference_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename Cmp>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr OIter set_union_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -253,6 +258,7 @@ template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+  FAST_IO_UNSAFE_API                                                         \
 inline constexpr bool includes_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -301,6 +307,7 @@ inline constexpr bool includes_index_range(
     typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way> \
   requires ::fast_io::details::algorithms::three_way_comparator<             \
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>             \
+  FAST_IO_UNSAFE_API                                                         \
   inline constexpr OIter name##_iters(                                       \
     Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest,          \
     Cmp cmp = Cmp{})                                                         \
@@ -317,6 +324,7 @@ inline constexpr bool includes_index_range(
   }                                                                          \
   template<::std::ranges::input_range R1, ::std::ranges::input_range R2,     \
     typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way> \
+  FAST_IO_UNSAFE_API                                                         \
   inline constexpr OIter name(                                               \
     R1 &&r1, R2 &&r2, OIter dest, Cmp cmp = Cmp{})                           \
     FAST_IO_HERBCEPTIONS_THROWS_IF(                                          \
@@ -330,6 +338,7 @@ inline constexpr bool includes_index_range(
   template<::std::ranges::random_access_range R1,                            \
     ::std::ranges::random_access_range R2, typename OIter,                   \
     typename Cmp = ::fast_io::algorithms::compare_three_way>                 \
+  FAST_IO_UNSAFE_API                                                         \
   inline constexpr OIter name##_index_range(                                 \
     R1 &&r1, ::std::size_t firstidx1, ::std::size_t lastidx1,                \
     R2 &&r2, ::std::size_t firstidx2, ::std::size_t lastidx2,                \

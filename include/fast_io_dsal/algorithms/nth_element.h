@@ -30,6 +30,7 @@ concept nth_element_index_range_no_throw =
 // is left at `first` and the rest is `>=` (or `>`) the pivot. The caller swaps
 // the pivot into place.
 template<bool equal, typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> nth_element_partition(
   Iter first, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -58,6 +59,7 @@ inline constexpr ::std::iter_difference_t<Iter> nth_element_partition(
 }
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void nth_element_iters_impl(
   Iter first, Iter nth, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -173,6 +175,7 @@ template<::std::random_access_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr void nth_element_iters(
   Iter first, Iter nth, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

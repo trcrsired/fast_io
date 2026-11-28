@@ -26,6 +26,7 @@ concept move_backward_iters_no_throw =
 };
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_iters_no_throw<
@@ -39,6 +40,7 @@ inline constexpr OIter move_iters_impl(Iter first, Snt last, OIter dest)
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_backward_iters_impl(
   Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -67,6 +69,7 @@ namespace fast_io::algorithms
 // source in a way that would clobber unread elements.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_iters_no_throw<
@@ -80,6 +83,7 @@ inline constexpr OIter move_iters(Iter first, Snt last, OIter dest)
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move(R &&r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_iters_no_throw<
@@ -93,6 +97,7 @@ inline constexpr OIter move(R &&r, OIter dest)
 // Move elements backwards into a destination whose end is `d_last`.
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt,
   ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_backward_iters(
   Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -108,6 +113,7 @@ inline constexpr OIter move_backward_iters(
 
 template<::std::ranges::bidirectional_range R,
   ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_backward(R &&r, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_backward_iters_no_throw<

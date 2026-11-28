@@ -68,6 +68,7 @@ concept remove_if_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, F>;
 
 template<typename T, typename V>
+FAST_IO_UNSAFE_API
 inline constexpr T *remove_ptr(T *first, T *last, V const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_iters_no_throw<T *, T *, V>)
@@ -91,6 +92,7 @@ inline constexpr T *remove_ptr(T *first, T *last, V const &value)
 }
 
 template<typename T, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr T *remove_if_ptr(T *first, T *last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_if_iters_no_throw<T *, T *, F>)
@@ -120,6 +122,7 @@ inline constexpr T *remove_if_ptr(T *first, T *last, F &f)
 }
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter remove_iters_impl(Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_iters_no_throw<Iter, Snt, T>)
@@ -169,6 +172,7 @@ inline constexpr Iter remove_iters_impl(Iter first, Snt last, T const &value)
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter remove_if_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_if_iters_no_throw<Iter, Snt, F>)
@@ -233,6 +237,7 @@ namespace fast_io::algorithms
 // remaining elements. Returns the new logical end.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter remove_iters(Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_iters_no_throw<Iter, Snt, T>)
@@ -281,6 +286,7 @@ inline constexpr ::std::size_t remove_index_of(R &&r, T const &value)
 // order of the remaining elements. Returns the new logical end.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr Iter remove_if_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_if_iters_no_throw<Iter, Snt, F>)

@@ -35,6 +35,7 @@ concept copy_n_iters_no_throw =
    ::fast_io::details::algorithms::copy_assign_no_throw<Iter, OIter>);
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* copy_pointer(T* first, T* last, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     !noexcept(*dest = *first))
@@ -69,6 +70,7 @@ inline constexpr U* copy_pointer(T* first, T* last, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* copy_n_pointer(T* first, ::std::size_t count, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     !noexcept(*dest = *first))
@@ -102,6 +104,7 @@ inline constexpr U* copy_n_pointer(T* first, ::std::size_t count, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* copy_backward_pointer(T* first, T* last, U* d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     !noexcept(*d_last = *last))
@@ -138,6 +141,7 @@ inline constexpr U* copy_backward_pointer(T* first, T* last, U* d_last)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* non_overlapped_copy_pointer(T* first, T* last, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     !noexcept(*dest = *first))
@@ -172,6 +176,7 @@ inline constexpr U* non_overlapped_copy_pointer(T* first, T* last, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* non_overlapped_copy_n_pointer(T* first, ::std::size_t count, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     !noexcept(*dest = *first))
@@ -205,6 +210,7 @@ inline constexpr U* non_overlapped_copy_n_pointer(T* first, ::std::size_t count,
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -228,6 +234,7 @@ inline constexpr OIter copy_iters_impl(Iter first, Snt last, OIter dest)
 }
 
 template<typename Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_n_iters_impl(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -255,6 +262,7 @@ inline constexpr OIter copy_n_iters_impl(Iter first, ::std::size_t count, OIter 
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_backward_iters_impl(Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<Iter> &&
     ::std::bidirectional_iterator<OIter> &&
@@ -301,6 +309,7 @@ inline constexpr OIter copy_backward_iters_impl(Iter first, Snt last, OIter d_la
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -324,6 +333,7 @@ inline constexpr OIter non_overlapped_copy_iters_impl(Iter first, Snt last, OIte
 }
 
 template<typename Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_n_iters_impl(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -367,6 +377,7 @@ concept uninitialized_copy_n_iters_no_throw =
   ::std::is_nothrow_destructible_v<::std::iter_value_t<OIter>>;
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_copy_pointer(T* first, T* last, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T const&> || !::std::is_nothrow_destructible_v<U>))
@@ -404,6 +415,7 @@ inline constexpr U* uninitialized_copy_pointer(T* first, T* last, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_copy_n_pointer(T* first, ::std::size_t count, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T const&> || !::std::is_nothrow_destructible_v<U>))
@@ -440,6 +452,7 @@ inline constexpr U* uninitialized_copy_n_pointer(T* first, ::std::size_t count, 
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_copy_backward_pointer(T* first, T* last, U* d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T const&> || !::std::is_nothrow_destructible_v<U>))
@@ -481,6 +494,7 @@ inline constexpr U* uninitialized_copy_backward_pointer(T* first, T* last, U* d_
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -508,6 +522,7 @@ inline constexpr OIter uninitialized_copy_iters_impl(Iter first, Snt last, OIter
 }
 
 template<typename Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_n_iters_impl(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -539,6 +554,7 @@ inline constexpr OIter uninitialized_copy_n_iters_impl(Iter first, ::std::size_t
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_backward_iters_impl(Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<Iter> &&
     ::std::bidirectional_iterator<OIter> &&
@@ -602,6 +618,7 @@ concept copy_if_iters_no_throw =
    ::fast_io::details::algorithms::copy_assign_no_throw<Iter, OIter>);
 
 template<typename Iter, typename Snt, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_if_iters_impl(
   Iter first, Snt last, OIter dest, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -625,6 +642,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -635,6 +653,7 @@ inline constexpr OIter copy_iters(Iter first, Snt last, OIter dest)
 }
 
 template<::std::ranges::range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy(R&& r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<
     ::std::ranges::iterator_t<R>, ::std::ranges::sentinel_t<R>, OIter>)
@@ -643,6 +662,7 @@ inline constexpr OIter copy(R&& r, OIter dest)
 }
 
 template<::std::input_iterator Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_n_iters(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -653,6 +673,7 @@ inline constexpr OIter copy_n_iters(Iter first, ::std::size_t count, OIter dest)
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_n(R&& r, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<
     ::std::ranges::iterator_t<R>, OIter>)
@@ -661,6 +682,7 @@ inline constexpr OIter copy_n(R&& r, ::std::size_t count, OIter dest)
 }
 
 template<::std::bidirectional_iterator Iter, ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_backward_iters(Iter first, Iter last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::fast_io::details::algorithms::iter_no_throw<Iter> &&
     ::fast_io::details::algorithms::iter_no_throw<OIter> &&
@@ -675,6 +697,7 @@ inline constexpr OIter copy_backward_iters(Iter first, Iter last, OIter d_last)
 }
 
 template<::std::ranges::bidirectional_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_backward(R&& r, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<OIter> &&
     ::fast_io::details::algorithms::iter_no_throw<::std::ranges::iterator_t<R>> &&
@@ -688,6 +711,7 @@ inline constexpr OIter copy_backward(R&& r, OIter d_last)
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -698,6 +722,7 @@ inline constexpr OIter non_overlapped_copy_iters(Iter first, Snt last, OIter des
 }
 
 template<::std::ranges::range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy(R&& r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_iters_no_throw<
     ::std::ranges::iterator_t<R>, ::std::ranges::sentinel_t<R>, OIter>)
@@ -707,6 +732,7 @@ inline constexpr OIter non_overlapped_copy(R&& r, OIter dest)
 }
 
 template<::std::input_iterator Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_n_iters(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -717,6 +743,7 @@ inline constexpr OIter non_overlapped_copy_n_iters(Iter first, ::std::size_t cou
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_n(R&& r, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::copy_n_iters_no_throw<
     ::std::ranges::iterator_t<R>, OIter>)
@@ -726,6 +753,7 @@ inline constexpr OIter non_overlapped_copy_n(R&& r, ::std::size_t count, OIter d
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -736,6 +764,7 @@ inline constexpr OIter uninitialized_copy_iters(Iter first, Snt last, OIter dest
 }
 
 template<::std::ranges::range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy(R&& r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_iters_no_throw<
     ::std::ranges::iterator_t<R>, ::std::ranges::sentinel_t<R>, OIter>)
@@ -745,6 +774,7 @@ inline constexpr OIter uninitialized_copy(R&& r, OIter dest)
 }
 
 template<::std::input_iterator Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_n_iters(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_n_iters_no_throw<Iter, OIter>)
 {
@@ -755,6 +785,7 @@ inline constexpr OIter uninitialized_copy_n_iters(Iter first, ::std::size_t coun
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_n(R&& r, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_copy_n_iters_no_throw<
     ::std::ranges::iterator_t<R>, OIter>)
@@ -764,6 +795,7 @@ inline constexpr OIter uninitialized_copy_n(R&& r, ::std::size_t count, OIter de
 }
 
 template<::std::bidirectional_iterator Iter, ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_backward_iters(Iter first, Iter last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::fast_io::details::algorithms::iter_no_throw<Iter> &&
     ::fast_io::details::algorithms::iter_no_throw<OIter> &&
@@ -778,6 +810,7 @@ inline constexpr OIter uninitialized_copy_backward_iters(Iter first, Iter last, 
 }
 
 template<::std::ranges::bidirectional_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_backward(R&& r, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<OIter> &&
     ::fast_io::details::algorithms::iter_no_throw<::std::ranges::iterator_t<R>> &&
@@ -794,6 +827,7 @@ inline constexpr OIter uninitialized_copy_backward(R&& r, OIter d_last)
 // Copy only the elements for which `f` returns true.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_if_iters(
   Iter first, Snt last, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -808,6 +842,7 @@ inline constexpr OIter copy_if_iters(
 }
 
 template<::std::ranges::input_range R, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_if(R &&r, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::copy_if_iters_no_throw<

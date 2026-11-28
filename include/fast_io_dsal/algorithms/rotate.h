@@ -17,6 +17,7 @@ inline constexpr bool rotate_byte_copyable{
   !::fast_io::details::algorithms::swap_adl::swappable<T &, T &>};
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_memmove(T *first, T *middle, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(false)
 {
@@ -46,6 +47,7 @@ inline constexpr void rotate_ptr_memmove(T *first, T *middle, T *last)
 // three-move swap for large element types. `gcd(left + right, right)` cycles
 // are walked, so the number of extra rounds is the gcd.
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_gcd(T *first, T *middle, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_no_throw<T>)
@@ -104,6 +106,7 @@ inline constexpr void rotate_ptr_gcd(T *first, T *middle, T *last)
 // the element type's own swap. The four-element form lets the compiler use
 // vector loads and stores for small trivially copyable types.
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_swap_block_elements(T *a, T *b, ::std::size_t n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::swap_no_throw_v<T>)
@@ -142,6 +145,7 @@ inline constexpr void rotate_ptr_swap_block_elements(T *a, T *b, ::std::size_t n
 // the stack buffer, so large blocks become a few memmoves instead of one
 // element exchange per value. Constant evaluation keeps the element form.
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_swap_block(T *a, T *b, ::std::size_t n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::swap_no_throw_v<T>)
@@ -186,6 +190,7 @@ inline constexpr void rotate_ptr_swap_block(T *a, T *b, ::std::size_t n)
 // equally long piece of the larger side, then recurse on the remainder. The
 // inner loops reduce to the classic two-block swap.
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_swap(T *first, T *middle, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::swap_no_throw_v<T>)
@@ -256,6 +261,7 @@ inline constexpr void rotate_ptr_swap(T *first, T *middle, T *last)
 // 1, end)` case and is much cheaper than the general block algorithms for
 // large element types.
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_left_one(T *first, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_no_throw<T>)
@@ -280,6 +286,7 @@ inline constexpr void rotate_ptr_left_one(T *first, T *last)
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void rotate_ptr_right_one(T *first, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::move_no_throw<T>)
@@ -304,6 +311,7 @@ inline constexpr void rotate_ptr_right_one(T *first, T *last)
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T *rotate_ptr(T *first, T *middle, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::move_no_throw<T> &&
@@ -407,6 +415,7 @@ concept rotate_iters_no_throw =
 // distance requirement. It works for forward, bidirectional and non-contiguous
 // random-access iterators.
 template<typename Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter rotate_forward_iters_impl(Iter first, Iter middle, Iter last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::rotate_iter_no_throw<Iter>)
@@ -451,6 +460,7 @@ inline constexpr Iter rotate_forward_iters_impl(Iter first, Iter middle, Iter la
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter rotate_iters_impl(Iter first, Iter middle, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::rotate_iters_no_throw<Iter, Snt>)
@@ -531,6 +541,7 @@ concept rotate_copy_iters_no_throw =
 };
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter rotate_copy_iters_impl(
   Iter first, Iter middle, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -557,6 +568,7 @@ namespace fast_io::algorithms
 // the iterator that now holds the old first element, i.e. `first + (last -
 // middle)`.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter rotate_iters(Iter first, Iter middle, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::rotate_iters_no_throw<Iter, Snt>)
@@ -616,6 +628,7 @@ inline constexpr ::std::size_t rotate_index_of(
 // Copy `[first, last)` to `dest` rotated so that `middle` becomes first.
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter rotate_copy_iters(
   Iter first, Iter middle, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -630,6 +643,7 @@ inline constexpr OIter rotate_copy_iters(
 }
 
 template<::std::ranges::forward_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter rotate_copy(R &&r, ::std::ranges::iterator_t<R> middle,
   OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -642,6 +656,7 @@ inline constexpr OIter rotate_copy(R &&r, ::std::ranges::iterator_t<R> middle,
 }
 
 template<::std::ranges::random_access_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter rotate_copy_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t middleidx,
   ::std::size_t lastidx, OIter dest)

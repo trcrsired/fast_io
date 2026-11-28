@@ -82,6 +82,7 @@ concept search_n_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, T, Cmp>;
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter adjacent_find_iters_impl(
   Iter first, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -108,6 +109,7 @@ inline constexpr Iter adjacent_find_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 find_end_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -149,6 +151,7 @@ inline constexpr Iter1 find_end_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 find_first_of_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -171,6 +174,7 @@ inline constexpr Iter1 find_first_of_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 search_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -205,6 +209,7 @@ inline constexpr Iter1 search_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter search_n_iters_impl(
   Iter first, Snt last, ::std::size_t count, T const &value, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -253,6 +258,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter adjacent_find_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -310,6 +316,7 @@ template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 find_end_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -375,6 +382,7 @@ template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 find_first_of_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -439,6 +447,7 @@ template<::std::forward_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter1 search_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -502,6 +511,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter>, T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter search_n_iters(
   Iter first, Snt last, ::std::size_t count, T const &value,
   Cmp cmp = Cmp{})

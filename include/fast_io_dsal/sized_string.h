@@ -1,4 +1,7 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_fence.h"
+
+FAST_IO_SAFECXX_IMPL_BEGIN
 
 #if !defined(__cplusplus)
 #error "You must be using a C++ compiler"
@@ -439,3 +442,4 @@ constexpr inline ::fast_io::tlc::u32sized_string_zu32 u32concatln_fast_io_sized_
 
 #include "impl/misc/pop_macros.h"
 #include "impl/misc/pop_warnings.h"
+FAST_IO_SAFECXX_IMPL_END

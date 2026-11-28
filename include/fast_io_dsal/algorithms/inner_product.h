@@ -49,6 +49,7 @@ concept inner_product_index_range_no_throw =
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename T, typename Op1, typename Op2>
+FAST_IO_UNSAFE_API
 inline constexpr T inner_product_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, T init,
   Op1 &op1, Op2 &op2)
@@ -77,6 +78,7 @@ template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename T, typename Op1 = ::fast_io::algorithms::field_ops::add,
   typename Op2 = ::fast_io::algorithms::field_ops::multiply>
+FAST_IO_UNSAFE_API
 inline constexpr T inner_product_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, T init,
   Op1 op1 = Op1{}, Op2 op2 = Op2{})

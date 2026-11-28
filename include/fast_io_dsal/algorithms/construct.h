@@ -46,6 +46,7 @@ inline constexpr bool uninitialized_construct_zero_v{
   ::std::is_trivially_default_constructible_v<T>};
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_default_construct_pointer(T *first, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::std::is_nothrow_default_constructible_v<T> ||
@@ -83,6 +84,7 @@ inline constexpr T *uninitialized_default_construct_pointer(T *first, T *last)
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_default_construct_n_pointer(
   T *first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -120,6 +122,7 @@ inline constexpr T *uninitialized_default_construct_n_pointer(
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_value_construct_pointer(T *first, T *last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::std::is_nothrow_default_constructible_v<T> ||
@@ -157,6 +160,7 @@ inline constexpr T *uninitialized_value_construct_pointer(T *first, T *last)
 }
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_value_construct_n_pointer(
   T *first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -194,6 +198,7 @@ inline constexpr T *uninitialized_value_construct_n_pointer(
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_default_construct_iters_impl(
   Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -240,6 +245,7 @@ inline constexpr Iter uninitialized_default_construct_iters_impl(
 }
 
 template<typename Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_default_construct_n_iters_impl(
   Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -278,6 +284,7 @@ inline constexpr Iter uninitialized_default_construct_n_iters_impl(
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_value_construct_iters_impl(
   Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -324,6 +331,7 @@ inline constexpr Iter uninitialized_value_construct_iters_impl(
 }
 
 template<typename Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_value_construct_n_iters_impl(
   Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -367,6 +375,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_default_construct_iters(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::uninitialized_construct_iters_no_throw<
@@ -390,6 +399,7 @@ inline constexpr ::std::ranges::iterator_t<R> uninitialized_default_construct(
 }
 
 template<::std::input_iterator Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_default_construct_n_iters(
   Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -415,6 +425,7 @@ inline constexpr ::std::ranges::iterator_t<R> uninitialized_default_construct_n(
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_value_construct_iters(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::uninitialized_construct_iters_no_throw<
@@ -438,6 +449,7 @@ inline constexpr ::std::ranges::iterator_t<R> uninitialized_value_construct(
 }
 
 template<::std::input_iterator Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_value_construct_n_iters(
   Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

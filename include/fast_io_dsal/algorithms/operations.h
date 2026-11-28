@@ -36,6 +36,7 @@ struct minus
 struct multiply
 {
   template<typename T, typename U>
+  FAST_IO_UNSAFE_API
   inline constexpr auto compute(T const &t, U const &u) const
     FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(t * u))
   {

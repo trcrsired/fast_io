@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <concepts>
 #include <cstdint>
+#include <compare>
 #ifdef __HERBCEPTIONS__
 #include <herbceptions/error>
 #else
@@ -31,10 +32,13 @@
 
 #include "fast_io_dsal/impl/misc/push_macros.h"
 #include "fast_io_dsal/impl/misc/push_warnings.h"
+#include "fast_io_core_impl/safecxx_fence.h"
 
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_core_impl/freestanding/herbceptions.h"
 #include "fast_io_core_impl/freestanding/addressof.h"
 #include "fast_io_core_impl/concepts/impl.h"
+FAST_IO_SAFECXX_IMPL_END
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"

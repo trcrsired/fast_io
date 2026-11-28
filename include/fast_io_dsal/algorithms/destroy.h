@@ -37,6 +37,7 @@ concept destroy_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>>;
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void destroy_at_impl(T *location)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_destructible_v<T>)
 {
@@ -59,6 +60,7 @@ inline constexpr void destroy_at_impl(T *location)
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter destroy_iters_impl(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::destroy_iters_no_throw<Iter, Snt>)
@@ -97,6 +99,7 @@ inline constexpr Iter destroy_iters_impl(Iter first, Snt last)
 }
 
 template<typename Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter destroy_n_iters_impl(Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::destroy_n_iters_no_throw<Iter>)
@@ -125,6 +128,7 @@ namespace fast_io::algorithms
 {
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void destroy_at(T *location)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_destructible_v<T>)
 {
@@ -134,6 +138,7 @@ inline constexpr void destroy_at(T *location)
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter destroy_iters(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::destroy_iters_no_throw<Iter, Snt>)
@@ -154,6 +159,7 @@ inline constexpr ::std::ranges::iterator_t<R> destroy(R &&r)
 }
 
 template<::std::input_iterator Iter>
+FAST_IO_UNSAFE_API
 inline constexpr Iter destroy_n_iters(Iter first, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::destroy_n_iters_no_throw<Iter>)

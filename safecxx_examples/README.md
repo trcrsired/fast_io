@@ -206,10 +206,37 @@ Still open / design notes:
   contradictory: the raw-reference rule says "use in/inout", the range-for
   rule says "use 'in auto'". Either accept the explicit `&` or give one clear
   message ("write `in auto` without `&`").
-- Making fast_io safe for real still requires marking its *other* headers:
-  `freestanding/herbceptions.h`, `freestanding/addressof.h`,
-  `concepts/type.h`, etc. The isolated run produced 204 diagnostics, all in
-  the vector implementation once those support headers were fenced.
-- The driver config includes fast_io with `-I`. `fast_io.h` now declares its
-  own trust with a library-header fence, so core I/O is usable directly from
-  safe source (see `print_hello.cc`).
+- The driver config includes fast_io with `-I`. Every public header now
+  declares its own trust with a library-header fence, so the whole library is
+  usable directly from safe source (see `print_hello.cc`, `include_layers.cc`).
+  A fence in a library header is a **syntax relaxation for the implementation**,
+  not a call restriction for the API.
+
+## Whole-library classification
+
+All public headers (`fast_io_concept.h`, `fast_io_core.h`,
+`fast_io_freestanding.h`, `fast_io_hosted.h`, `fast_io_crypto.h`,
+`fast_io_i18n.h`, `fast_io_legacy.h`, `fast_io_hosted_crypto.h`, `fast_io.h`,
+and the `fast_io_dsal/*.h` family) open `FAST_IO_SAFECXX_IMPL_BEGIN` from
+`fast_io_core_impl/safecxx_fence.h` under `__SAFECXX__`. That single fence
+covers every transitive implementation header, including all uses of the C++
+standard library (whose iterator/pointer APIs are inherently unsafe) — no
+`-isystem`, no facade header, no user-written fence.
+
+Public APIs are then classified:
+
+- **Iterator / pointer+length APIs are `[[unsafe]]`** (`FAST_IO_UNSAFE_API` from
+  `fast_io_core_impl/safecxx_attr.h`). A function taking an iterator pair or a
+  pointer plus a length carries no owner a borrow can be tied to. In the
+  algorithm family this covers the `*_iters`, `*_pointer` and `*_ptr` kernels
+  (322 marks); in the containers it is the existing iterator/unchecked split
+  in `vector.h`, `span.h`, `string_view.h`, `cstring_view.h` and
+  `index_span.h`. A source-written call is rejected unless it is inside a
+  fence; see `include_layers_reject.cc`.
+- **Range-based APIs, index-based and checked access stay safe** — `count(v, x)`
+  works from safe source, `count_iters(first, last, x)` does not.
+- **C++ concepts and `consteval` functions are automatically safe** — they are
+  compile-time / unevaluated constructs, so they are never marked.
+
+`include_layers.cc` includes every layer and uses a range-based algorithm from
+safe source; `include_layers_reject.cc` documents a rejected iterator call.

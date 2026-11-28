@@ -99,6 +99,7 @@ concept replace_copy_if_ranges_no_throw =
     OIter, F, T>;
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void replace_iters_impl(
   Iter first, Snt last, T const &old_value, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -114,6 +115,7 @@ inline constexpr void replace_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename F, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void replace_if_iters_impl(
   Iter first, Snt last, F &f, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -130,6 +132,7 @@ inline constexpr void replace_if_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename OIter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy_iters_impl(
   Iter first, Snt last, OIter dest, T const &old_value,
   T const &new_value)
@@ -152,6 +155,7 @@ inline constexpr OIter replace_copy_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename OIter, typename F, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy_if_iters_impl(
   Iter first, Snt last, OIter dest, F &f, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -179,6 +183,7 @@ namespace fast_io::algorithms
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void replace_iters(
   Iter first, Snt last, T const &old_value, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -217,6 +222,7 @@ inline constexpr void replace_index_range(
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void replace_if_iters(
   Iter first, Snt last, F f, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -256,6 +262,7 @@ inline constexpr void replace_if_index_range(
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy_iters(
   Iter first, Snt last, OIter dest, T const &old_value,
   T const &new_value)
@@ -271,6 +278,7 @@ inline constexpr OIter replace_copy_iters(
 }
 
 template<::std::ranges::input_range R, typename OIter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy(
   R &&r, OIter dest, T const &old_value, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -284,6 +292,7 @@ inline constexpr OIter replace_copy(
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename F, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy_if_iters(
   Iter first, Snt last, OIter dest, F f, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -298,6 +307,7 @@ inline constexpr OIter replace_copy_if_iters(
 }
 
 template<::std::ranges::input_range R, typename OIter, typename F, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr OIter replace_copy_if(
   R &&r, OIter dest, F f, T const &new_value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

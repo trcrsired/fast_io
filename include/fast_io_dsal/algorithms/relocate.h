@@ -56,6 +56,7 @@ concept uninitialized_move_n_iters_no_throw =
    ::fast_io::details::algorithms::relocate_construct_no_throw<Iter, OIter>);
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_relocate_pointer(T* first, T* last, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T&&> || !::std::is_nothrow_destructible_v<T>))
@@ -97,6 +98,7 @@ inline constexpr U* uninitialized_relocate_pointer(T* first, T* last, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_relocate_n_pointer(T* first, ::std::size_t count, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T&&> || !::std::is_nothrow_destructible_v<T>))
@@ -137,6 +139,7 @@ inline constexpr U* uninitialized_relocate_n_pointer(T* first, ::std::size_t cou
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_relocate_backward_pointer(T* first, T* last, U* d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     (!::std::is_nothrow_constructible_v<U, T&&> || !::std::is_nothrow_destructible_v<T>))
@@ -182,6 +185,7 @@ inline constexpr U* uninitialized_relocate_backward_pointer(T* first, T* last, U
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_move_pointer(T* first, T* last, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     !::std::is_nothrow_constructible_v<U, T&&>)
@@ -219,6 +223,7 @@ inline constexpr U* uninitialized_move_pointer(T* first, T* last, U* dest)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_move_n_pointer(T* first, ::std::size_t count, U* dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     !::std::is_nothrow_constructible_v<U, T&&>)
@@ -255,6 +260,7 @@ inline constexpr U* uninitialized_move_n_pointer(T* first, ::std::size_t count, 
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr U* uninitialized_move_backward_pointer(T* first, T* last, U* d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_byte_copyable<T, U> &&
     !::std::is_nothrow_constructible_v<U, T&&>)
@@ -296,6 +302,7 @@ inline constexpr U* uninitialized_move_backward_pointer(T* first, T* last, U* d_
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -328,6 +335,7 @@ inline constexpr OIter uninitialized_relocate_iters_impl(Iter first, Snt last, O
 }
 
 template<typename Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_n_iters_impl(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_n_iters_no_throw<Iter, OIter>)
 {
@@ -364,6 +372,7 @@ inline constexpr OIter uninitialized_relocate_n_iters_impl(Iter first, ::std::si
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_backward_iters_impl(Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<Iter> &&
     ::std::bidirectional_iterator<OIter> &&
@@ -420,6 +429,7 @@ inline constexpr OIter uninitialized_relocate_backward_iters_impl(Iter first, Sn
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_iters_impl(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -447,6 +457,7 @@ inline constexpr OIter uninitialized_move_iters_impl(Iter first, Snt last, OIter
 }
 
 template<typename Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_n_iters_impl(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_n_iters_no_throw<Iter, OIter>)
 {
@@ -478,6 +489,7 @@ inline constexpr OIter uninitialized_move_n_iters_impl(Iter first, ::std::size_t
 }
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_backward_iters_impl(Iter first, Snt last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<Iter> &&
     ::std::bidirectional_iterator<OIter> &&
@@ -533,6 +545,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -543,6 +556,7 @@ inline constexpr OIter uninitialized_relocate_iters(Iter first, Snt last, OIter 
 }
 
 template<::std::ranges::range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate(R&& r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_iters_no_throw<
     ::std::ranges::iterator_t<R>, ::std::ranges::sentinel_t<R>, OIter>)
@@ -552,6 +566,7 @@ inline constexpr OIter uninitialized_relocate(R&& r, OIter dest)
 }
 
 template<::std::input_iterator Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_n_iters(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_n_iters_no_throw<Iter, OIter>)
 {
@@ -562,6 +577,7 @@ inline constexpr OIter uninitialized_relocate_n_iters(Iter first, ::std::size_t 
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_n(R&& r, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::relocate_n_iters_no_throw<
     ::std::ranges::iterator_t<R>, OIter>)
@@ -571,6 +587,7 @@ inline constexpr OIter uninitialized_relocate_n(R&& r, ::std::size_t count, OIte
 }
 
 template<::std::bidirectional_iterator Iter, ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_backward_iters(Iter first, Iter last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::fast_io::details::algorithms::iter_no_throw<Iter> &&
     ::fast_io::details::algorithms::iter_no_throw<OIter> &&
@@ -586,6 +603,7 @@ inline constexpr OIter uninitialized_relocate_backward_iters(Iter first, Iter la
 }
 
 template<::std::ranges::bidirectional_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_backward(R&& r, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<OIter> &&
     ::fast_io::details::algorithms::iter_no_throw<::std::ranges::iterator_t<R>> &&
@@ -602,6 +620,7 @@ inline constexpr OIter uninitialized_relocate_backward(R&& r, OIter d_last)
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_iters_no_throw<Iter, Snt, OIter>)
 {
@@ -612,6 +631,7 @@ inline constexpr OIter uninitialized_move_iters(Iter first, Snt last, OIter dest
 }
 
 template<::std::ranges::range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move(R&& r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_iters_no_throw<
     ::std::ranges::iterator_t<R>, ::std::ranges::sentinel_t<R>, OIter>)
@@ -621,6 +641,7 @@ inline constexpr OIter uninitialized_move(R&& r, OIter dest)
 }
 
 template<::std::input_iterator Iter, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_n_iters(Iter first, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_n_iters_no_throw<Iter, OIter>)
 {
@@ -631,6 +652,7 @@ inline constexpr OIter uninitialized_move_n_iters(Iter first, ::std::size_t coun
 }
 
 template<::std::ranges::input_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_n(R&& r, ::std::size_t count, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::uninitialized_move_n_iters_no_throw<
     ::std::ranges::iterator_t<R>, OIter>)
@@ -640,6 +662,7 @@ inline constexpr OIter uninitialized_move_n(R&& r, ::std::size_t count, OIter de
 }
 
 template<::std::bidirectional_iterator Iter, ::std::bidirectional_iterator OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_backward_iters(Iter first, Iter last, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::fast_io::details::algorithms::iter_no_throw<Iter> &&
     ::fast_io::details::algorithms::iter_no_throw<OIter> &&
@@ -654,6 +677,7 @@ inline constexpr OIter uninitialized_move_backward_iters(Iter first, Iter last, 
 }
 
 template<::std::ranges::bidirectional_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_backward(R&& r, OIter d_last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!(::std::bidirectional_iterator<OIter> &&
     ::fast_io::details::algorithms::iter_no_throw<::std::ranges::iterator_t<R>> &&

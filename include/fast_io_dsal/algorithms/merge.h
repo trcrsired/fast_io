@@ -31,6 +31,7 @@ concept merge_ranges_no_throw =
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr OIter merge_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -86,6 +87,7 @@ concept inplace_merge_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, Cmp>;
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void inplace_merge_iters_impl(
   Iter first, Iter middle, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -118,6 +120,7 @@ template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_compare<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+FAST_IO_UNSAFE_API
 inline constexpr OIter merge_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest,
   Cmp cmp = Cmp{})
@@ -134,6 +137,7 @@ inline constexpr OIter merge_iters(
 
 template<::std::ranges::input_range R1, ::std::ranges::input_range R2,
   typename OIter, typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr OIter merge(
   R1 &&r1, R2 &&r2, OIter dest, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -150,6 +154,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_compare<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr void inplace_merge_iters(
   Iter first, Iter middle, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

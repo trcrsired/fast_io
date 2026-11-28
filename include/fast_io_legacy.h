@@ -21,11 +21,15 @@
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
+#include "fast_io_core_impl/safecxx_fence.h"
+
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_legacy_impl/filebuf/streambuf_io_observer.h"
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM) || defined(_LIBCPP_HAS_FSTREAM)
 #include "fast_io_legacy_impl/filebuf/filebuf_file.h"
 #endif
 #include "fast_io_legacy_impl/filebuf/op_out.h"
+FAST_IO_SAFECXX_IMPL_END
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"

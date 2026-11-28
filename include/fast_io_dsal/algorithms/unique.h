@@ -51,6 +51,7 @@ concept unique_copy_ranges_no_throw =
     OIter, Cmp>;
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter unique_iters_impl(
   Iter first, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -81,6 +82,7 @@ inline constexpr Iter unique_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename OIter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr OIter unique_copy_iters_impl(
   Iter first, Snt last, OIter dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -117,6 +119,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter unique_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -173,6 +176,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr OIter unique_copy_iters(
   Iter first, Snt last, OIter dest, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -188,6 +192,7 @@ inline constexpr OIter unique_copy_iters(
 
 template<::std::ranges::forward_range R, typename OIter,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr OIter unique_copy(
   R &&r, OIter dest, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

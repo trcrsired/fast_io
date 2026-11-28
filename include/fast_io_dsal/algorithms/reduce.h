@@ -35,6 +35,7 @@ concept reduce_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, T, Op>;
 
 template<typename Iter, typename Snt, typename T, typename Op>
+FAST_IO_UNSAFE_API
 inline constexpr T reduce_iters_impl(Iter first, Snt last, T init, Op &op)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::reduce_iters_no_throw<
@@ -60,6 +61,7 @@ namespace fast_io::algorithms
 // currently produce identical results.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr T reduce_iters(
   Iter first, Snt last, T init, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -102,6 +104,7 @@ inline constexpr T reduce_index_range(
 // Strict left fold, same signature and same implementation as `reduce`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename T, typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr T accumulate_iters(
   Iter first, Snt last, T init, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

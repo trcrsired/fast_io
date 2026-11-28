@@ -12,6 +12,8 @@
 
 #include "fast_io_core.h"
 
+#include "fast_io_core_impl/safecxx_fence.h"
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_dsal/impl/misc/push_macros.h"
 #include "fast_io_dsal/impl/common.h"
 #include "fast_io_dsal/impl/span.h"
@@ -29,6 +31,7 @@
 #include "fast_io_crypto/ecc/impl.h"
 #include "fast_io_crypto/tls/impl.h"
 #include "fast_io_crypto/websocket/impl.h"
+FAST_IO_SAFECXX_IMPL_END
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"

@@ -68,6 +68,7 @@ concept uninitialized_fill_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, T>;
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr T *fill_pointer(T *first, T *last, U const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_byte_memset<T, U> &&
@@ -102,6 +103,7 @@ inline constexpr T *fill_pointer(T *first, T *last, U const &value)
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr T *fill_n_pointer(T *first, ::std::size_t count, U const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_byte_memset<T, U> &&
@@ -136,6 +138,7 @@ inline constexpr T *fill_n_pointer(T *first, ::std::size_t count, U const &value
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_fill_pointer(T *first, T *last, U const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::std::is_nothrow_constructible_v<T, U const &> ||
@@ -175,6 +178,7 @@ inline constexpr T *uninitialized_fill_pointer(T *first, T *last, U const &value
 }
 
 template<typename T, typename U>
+FAST_IO_UNSAFE_API
 inline constexpr T *uninitialized_fill_n_pointer(
   T *first, ::std::size_t count, U const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -214,6 +218,7 @@ inline constexpr T *uninitialized_fill_n_pointer(
 }
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter fill_iters_impl(Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_iters_no_throw<Iter, Snt, T>)
@@ -252,6 +257,7 @@ inline constexpr Iter fill_iters_impl(Iter first, Snt last, T const &value)
 }
 
 template<typename Iter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter fill_n_iters_impl(Iter first, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_iter_no_throw<Iter, T>)
@@ -282,6 +288,7 @@ inline constexpr Iter fill_n_iters_impl(Iter first, ::std::size_t count, T const
 }
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_fill_iters_impl(
   Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -329,6 +336,7 @@ inline constexpr Iter uninitialized_fill_iters_impl(
 }
 
 template<typename Iter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_fill_n_iters_impl(
   Iter first, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -373,6 +381,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter fill_iters(Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_iters_no_throw<Iter, Snt, T>)
@@ -393,6 +402,7 @@ inline constexpr ::std::ranges::iterator_t<R> fill(R &&r, T const &value)
 }
 
 template<::std::input_iterator Iter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter fill_n_iters(Iter first, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_iter_no_throw<Iter, T>)
@@ -426,6 +436,7 @@ inline constexpr void fill_index_range(
 }
 
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_fill_iters(
   Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -450,6 +461,7 @@ inline constexpr ::std::ranges::iterator_t<R> uninitialized_fill(
 }
 
 template<::std::input_iterator Iter, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_fill_n_iters(
   Iter first, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

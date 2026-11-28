@@ -31,6 +31,7 @@ concept minmax_element_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, Cmp>;
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter min_element_iters_impl(
   Iter first, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -54,6 +55,7 @@ inline constexpr Iter min_element_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter max_element_iters_impl(
   Iter first, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -77,6 +79,7 @@ inline constexpr Iter max_element_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::pair<Iter, Iter> minmax_element_iters_impl(
   Iter first, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -113,6 +116,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter min_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -169,6 +173,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr Iter max_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -225,6 +230,7 @@ template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::pair<Iter, Iter> minmax_element_iters(
   Iter first, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

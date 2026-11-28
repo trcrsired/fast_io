@@ -20,9 +20,12 @@
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
+#include "fast_io_core_impl/safecxx_fence.h"
 
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_crypto/platforms/impl.h"
 #include "fast_io_crypto/tls/client_impl.h"
+FAST_IO_SAFECXX_IMPL_END
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"
 #endif

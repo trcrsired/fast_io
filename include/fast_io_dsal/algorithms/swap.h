@@ -212,6 +212,7 @@ template<::std::indirectly_readable Iter1, ::std::indirectly_readable Iter2>
               ::std::iter_reference_t<Iter1>,
               ::std::iter_reference_t<Iter2>> !=
             ::fast_io::details::algorithms::swap_kind::none)
+FAST_IO_UNSAFE_API
 inline constexpr void iter_swap(Iter1 a, Iter2 b)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::swap_nothrow<

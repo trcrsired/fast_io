@@ -175,6 +175,7 @@ inline constexpr bool sort_small_ops_no_throw = []() constexpr
 // Insert the element at `tail` into the already sorted range
 // [`begin`, `tail`), using the hole technique.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_insert_tail(
   Iter begin, Iter tail, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -207,6 +208,7 @@ inline constexpr void sort_insert_tail(
 
 // Sort `v[0, len)` assuming `v[0, offset)` is already sorted.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_insertion_sort_shift_left(
   Iter v, ::std::iter_difference_t<Iter> len,
   ::std::iter_difference_t<Iter> offset, Cmp cmp)
@@ -244,6 +246,7 @@ inline constexpr void sort_insertion_sort_shift_left(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_swap_if_less(Iter a, Iter b, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::sort_copy_ops_iter_no_throw<Iter, Cmp>)
@@ -259,6 +262,7 @@ inline constexpr void sort_swap_if_less(Iter a, Iter b, Cmp cmp)
 
 // Optimal sorting network for 9 elements.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort9_optimal(Iter v, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::sort_copy_ops_iter_no_throw<Iter, Cmp>)
@@ -292,6 +296,7 @@ inline constexpr void sort9_optimal(Iter v, Cmp cmp)
 
 // Optimal sorting network for 13 elements.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort13_optimal(Iter v, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::sort_copy_ops_iter_no_throw<Iter, Cmp>)
@@ -348,6 +353,7 @@ inline constexpr void sort13_optimal(Iter v, Cmp cmp)
 // exactly once. The order invariant is checked at the end; a broken strict
 // weak ordering traps.
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_bidirectional_merge_construct(
   T *src, ::std::ptrdiff_t len, T *dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -421,6 +427,7 @@ inline constexpr void sort_bidirectional_merge_construct(
 
 // Same merge, into already initialized elements.
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_bidirectional_merge_assign(
   T *src, ::std::ptrdiff_t len, T *dest, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -494,6 +501,7 @@ inline constexpr void sort_bidirectional_merge_assign(
 
 // Stable sort of 4 elements into uninitialized `dst`.
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort4_stable(T *v, T *dst, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::sort_copy_ops_no_throw<Cmp, T>)
@@ -522,6 +530,7 @@ inline constexpr void sort4_stable(T *v, T *dst, Cmp cmp)
 // Stable sort of 8 elements into uninitialized `dst`, using `temp` for 8
 // intermediate elements.
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort8_stable(
   T *v, T *dst, T *temp, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -534,6 +543,7 @@ inline constexpr void sort8_stable(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_small_sort_fallback(
   Iter v, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -546,6 +556,7 @@ inline constexpr void sort_small_sort_fallback(
 }
 
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_small_sort_general(
   T *v, ::std::ptrdiff_t len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -613,6 +624,7 @@ inline constexpr void sort_small_sort_general(
 }
 
 template<typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_small_sort_network(
   T *v, ::std::ptrdiff_t len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -667,6 +679,7 @@ inline constexpr void sort_small_sort_network(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_small_sort(
   Iter v, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -709,6 +722,7 @@ inline constexpr void sort_small_sort(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_heapsort_sift_down(
   Iter first, ::std::iter_difference_t<Iter> n,
   ::std::iter_difference_t<Iter> node, Cmp cmp)
@@ -746,6 +760,7 @@ inline constexpr void sort_heapsort_sift_down(
 // Branchless-heapsort style fallback, interleaving heap construction and
 // extraction. Used when the quicksort depth limit is exhausted.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_heapsort(
   Iter first, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -775,6 +790,7 @@ inline constexpr void sort_heapsort(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter sort_median3(Iter a, Iter b, Iter c, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::sort_ops_iter_no_throw<Iter, Cmp>)
@@ -790,6 +806,7 @@ inline constexpr Iter sort_median3(Iter a, Iter b, Iter c, Cmp cmp)
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter sort_median3_rec(
   Iter a, Iter b, Iter c,
   ::std::iter_difference_t<Iter> n, Cmp cmp)
@@ -813,6 +830,7 @@ inline constexpr Iter sort_median3_rec(
 // Adaptive pseudomedian pivot selection from glidesort. Samples an
 // approximation of the median of roughly sqrt(n) elements.
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr Iter sort_choose_pivot(
   Iter first, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -838,6 +856,7 @@ inline constexpr Iter sort_choose_pivot(
 // Branchless cyclic Lomuto partition for small and medium elements.
 // `equal` selects the equal-element partition: elements <= pivot go left.
 template<bool equal, typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> sort_partition_lomuto(
   Iter first, ::std::iter_difference_t<Iter> len,
   ::std::iter_value_t<Iter> const *__restrict pivot_ptr, Cmp cmp)
@@ -855,6 +874,7 @@ inline constexpr ::std::iter_difference_t<Iter> sort_partition_lomuto(
   // ipnsort unrolls the partition loop by two for element sizes up to 16
   // bytes. The unrolled form gives the out-of-order engine two independent
   // comparison chains per iteration.
+  FAST_IO_UNSAFE_API
   constexpr difference_type unroll_len{(sizeof(value_type) <= 16) ? 2 : 1};
   Iter const unroll_end_it{
     base + static_cast<difference_type>(m - (unroll_len - 1))};
@@ -975,6 +995,7 @@ struct sort_gap
 // Branchy cyclic Hoare partition for large elements. Fewer element moves
 // than pairwise swapping, which matters when copies are expensive.
 template<bool equal, typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> sort_partition_hoare(
   Iter first, ::std::iter_difference_t<Iter> len,
   ::std::iter_value_t<Iter> const *__restrict pivot_ptr, Cmp cmp)
@@ -1054,6 +1075,7 @@ inline constexpr ::std::iter_difference_t<Iter> sort_partition_hoare(
 }
 
 template<bool equal, typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> sort_partition(
   Iter first, ::std::iter_difference_t<Iter> len, Iter pivot, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -1103,6 +1125,7 @@ inline constexpr ::std::iter_difference_t<Iter> sort_partition(
 }
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_quicksort(
   Iter first, ::std::iter_difference_t<Iter> len,
   Iter ancestor, bool has_ancestor,
@@ -1159,6 +1182,7 @@ struct sort_run
 };
 
 template<typename Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::algorithms::sort_run sort_find_existing_run(
   Iter first, ::std::iter_difference_t<Iter> len, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -1244,6 +1268,7 @@ inline constexpr ::std::ptrdiff_t sort_floor_log2(::std::size_t n) noexcept
 }
 
 template<::std::random_access_iterator Iter, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_iters_impl(Iter first, Iter last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::sort_iters_no_throw<Iter, Cmp> &&
@@ -1307,6 +1332,7 @@ template<::std::random_access_iterator Iter,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr void sort_iters(Iter first, Iter last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::sort_iters_no_throw<Iter, Cmp> &&

@@ -1,4 +1,7 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_fence.h"
+
+FAST_IO_SAFECXX_IMPL_BEGIN
 
 #if !defined(__cplusplus)
 #error "You must be using a C++ compiler"
@@ -74,3 +77,4 @@ using zu32_sized_vector_zu32 = ::fast_io::containers::sized_vector<::fast_io::si
 
 #include "impl/misc/pop_macros.h"
 #include "impl/misc/pop_warnings.h"
+FAST_IO_SAFECXX_IMPL_END

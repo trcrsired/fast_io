@@ -10,6 +10,7 @@ inline constexpr bool reverse_block_v{
   !::fast_io::details::algorithms::swap_adl::swappable<T &, T &>};
 
 template<typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void reverse_ptr(T *first, ::std::ptrdiff_t len)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::move_no_throw<T> &&
@@ -79,6 +80,7 @@ concept reverse_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>>;
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr void reverse_iters_impl(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::reverse_iters_no_throw<Iter, Snt>)
@@ -135,6 +137,7 @@ concept reverse_copy_iters_no_throw =
 };
 
 template<typename Iter, typename Snt, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter reverse_copy_iters_impl(
   Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -160,6 +163,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr void reverse_iters(Iter first, Snt last)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::reverse_iters_no_throw<Iter, Snt>)
@@ -195,6 +199,7 @@ inline constexpr void reverse_index_range(
 // Copy `[first, last)` to `dest` in reverse order.
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter reverse_copy_iters(Iter first, Snt last, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::reverse_copy_iters_no_throw<
@@ -208,6 +213,7 @@ inline constexpr OIter reverse_copy_iters(Iter first, Snt last, OIter dest)
 }
 
 template<::std::ranges::bidirectional_range R, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter reverse_copy(R &&r, OIter dest)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::reverse_copy_iters_no_throw<

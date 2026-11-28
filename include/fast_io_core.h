@@ -25,7 +25,9 @@
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
+#include "fast_io_core_impl/safecxx_fence.h"
 
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_core_impl/empty.h"
 #if defined(_MSC_VER) && !defined(__clang__)
 #include "fast_io_core_impl/intrinsics/msvc/impl.h"
@@ -126,6 +128,7 @@ namespace fast_io
 #include "fast_io_core_impl/concat/impl.h"
 #include "fast_io_core_impl/operations/to/to.h"
 #endif
+FAST_IO_SAFECXX_IMPL_END
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"

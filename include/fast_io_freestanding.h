@@ -13,7 +13,9 @@
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
+#include "fast_io_core_impl/safecxx_fence.h"
 
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_freestanding_impl/exception.h"
 // #include"fast_io_freestanding_impl/posix_error.h"
 // compile floating point is slow; the conversion machinery is separately compiled in fast_io.floating
@@ -33,6 +35,7 @@
 #if defined(_GLIBCXX_BITSET)
 #include "fast_io_unit/bitset.h"
 #endif
+FAST_IO_SAFECXX_IMPL_END
 
 #include "fast_io_dsal/impl/misc/pop_macros.h"
 #include "fast_io_dsal/impl/misc/pop_warnings.h"

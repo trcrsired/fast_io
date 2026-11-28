@@ -40,6 +40,7 @@ concept adjacent_difference_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, OIter, Op>;
 
 template<typename Iter, typename Snt, typename OIter, typename Op>
+FAST_IO_UNSAFE_API
 inline constexpr OIter adjacent_difference_iters_impl(
   Iter first, Snt last, OIter dest, Op &op)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -72,6 +73,7 @@ namespace fast_io::algorithms
 // write, so the in-place form is well-defined.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename Op = ::fast_io::algorithms::field_ops::minus>
+FAST_IO_UNSAFE_API
 inline constexpr OIter adjacent_difference_iters(
   Iter first, Snt last, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -89,6 +91,7 @@ inline constexpr OIter adjacent_difference_iters(
 
 template<::std::ranges::input_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::minus>
+FAST_IO_UNSAFE_API
 inline constexpr OIter adjacent_difference(
   R &&r, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -102,6 +105,7 @@ inline constexpr OIter adjacent_difference(
 
 template<::std::ranges::random_access_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::minus>
+FAST_IO_UNSAFE_API
 inline constexpr OIter adjacent_difference_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t lastidx, OIter dest,
   Op op = Op{})

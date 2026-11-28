@@ -32,6 +32,7 @@ concept all_of_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, F>;
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool all_of_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)
@@ -47,6 +48,7 @@ inline constexpr bool all_of_iters_impl(Iter first, Snt last, F &f)
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool any_of_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)
@@ -62,6 +64,7 @@ inline constexpr bool any_of_iters_impl(Iter first, Snt last, F &f)
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool none_of_iters_impl(Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)
@@ -83,6 +86,7 @@ namespace fast_io::algorithms
 
 // True when `f` returns true for every element of `[first, last)`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool all_of_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)
@@ -116,6 +120,7 @@ inline constexpr bool all_of_index_range(
 
 // True when `f` returns true for at least one element of `[first, last)`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool any_of_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)
@@ -149,6 +154,7 @@ inline constexpr bool any_of_index_range(
 
 // True when `f` returns false for every element of `[first, last)`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr bool none_of_iters(Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::all_of_iters_no_throw<Iter, Snt, F>)

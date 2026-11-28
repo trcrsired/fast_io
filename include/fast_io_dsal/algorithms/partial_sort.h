@@ -59,6 +59,7 @@ concept partial_sort_copy_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R2>, Cmp>;
 
 template<typename Iter, typename Snt, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void partial_sort_iters_impl(
   Iter first, Iter middle, Snt last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -94,6 +95,7 @@ inline constexpr void partial_sort_iters_impl(
 
 template<typename Iter, typename Snt, typename OIter, typename OSnt,
   typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sort_copy_iters_impl(
   Iter first, Snt last, OIter d_first, OSnt d_last, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -142,6 +144,7 @@ template<::std::random_access_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr void partial_sort_iters(
   Iter first, Iter middle, Snt last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -195,6 +198,7 @@ template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
   requires ::fast_io::details::algorithms::three_way_comparator<
     Cmp, ::std::iter_value_t<OIter>>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sort_copy_iters(
   Iter first, Snt last, OIter d_first, OSnt d_last, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_fence.h"
+
+FAST_IO_SAFECXX_IMPL_BEGIN
 
 #if !defined(__cplusplus)
 #error "You must be using a C++ compiler"
@@ -69,3 +72,4 @@ using u32str_swiss_set = ::fast_io::tlc::basic_str_swiss_set<char32_t>;
 
 #include "impl/misc/pop_macros.h"
 #include "impl/misc/pop_warnings.h"
+FAST_IO_SAFECXX_IMPL_END

@@ -58,6 +58,7 @@ concept count_if_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, F>;
 
 template<typename Iter, typename Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> count_iters_impl(
   Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -75,6 +76,7 @@ inline constexpr ::std::iter_difference_t<Iter> count_iters_impl(
 }
 
 template<typename Iter, typename Snt, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> count_if_iters_impl(
   Iter first, Snt last, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -98,6 +100,7 @@ namespace fast_io::algorithms
 
 // Count elements equal to `value`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> count_iters(
   Iter first, Snt last, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -135,6 +138,7 @@ inline constexpr ::std::size_t count_index_range(
 // Count elements for which `f` returns true.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::iter_difference_t<Iter> count_if_iters(
   Iter first, Snt last, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

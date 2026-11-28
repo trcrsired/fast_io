@@ -49,6 +49,7 @@ concept shift_right_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>>;
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter shift_left_iters_impl(
   Iter first, Snt last, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -82,6 +83,7 @@ inline constexpr Iter shift_left_iters_impl(
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter shift_left_iters(
   Iter first, Snt last, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -93,6 +95,7 @@ inline constexpr Iter shift_left_iters(
 }
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter shift_right_iters_impl(
   Iter first, Snt last, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -139,6 +142,7 @@ namespace fast_io::algorithms
 {
 
 template<::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter shift_left_iters(
   Iter first, Snt last, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -191,6 +195,7 @@ inline constexpr ::std::size_t shift_left_index_of(
 }
 
 template<::std::bidirectional_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr Iter shift_right_iters(
   Iter first, Snt last, ::std::iter_difference_t<Iter> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

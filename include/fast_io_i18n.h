@@ -10,7 +10,9 @@
 
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_dsal/impl/misc/push_macros.h"
+#include "fast_io_core_impl/safecxx_fence.h"
 
+FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_dsal/string_view.h"
 #include "fast_io_dsal/string.h"
 #if __has_include(<chrono>)
@@ -29,6 +31,7 @@
 #include "fast_io_i18n/lc_print_status.h"
 #include "fast_io_i18n/imbuer.h"
 #include "fast_io_i18n/lc_concat.h"
+FAST_IO_SAFECXX_IMPL_END
 
 // locale-aware floating print hooks live in
 // fast_io_unit/floating/lc_impl.h — they exist only when the

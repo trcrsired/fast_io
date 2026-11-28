@@ -66,6 +66,7 @@ concept transform_binary_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R2>, OIter, F>;
 
 template<typename Iter, typename Snt, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_iters_impl(
   Iter first, Snt last, OIter dest, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -81,6 +82,7 @@ inline constexpr OIter transform_iters_impl(
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_binary_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, F &f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -102,6 +104,7 @@ namespace fast_io::algorithms
 // Apply a unary function to every element of `[first, last)`.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_iters(
   Iter first, Snt last, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -116,6 +119,7 @@ inline constexpr OIter transform_iters(
 }
 
 template<::std::ranges::input_range R, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform(R &&r, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::transform_ranges_no_throw<
@@ -127,6 +131,7 @@ inline constexpr OIter transform(R &&r, OIter dest, F f)
 }
 
 template<::std::ranges::random_access_range R, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t lastidx, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -143,6 +148,7 @@ inline constexpr OIter transform_index_range(
 template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   ::std::input_iterator Iter2, ::std::sentinel_for<Iter2> Snt2,
   typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_binary_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -158,6 +164,7 @@ inline constexpr OIter transform_binary_iters(
 
 template<::std::ranges::input_range R1, ::std::ranges::input_range R2,
   typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_binary(
   R1 &&r1, R2 &&r2, OIter dest, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -172,6 +179,7 @@ inline constexpr OIter transform_binary(
 
 template<::std::ranges::random_access_range R1,
   ::std::ranges::random_access_range R2, typename OIter, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr OIter transform_binary_index_range(
   R1 &&r1, ::std::size_t firstidx1, ::std::size_t lastidx1,
   R2 &&r2, ::std::size_t firstidx2, ::std::size_t lastidx2,

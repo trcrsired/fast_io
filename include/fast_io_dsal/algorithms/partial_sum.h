@@ -38,6 +38,7 @@ concept partial_sum_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, OIter, Op>;
 
 template<typename Iter, typename Snt, typename OIter, typename Op>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sum_iters_impl(
   Iter first, Snt last, OIter dest, Op &op)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -68,6 +69,7 @@ namespace fast_io::algorithms
 // the in-place form is well-defined.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sum_iters(
   Iter first, Snt last, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -85,6 +87,7 @@ inline constexpr OIter partial_sum_iters(
 
 template<::std::ranges::input_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sum(R &&r, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::partial_sum_ranges_no_throw<
@@ -97,6 +100,7 @@ inline constexpr OIter partial_sum(R &&r, OIter dest, Op op = Op{})
 
 template<::std::ranges::random_access_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter partial_sum_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t lastidx, OIter dest,
   Op op = Op{})

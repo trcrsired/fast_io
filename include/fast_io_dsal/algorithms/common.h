@@ -1,5 +1,7 @@
 #pragma once
 
+#include "fast_io_core_impl/safecxx_attr.h"
+
 namespace fast_io::details::algorithms
 {
 
@@ -25,6 +27,7 @@ inline constexpr ::std::size_t algo_index_check(::std::size_t n, ::std::size_t f
 }
 
 template<bool throwing_violations, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::algorithms::iter_pairs<T*, T*> algo_index_to_ptrs(
   T* dt, ::std::size_t n, ::std::size_t firstidx, ::std::size_t lastidx)
   FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
@@ -35,6 +38,7 @@ inline constexpr ::fast_io::details::algorithms::iter_pairs<T*, T*> algo_index_t
 }
 
 template<bool throwing_violations>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::algorithms::iter_pairs<::std::byte const*, ::std::byte const*> algo_index_to_ptrs_common(
   ::std::byte const* dt, ::std::size_t n, ::std::size_t firstidx, ::std::size_t lastidx, ::std::size_t sizeoft)
   FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
@@ -88,6 +92,7 @@ using algo_index_iters = ::fast_io::details::algorithms::iter_pairs<
   ::fast_io::details::algorithms::algo_index_iterator<R>>;
 
 template<::std::ranges::random_access_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::algorithms::algo_index_iters<R> algo_index_to_iters(
   R&& r, ::std::size_t firstidx, ::std::size_t lastidx)
   FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::algorithms::range_throws_on_violations<R>)
@@ -165,6 +170,7 @@ concept contiguous_iters =
   (::std::contiguous_iterator<Iters> && ...);
 
 template<typename Iter, typename Snt>
+FAST_IO_UNSAFE_API
 inline constexpr auto copy_source_last(Iter first, Snt last) noexcept
 {
   if constexpr (::std::same_as<Iter, Snt> || ::std::contiguous_iterator<Snt>)

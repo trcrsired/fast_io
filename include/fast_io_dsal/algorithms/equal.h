@@ -35,6 +35,7 @@ concept equal_index_range_no_throw =
 
 template<typename Iter1, typename Snt1, typename Iter2, typename Snt2,
   typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr bool equal_iters_impl(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -64,6 +65,7 @@ template<::std::input_iterator Iter1, ::std::sentinel_for<Iter1> Snt1,
   typename Cmp = ::fast_io::algorithms::equal_to>
   requires ::fast_io::details::algorithms::equality_comparator<
     Cmp, ::std::iter_value_t<Iter1>, ::std::iter_value_t<Iter2>>
+FAST_IO_UNSAFE_API
 inline constexpr bool equal_iters(
   Iter1 first1, Snt1 last1, Iter2 first2, Snt2 last2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

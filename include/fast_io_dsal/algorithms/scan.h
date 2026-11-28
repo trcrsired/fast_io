@@ -62,6 +62,7 @@ concept exclusive_scan_index_range_no_throw =
     ::fast_io::details::algorithms::algo_index_iterator<R>, OIter, T, Op>;
 
 template<typename Iter, typename Snt, typename OIter, typename T, typename Op>
+FAST_IO_UNSAFE_API
 inline constexpr OIter exclusive_scan_iters_impl(
   Iter first, Snt last, OIter dest, T init, Op &op)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -97,6 +98,7 @@ namespace fast_io::algorithms
 // ending at that element. The first element seeds the fold.
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter inclusive_scan_iters(
   Iter first, Snt last, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -114,6 +116,7 @@ inline constexpr OIter inclusive_scan_iters(
 
 template<::std::ranges::input_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter inclusive_scan(R &&r, OIter dest, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::inclusive_scan_ranges_no_throw<
@@ -126,6 +129,7 @@ inline constexpr OIter inclusive_scan(R &&r, OIter dest, Op op = Op{})
 
 template<::std::ranges::random_access_range R, typename OIter,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter inclusive_scan_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t lastidx, OIter dest,
   Op op = Op{})
@@ -145,6 +149,7 @@ inline constexpr OIter inclusive_scan_index_range(
 template<::std::input_iterator Iter, ::std::sentinel_for<Iter> Snt,
   typename OIter, typename T,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter exclusive_scan_iters(
   Iter first, Snt last, OIter dest, T init, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -162,6 +167,7 @@ inline constexpr OIter exclusive_scan_iters(
 
 template<::std::ranges::input_range R, typename OIter, typename T,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter exclusive_scan(
   R &&r, OIter dest, T init, Op op = Op{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -175,6 +181,7 @@ inline constexpr OIter exclusive_scan(
 
 template<::std::ranges::random_access_range R, typename OIter, typename T,
   typename Op = ::fast_io::algorithms::field_ops::add>
+FAST_IO_UNSAFE_API
 inline constexpr OIter exclusive_scan_index_range(
   R &&r, ::std::size_t firstidx, ::std::size_t lastidx, OIter dest,
   T init, Op op = Op{})
