@@ -20,17 +20,19 @@
 #include <fast_io_dsal/string_view.h>
 #include <fast_io_dsal/index_span.h>
 
-static fast_io::string_view make_string(inout fast_io::vector<char> v) noexcept
+static fast_io::string_view make_string(in fast_io::vector<char> v) noexcept
 {
 	return fast_io::string_view(fast_io::freestanding::from_range, v);
 }
 
-static fast_io::cstring_view make_cstring(inout fast_io::vector<char> v) noexcept
+static fast_io::cstring_view make_cstring(in fast_io::vector<char> v) noexcept
 {
 	return fast_io::cstring_view(fast_io::null_terminated,
 		fast_io::freestanding::from_range, v);
 }
 
+// index_span needs mutable elements, so it takes an inout owner; iv has no
+// outstanding view, so the freeze rule does not apply to it.
 static fast_io::index_span<int, 1> make_index(inout fast_io::vector<int> v) noexcept
 {
 	return fast_io::index_span<int, 1>(fast_io::freestanding::from_range, v);

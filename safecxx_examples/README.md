@@ -150,9 +150,12 @@ All spellings are guarded by `__SAFECXX__`, so an ordinary compiler sees plain
 C++ and no lifetime attributes.
 
 `view_invalidation_reject.cc` documents the owner-freeze rule: a non-const
-member call on an owner is rejected while a live view borrows from it. The
-freeze follows liveness rather than a hardcoded list of container mutators, and
-`[[unsafe]]` fences permit the call because it is a call restriction.
+member call on an owner is rejected while a live view borrows from it. The same
+applies to named functions — a frozen owner may only be passed as `in T` or
+copied by value; `out`, `inout`, `move`, `forward` and `destructive_move` are
+rejected. The freeze follows liveness rather than a hardcoded list of container
+mutators, and `[[unsafe]]` fences permit the call because it is a call
+restriction.
 
 ## What this exposed about safe C++
 
