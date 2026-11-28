@@ -9,6 +9,10 @@
 // does not call-restrict the API; this attribute is what restricts calls.
 #if defined(__SAFECXX__)
 #define FAST_IO_UNSAFE_API [[unsafe]]
+// Expression-only manipulator result: legal as a temporary inside a call,
+// illegal as a stored variable or field in safe source.
+#define FAST_IO_LIFETIME_EXPRESSION [[lifetime_expression]]
 #else
 #define FAST_IO_UNSAFE_API
+#define FAST_IO_LIFETIME_EXPRESSION
 #endif

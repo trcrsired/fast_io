@@ -40,7 +40,7 @@ namespace manipulators
 {
 
 template <::std::integral ch_type>
-struct basic_os_c_str
+struct FAST_IO_LIFETIME_EXPRESSION basic_os_c_str
 {
 	using char_type = ch_type;
 	char_type const *ptr{};
@@ -51,6 +51,7 @@ struct basic_os_c_str
 };
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_c_str<char_type> os_c_str(char_type const *cstr) noexcept
 {
 	return {cstr};
@@ -59,7 +60,7 @@ inline constexpr basic_os_c_str<char_type> os_c_str(char_type const *cstr) noexc
 inline constexpr void os_c_str(decltype(nullptr)) = delete;
 
 template <::std::integral ch_type>
-struct basic_os_c_str_or_nullptr
+struct FAST_IO_LIFETIME_EXPRESSION basic_os_c_str_or_nullptr
 {
 	using char_type = ch_type;
 	char_type const *ptr{};
@@ -74,13 +75,14 @@ struct basic_os_c_str_or_nullptr
 };
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_c_str_or_nullptr<char_type> os_c_str_or_nullptr(char_type const *cstr) noexcept
 {
 	return {cstr};
 }
 
 template <::std::integral ch_type>
-struct basic_os_c_str_with_known_size
+struct FAST_IO_LIFETIME_EXPRESSION basic_os_c_str_with_known_size
 {
 	using char_type = ch_type;
 	char_type const *ptr{};
@@ -112,6 +114,7 @@ struct basic_os_c_str_with_known_size
 };
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_c_str_with_known_size<char_type> os_c_str_with_known_size(char_type const *cstr,
 																					::std::size_t n) noexcept
 {
@@ -121,7 +124,7 @@ inline constexpr basic_os_c_str_with_known_size<char_type> os_c_str_with_known_s
 inline constexpr void os_c_str_with_known_size(decltype(nullptr), ::std::size_t) = delete;
 
 template <::std::integral ch_type>
-struct basic_os_str_known_size_without_null_terminated
+struct FAST_IO_LIFETIME_EXPRESSION basic_os_str_known_size_without_null_terminated
 {
 	using char_type = ch_type;
 	char_type const *ptr{};
@@ -149,6 +152,7 @@ struct basic_os_str_known_size_without_null_terminated
 };
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_str_known_size_without_null_terminated<char_type>
 os_str_known_size_without_null_terminated(char_type const *cstr, ::std::size_t n) noexcept
 {
@@ -156,6 +160,7 @@ os_str_known_size_without_null_terminated(char_type const *cstr, ::std::size_t n
 }
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_str_known_size_without_null_terminated<char_type>
 os_str_known_size_without_null_terminated(char_type const *cstr, char_type const *end) noexcept
 {

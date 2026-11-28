@@ -26,9 +26,17 @@
 #if defined(__SAFECXX__)
 #define FAST_IO_PRINT_IN in
 #define FAST_IO_PRINT_IN_TYPE(T) T
+// scan reads and writes each argument through the alias machinery, so in
+// the safe dialect they are `inout` borrows (an `out` would require the
+// callee to construct before reading, which the forwarding implementation
+// cannot satisfy). Plain C++ keeps the forwarding references.
+#define FAST_IO_SCAN_INOUT inout
+#define FAST_IO_SCAN_INOUT_TYPE(T) T
 #else
 #define FAST_IO_PRINT_IN
 #define FAST_IO_PRINT_IN_TYPE(T) T &&
+#define FAST_IO_SCAN_INOUT
+#define FAST_IO_SCAN_INOUT_TYPE(T) T &&
 #endif
 
 namespace fast_io
@@ -431,7 +439,8 @@ inline constexpr void debug_perrln(Args &&...args)
 #endif
 
 template <typename input, typename... Args>
-inline constexpr void scan(input &&in, Args &&...args)
+inline constexpr void scan(input &&in,
+	FAST_IO_SCAN_INOUT FAST_IO_SCAN_INOUT_TYPE(Args)... args)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_scan_may_throw<input, Args...>())
 {
 	constexpr bool device_error{::fast_io::operations::defines::has_input_or_io_stream_ref_define<input>};
@@ -463,7 +472,8 @@ static_assert(device_error, "freestanding environment must provide IO device");
 }
 
 template <typename input, typename... Args>
-[[nodiscard]] inline constexpr ::fast_io::scan_some_result_t scan_some(input &&in, Args &&...args)
+[[nodiscard]] inline constexpr ::fast_io::scan_some_result_t scan_some(input &&in,
+	FAST_IO_SCAN_INOUT FAST_IO_SCAN_INOUT_TYPE(Args)... args)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_scan_may_throw<input, Args...>())
 {
 	constexpr bool device_error{::fast_io::operations::defines::has_input_or_io_stream_ref_define<input>};

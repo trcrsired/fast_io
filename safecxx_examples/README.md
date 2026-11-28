@@ -252,6 +252,28 @@ and range-for stay safe (compiler-generated `begin`/`end` calls are exempt).
 `containers_classify.cc` and `containers_classify_reject.cc` demonstrate both
 sides.
 
+### `scan` and expression-only manipulators
+
+`scan` and `scan_some` take `FAST_IO_SCAN_INOUT ...` (`inout Args...` under
+`__SAFECXX__`, `Args&&...` in plain C++): a scan target is a read/write borrow,
+not a read-only one. `out` was rejected by the definite-assignment rule because
+the forwarding implementation reads the argument through the alias machinery
+before writing it. The `io_scan_may_throw` noexcept probe likewise names an
+lvalue in safe mode, matching the lowered `inout` parameter. With this, the
+10-million-integer `benchmark/0002.file_io_tsc/time/iobuf_file.cc` compiles,
+links and runs in safe source, producing byte-identical output to plain C++.
+
+C-string manipulator factories that take raw pointers (`os_c_str(p)`,
+`os_c_str_with_known_size(p, n)`, `strvw(first, last)`, `code_cvt_os_c_str(p)`,
+…) are `[[unsafe]]`: a C-style string or iterator pair carries no owner. The
+array overload `os_c_str_carr("literal")` stays callable from safe source.
+Their result types (the `basic_os_c_str` family) carry
+`FAST_IO_LIFETIME_EXPRESSION` (`[[lifetime_expression]]`): they may only exist
+as temporaries inside an expression. Storing one in a variable or field is
+rejected; see `manipulator_expression.cc` and
+`manipulator_expression_reject.cc`. This is a lifetime property of the type,
+not an `[[unsafe]]` fence or call restriction.
+
 ### How much of a real program is safe
 
 `construct_fstream_from_syscall.cc` is the safe-C++ version of the upstream

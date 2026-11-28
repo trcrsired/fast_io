@@ -219,6 +219,15 @@ template <typename... Args>
 #endif
 }
 
+// Under the safe dialect scan takes `out Args...`, so Args deduces to the
+// value type (not T&). The noexcept probe must name an lvalue, matching the
+// lowered `out` parameter; plain C++ keeps its forwarding-reference deduction.
+#if defined(__SAFECXX__)
+#define FAST_IO_SCAN_DECLVAL(T) ::std::declval<T &>()
+#else
+#define FAST_IO_SCAN_DECLVAL(T) ::std::declval<T>()
+#endif
+
 template <typename input, typename... Args>
 inline consteval bool io_scan_may_throw() noexcept
 {
@@ -227,13 +236,13 @@ inline consteval bool io_scan_may_throw() noexcept
 		return !noexcept(::fast_io::operations::decay::scan_some_freestanding_decay(
 			::fast_io::operations::input_stream_ref(::std::declval<input>()),
 			::fast_io::io_scan_forward<typename decltype(::fast_io::operations::input_stream_ref(
-				::std::declval<input>()))::input_char_type>(::fast_io::io_scan_alias(::std::declval<Args>()))...));
+				::std::declval<input>()))::input_char_type>(::fast_io::io_scan_alias(FAST_IO_SCAN_DECLVAL(Args)))...));
 	}
 	else
 	{
 		return !noexcept(::fast_io::details::scan_some_after_io_scan_forward(
 			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(::std::declval<input>())),
-			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(::std::declval<Args>()))...));
+			::fast_io::io_scan_forward<char>(::fast_io::io_scan_alias(FAST_IO_SCAN_DECLVAL(Args)))...));
 	}
 }
 
