@@ -222,6 +222,7 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 async_scheduler_type,
 					 instmtype,
 					 ::std::remove_cvref_t<callback_type>>
+FAST_IO_UNSAFE_API
 inline void async_pread_some_bytes_decay_callback(async_scheduler_type scheduler,
 												  ::fast_io::posix_statx_timestamp_opt timeout,
 												  instmtype instm, ::std::byte *first,
@@ -251,6 +252,7 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 async_scheduler_type,
 					 instmtype,
 					 ::fast_io::details::async_io_callback>
+FAST_IO_UNSAFE_API
 inline void async_pread_all_bytes_decay_callback(async_scheduler_type scheduler,
 												 ::fast_io::posix_statx_timestamp_opt timeout,
 												 instmtype instm, ::std::byte *first,
@@ -358,6 +360,7 @@ namespace fast_io::operations::decay
  * completion runs. await_resume() rethrows the error through the channel;
  * the some form yields the bytes read. */
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pread_some_bytes_decay(async_scheduler_type scheduler,
 										 ::fast_io::posix_statx_timestamp_opt timeout,
 										 instmtype instm, ::std::byte *first,
@@ -370,6 +373,7 @@ inline auto async_pread_some_bytes_decay(async_scheduler_type scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pread_all_bytes_decay(async_scheduler_type scheduler,
 										::fast_io::posix_statx_timestamp_opt timeout,
 										instmtype instm, ::std::byte *first,

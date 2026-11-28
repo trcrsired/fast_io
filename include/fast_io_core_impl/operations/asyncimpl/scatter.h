@@ -380,6 +380,7 @@ namespace fast_io::operations::decay
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<callback_type>>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pread_some_bytes_decay_callback(
 	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout, instmtype instm,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_opt off,
@@ -440,6 +441,7 @@ template <typename async_scheduler_type, typename instmtype, typename callback_t
 					 async_scheduler_type,
 					 instmtype,
 					 ::fast_io::details::async_io_callback>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pread_all_bytes_decay_callback(
 	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout, instmtype instm,
 	::fast_io::io_scatter_t const *pscatters, ::std::size_t n, ::fast_io::intfpos_opt off,
@@ -474,6 +476,7 @@ inline void async_scatter_pread_all_bytes_decay_callback(
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
 	requires ::fast_io::operations::decay::defines::async_scatter_completion_callback<
 		::std::remove_cvref_t<callback_type>>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pwrite_some_bytes_decay_callback(
 	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
 	outstmtype outstm, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
@@ -534,6 +537,7 @@ template <typename async_scheduler_type, typename outstmtype, typename callback_
 					 async_scheduler_type,
 					 outstmtype,
 					 ::fast_io::details::async_io_callback>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pwrite_all_bytes_decay_callback(
 	async_scheduler_type scheduler, ::fast_io::posix_statx_timestamp_opt timeout,
 	outstmtype outstm, ::fast_io::io_scatter_t const *pscatters, ::std::size_t n,
@@ -693,6 +697,7 @@ namespace fast_io::operations::decay
 /* Coroutine forms of the scatter decays. The some forms yield
  * io_scatter_status_t; the all forms yield void. */
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler,
 												 ::fast_io::posix_statx_timestamp_opt timeout,
 												 instmtype instm,
@@ -706,6 +711,7 @@ inline auto async_scatter_pread_some_bytes_decay(async_scheduler_type scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler,
 												::fast_io::posix_statx_timestamp_opt timeout,
 												instmtype instm,
@@ -719,6 +725,7 @@ inline auto async_scatter_pread_all_bytes_decay(async_scheduler_type scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pwrite_some_bytes_decay(async_scheduler_type scheduler,
 												  ::fast_io::posix_statx_timestamp_opt timeout,
 												  outstmtype outstm,
@@ -732,6 +739,7 @@ inline auto async_scatter_pwrite_some_bytes_decay(async_scheduler_type scheduler
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pwrite_all_bytes_decay(async_scheduler_type scheduler,
 												 ::fast_io::posix_statx_timestamp_opt timeout,
 												 outstmtype outstm,

@@ -275,6 +275,7 @@ template <typename outstmtype, ::std::ranges::input_range R>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void write_all_range(outstmtype &&outstm, R &&r)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 {

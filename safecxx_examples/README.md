@@ -285,6 +285,25 @@ manipulators, …), 34 types in total. Driver types are excluded. See
 `manipulator_expression.cc` and `manipulator_expression_reject.cc`. This is a
 lifetime property of the type, not an `[[unsafe]]` fence or call restriction.
 
+### Raw operations vs. formatted operations
+
+The criterion is contact with a raw pointer, not whether a stream is mutated.
+The low-level operations in `fast_io::operations` are `[[unsafe]]` under the
+safe dialect: `read_some`/`read_all`, `write_some`/`write_all`, their `*_bytes`
+and `scatter_*` variants, `pread_*`/`pwrite_*`, `char_put`, the `decay::`
+counterparts, and the matching async byte operations. They accept raw buffers
+with no owner a borrow could be tied to; safe source must wrap such a call in
+`[[unsafe]]`.
+
+`print`, `scan`, `transmit` and their async forms stay safe: they take dialect
+parameter kinds (`in`/`inout`) and borrow only from owned streams/scanners.
+`seek`, `rewind` and buffer-flush are safe too — they take only a stream and a
+position, never a raw pointer.
+`operations_classify.cc` and `operations_classify_reject.cc` show both sides.
+The `[[unsafe]]` mark is on the declarations only; the library implementation
+itself is inside its header fence, so the safe high-level APIs keep working
+without a user-written fence.
+
 ### How much of a real program is safe
 
 `construct_fstream_from_syscall.cc` is the safe-C++ version of the upstream

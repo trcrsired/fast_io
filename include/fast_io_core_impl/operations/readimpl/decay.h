@@ -4,6 +4,7 @@ namespace fast_io::operations::decay
 {
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t
 read_some_decay(instmtype insm, typename instmtype::input_char_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
@@ -13,6 +14,7 @@ read_some_decay(instmtype insm, typename instmtype::input_char_type *first, ::st
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void read_all_decay(instmtype insm, typename instmtype::input_char_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -21,6 +23,7 @@ inline constexpr void read_all_decay(instmtype insm, typename instmtype::input_c
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t read_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -29,6 +32,7 @@ inline constexpr ::std::size_t read_some_bytes_decay(instmtype insm, ::std::byte
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void read_all_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -47,6 +51,7 @@ scatter_read_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::i
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_read_some_bytes_decay(instmtype insm, io_scatter_t const *pscatters,
 																   ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
@@ -56,6 +61,7 @@ inline constexpr io_scatter_status_t scatter_read_some_bytes_decay(instmtype ins
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_read_all_decay(instmtype insm,
 											 basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											 ::std::size_t n)
@@ -66,6 +72,7 @@ inline constexpr void scatter_read_all_decay(instmtype insm,
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_read_all_bytes_decay(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -74,6 +81,7 @@ inline constexpr void scatter_read_all_bytes_decay(instmtype insm, io_scatter_t 
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t
 pread_some_decay(instmtype insm, typename instmtype::input_char_type *first, ::std::size_t count,
 				 ::fast_io::intfpos_t off)
@@ -84,6 +92,7 @@ pread_some_decay(instmtype insm, typename instmtype::input_char_type *first, ::s
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void pread_all_decay(instmtype insm, typename instmtype::input_char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::preadable<instmtype> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<instmtype>)
@@ -92,6 +101,7 @@ inline constexpr void pread_all_decay(instmtype insm, typename instmtype::input_
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pread_some_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count,
 													  ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
@@ -101,6 +111,7 @@ inline constexpr ::std::size_t pread_some_bytes_decay(instmtype insm, ::std::byt
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void pread_all_bytes_decay(instmtype insm, ::std::byte *first, ::std::size_t count,
 											::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
@@ -120,6 +131,7 @@ scatter_pread_some_decay(instmtype insm, basic_io_scatter_t<typename instmtype::
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pread_some_bytes_decay(instmtype insm, io_scatter_t const *pscatters,
 																	::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)
@@ -129,6 +141,7 @@ inline constexpr io_scatter_status_t scatter_pread_some_bytes_decay(instmtype in
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pread_all_decay(instmtype insm,
 											  basic_io_scatter_t<typename instmtype::input_char_type> const *pscatters,
 											  ::std::size_t n, ::fast_io::intfpos_t off)
@@ -139,6 +152,7 @@ inline constexpr void scatter_pread_all_decay(instmtype insm,
 }
 
 template <typename instmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pread_all_bytes_decay(instmtype insm, io_scatter_t const *pscatters, ::std::size_t n,
 													::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::input_stream_operations_nothrow<instmtype>)

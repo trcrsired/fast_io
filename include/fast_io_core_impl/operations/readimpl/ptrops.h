@@ -12,6 +12,7 @@ template <typename instmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t read_some(instmtype &&instm, char_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::readable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -25,6 +26,7 @@ template <typename instmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void read_all(instmtype &&instm, char_type *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::readable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -38,6 +40,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t read_some_bytes(instmtype &&instm, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -50,6 +53,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void read_all_bytes(instmtype &&instm, ::std::byte *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -63,6 +67,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_read_some_bytes(instmtype &&instm, io_scatter_t const *pscatter,
 															 ::std::size_t len)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
@@ -78,6 +83,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_read_all_bytes(instmtype &&instm, io_scatter_t const *pscatter, ::std::size_t len)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_readable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -91,6 +97,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_read_some(
 	instmtype &&instm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::input_stream_ref(instm))::input_char_type> const
@@ -108,6 +115,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_read_all(
 	instmtype &&instm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::input_stream_ref(instm))::input_char_type> const
@@ -125,6 +133,7 @@ template <typename instmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pread_some(instmtype &&instm, char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::preadable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -138,6 +147,7 @@ template <typename instmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void pread_all(instmtype &&instm, char_type *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
 	requires(::fast_io::operations::decay::defines::preadable<decltype(::fast_io::operations::input_stream_ref(instm))> || ::fast_io::operations::decay::defines::has_input_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::input_stream_ref(instm))>)
@@ -151,6 +161,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pread_some_bytes(instmtype &&instm, ::std::byte *first, ::std::size_t count,
 												::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
@@ -165,6 +176,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void pread_all_bytes(instmtype &&instm, ::std::byte *first, ::std::size_t count,
 									  ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
@@ -179,6 +191,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pread_some_bytes(instmtype &&instm, io_scatter_t const *pscatter,
 															  ::std::size_t len, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
@@ -194,6 +207,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pread_all_bytes(instmtype &&instm, io_scatter_t const *pscatter, ::std::size_t len,
 											  ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::input_stream_operations_nothrow<instmtype>)
@@ -209,6 +223,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pread_some(
 	instmtype &&instm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::input_stream_ref(instm))::input_char_type> const
@@ -227,6 +242,7 @@ template <typename instmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pread_all(
 	instmtype &&instm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::input_stream_ref(instm))::input_char_type> const

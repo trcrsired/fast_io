@@ -13,6 +13,7 @@ template <typename outstmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t write_some(outstmtype &&outstm, char_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::writable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -26,6 +27,7 @@ template <typename outstmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void write_all(outstmtype &&outstm, char_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::writable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -39,6 +41,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t write_some_bytes(outstmtype &&outstm, ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -52,6 +55,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void write_all_bytes(outstmtype &&outstm, ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -60,6 +64,7 @@ inline constexpr void write_all_bytes(outstmtype &&outstm, ::std::byte const *fi
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_write_some_bytes(outstmtype &&outstm, io_scatter_t const *pscatter,
 															  ::std::size_t len)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -70,6 +75,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes(outstmtype &&outst
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_write_all_bytes(outstmtype &&outstm, io_scatter_t const *pscatter, ::std::size_t len)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -83,6 +89,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_write_some(
 	outstmtype &&outstm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type> const
@@ -100,6 +107,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_write_all(
 	outstmtype &&outstm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type> const
@@ -117,6 +125,7 @@ template <typename outstmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pwrite_some(outstmtype &&outstm, char_type const *first, ::std::size_t count,
 										   ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -131,6 +140,7 @@ template <typename outstmtype, ::std::integral char_type>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void pwrite_all(outstmtype &&outstm, char_type const *first, ::std::size_t count,
 								 ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -145,6 +155,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pwrite_some_bytes(outstmtype &&outstm, ::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_pwritable<decltype(::fast_io::operations::output_stream_ref(outstm))> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<decltype(::fast_io::operations::output_stream_ref(outstm))>)
@@ -159,6 +170,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void pwrite_all_bytes(outstmtype &&outstm, ::std::byte const *first, ::std::size_t count,
 									   ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -174,6 +186,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes(outstmtype &&outstm, io_scatter_t const *pscatter,
 															   ::std::size_t len, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -189,6 +202,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pwrite_all_bytes(outstmtype &&outstm, io_scatter_t const *pscatter, ::std::size_t len,
 											   ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)
@@ -204,6 +218,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pwrite_some(
 	outstmtype &&outstm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type> const
@@ -222,6 +237,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pwrite_all(
 	outstmtype &&outstm,
 	basic_io_scatter_t<typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type> const
@@ -247,6 +263,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void char_put(outstmtype &&outstm,
 							   typename decltype(::fast_io::operations::output_stream_ref(outstm))::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::defines::output_stream_operations_nothrow<outstmtype>)

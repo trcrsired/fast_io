@@ -4,6 +4,7 @@ namespace fast_io::operations::decay
 {
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t
 write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -13,6 +14,7 @@ write_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -21,6 +23,7 @@ inline constexpr void write_all_decay(outstmtype outsm, typename outstmtype::out
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t write_some_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -29,6 +32,7 @@ inline constexpr ::std::size_t write_some_bytes_decay(outstmtype outsm, ::std::b
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void write_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::size_t count)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -47,6 +51,7 @@ scatter_write_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
 																	::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -56,6 +61,7 @@ inline constexpr io_scatter_status_t scatter_write_some_bytes_decay(outstmtype o
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void
 scatter_write_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						::std::size_t n)
@@ -66,6 +72,7 @@ scatter_write_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_write_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -74,6 +81,7 @@ inline constexpr void scatter_write_all_bytes_decay(outstmtype outsm, io_scatter
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t
 pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -83,6 +91,7 @@ pwrite_some_decay(outstmtype outsm, typename outstmtype::output_char_type const 
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::output_char_type const *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -91,6 +100,7 @@ inline constexpr void pwrite_all_decay(outstmtype outsm, typename outstmtype::ou
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t pwrite_some_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::size_t count, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires(::fast_io::operations::decay::defines::bytes_pwritable<outstmtype> || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)
@@ -99,6 +109,7 @@ inline constexpr ::std::size_t pwrite_some_bytes_decay(outstmtype outsm, ::std::
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void pwrite_all_bytes_decay(outstmtype outsm, ::std::byte const *first, ::std::size_t count,
 											 ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -118,6 +129,7 @@ scatter_pwrite_some_decay(outstmtype outsm, basic_io_scatter_t<typename outstmty
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters,
 																	 ::std::size_t n, ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -127,6 +139,7 @@ inline constexpr io_scatter_status_t scatter_pwrite_some_bytes_decay(outstmtype 
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void
 scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtype::output_char_type> const *pscatters,
 						 ::std::size_t n, ::fast_io::intfpos_t off)
@@ -137,6 +150,7 @@ scatter_pwrite_all_decay(outstmtype outsm, basic_io_scatter_t<typename outstmtyp
 }
 
 template <typename outstmtype>
+FAST_IO_UNSAFE_API
 inline constexpr void scatter_pwrite_all_bytes_decay(outstmtype outsm, io_scatter_t const *pscatters, ::std::size_t n,
 													 ::fast_io::intfpos_t off)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
@@ -151,6 +165,7 @@ template <typename outstmtype>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void char_put_decay(outstmtype outstm, typename outstmtype::output_char_type ch)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::operations::decay::defines::output_stream_operations_nothrow<outstmtype>)
 	requires((::fast_io::operations::decay::defines::writable<outstmtype> || ::fast_io::operations::decay::defines::has_output_stream_char_put_overflow_define<outstmtype>) || ::fast_io::operations::decay::defines::has_output_or_io_stream_mutex_ref_define<outstmtype>)

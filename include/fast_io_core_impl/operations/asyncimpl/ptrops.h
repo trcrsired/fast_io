@@ -17,6 +17,7 @@ namespace fast_io::operations
 /* ------------------------------ pread ------------------------------ */
 
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_pread_some_bytes_callback(async_scheduler_type &&scheduler,
 											::fast_io::posix_statx_timestamp_opt timeout,
 											instmtype &&instm, ::std::byte *first,
@@ -35,6 +36,7 @@ inline void async_pread_some_bytes_callback(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_pread_all_bytes_callback(async_scheduler_type &&scheduler,
 										   ::fast_io::posix_statx_timestamp_opt timeout,
 										   instmtype &&instm, ::std::byte *first,
@@ -53,6 +55,7 @@ inline void async_pread_all_bytes_callback(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pread_some_bytes(async_scheduler_type &&scheduler,
 								   ::fast_io::posix_statx_timestamp_opt timeout,
 								   instmtype &&instm, ::std::byte *first,
@@ -69,6 +72,7 @@ inline auto async_pread_some_bytes(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pread_all_bytes(async_scheduler_type &&scheduler,
 								  ::fast_io::posix_statx_timestamp_opt timeout,
 								  instmtype &&instm, ::std::byte *first,
@@ -87,6 +91,7 @@ inline auto async_pread_all_bytes(async_scheduler_type &&scheduler,
 /* ------------------------------ pwrite ----------------------------- */
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_pwrite_some_bytes_callback(async_scheduler_type &&scheduler,
 											 ::fast_io::posix_statx_timestamp_opt timeout,
 											 outstmtype &&outstm, ::std::byte const *first,
@@ -105,6 +110,7 @@ inline void async_pwrite_some_bytes_callback(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_pwrite_all_bytes_callback(async_scheduler_type &&scheduler,
 											::fast_io::posix_statx_timestamp_opt timeout,
 											outstmtype &&outstm, ::std::byte const *first,
@@ -123,6 +129,7 @@ inline void async_pwrite_all_bytes_callback(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pwrite_some_bytes(async_scheduler_type &&scheduler,
 									::fast_io::posix_statx_timestamp_opt timeout,
 									outstmtype &&outstm, ::std::byte const *first,
@@ -139,6 +146,7 @@ inline auto async_pwrite_some_bytes(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_pwrite_all_bytes(async_scheduler_type &&scheduler,
 								   ::fast_io::posix_statx_timestamp_opt timeout,
 								   outstmtype &&outstm, ::std::byte const *first,
@@ -157,6 +165,7 @@ inline auto async_pwrite_all_bytes(async_scheduler_type &&scheduler,
 /* ------------------------------ scatter ---------------------------- */
 
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pread_some_bytes_callback(async_scheduler_type &&scheduler,
 													::fast_io::posix_statx_timestamp_opt timeout,
 													instmtype &&instm,
@@ -181,6 +190,7 @@ inline void async_scatter_pread_some_bytes_callback(async_scheduler_type &&sched
 }
 
 template <typename async_scheduler_type, typename instmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pread_all_bytes_callback(async_scheduler_type &&scheduler,
 												   ::fast_io::posix_statx_timestamp_opt timeout,
 												   instmtype &&instm,
@@ -200,6 +210,7 @@ inline void async_scatter_pread_all_bytes_callback(async_scheduler_type &&schedu
 }
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pwrite_some_bytes_callback(async_scheduler_type &&scheduler,
 													 ::fast_io::posix_statx_timestamp_opt timeout,
 													 outstmtype &&outstm,
@@ -224,6 +235,7 @@ inline void async_scatter_pwrite_some_bytes_callback(async_scheduler_type &&sche
 }
 
 template <typename async_scheduler_type, typename outstmtype, typename callback_type>
+FAST_IO_UNSAFE_API
 inline void async_scatter_pwrite_all_bytes_callback(async_scheduler_type &&scheduler,
 													::fast_io::posix_statx_timestamp_opt timeout,
 													outstmtype &&outstm,
@@ -243,6 +255,7 @@ inline void async_scatter_pwrite_all_bytes_callback(async_scheduler_type &&sched
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pread_some_bytes(async_scheduler_type &&scheduler,
 										   ::fast_io::posix_statx_timestamp_opt timeout,
 										   instmtype &&instm,
@@ -266,6 +279,7 @@ inline auto async_scatter_pread_some_bytes(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename instmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pread_all_bytes(async_scheduler_type &&scheduler,
 										  ::fast_io::posix_statx_timestamp_opt timeout,
 										  instmtype &&instm,
@@ -284,6 +298,7 @@ inline auto async_scatter_pread_all_bytes(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pwrite_some_bytes(async_scheduler_type &&scheduler,
 											::fast_io::posix_statx_timestamp_opt timeout,
 											outstmtype &&outstm,
@@ -307,6 +322,7 @@ inline auto async_scatter_pwrite_some_bytes(async_scheduler_type &&scheduler,
 }
 
 template <typename async_scheduler_type, typename outstmtype>
+FAST_IO_UNSAFE_API
 inline auto async_scatter_pwrite_all_bytes(async_scheduler_type &&scheduler,
 										   ::fast_io::posix_statx_timestamp_opt timeout,
 										   outstmtype &&outstm,
