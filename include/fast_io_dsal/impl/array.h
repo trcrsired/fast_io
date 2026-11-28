@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::containers
 {
@@ -54,51 +55,63 @@ public:
 		constexpr size_type szb{N * sizeof(value_type)};
 		return szb;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator begin() noexcept
 	{
 		return element;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator begin() const noexcept
 	{
 		return element;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cbegin() const noexcept
 	{
 		return element;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator end() noexcept
 	{
 		return element + N;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator end() const noexcept
 	{
 		return element + N;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cend() const noexcept
 	{
 		return element + N;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator(element + N);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator(element + N);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(element + N);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator(element);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rend() const noexcept
 	{
 		return const_reverse_iterator(element);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(element);
@@ -109,6 +122,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_pointer data() const noexcept
 	{
 		return element;
@@ -119,6 +133,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer data() noexcept
 	{
 		return element;
@@ -133,6 +148,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(array &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<value_type>)
 	{
@@ -173,6 +189,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference index_unchecked(size_type idx) noexcept
 	{
 		return element[idx];
@@ -182,6 +199,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference index_unchecked(size_type idx) const noexcept
 	{
 		return element[idx];
@@ -212,6 +230,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference back_unchecked() noexcept
 	{
 		constexpr size_type nm1{N - 1};
@@ -222,6 +241,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference back_unchecked() const noexcept
 	{
 		constexpr size_type nm1{N - 1};
@@ -251,6 +271,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference front_unchecked() noexcept
 	{
 		return *element;
@@ -260,6 +281,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference front_unchecked() const noexcept
 	{
 		return *element;
@@ -297,51 +319,63 @@ public:
 	{
 		return 0;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator begin() noexcept
 	{
 		return nullptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator begin() const noexcept
 	{
 		return nullptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cbegin() const noexcept
 	{
 		return nullptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator end() noexcept
 	{
 		return nullptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator end() const noexcept
 	{
 		return nullptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cend() const noexcept
 	{
 		return nullptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator(nullptr);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator(nullptr);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(nullptr);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator(nullptr);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rend() const noexcept
 	{
 		return const_reverse_iterator(nullptr);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(nullptr);
@@ -352,6 +386,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_pointer data() const noexcept
 	{
 		return nullptr;
@@ -362,6 +397,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer data() noexcept
 	{
 		return nullptr;
@@ -371,6 +407,7 @@ public:
 	{
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(array &) noexcept
 	{
 	}
@@ -398,6 +435,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference index_unchecked(size_type) noexcept
 	{
 		::fast_io::unreachable();
@@ -407,6 +445,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference index_unchecked(size_type) const noexcept
 	{
 		::fast_io::unreachable();
@@ -435,6 +474,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference back_unchecked() noexcept
 	{
 		::fast_io::unreachable();
@@ -444,6 +484,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference back_unchecked() const noexcept
 	{
 		::fast_io::unreachable();
@@ -472,6 +513,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr reference front_unchecked() noexcept
 	{
 		::fast_io::unreachable();
@@ -481,6 +523,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference front_unchecked() const noexcept
 	{
 		::fast_io::unreachable();
@@ -488,6 +531,7 @@ public:
 };
 
 template <typename T, ::std::size_t N, ::fast_io::allocator_adapter_flags flags>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(::fast_io::containers::array<T, N, flags> &a, ::fast_io::containers::array<T, N, flags> &b)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<::fast_io::containers::array<T, N, flags> &>().swap(::std::declval<::fast_io::containers::array<T, N, flags> &>()))
 {

@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::containers
 {
@@ -19,9 +20,13 @@ struct basic_str_swiss_map_key_mapped_pair
 	mapped_type val;
 
 	constexpr basic_str_swiss_map_key_mapped_pair() FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_default_constructible_v<mapped_type>) = default;
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map_key_mapped_pair(basic_str_swiss_map_key_mapped_pair const &) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<mapped_type>) = default;
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map_key_mapped_pair(basic_str_swiss_map_key_mapped_pair &&) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<mapped_type>) = default;
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map_key_mapped_pair &operator=(basic_str_swiss_map_key_mapped_pair const &) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_assignable_v<mapped_type>) = default;
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map_key_mapped_pair &operator=(basic_str_swiss_map_key_mapped_pair &&) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_assignable_v<mapped_type>) = default;
 
 	constexpr key_type key() const noexcept
@@ -271,6 +276,7 @@ inline constexpr void str_swiss_map_grow(
 
 #if 0
 template <typename allocator_type, ::std::integral chtype>
+FAST_IO_UNSAFE_API
 inline void str_swiss_map_insert_key_internal_trivial(
 	::fast_io::details::swiss_table_str_type_erased_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash,
@@ -304,6 +310,7 @@ inline void str_swiss_map_insert_key_internal_trivial(
 #endif
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash, ::std::uint_least8_t *pcontrol,
@@ -326,6 +333,7 @@ inline constexpr void str_swiss_map_insert_key_internal_computed_slot_controls(
 }
 
 template <typename allocator_type, ::std::integral chtype, typename mappedtype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_swiss_map_insert_key_internal(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
@@ -532,6 +540,7 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype>
+FAST_IO_UNSAFE_API
 inline constexpr bool str_swiss_map_erase_key(::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
 	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<chtype>(
@@ -629,6 +638,7 @@ inline constexpr ::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
+FAST_IO_UNSAFE_API
 constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename hasher::digest_type, char_type, mappedtype> str_swiss_map_insert_key_with_hash_no_insert(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	auto hval{hash.do_hash(reinterpret_cast<::std::byte const *>(key), reinterpret_cast<::std::byte const *>(key + keyn))};
@@ -663,6 +673,7 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result_with_hval<typename
 }
 
 template <typename allocator_type, typename hasher, ::std::integral char_type, typename mappedtype>
+FAST_IO_UNSAFE_API
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<char_type, mappedtype> str_swiss_map_insert_key_with_hash(::fast_io::details::str_swiss_map_imp_common<char_type, mappedtype> &imp, char_type const *key, ::std::size_t keyn, hasher hash) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_move_constructible_v<mappedtype>)
 {
 	auto [hval, pos, inserted] = ::fast_io::details::str_swiss_map_insert_key_with_hash_no_insert<allocator_type, hasher, char_type>(imp, key, keyn, hash);
@@ -700,6 +711,7 @@ inline constexpr bool str_swiss_map_mapped_nothrow_copy_move{
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype, typename... Args>
 	requires ::std::constructible_from<mappedtype, Args...>
+FAST_IO_UNSAFE_API
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype> str_swiss_map_emplace_key_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
@@ -736,6 +748,7 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype, typename... Args>
 	requires ::std::constructible_from<mappedtype, Args...>
+FAST_IO_UNSAFE_API
 constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype> str_swiss_map_emplace_key_or_assign_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	chtype const *key, ::std::size_t keyn, Args &&...args) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_constructible_v<mappedtype, Args &&...>)
@@ -791,6 +804,7 @@ constexpr ::fast_io::details::str_swiss_map_insert_key_result<chtype, mappedtype
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype,
 		  ::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+FAST_IO_UNSAFE_API
 constexpr void str_swiss_map_insert_range_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last)
@@ -832,6 +846,7 @@ struct str_swiss_map_construct_range_destroyer
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype,
 		  ::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+FAST_IO_UNSAFE_API
 constexpr void str_swiss_map_construct_range_common_with_n(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last, ::std::size_t sz)
@@ -847,6 +862,7 @@ constexpr void str_swiss_map_construct_range_common_with_n(
 
 template <typename allocator_type, typename hasher, ::std::integral chtype, typename mappedtype,
 		  ::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+FAST_IO_UNSAFE_API
 constexpr void str_swiss_map_construct_range_common(
 	::fast_io::details::str_swiss_map_imp_common<chtype, mappedtype> &imp, hasher hash,
 	Iter first, Sen last)
@@ -919,7 +935,9 @@ public:
 
 	explicit constexpr basic_str_swiss_map(::fast_io::freestanding::from_hasher_t, hasher h) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_copy_constructible_v<hasher>) : hash(h)
 	{}
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>) : imp(::fast_io::details::str_swiss_map_clone<allocator_type, chtype, mappedtype>(other.imp)), hash(other.hash) {};
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map const &other) FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> || !::std::is_nothrow_copy_constructible_v<mapped_type>)
 	{
 		if (this != ::std::addressof(other))
@@ -955,12 +973,14 @@ public:
 	{
 		::fast_io::details::str_swiss_map_construct_with_range_common<allocator_type, hasher, chtype, mapped_type>(this->imp, hash, ::std::forward<R>(rg));
 	}
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map(basic_str_swiss_map &&other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<hasher>)
 		: imp{other.imp}, hash(::std::move(other.hash))
 	{
 		other.imp = {};
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_map &operator=(basic_str_swiss_map &&other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_assignable_v<hasher>)
 	{
 		if (this == ::std::addressof(other))
@@ -1070,6 +1090,7 @@ public:
 				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator find_key(key_string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
@@ -1092,66 +1113,80 @@ public:
 	{
 		return ::fast_io::details::str_swiss_map_erase_key<allocator_type, hasher>(this->imp, key.data(), key.size(), hash);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator iter) noexcept
 	{
 		auto next{::fast_io::details::str_swiss_map_erase<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(iter.controlpos - this->imp.controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		auto controls{this->imp.controls};
 		auto next{::fast_io::details::str_swiss_map_erase_rg<allocator_type, char_type, mapped_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cbegin() const noexcept
 	{
 		auto leftmost{this->imp.leftmost};
 		return {this->imp.controls + leftmost, this->imp.slots + leftmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cend() const noexcept
 	{
 		auto cap{this->imp.cap};
 		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator begin() const noexcept
 	{
 		return this->cbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator end() const noexcept
 	{
 		return this->cend();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator begin() noexcept
 	{
 		auto leftmost{this->imp.leftmost};
 		return {this->imp.controls + leftmost, this->imp.slots + leftmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator end() noexcept
 	{
 		auto cap{this->imp.cap};
 		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(cend());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(cbegin());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator(this->end());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator(this->begin());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return this->crbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator rend() const noexcept
 	{
 		return this->crend();
@@ -1160,6 +1195,7 @@ public:
 	{
 		::fast_io::details::str_swiss_map_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr void swap(basic_str_swiss_map &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<hasher>)
 	{
 		::fast_io::algorithms::swap(this->imp, other.imp);
@@ -1168,6 +1204,7 @@ public:
 };
 
 template <::std::integral chtype, typename mappedtype, typename Hash, typename Allocator>
+FAST_IO_UNSAFE_API
 constexpr void swap(basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> &a, basic_str_swiss_map<chtype, mappedtype, Hash, Allocator> &b) noexcept
 {
 	a.swap(b);

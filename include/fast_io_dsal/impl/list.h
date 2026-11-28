@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -93,6 +94,7 @@ inline constexpr bool operator!=(list_iterator<T, isconst1> a, list_iterator<T, 
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline void list_trivially_destroy(void *first, void *last, ::std::size_t sz) noexcept
 {
 	for (void *it{first}; it != last;)
@@ -104,6 +106,7 @@ inline void list_trivially_destroy(void *first, void *last, ::std::size_t sz) no
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline void list_trivially_destroy_aligned(void *first, void *last,
 										   ::std::size_t align, ::std::size_t sz) noexcept
 {
@@ -116,6 +119,7 @@ inline void list_trivially_destroy_aligned(void *first, void *last,
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t sz>
+FAST_IO_UNSAFE_API
 inline void list_trivially_destroy_sa(void *first, void *last) noexcept
 {
 	if constexpr (align <= allocator::default_alignment)
@@ -128,6 +132,7 @@ inline void list_trivially_destroy_sa(void *first, void *last) noexcept
 	}
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_main_insert_ptr_common(void *newnodevp, void *iter) noexcept
 {
 	auto newnode(static_cast<::fast_io::containers::details::list_node_common *>(newnodevp));
@@ -139,6 +144,7 @@ inline constexpr void list_main_insert_ptr_common(void *newnodevp, void *iter) n
 	prev->next = newnode;
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_main_push_front_ptr_common(void *newnodevp, void *imp) noexcept
 {
 	auto newnode(static_cast<::fast_io::containers::details::list_node_common *>(newnodevp));
@@ -150,6 +156,7 @@ inline constexpr void list_main_push_front_ptr_common(void *newnodevp, void *imp
 	prev->next = newnode;
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_main_erase_ptr_common(void *iter) noexcept
 {
 	auto node = static_cast<::fast_io::containers::details::list_node_common *>(iter);
@@ -160,6 +167,7 @@ inline constexpr void list_main_erase_ptr_common(void *iter) noexcept
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_insert(void *iter, ::std::size_t sz)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -169,6 +177,7 @@ inline constexpr void *list_trivially_allocate_insert(void *iter, ::std::size_t 
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_insert_aligned(void *iter, ::std::size_t align, ::std::size_t sz)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -178,6 +187,7 @@ inline constexpr void *list_trivially_allocate_insert_aligned(void *iter, ::std:
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t sz>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_insert_sa(void *iter)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -192,6 +202,7 @@ inline constexpr void *list_trivially_allocate_insert_sa(void *iter)
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_push_front(void *imp, ::std::size_t sz)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -201,6 +212,7 @@ inline constexpr void *list_trivially_allocate_push_front(void *imp, ::std::size
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_push_front_aligned(void *imp, ::std::size_t align, ::std::size_t sz)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -210,6 +222,7 @@ inline constexpr void *list_trivially_allocate_push_front_aligned(void *imp, ::s
 }
 
 template <typename allocator, ::std::size_t align, ::std::size_t sz>
+FAST_IO_UNSAFE_API
 inline constexpr void *list_trivially_allocate_push_front_sa(void *imp)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator>)
 {
@@ -223,6 +236,7 @@ inline constexpr void *list_trivially_allocate_push_front_sa(void *imp)
 	}
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_reverse_common(void *firstptr, void *lastptr) noexcept
 {
 	for (; firstptr != lastptr;)
@@ -234,6 +248,7 @@ inline constexpr void list_reverse_common(void *firstptr, void *lastptr) noexcep
 	}
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_splice_range_common_unchecked(void *nodeptr, void *firstptr, void *lastptr) noexcept
 {
 	auto node(static_cast<::fast_io::containers::details::list_node_common *>(nodeptr));
@@ -253,6 +268,7 @@ inline constexpr void list_splice_range_common_unchecked(void *nodeptr, void *fi
 	firstprev->next = last;
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_splice_range_common(void *nodeptr, void *firstptr, void *lastptr) noexcept
 {
 	if (firstptr == lastptr)
@@ -262,6 +278,7 @@ inline constexpr void list_splice_range_common(void *nodeptr, void *firstptr, vo
 	list_splice_range_common_unchecked(nodeptr, firstptr, lastptr);
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void list_splice_single_common(void *nodeptr, void *iterptr) noexcept
 {
 	auto node(static_cast<::fast_io::containers::details::list_node_common *>(nodeptr));
@@ -276,6 +293,7 @@ inline constexpr void list_splice_single_common(void *nodeptr, void *iterptr) no
 	iternext->prev = iterprev;
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t list_ptr_distance(void *firstptr, void *lastptr) noexcept
 {
 	::std::size_t n{};
@@ -286,6 +304,7 @@ inline constexpr ::std::size_t list_ptr_distance(void *firstptr, void *lastptr) 
 	return n;
 }
 
+FAST_IO_UNSAFE_API
 inline constexpr void *list_ptr_advance(void *firstptr, ::std::size_t n) noexcept
 {
 	for (; n; --n)
@@ -296,6 +315,7 @@ inline constexpr void *list_ptr_advance(void *firstptr, ::std::size_t n) noexcep
 }
 
 template <typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void list_merge_common(void *leftfirstptr, void *leftlastptr, void *rightfirstptr, void *rightlastptr, Cmp cmp)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
@@ -320,6 +340,7 @@ inline constexpr void list_merge_common(void *leftfirstptr, void *leftlastptr, v
 }
 
 template <typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void list_sort_n_common(void *firstptr, void *lastptr, ::std::size_t n, Cmp cmp)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
@@ -384,6 +405,7 @@ inline constexpr void list_sort_n_common(void *firstptr, void *lastptr, ::std::s
 }
 
 template <typename T, typename Cmp>
+FAST_IO_UNSAFE_API
 inline constexpr void list_sort_common(void *firstptr, void *lastptr, Cmp cmp)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<T &>(), ::std::declval<T &>()) < 0))
 {
@@ -456,7 +478,9 @@ private:
 				v = va;
 			}
 		}
+		FAST_IO_UNSAFE_API
 		inline new_handle_guard(new_handle_guard const &) = delete;
+		FAST_IO_UNSAFE_API
 		inline new_handle_guard &operator=(new_handle_guard const &) = delete;
 		inline constexpr ~new_handle_guard() noexcept
 		{
@@ -485,7 +509,9 @@ private:
 		{
 			plst = nullptr;
 		}
+		FAST_IO_UNSAFE_API
 		inline list_destroyer(list_destroyer const &) = delete;
+		FAST_IO_UNSAFE_API
 		inline list_destroyer &operator=(list_destroyer const &) = delete;
 		inline constexpr ~list_destroyer() noexcept
 		{
@@ -522,6 +548,7 @@ public:
 
 private:
 	template <::std::forward_iterator Iter, typename Sentinel>
+	FAST_IO_UNSAFE_API
 	inline constexpr void construct_list_common_impl(Iter first, Sentinel last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any ||
 									   !::std::is_nothrow_constructible_v<value_type, decltype(*first)> ||
@@ -571,56 +598,68 @@ public:
 		destroyer.release();
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr iterator begin() noexcept
 	{
 		return {imp.next};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr iterator end() noexcept
 	{
 		return {__builtin_addressof(imp)};
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator begin() const noexcept
 	{
 		return {imp.next};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator end() const noexcept
 	{
 		return {const_cast<::fast_io::containers::details::list_node_common *>(__builtin_addressof(imp))};
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator cbegin() const noexcept
 	{
 		return {imp.next};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator cend() const noexcept
 	{
 		return {const_cast<::fast_io::containers::details::list_node_common *>(__builtin_addressof(imp))};
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator({__builtin_addressof(imp)});
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator({imp.next});
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator rend() const noexcept
 	{
 		return const_reverse_iterator({imp.next});
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator({const_cast<::fast_io::containers::details::list_node_common *>(__builtin_addressof(imp))});
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator({imp.next});
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator({const_cast<::fast_io::containers::details::list_node_common *>(__builtin_addressof(imp))});
@@ -723,6 +762,7 @@ public:
 
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace(const_iterator iter, Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation || !::std::is_nothrow_constructible_v<value_type, Args &&...>)
 	{
@@ -741,6 +781,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr void destroy_node(void *it) noexcept
 	{
 		auto node = static_cast<node_type *>(it);
@@ -783,12 +824,14 @@ public:
 		this->emplace_front(std::move(value));
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void insert(const_iterator iter, T &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || !::std::is_nothrow_move_constructible_v<value_type>)
 	{
 		this->emplace(iter, std::move(value));
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void insert(const_iterator iter, const_reference value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || !::std::is_nothrow_copy_constructible_v<value_type>)
 	{
@@ -831,6 +874,7 @@ public:
 #endif
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_back_unchecked() noexcept
 	{
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.prev);
@@ -840,6 +884,7 @@ public:
 		this->destroy_node(node);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_front_unchecked() noexcept
 	{
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(imp.next);
@@ -895,28 +940,33 @@ public:
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reference front_unchecked() const noexcept
 	{
 		auto nodeptr{imp.next};
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reference front_unchecked() noexcept
 	{
 		auto nodeptr{imp.next};
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reference back_unchecked() const noexcept
 	{
 		auto nodeptr{imp.prev};
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reference back_unchecked() noexcept
 	{
 		auto nodeptr{imp.prev};
 		return static_cast<::fast_io::containers::details::list_node<T> *>(nodeptr)->element;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void erase(const_iterator iter) noexcept
 	{
 		auto node = static_cast<::fast_io::containers::details::list_node_common *>(iter.iter);
@@ -936,6 +986,7 @@ public:
 		destroyer.release();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr list &operator=(list const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || !::std::is_nothrow_copy_constructible_v<value_type>)
 		requires(::std::copyable<value_type>)
@@ -949,6 +1000,7 @@ public:
 		return *this;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr list(list &&other) noexcept
 #if 0
 		  : allochdl(std::move(other.allochdl))
@@ -1017,16 +1069,19 @@ public:
 		this->clear();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void splice(const_iterator pos, const_iterator first, const_iterator last) noexcept
 	{
 		::fast_io::containers::details::list_splice_range_common(pos.iter, first.iter, last.iter);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void splice(const_iterator pos, const_iterator it) noexcept
 	{
 		::fast_io::containers::details::list_splice_single_common(pos.iter, it.iter);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void splice(const_iterator pos, list &&other) noexcept
 	{
 		::fast_io::containers::details::list_splice_range_common(pos.iter, other.imp.next, __builtin_addressof(other.imp));
@@ -1071,12 +1126,14 @@ public:
 
 	template <typename Cmp>
 		requires ::fast_io::details::algorithms::three_way_comparator<Cmp, value_type>
+	FAST_IO_UNSAFE_API
 	inline constexpr void sort(const_iterator first, const_iterator last, Cmp cmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<Cmp &>().compare(::std::declval<value_type &>(), ::std::declval<value_type &>()) < 0))
 	{
 		::fast_io::containers::details::list_sort_common<value_type, Cmp>(first.iter, last.iter, cmp);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void sort(const_iterator first, const_iterator last) noexcept
 	{
 		this->sort(first, last, ::fast_io::algorithms::compare_three_way{});

@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::details
 {
@@ -153,6 +154,7 @@ inline constexpr void str_swiss_set_grow(
 }
 
 template <typename allocator_type, ::std::integral chtype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_swiss_set_insert_key_internal(
 	::fast_io::details::str_swiss_set_imp_common<chtype> &imp,
 	::std::size_t pos, chtype const *keybase, ::std::size_t keylen,
@@ -359,6 +361,7 @@ inline constexpr ::std::conditional_t<compute_next, ::std::size_t, void> str_swi
 }
 
 template <typename allocator_type, typename hasher, ::std::integral chtype>
+FAST_IO_UNSAFE_API
 inline constexpr bool str_swiss_set_erase_key(::fast_io::details::str_swiss_set_imp_common<chtype> &imp, chtype const *str, ::std::size_t strn, hasher hash) noexcept
 {
 	auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<chtype>(
@@ -450,6 +453,7 @@ struct str_swiss_set_insert_key_result
 };
 
 template <typename allocator_type, typename hasher, ::std::integral char_type>
+FAST_IO_UNSAFE_API
 constexpr ::fast_io::details::str_swiss_set_insert_key_result<char_type> str_swiss_set_insert_key_with_hash(::fast_io::details::str_swiss_set_imp_common<char_type> &imp, char_type const *key, ::std::size_t keyn, hasher hash)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
@@ -531,6 +535,7 @@ public:
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
 									   !::std::is_nothrow_copy_constructible_v<hasher>)
 		: imp(::fast_io::details::str_swiss_set_clone<allocator_type, chtype>(other.imp)), hash(other.hash) {};
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type> ||
 									   !::std::is_nothrow_copy_constructible_v<hasher>)
@@ -549,6 +554,7 @@ private:
 	struct construct_range_destroyer
 	{
 		basic_str_swiss_set *ptr{};
+		FAST_IO_UNSAFE_API
 		explicit constexpr construct_range_destroyer(basic_str_swiss_set *p) noexcept
 			: ptr{p}
 		{}
@@ -614,6 +620,7 @@ public:
 		this->construct_with_range_common(::std::forward<R>(rg));
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_set(basic_str_swiss_set &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_constructible_v<hasher>)
 		: imp{other.imp}, hash(::std::move(other.hash))
@@ -621,6 +628,7 @@ public:
 		other.imp = {};
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_swiss_set &operator=(basic_str_swiss_set &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_move_assignable_v<hasher>)
 	{
@@ -695,6 +703,7 @@ public:
 				   this->imp, key.ptr, key.n, hash)
 			.found;
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator find_key(key_string_view_type key) const noexcept
 	{
 		auto [pos, found] = ::fast_io::details::swiss_table_find_common_with_str_hashfunc_with_hasher<char_type>(
@@ -719,47 +728,57 @@ public:
 		return ::fast_io::details::str_swiss_set_erase_key<allocator_type, hasher>(this->imp, key.data(), key.size(), hash);
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator iter) noexcept
 	{
 		auto next{::fast_io::details::str_swiss_set_erase<true, allocator_type, char_type>(this->imp, static_cast<::std::size_t>(iter.controlpos - this->imp.controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		auto controls{this->imp.controls};
 		auto next{::fast_io::details::str_swiss_set_erase_rg<allocator_type, char_type>(this->imp, static_cast<::std::size_t>(first.controlpos - controls), static_cast<::std::size_t>(last.controlpos - controls))};
 		return {this->imp.controls + next, this->imp.slots + next};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cbegin() const noexcept
 	{
 		auto leftmost{this->imp.leftmost};
 		return {this->imp.controls + leftmost, this->imp.slots + leftmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cend() const noexcept
 	{
 		auto cap{this->imp.cap};
 		return {this->imp.controls + cap, this->imp.slots + cap};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator begin() const noexcept
 	{
 		return this->cbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator end() const noexcept
 	{
 		return this->cend();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(cend());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(cbegin());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr reverse_iterator rbegin() const noexcept
 	{
 		return this->crbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr reverse_iterator rend() const noexcept
 	{
 		return this->crend();
@@ -770,6 +789,7 @@ public:
 	{
 		::fast_io::details::str_swiss_set_reserve<allocator_type, hasher, char_type>(this->imp, n, hash);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr void swap(basic_str_swiss_set &other) FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_swappable_v<hasher>)
 	{
 		::fast_io::algorithms::swap(this->imp, other.imp);
@@ -778,6 +798,7 @@ public:
 };
 
 template <::std::integral chtype, typename Hash, typename Allocator>
+FAST_IO_UNSAFE_API
 constexpr void swap(basic_str_swiss_set<chtype, Hash, Allocator> &a, basic_str_swiss_set<chtype, Hash, Allocator> &b) noexcept
 {
 	a.swap(b);

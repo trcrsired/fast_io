@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -28,6 +29,7 @@ struct string_internal
 };
 
 template <typename allocator_type, ::std::integral chtype>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::basic_allocation_least_result<chtype *> string_allocate_init(chtype const *first, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_allocation_failure<allocator_type>)
 {
@@ -215,6 +217,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr void construct_impl(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -231,6 +234,7 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline explicit constexpr basic_string(char_type const *f, char_type const *e)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -243,16 +247,19 @@ public:
 		this->construct_impl(othervw.data(), othervw.size());
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_pointer c_str() const noexcept
 	{
 		return imp.begin_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer data() noexcept
 	{
 		return imp.begin_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_pointer data() const noexcept
 	{
 		return imp.begin_ptr;
@@ -367,6 +374,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr reference back_unchecked() noexcept
 	{
 		return imp.curr_ptr[-1];
@@ -378,6 +386,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference back_unchecked() const noexcept
 	{
 		return imp.curr_ptr[-1];
@@ -389,6 +398,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr reference front_unchecked() noexcept
 	{
 		return *imp.begin_ptr;
@@ -400,6 +410,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference front_unchecked() const noexcept
 	{
 		return *imp.begin_ptr;
@@ -445,6 +456,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference index_unchecked(size_type pos) const noexcept
 	{
 		return imp.begin_ptr[pos];
@@ -456,6 +468,7 @@ public:
 	[[msvc::forceinline]]
 #endif
 	[[nodiscard]]
+	FAST_IO_UNSAFE_API
 	inline constexpr reference index_unchecked(size_type pos) noexcept
 	{
 		return imp.begin_ptr[pos];
@@ -470,12 +483,14 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr basic_string(basic_string &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
 		this->moveconstructorcommon(::std::move(other));
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr basic_string &operator=(basic_string &&other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
@@ -504,6 +519,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr void assign_impl(char_type const *otherptr, ::std::size_t othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -566,6 +582,7 @@ public:
 	{
 		this->assign_characters(1u, ch);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr basic_string &operator=(basic_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -576,6 +593,7 @@ public:
 		this->assign_impl(other.imp.begin_ptr, static_cast<::std::size_t>(other.imp.curr_ptr - other.imp.begin_ptr));
 		return *this;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr basic_string &operator=(string_view_type const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -587,6 +605,7 @@ private:
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer insert_cold_impl(pointer insertpos, char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -653,11 +672,13 @@ private:
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr void append_cold_impl(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->insert_cold_impl(this->imp.curr_ptr, otherptr, othern);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void append_impl(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -689,11 +710,13 @@ public:
 	{
 		this->append_impl(other.data(), other.size());
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void append(char_type const *begin, char_type const *end)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
 		this->append_impl(begin, static_cast<::std::size_t>(end - begin));
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void append(char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -716,6 +739,7 @@ public:
 		this->reset_imp();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(char_type ch) noexcept
 	{
 		*this->imp.curr_ptr = ch;
@@ -733,61 +757,73 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cbegin() const noexcept
 	{
 		return this->imp.begin_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cend() const noexcept
 	{
 		return this->imp.curr_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator begin() const noexcept
 	{
 		return this->imp.begin_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator end() const noexcept
 	{
 		return this->imp.curr_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator begin() noexcept
 	{
 		return this->imp.begin_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator end() noexcept
 	{
 		return this->imp.curr_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator(this->imp.curr_ptr);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator crend() const noexcept
 	{
 		return const_reverse_iterator(this->imp.begin_ptr);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator(this->imp.curr_ptr);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator rend() const noexcept
 	{
 		return const_reverse_iterator(this->imp.begin_ptr);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator(this->imp.curr_ptr);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator(this->imp.begin_ptr);
@@ -824,6 +860,7 @@ public:
 		*--this->imp.curr_ptr = 0;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_back_unchecked() noexcept
 	{
 		*--this->imp.curr_ptr = 0;
@@ -876,6 +913,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer insert_impl(pointer ptr, char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -899,6 +937,7 @@ private:
 		this->imp.curr_ptr = newcurrptr;
 		return retptr;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void insert_index_impl(size_type idx, char_type const *otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -917,6 +956,7 @@ public:
 	{
 		return this->insert_index_impl(idx, vw.data(), vw.size());
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator ptr, string_view_type vw)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -936,6 +976,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer erase_impl(pointer first, pointer last) noexcept
 	{
 		if (this->imp.begin_ptr != this->imp.end_ptr) [[likely]]
@@ -945,12 +986,14 @@ private:
 		return first;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer erase_impl(pointer first) noexcept
 	{
 		return this->erase_impl(first, first + 1);
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		if (__builtin_is_constant_evaluated())
@@ -976,6 +1019,7 @@ public:
 		this->erase_impl(beginptr + firstidx, beginptr + lastidx);
 		return firstidx;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator it) noexcept
 	{
 		if (__builtin_is_constant_evaluated())
@@ -1001,10 +1045,12 @@ public:
 		this->erase_impl(beginptr + idx);
 		return idx;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(basic_string &other) noexcept
 	{
 		::fast_io::algorithms::swap(other.imp, this->imp);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator ptr, basic_string const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1022,6 +1068,7 @@ private:
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer replace_cold_impl(pointer first, pointer last, const_pointer otherptr, size_type othern)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1073,6 +1120,7 @@ private:
 		}
 		return retit;
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer replace_impl(pointer first, pointer last, const_pointer otherdata, size_type othersize)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1090,6 +1138,7 @@ private:
 		return this->replace_cold_impl(first, last, otherdata, othersize);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void replace_index_impl(size_type firstidx, size_type lastidx, const_pointer otherdata, size_type othersize)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1109,6 +1158,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator replace(const_iterator first, const_iterator last, string_view_type view)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1127,6 +1177,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator replace(const_iterator first, const_iterator last, basic_string const &view)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -1185,6 +1236,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr cstring_view_type subview_back_unchecked(size_type count) const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
@@ -1216,6 +1268,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr string_view_type subview_front_unchecked(size_type count) const noexcept
 	{
 		return string_view_type(this->imp.begin_ptr, count);
@@ -1253,6 +1306,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr string_view_type subview_unchecked(size_type pos, size_type count = ::fast_io::containers::npos) const noexcept
 	{
 		auto beginptr{this->imp.begin_ptr};
@@ -1307,6 +1361,7 @@ public:
 		*(this->imp.curr_ptr = currptr) = 0;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void remove_suffix_unchecked(size_type svn) noexcept
 	{
 		*(this->imp.curr_ptr -= svn) = 0;
@@ -1333,6 +1388,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type copy(char_type *dest, size_type count, size_type pos = 0) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).copy(dest, count, pos);
@@ -1342,6 +1398,7 @@ public:
 #elif __has_cpp_attribute(msvc::forceinline)
 	[[msvc::forceinline]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type copy_unchecked(char_type *dest, size_type count, size_type pos = 0) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).copy_unchecked(dest, count, pos);
@@ -1381,6 +1438,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).rfind_not_character(ch, pos);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type find(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find(s, pos, count);
@@ -1389,6 +1447,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find(v, pos);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type rfind(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).rfind(s, pos, count);
@@ -1402,6 +1461,7 @@ public:
 		return string_view_type(this->data(), this->size()).rfind(v.data(), v.size(), pos);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type find_first_of(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_first_of(s, pos, count);
@@ -1410,6 +1470,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_first_of(s, pos);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type find_first_not_of(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_first_of(s, pos, count);
@@ -1422,6 +1483,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_first_not_of(s.data(), s.size(), pos);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type find_last_of(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_last_of(s, pos, count);
@@ -1434,6 +1496,7 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_last_of(s.data(), pos, s.size());
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type find_last_not_of(const_pointer s, size_type pos, size_type count) const noexcept
 	{
 		return string_view_type(this->data(), this->size()).find_last_not_of(s, pos, count);
@@ -1446,11 +1509,13 @@ public:
 	{
 		return string_view_type(this->data(), this->size()).find_last_not_of(s.data(), pos, s.size());
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr auto compare_three_way(size_type pos1, size_type count1, const_pointer s, size_type count2) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_violations)
 	{
 		return this->subview(pos1, count1) <=> string_view_type(s, count2);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr auto compare_three_way_unchecked(size_type pos1, size_type count1, const_pointer s, size_type count2) const noexcept
 	{
 		return this->subview_unchecked(pos1, count1) <=> string_view_type(s, count2);
@@ -1460,6 +1525,7 @@ public:
 	{
 		return this->subview(pos1, count1) <=> other.subview(pos2, count2);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr auto compare_three_way_unchecked(size_type pos1, size_type count1, string_view_type other, size_type pos2, size_type count2) const noexcept
 	{
 		return this->subview_unchecked(pos1, count1) <=> other.subview_unchecked(pos2, count2);
@@ -1469,6 +1535,7 @@ public:
 	{
 		return this->subview(pos1, count1) <=> other.subview(pos2, count2);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr auto compare_three_way_unchecked(size_type pos1, size_type count1, basic_string const &other, size_type pos2, size_type count2) const noexcept
 	{
 		return this->subview_unchecked(pos1, count1) <=> other.subview_unchecked(pos2, count2);
@@ -1783,6 +1850,7 @@ print_alias_define(io_alias_t, basic_string<chtype, alloctype> const &str) noexc
 }
 
 template <::std::integral char_type, typename allocator_type>
+FAST_IO_UNSAFE_API
 inline constexpr auto
 strlike_construct_define(io_strlike_type_t<char_type, basic_string<char_type, allocator_type>>,
 						 char_type const *first, char_type const *last)
@@ -1818,6 +1886,7 @@ inline constexpr chtype *strlike_end(::fast_io::io_strlike_type_t<chtype, basic_
 }
 
 template <::std::integral chtype, typename alloctype>
+FAST_IO_UNSAFE_API
 inline constexpr void strlike_set_curr(::fast_io::io_strlike_type_t<chtype, basic_string<chtype, alloctype>>, basic_string<chtype, alloctype> &str, chtype *p) noexcept
 {
 	if (str.imp.begin_ptr == str.imp.end_ptr) [[unlikely]]
@@ -1841,6 +1910,7 @@ inline constexpr ::fast_io::io_strlike_reference_wrapper<chtype, basic_string<ch
 }
 
 template <::std::integral chtype, typename alloctype>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(::fast_io::containers::basic_string<chtype, alloctype> &a, ::fast_io::containers::basic_string<chtype, alloctype> &b) noexcept
 {
 	a.swap(b);
@@ -1859,6 +1929,7 @@ namespace details
 {
 
 template <bool noskipws, bool line, ::std::integral char_type, typename allocator_type>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::parse_result<char_type const *>
 scan_context_define_fast_io_string_impl(bool &skip_space_done, char_type const *first, char_type const *last, basic_string<char_type, allocator_type> &ref)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
@@ -1926,9 +1997,11 @@ inline constexpr ::fast_io::freestanding::parse_errc scan_context_eof_fast_io_st
 }
 
 template <bool noskipws, bool line>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::manipulators::scalar_flags fast_io_string_default_scalar_flags{.noskipws = noskipws, .line = line};
 
 template <::std::integral char_type, typename allocator_type>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::parse_result<char_type const *>
 scan_context_define_whole_fast_io_string_impl(bool &notfirstround, char_type const *first, char_type const *last, basic_string<char_type, allocator_type> &ref)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
@@ -1967,6 +2040,7 @@ inline constexpr io_type_t<scan_fast_io_string_context> scan_context_type(
 }
 
 template <::std::integral char_type, ::fast_io::manipulators::scalar_flags flags, typename allocator_type>
+FAST_IO_UNSAFE_API
 inline constexpr parse_result<char_type const *> scan_context_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::scalar_manip_t<flags, basic_string<char_type, allocator_type> &>>,
 	scan_fast_io_string_context &skip_space_done, char_type const *first, char_type const *last,
@@ -2015,6 +2089,7 @@ scan_context_type(io_reserve_type_t<char_type, ::fast_io::manipulators::whole_ge
 }
 
 template <::std::integral char_type, typename allocator_type>
+FAST_IO_UNSAFE_API
 inline constexpr parse_result<char_type const *> scan_context_define(
 	io_reserve_type_t<char_type, ::fast_io::manipulators::whole_get_t<basic_string<char_type, allocator_type> &>>,
 	scan_fast_io_string_context &ctx, char_type const *first, char_type const *last,

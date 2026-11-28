@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -481,6 +482,7 @@ inline constexpr auto deque_alloc_at_least(typename typedalloc::handle_type allo
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void deque_dealloc_aligned_n(typename allocator::handle_type allochdl, void *p, ::std::size_t alignment, ::std::size_t n) noexcept
 {
 	if constexpr (allocator::has_status)
@@ -494,6 +496,7 @@ inline constexpr void deque_dealloc_aligned_n(typename allocator::handle_type al
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void deque_dealloc_n(typename allocator::handle_type allochdl, void *p, ::std::size_t n) noexcept
 {
 	if constexpr (allocator::has_status)
@@ -507,6 +510,7 @@ inline constexpr void deque_dealloc_n(typename allocator::handle_type allochdl, 
 }
 
 template <typename typedalloc, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr void deque_typed_dealloc_n(typename typedalloc::handle_type allochdl, T *p, ::std::size_t n) noexcept
 {
 	if constexpr (typedalloc::has_status)
@@ -2046,6 +2050,7 @@ concept is_fast_io_deque_iterator_v =
 
 template <typename Iter>
 	requires(::fast_io::containers::details::is_fast_io_deque_iterator_v<Iter>)
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_relocate_define(
 	::fast_io::operations::defines::memory_algorithm_define_type<Iter, Iter, Iter>,
 	Iter first, Iter last, Iter dest)
@@ -2070,6 +2075,7 @@ inline constexpr Iter uninitialized_relocate_define(
 
 template <typename Iter>
 	requires(::fast_io::containers::details::is_fast_io_deque_iterator_v<Iter>)
+FAST_IO_UNSAFE_API
 inline constexpr Iter uninitialized_relocate_backward_define(
 	::fast_io::operations::defines::memory_algorithm_define_type<Iter, Iter, Iter>,
 	Iter first, Iter last, Iter dest)
@@ -2349,6 +2355,7 @@ public:
 	{
 		this->copy_construct_impl(other.controller);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr deque &operator=(deque const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
@@ -2376,6 +2383,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr deque(deque &&other) noexcept : controller(other.controller), allochdl{other.allochdl}
 	{
 		other.controller = {};
@@ -2398,11 +2406,15 @@ private:
 	{
 		controller_type *thiscontroller{};
 		handle_type allochdl_member{};
+		FAST_IO_UNSAFE_API
 		inline constexpr run_destroy() noexcept = default;
+		FAST_IO_UNSAFE_API
 		inline explicit constexpr run_destroy(handle_type hdl, controller_type *p) noexcept
 			: thiscontroller(p), allochdl_member{hdl}
 		{}
+		FAST_IO_UNSAFE_API
 		inline run_destroy(run_destroy const &) = delete;
+		FAST_IO_UNSAFE_API
 		inline run_destroy &operator=(run_destroy const &) = delete;
 		inline constexpr ~run_destroy() noexcept
 		{
@@ -2673,6 +2685,7 @@ private:
 
 private:
 	template <typename Iter, typename Sentinel>
+	FAST_IO_UNSAFE_API
 	inline constexpr void construct_deque_common_impl(Iter first, Sentinel last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*first)> ||
 									   !noexcept(++first) || !noexcept(first != last))
@@ -2920,6 +2933,7 @@ public:
 	// unchecked variants skip the capacity check; the caller must have reserved space
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace_back_unchecked(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
@@ -2943,11 +2957,13 @@ public:
 		return *currptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(value_type const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->emplace_back_unchecked(value);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(value_type &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
@@ -2964,6 +2980,7 @@ public:
 		pop_back_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_back_unchecked() noexcept
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
@@ -2976,11 +2993,13 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference back_unchecked() noexcept
 	{
 		return controller.back_block.curr_ptr[-1];
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference back_unchecked() const noexcept
 	{
 		return controller.back_block.curr_ptr[-1];
@@ -3013,6 +3032,7 @@ private:
 	{
 		using handletype = ::fast_io::containers::details::deque_controller<value_type>;
 		handletype *thisdeq;
+		FAST_IO_UNSAFE_API
 		explicit constexpr emplace_front_guard(handletype *other) noexcept : thisdeq{other}
 		{
 		}
@@ -3099,6 +3119,7 @@ public:
 	// unchecked variants skip the capacity check; the caller must have reserved space
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace_front_unchecked(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
@@ -3122,11 +3143,13 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_front_unchecked(value_type const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		this->emplace_front_unchecked(value);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_front_unchecked(value_type &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
@@ -3144,6 +3167,7 @@ public:
 		pop_front_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_front_unchecked() noexcept
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
@@ -3157,11 +3181,13 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference front_unchecked() noexcept
 	{
 		return *controller.front_block.curr_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference front_unchecked() const noexcept
 	{
 		return *controller.front_block.curr_ptr;
@@ -3209,11 +3235,13 @@ public:
 		return ::fast_io::containers::details::deque_index_container_unsigned(controller.front_block, index);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference index_unchecked(size_type index) noexcept
 	{
 		return ::fast_io::containers::details::deque_index_container_unsigned(controller.front_block, index);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference index_unchecked(size_type index) const noexcept
 	{
 		return ::fast_io::containers::details::deque_index_container_unsigned(controller.front_block, index);
@@ -3375,31 +3403,37 @@ public:
 		return this->const_nth_segment(pos);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator begin() noexcept
 	{
 		return {this->controller.front_block};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator begin() const noexcept
 	{
 		return {this->controller.front_block};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cbegin() const noexcept
 	{
 		return {this->controller.front_block};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator({this->controller.front_block});
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rend() const noexcept
 	{
 		return const_reverse_iterator({this->controller.front_block});
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator({this->controller.front_block});
@@ -3420,31 +3454,37 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator end() noexcept
 	{
 		return {this->end_common()};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator end() const noexcept
 	{
 		return {this->end_common()};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_iterator cend() const noexcept
 	{
 		return {this->end_common()};
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator({this->end_common()});
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator({this->end_common()});
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator({this->end_common()});
@@ -3456,11 +3496,13 @@ public:
 		return controller.front_block.curr_ptr == controller.back_block.curr_ptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type index_of(const_iterator it) const noexcept
 	{
 		return ::fast_io::containers::details::deque_iter_difference_unsigned_common(it.itercontent, this->controller.front_block);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type segment_nth_of(const_iterator it) const noexcept
 	{
 		auto controllerptr{it.itercontent.controller_ptr};
@@ -3592,6 +3634,7 @@ private:
 public:
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert_range(const_iterator pos, R &&rg)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_shift || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))> || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::cbegin(rg))>)
 	{
@@ -3765,6 +3808,7 @@ private:
 		::std::int_fast8_t decision;
 	};
 	template <bool isnothrow>
+	FAST_IO_UNSAFE_API
 	inline constexpr ::std::conditional_t<isnothrow,
 										  iterator, emplace_decision>
 	emplace_decision_common(const_iterator iter)
@@ -3937,6 +3981,7 @@ private:
 
 public:
 	template <typename... Args>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator emplace(const_iterator iter, Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
@@ -3981,11 +4026,13 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		return this->emplace(iter, val);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, value_type &&val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
@@ -4036,6 +4083,7 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
@@ -4153,6 +4201,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr void resize_impl(size_type count, T const *pval)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
@@ -4254,6 +4303,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase_no_destroy_common_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		::fast_io::containers::details::deque_control_block<value_type> back_block;
@@ -4279,6 +4329,7 @@ private:
 		return first;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase_unchecked_nodestroy_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type> && 0)
@@ -4296,6 +4347,7 @@ private:
 		}
 		return this->erase_no_destroy_common_impl(first, last, moveleft);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void erase_unchecked_nodestroy_for_insert_counts_impl(iterator first, ::std::size_t count) noexcept
 	{
 		if (!count)
@@ -4312,6 +4364,7 @@ private:
 
 		this->erase_unchecked_nodestroy_impl(first, last, distofront < distoback);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase_unchecked_impl(iterator first, iterator last, bool moveleft) noexcept
 	{
 		if (first == last)
@@ -4324,6 +4377,7 @@ private:
 		}
 		return this->erase_unchecked_nodestroy_impl(first, last, moveleft);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase_unchecked_single_nodestroy_impl(iterator pos, bool moveleft) noexcept
 	{
 		if constexpr (::fast_io::freestanding::is_trivially_copyable_or_relocatable_v<value_type>)
@@ -4351,6 +4405,7 @@ private:
 		++posp1;
 		return this->erase_no_destroy_common_impl(pos, posp1, moveleft);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase_unchecked_single_impl(iterator pos, bool moveleft) noexcept
 	{
 		if constexpr (!::std::is_trivially_destructible_v<value_type>)
@@ -4361,6 +4416,7 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		return this->erase_unchecked_impl(iterator{first.itercontent},
@@ -4382,6 +4438,7 @@ public:
 		return firstidx;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator first) noexcept
 	{
 		::std::size_t const n{this->size()};
@@ -4409,6 +4466,7 @@ public:
 		destroy_deque_controller(this->allochdl, this->controller);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(deque &rhs) noexcept
 	{
 		::fast_io::algorithms::swap(this->controller, rhs.controller);
@@ -4417,6 +4475,7 @@ public:
 };
 
 template <typename T, typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(::fast_io::containers::deque<T, allocator> &lhs, ::fast_io::containers::deque<T, allocator> &rhs) noexcept
 {
 	lhs.swap(rhs);

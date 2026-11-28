@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::details
 {
@@ -47,6 +48,7 @@ inline constexpr bool operator!=(::fast_io::containers::basic_string_view<chtype
 }
 
 template <typename allocator_type, ::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::associative_string<char_type> create_associative_string(char_type const *p, ::std::size_t n)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 {
@@ -62,6 +64,7 @@ inline constexpr ::fast_io::details::associative_string<char_type> create_associ
 }
 
 template <typename allocator_type, ::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr void deallocate_associative_string(void const *p, ::std::size_t n) noexcept
 {
 	using typed_allocator_type = ::fast_io::typed_generic_allocator_adapter<allocator_type, char_type>;

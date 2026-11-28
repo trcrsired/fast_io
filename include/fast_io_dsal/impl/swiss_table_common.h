@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::details
 {
@@ -115,6 +116,7 @@ struct swiss_table_group
 	static constexpr ::std::size_t counts{::fast_io::details::swiss_table_group_vec_counts};
 	::fast_io::details::swiss_table_group_vec_type ctrlv;
 
+	FAST_IO_UNSAFE_API
 	inline explicit swiss_table_group(::std::uint_least8_t const *pos) noexcept
 	{
 		ctrlv.load(pos);
@@ -142,6 +144,7 @@ struct swiss_table_group
 
 	// special (empty/deleted/sentinel) -> empty, full -> deleted.
 	// Used by drop-deletes rehash before reinsertion.
+	FAST_IO_UNSAFE_API
 	inline constexpr void convert_special_to_empty_and_full_to_deleted(::std::uint_least8_t *dst) const noexcept
 	{
 		// special lanes are negative as signed char; full lanes are not.
@@ -177,6 +180,7 @@ struct swiss_table_probe_seq
 };
 
 // Writes a control byte and maintains the clone region.
+FAST_IO_UNSAFE_API
 inline constexpr void swiss_table_set_ctrl(::std::uint_least8_t *controls, ::std::size_t cap,
 										   ::std::size_t i, ::std::uint_least8_t v) noexcept
 {
@@ -290,6 +294,7 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 }
 
 template <::std::integral chtype, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str(
 	T const &imp,
 	chtype const *keybase, ::std::size_t keylen, ::std::uint_least64_t hash) noexcept
@@ -299,6 +304,7 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 }
 
 template <::std::integral chtype, typename hasher, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_common_with_str_hashfunc_with_hasher(
 	T const &imp,
 	chtype const *keybase, ::std::size_t keylen, hasher hash) noexcept
@@ -309,6 +315,7 @@ inline constexpr ::fast_io::details::swiss_table_find_result swiss_table_find_co
 
 // First non-full (empty or deleted) position in the probe sequence of hash.
 // Used for insertion and for rehashing.
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t swiss_table_find_first_non_full(::std::uint_least8_t const *controls, ::std::size_t cap,
 															   ::std::uint_least64_t hash) noexcept
 {
@@ -343,6 +350,7 @@ inline constexpr ::std::size_t swiss_table_find_first_non_full(::std::uint_least
 // Whether the erased slot's probe cluster never overflowed a group boundary.
 // If true the slot can be marked empty instead of deleted. References abseil's
 // was_never_full.
+FAST_IO_UNSAFE_API
 inline constexpr bool swiss_table_was_never_full(::std::uint_least8_t const *controls, ::std::size_t cap,
 												 ::std::size_t index) noexcept
 {
@@ -497,6 +505,7 @@ inline constexpr ::std::size_t str_swiss_table_reserve_compute_newcap(::std::siz
 }
 
 template <bool isprev>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::uint_least8_t const *controlpos) noexcept
 {
 	if constexpr (isprev || ::fast_io::details::swiss_table_group_counts == 0)
@@ -535,6 +544,7 @@ inline constexpr ::std::uint_least8_t const *swiss_table_iterator_common(::std::
 
 // special -> empty, full -> deleted over the whole control array, then
 // restores the sentinel and clones. Used by drop-deletes rehash.
+FAST_IO_UNSAFE_API
 inline constexpr void
 swiss_table_convert_special_to_empty_and_full_to_deleted(::std::uint_least8_t *controls, ::std::size_t cap) noexcept
 {

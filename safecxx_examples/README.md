@@ -241,6 +241,17 @@ Public APIs are then classified:
 `include_layers.cc` includes every layer and uses a range-based algorithm from
 safe source; `include_layers_reject.cc` documents a rejected iterator call.
 
+All container families are classified the same way as `vector`/`span`:
+`array`, `bitvec`, `deque`, `forward_list`, `list`, `priority_queue`, `queue`,
+`sized_string`, `sized_vector`, `stack`, the btree/swiss map and set families,
+and their shared helpers carry `FAST_IO_UNSAFE_API` on iterator accessors
+(`begin`/`end`/`cbegin`/.../`data`), `*_unchecked` operations, iterator- and
+pointer+length-taking operations, move construction/assignment and `swap`.
+Index/checked access, `push_back`/`pop_back`, size queries, checked insert/erase
+and range-for stay safe (compiler-generated `begin`/`end` calls are exempt).
+`containers_classify.cc` and `containers_classify_reject.cc` demonstrate both
+sides.
+
 ### How much of a real program is safe
 
 `construct_fstream_from_syscall.cc` is the safe-C++ version of the upstream

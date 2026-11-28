@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -249,6 +250,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference top_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_top_unchecked_may_throw<container_type, false>)
 	{
@@ -263,6 +265,7 @@ public:
 			return container.front_unchecked();
 		}
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference top_unchecked() const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_top_unchecked_may_throw<container_type, true>)
 	{
@@ -329,6 +332,7 @@ public:
 		container.reserve(newcap);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_unchecked(value_type const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_push_unchecked_may_throw<container_type, value_type const &>)
 	{
@@ -345,6 +349,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_unchecked(value_type &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_push_unchecked_may_throw<container_type, value_type>)
 	{
@@ -381,6 +386,7 @@ public:
 
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace_unchecked(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_emplace_unchecked_may_throw<container_type, Args &&...>)
 	{
@@ -429,6 +435,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_pop_unchecked_may_throw<container_type>)
 	{
@@ -480,6 +487,7 @@ public:
 		return top;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr value_type pop_element_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::stack_pop_element_unchecked_may_throw<container_type>)
 		requires(::std::move_constructible<value_type>)
@@ -525,6 +533,7 @@ public:
 		container.clear_destroy();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(::fast_io::containers::stack<Container> &b)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().swap(::std::declval<container_type &>()))
 	{
@@ -547,6 +556,7 @@ inline constexpr auto operator<=>(::fast_io::containers::stack<Container> const 
 }
 
 template <typename Container>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(::fast_io::containers::stack<Container> &a, ::fast_io::containers::stack<Container> &b)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<::fast_io::containers::stack<Container> &>().swap(::std::declval<::fast_io::containers::stack<Container> &>()))
 {

@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::containers
 {
@@ -29,6 +30,7 @@ struct str_ranked_btree_set_node
 
 /* subtree_size = own key count + sum of children subtree sizes. */
 template <typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_ranked_btree_recompute_subtree_size(nodetype *node) noexcept
 {
 	auto s{node->size};
@@ -48,6 +50,7 @@ Post-order pass computing subtree_size for the whole tree. Used once after a
 bulk load whose inserts deliberately skipped subtree_size maintenance.
 */
 template <typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_ranked_btree_recompute_tree(nodetype *node) noexcept
 {
 	if (node == nullptr)
@@ -69,6 +72,7 @@ template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr bool str_ranked_btree_set_insert_key_cold(nodetype *node, ::std::size_t pos,
 														   typename nodetype::char_type const *tempkeystrptr, ::std::size_t tempkeystrn,
 														   ::fast_io::containers::details::btree_imp &imp)
@@ -251,6 +255,7 @@ inline constexpr bool str_ranked_btree_set_insert_key_cold(nodetype *node, ::std
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr bool str_ranked_btree_set_insert_key_with_root(::fast_io::containers::details::btree_imp &imp,
 																typename nodetype::char_type const *keystrptr, ::std::size_t keystrn)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
@@ -316,6 +321,7 @@ inline constexpr bool str_ranked_btree_set_insert_key_with_root(::fast_io::conta
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr void str_ranked_btree_set_erase_underflow(::fast_io::containers::details::btree_imp &imp,
 														   nodetype *node) noexcept
 {
@@ -542,6 +548,7 @@ inline constexpr void str_ranked_btree_set_erase_underflow(::fast_io::containers
 }
 
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr bool str_ranked_btree_set_erase(::fast_io::containers::details::btree_imp &imp,
 												 typename nodetype::char_type const *keystrptr,
 												 ::std::size_t keystrn) noexcept
@@ -836,6 +843,7 @@ the end computes every node's subtree_size.
 */
 template <typename allocator_type, ::std::size_t keys_number, typename nodetype,
 		  ::std::input_or_output_iterator Iter, ::std::sentinel_for<Iter> Sen>
+FAST_IO_UNSAFE_API
 inline constexpr void str_ranked_btree_set_insert_range_bulk(
 	::fast_io::containers::details::btree_imp &imp, Iter first, Sen last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
@@ -864,6 +872,7 @@ Returns {node, pos} of the element at in-order index n. Caller guarantees
 n < subtree_size(root).
 */
 template <typename nodetype>
+FAST_IO_UNSAFE_API
 inline constexpr ::fast_io::containers::details::find_btree_insert_result str_ranked_btree_nth_element(nodetype *node, ::std::size_t n) noexcept
 {
 	for (;;)
@@ -924,6 +933,7 @@ public:
 		::fast_io::containers::details::str_ranked_btree_set_insert_range_bulk<allocator_type, keys_number, node_type>(
 			this->imp, other.cbegin(), other.cend());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_ranked_btree_set &operator=(basic_str_ranked_btree_set const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_any<allocator_type>)
 	{
@@ -964,20 +974,24 @@ public:
 		auto root{static_cast<node_type *>(this->imp.root)};
 		return root == nullptr ? size_type{} : root->subtree_size;
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator find(string_view_type key) const noexcept
 	{
 		auto [ptr, pos] = ::fast_io::containers::details::str_btree_find(static_cast<node_type *>(this->imp.root), key.ptr, key.n);
 		return {ptr, pos, this->imp.rightmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator find_key(string_view_type key) const noexcept
 	{
 		return this->find(key);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator lower_bound(string_view_type key) const noexcept
 	{
 		auto [ptr, pos] = ::fast_io::containers::details::str_btree_lower_bound(static_cast<node_type *>(this->imp.root), key.ptr, key.n);
 		return {ptr, pos, this->imp.rightmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator upper_bound(string_view_type key) const noexcept
 	{
 		auto [ptr, pos] = ::fast_io::containers::details::str_btree_find(static_cast<node_type *>(this->imp.root), key.ptr, key.n);
@@ -993,6 +1007,7 @@ public:
 	{
 		return {this->lower_bound(key), this->upper_bound(key)};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator nth_element(size_type n) const
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::allocator_throws_on_violations<allocator_type>)
 	{
@@ -1002,6 +1017,7 @@ public:
 		}
 		return this->nth_element_unchecked(n);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator nth_element_unchecked(size_type n) const noexcept
 	{
 		auto [ptr, pos] = ::fast_io::containers::details::str_ranked_btree_nth_element(
@@ -1030,6 +1046,7 @@ public:
 			this->insert_key(e);
 		}
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator iter) noexcept
 	{
 		auto succ{iter};
@@ -1043,6 +1060,7 @@ public:
 		this->erase_key(*iter);
 		return this->find_key(nextkey);
 	}
+	FAST_IO_UNSAFE_API
 	constexpr iterator erase(const_iterator first, const_iterator last) noexcept
 	{
 		if (first == last)
@@ -1067,6 +1085,7 @@ public:
 			first = this->erase(first);
 		}
 	}
+	FAST_IO_UNSAFE_API
 	constexpr void swap(basic_str_ranked_btree_set &other) noexcept
 	{
 		auto const tmp{this->imp};
@@ -1075,6 +1094,7 @@ public:
 	}
 
 private:
+	FAST_IO_UNSAFE_API
 	static inline constexpr void clear_node(void *nodev) noexcept
 	{
 		auto node{static_cast<node_type *>(nodev)};
@@ -1113,6 +1133,7 @@ public:
 		this->clear();
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr basic_str_ranked_btree_set(basic_str_ranked_btree_set &&other) noexcept : imp(other.imp)
 	{
 		other.imp = {};
@@ -1128,24 +1149,29 @@ public:
 		other.imp = {};
 		return *this;
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cbegin() const noexcept
 	{
 		return {this->imp.leftmost, 0, this->imp.rightmost};
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator cend() const noexcept
 	{
 		return {nullptr, 0, this->imp.rightmost};
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator begin() const noexcept
 	{
 		return this->cbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_iterator end() const noexcept
 	{
 		return this->cend();
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return reverse_iterator(cend());
@@ -1163,14 +1189,17 @@ public:
 		return mx;
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator crend() const noexcept
 	{
 		return reverse_iterator(cbegin());
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return this->crbegin();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr const_reverse_iterator rend() const noexcept
 	{
 		return this->crend();
@@ -1193,10 +1222,12 @@ public:
 		}
 		return this->back_unchecked();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr cstring_view_type front_unchecked() const noexcept
 	{
 		return static_cast<node_type const *>(this->imp.leftmost)->keys->strvw();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr cstring_view_type back_unchecked() const noexcept
 	{
 		auto &e{*static_cast<node_type const *>(this->imp.rightmost)};
@@ -1209,6 +1240,7 @@ public:
 };
 
 template <::std::integral chtype, typename Allocator, ::std::size_t keys_number>
+FAST_IO_UNSAFE_API
 constexpr void swap(::fast_io::containers::basic_str_ranked_btree_set<chtype, Allocator, keys_number> &a,
 					::fast_io::containers::basic_str_ranked_btree_set<chtype, Allocator, keys_number> &b) noexcept
 {

@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 // Container-specific paths for fast_io's segmented deque. The generic
 // algorithms are correct for deque iterators, but every element access has to
@@ -322,6 +323,7 @@ namespace fast_io::containers::details
 using ::fast_io::details::algorithms::deque_algo_iterator;
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> last, OIter dest)
@@ -336,6 +338,7 @@ inline constexpr OIter copy_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_n_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   ::std::size_t count, OIter dest)
@@ -350,6 +353,7 @@ inline constexpr OIter copy_n_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter copy_backward_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> last, OIter d_last)
@@ -364,6 +368,7 @@ inline constexpr OIter copy_backward_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -379,6 +384,7 @@ inline constexpr OIter non_overlapped_copy_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter non_overlapped_copy_n_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first, ::std::size_t count,
@@ -395,6 +401,7 @@ inline constexpr OIter non_overlapped_copy_n_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> last, OIter dest)
@@ -410,6 +417,7 @@ inline constexpr OIter move_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter move_backward_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> last, OIter d_last)
@@ -424,6 +432,7 @@ inline constexpr OIter move_backward_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -439,6 +448,7 @@ inline constexpr OIter uninitialized_copy_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_n_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first, ::std::size_t count,
@@ -454,6 +464,7 @@ inline constexpr OIter uninitialized_copy_n_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_copy_backward_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -471,6 +482,7 @@ inline constexpr OIter uninitialized_copy_backward_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -487,6 +499,7 @@ inline constexpr OIter uninitialized_move_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_n_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first, ::std::size_t count,
@@ -503,6 +516,7 @@ inline constexpr OIter uninitialized_move_n_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_move_backward_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -520,6 +534,7 @@ inline constexpr OIter uninitialized_move_backward_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -536,6 +551,7 @@ inline constexpr OIter uninitialized_relocate_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_n_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first, ::std::size_t count,
@@ -552,6 +568,7 @@ inline constexpr OIter uninitialized_relocate_n_iters_define(
 
 template<typename T, bool isconst, typename OIter>
   requires(!isconst)
+FAST_IO_UNSAFE_API
 inline constexpr OIter uninitialized_relocate_backward_iters_define(
   ::fast_io::io_algorithm_t,
   deque_algo_iterator<T, isconst> first,
@@ -569,6 +586,7 @@ inline constexpr OIter uninitialized_relocate_backward_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter reverse_copy_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> last, OIter dest)
@@ -618,6 +636,7 @@ inline constexpr deque_algo_iterator<T, isconst> rotate_iters_define(
 }
 
 template<typename T, bool isconst, typename OIter>
+FAST_IO_UNSAFE_API
 inline constexpr OIter rotate_copy_iters_define(
   ::fast_io::io_algorithm_t, deque_algo_iterator<T, isconst> first,
   deque_algo_iterator<T, isconst> middle,

@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 namespace fast_io
 {
 
@@ -46,6 +47,7 @@ namespace detemplate
 {
 
 template <typename allocator, typename uinttype>
+FAST_IO_UNSAFE_API
 inline void *grow_to_byte_size_iter_impl(sized_vector_model<uinttype> &imp, void *iter, ::std::size_t newcap, ::std::size_t gap, ::std::size_t size, ::std::size_t alignment)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure)
 {
@@ -74,6 +76,7 @@ inline void *grow_to_byte_size_iter_impl(sized_vector_model<uinttype> &imp, void
 }
 
 template <typename allocator, typename uinttype>
+FAST_IO_UNSAFE_API
 inline void *grow_to_size_iter_impl(sized_vector_model<uinttype> &imp, void *iter, ::std::size_t newcap, ::std::size_t size, ::std::size_t alignment)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -108,6 +111,7 @@ template <typename allocator, typename uinttype>
 #if __has_cpp_attribute(__gnu__::__cold__)
 [[__gnu__::__cold__]]
 #endif
+FAST_IO_UNSAFE_API
 inline constexpr void *grow_twice_iter_impl(sized_vector_model<uinttype> &imp, void *iter, ::std::size_t size, ::std::size_t alignment)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -142,6 +146,7 @@ inline constexpr void *grow_twice_impl(sized_vector_model<uinttype> &imp, ::std:
 }
 
 template <typename allocator, typename uinttype>
+FAST_IO_UNSAFE_API
 inline constexpr void *move_backward_impl(sized_vector_model<uinttype> &imp, void *iter, ::std::size_t size, ::std::size_t alignment)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -157,6 +162,7 @@ inline constexpr void *move_backward_impl(sized_vector_model<uinttype> &imp, voi
 } // namespace detemplate
 
 template <typename allocator, typename uinttype, ::std::size_t size, ::std::size_t alignment>
+FAST_IO_UNSAFE_API
 inline constexpr void *grow_to_size_iter_impl(sized_vector_model<uinttype> &imp, void *iter, ::std::size_t newcap)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -199,6 +205,7 @@ inline constexpr void *grow_twice_impl(sized_vector_model<uinttype> &imp)
 }
 
 template <typename allocator, typename uinttype, ::std::size_t size, ::std::size_t alignment>
+FAST_IO_UNSAFE_API
 inline constexpr void *grow_twice_iter_impl(sized_vector_model<uinttype> &imp, void *iter)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -213,6 +220,7 @@ inline constexpr void *grow_twice_iter_impl(sized_vector_model<uinttype> &imp, v
 }
 
 template <typename allocator, typename uinttype, ::std::size_t size, ::std::size_t alignment>
+FAST_IO_UNSAFE_API
 inline constexpr void *move_backward_impl(sized_vector_model<uinttype> &imp, void *iter)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(allocator::throws_on_allocation_failure || allocator::throws_on_violations)
 {
@@ -227,6 +235,7 @@ inline constexpr void *move_backward_impl(sized_vector_model<uinttype> &imp, voi
 }
 
 template <::std::forward_iterator Iter, ::std::sentinel_for<Iter> Snt>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::size_t iter_distance(Iter first, Snt last)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(++first) || !noexcept(first != last))
 {
@@ -349,6 +358,7 @@ public:
 	{}
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer allocate_elements(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
@@ -361,6 +371,7 @@ private:
 			return typed_allocator_type::allocate(n);
 		}
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer allocate_zero_elements(size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_allocation)
 	{
@@ -373,6 +384,7 @@ private:
 			return typed_allocator_type::allocate_zero(n);
 		}
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void deallocate_elements_n(pointer ptr, size_type n) noexcept
 	{
 		if constexpr (alloc_with_status)
@@ -422,11 +434,15 @@ private:
 	struct run_destroy
 	{
 		sized_vector *thisvec{};
+		FAST_IO_UNSAFE_API
 		inline constexpr run_destroy() noexcept = default;
+		FAST_IO_UNSAFE_API
 		inline explicit constexpr run_destroy(sized_vector *p) noexcept
 			: thisvec(p)
 		{}
+		FAST_IO_UNSAFE_API
 		inline run_destroy(run_destroy const &) = delete;
+		FAST_IO_UNSAFE_API
 		inline run_destroy &operator=(run_destroy const &) = delete;
 		inline constexpr ~run_destroy() noexcept
 		{
@@ -453,6 +469,7 @@ private:
 	}
 
 	template <typename Iter, typename Sentinel>
+	FAST_IO_UNSAFE_API
 	inline constexpr void construct_vector_common_impl(Iter first, Sentinel last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*first)> ||
 									   !noexcept(++first) || !noexcept(first != last))
@@ -704,6 +721,7 @@ public:
 		des.thisvec = nullptr;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr sized_vector &operator=(sized_vector const &vec)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
@@ -719,6 +737,7 @@ public:
 		return *this;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr sized_vector(sized_vector &&vec) noexcept
 		: imp(vec.imp), allochdl{vec.allochdl}
 	{
@@ -743,6 +762,7 @@ public:
 
 	template <typename... Args>
 		requires std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace_back_unchecked(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
 	{
@@ -786,6 +806,7 @@ private:
 		}
 	};
 
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer grow_to_size_iter_impl(size_type newcap, pointer iter, size_type n)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation)
 	{
@@ -921,6 +942,7 @@ private:
 #if __has_cpp_attribute(__gnu__::__cold__)
 	[[__gnu__::__cold__]]
 #endif
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer grow_twice_iter_impl(pointer iter)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation)
 	{
@@ -947,6 +969,7 @@ private:
 	curr_ptr stay live (moved-from) after the shift; the caller writes the new
 	element into iter itself.
 	*/
+	FAST_IO_UNSAFE_API
 	inline constexpr void move_backward_one_impl(pointer iter)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_move_constructible<value_type> ||
 									   ::fast_io::containers::details::may_throw_move_assignable<value_type>)
@@ -1044,6 +1067,7 @@ public:
 		(--(imp.begin_ptr + imp.size))->~value_type();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_back_unchecked() noexcept
 	{
 		(--(imp.begin_ptr + imp.size))->~value_type();
@@ -1059,11 +1083,13 @@ public:
 	{
 		static_cast<void>(this->emplace_back(::std::move(value)));
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(T const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_copy_constructible<value_type>)
 	{
 		static_cast<void>(this->emplace_back_unchecked(value));
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(T &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::may_throw_move_constructible<value_type>)
 	{
@@ -1071,10 +1097,12 @@ public:
 	}
 
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr pointer data() noexcept
 	{
 		return imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_pointer data() const noexcept
 	{
 		return imp.begin_ptr;
@@ -1121,10 +1149,12 @@ public:
 	{
 		return static_cast<::std::size_t>(max_size()) * sizeof(value_type);
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reference index_unchecked(size_type pos) const noexcept
 	{
 		return imp.begin_ptr[pos];
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reference index_unchecked(size_type pos) noexcept
 	{
 		return imp.begin_ptr[pos];
@@ -1222,68 +1252,84 @@ public:
 		return curr_ptr[-1];
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reference front_unchecked() const noexcept
 	{
 		return *imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reference front_unchecked() noexcept
 	{
 		return *imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reference back_unchecked() const noexcept
 	{
 		return (imp.begin_ptr + imp.size)[-1];
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reference back_unchecked() noexcept
 	{
 		return (imp.begin_ptr + imp.size)[-1];
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr iterator begin() noexcept
 	{
 		return imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr iterator end() noexcept
 	{
 		return (imp.begin_ptr + imp.size);
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator begin() const noexcept
 	{
 		return imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator end() const noexcept
 	{
 		return (imp.begin_ptr + imp.size);
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator cbegin() const noexcept
 	{
 		return imp.begin_ptr;
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_iterator cend() const noexcept
 	{
 		return (imp.begin_ptr + imp.size);
 	}
 
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reverse_iterator rbegin() noexcept
 	{
 		return reverse_iterator{(imp.begin_ptr + imp.size)};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr reverse_iterator rend() noexcept
 	{
 		return reverse_iterator{imp.begin_ptr};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator rbegin() const noexcept
 	{
 		return const_reverse_iterator{(imp.begin_ptr + imp.size)};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator rend() const noexcept
 	{
 		return const_reverse_iterator{imp.begin_ptr};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator{(imp.begin_ptr + imp.size)};
 	}
+	FAST_IO_UNSAFE_API
 	[[nodiscard]] inline constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator{imp.begin_ptr};
@@ -1406,6 +1452,7 @@ private:
 	is a live moved-from object and is reconstructed.
 	*/
 	template <typename... Args>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator emplace_slot_construct_impl(pointer it, Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift)
 	{
@@ -1431,6 +1478,7 @@ private:
 	Same as emplace_slot_construct_impl but takes a pre-materialized element so
 	a throwing element constructor runs before the sized_vector is touched.
 	*/
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator emplace_move_tmp_impl(pointer it, value_type &&tmp)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift)
 	{
@@ -1461,6 +1509,7 @@ private:
 public:
 	template <typename... Args>
 		requires std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator emplace(const_iterator iter, Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_constructible<value_type, Args...>)
@@ -1500,6 +1549,7 @@ public:
 		return *this->emplace(beginptr + idx, ::std::forward<Args>(args)...);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
@@ -1507,6 +1557,7 @@ public:
 		return this->emplace(iter, val);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, value_type &&val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift)
 	{
@@ -1556,6 +1607,7 @@ private:
 	};
 
 	// Carves a count-wide uninitialized hole at it and fills it with val.
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert_count_impl(pointer it, size_type count, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
@@ -1593,6 +1645,7 @@ private:
 	}
 
 	template <::std::ranges::range R>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert_range_hole_impl(pointer it, R &&rg, size_type rgsize)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
@@ -1636,6 +1689,7 @@ private:
 	}
 
 	// Rotates [first, middle, last) left so that middle becomes the new first.
+	FAST_IO_UNSAFE_API
 	inline static constexpr void rotate_range_impl(pointer first, pointer middle, pointer last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1654,6 +1708,7 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert(const_iterator iter, size_type count, const_reference val)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_copy_constructible<value_type>)
@@ -1695,6 +1750,7 @@ public:
 
 	template <::std::ranges::range R>
 		requires ::std::constructible_from<value_type, ::std::ranges::range_value_t<R>>
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator insert_range(const_iterator iter, R &&rg)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any || throwing_relocation || throwing_shift ||
 									   ::fast_io::containers::details::may_throw_constructible<value_type, decltype(*::std::ranges::begin(rg))>)
@@ -1750,6 +1806,7 @@ public:
 
 
 private:
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer erase_common(pointer it)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1779,6 +1836,7 @@ private:
 		return it;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr pointer erase_iters_common(pointer first, pointer last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1817,6 +1875,7 @@ private:
 	}
 
 public:
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator it)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1844,6 +1903,7 @@ public:
 		return idx;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr iterator erase(const_iterator first, const_iterator last)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_shift)
 	{
@@ -1977,6 +2037,7 @@ public:
 		this->swap(temp);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(sized_vector &other) noexcept
 	{
 		::fast_io::algorithms::swap(imp, other.imp);
@@ -2006,6 +2067,7 @@ inline constexpr auto operator<=>(sized_vector<uinttype1, T, allocator1> const &
 #endif
 
 template <typename uinttype, typename T, typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(sized_vector<uinttype, T, allocator> &lhs, sized_vector<uinttype, T, allocator> &rhs) noexcept
 {
 	lhs.swap(rhs);

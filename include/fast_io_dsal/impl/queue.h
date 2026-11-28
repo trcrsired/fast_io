@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -73,11 +74,13 @@ public:
 		return container.front();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference front_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().front_unchecked())
 	{
 		return container.front_unchecked();
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference front_unchecked() const
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type const &>().front_unchecked())
 	{
@@ -95,11 +98,13 @@ public:
 		return container.back();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr reference back_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().back_unchecked())
 	{
 		return container.back_unchecked();
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr const_reference back_unchecked() const
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type const &>().back_unchecked())
 	{
@@ -137,12 +142,14 @@ public:
 		container.reserve(newcap);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_unchecked(value_type const &value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().push_back_unchecked(::std::declval<value_type const &>()))
 	{
 		container.push_back_unchecked(value);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_unchecked(value_type &&value)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().push_back_unchecked(::std::declval<value_type>()))
 	{
@@ -159,6 +166,7 @@ public:
 
 	template <typename... Args>
 		requires ::std::constructible_from<value_type, Args...>
+	FAST_IO_UNSAFE_API
 	inline constexpr reference emplace_unchecked(Args &&...args)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(!noexcept(::std::declval<container_type &>().emplace_back_unchecked(::std::declval<Args &&>()...)))
 	{
@@ -178,6 +186,7 @@ public:
 		container.pop_front();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void pop_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().pop_front_unchecked())
 	{
@@ -202,6 +211,7 @@ public:
 		return front;
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr value_type pop_element_unchecked()
 		FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::containers::details::queue_pop_element_unchecked_may_throw<container_type>)
 		requires(::std::move_constructible<value_type>)
@@ -229,6 +239,7 @@ public:
 		container.clear_destroy();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void swap(::fast_io::containers::queue<Container> &b)
 		FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<container_type &>().swap(::std::declval<container_type &>()))
 	{
@@ -251,6 +262,7 @@ inline constexpr auto operator<=>(::fast_io::containers::queue<Container> const 
 }
 
 template <typename Container>
+FAST_IO_UNSAFE_API
 inline constexpr void swap(::fast_io::containers::queue<Container> &a, ::fast_io::containers::queue<Container> &b)
 	FAST_IO_HERBCEPTIONS_THROWS_IF_NOT_NOEXCEPT(::std::declval<::fast_io::containers::queue<Container> &>().swap(::std::declval<::fast_io::containers::queue<Container> &>()))
 {

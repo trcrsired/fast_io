@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -293,6 +294,7 @@ public:
 		this->push_back_unchecked(v);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void push_back_unchecked(bool v) noexcept
 	{
 		if constexpr (underlying_digits == 8)
@@ -327,6 +329,7 @@ public:
 		}
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr bool test_unchecked(size_type pos) const noexcept
 	{
 		if constexpr (underlying_digits == 8)
@@ -363,6 +366,7 @@ public:
 		}
 		return this->test_unchecked(pos);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr void set_unchecked(size_type pos, bool value = true) noexcept
 	{
 		if constexpr (underlying_digits == 8)
@@ -400,6 +404,7 @@ public:
 		this->set_unchecked(pos, value);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void reset_unchecked(size_type pos) noexcept
 	{
 		if constexpr (underlying_digits == 8)
@@ -434,6 +439,7 @@ public:
 		this->reset_unchecked(pos);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr bool pop_back_unchecked() noexcept
 	{
 		// Position of last bit (curr_pos > 0 assumed)
@@ -462,6 +468,7 @@ public:
 		return this->pop_back_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr bool test_front_unchecked() const noexcept
 	{
 		// front bit is always at pos 0
@@ -478,6 +485,7 @@ public:
 		return this->test_front_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void set_front_unchecked(bool value = true) noexcept
 	{
 		underlying_type &byteval = *imp.begin_ptr;
@@ -496,6 +504,7 @@ public:
 		this->set_front_unchecked(value);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void reset_front_unchecked() noexcept
 	{
 		constexpr underlying_type mask = static_cast<underlying_type>(1u);
@@ -513,6 +522,7 @@ public:
 		this->reset_front_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr bool test_back_unchecked() const noexcept
 	{
 		// last bit is at pos curr_pos - 1
@@ -546,6 +556,7 @@ public:
 		return this->test_back_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void set_back_unchecked(bool value = true) noexcept
 	{
 		size_type bitpos{this->imp.curr_pos - 1};
@@ -584,6 +595,7 @@ public:
 		this->set_back_unchecked(value);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void reset_back_unchecked() noexcept
 	{
 		size_type bitpos{this->imp.curr_pos - 1};
@@ -602,6 +614,7 @@ public:
 		this->reset_back_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void flip_unchecked(size_type pos) noexcept
 	{
 		auto [byte_index, bit_index] = ::fast_io::details::bitvec_split_bits<underlying_digits>(pos);
@@ -622,6 +635,7 @@ public:
 		this->flip_unchecked(pos);
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void flip_front_unchecked() noexcept
 	{
 		// front bit is always bit 0 of byte 0
@@ -638,6 +652,7 @@ public:
 		this->flip_front_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr void flip_back_unchecked() noexcept
 	{
 		size_type bitpos{imp.curr_pos - 1};
@@ -657,6 +672,7 @@ public:
 		this->flip_back_unchecked();
 	}
 
+	FAST_IO_UNSAFE_API
 	constexpr bitvec(bitvec &&other) noexcept : imp{other.imp}
 	{
 		other.imp = {};
@@ -675,6 +691,7 @@ public:
 	constexpr bitvec(bitvec const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any) : imp{clone_imp(other.imp)}
 	{}
+	FAST_IO_UNSAFE_API
 	constexpr bitvec &operator=(bitvec const &other)
 		FAST_IO_HERBCEPTIONS_THROWS_IF(throwing_any)
 	{
@@ -691,6 +708,7 @@ public:
 	{
 		this->destroy_bitvec();
 	}
+	FAST_IO_UNSAFE_API
 	constexpr void swap(bitvec &other) noexcept
 	{
 		::fast_io::algorithms::swap(this->imp, other.imp);
@@ -1808,6 +1826,7 @@ public:
 		// No need to zero trailing bytes — they are logically out of range.
 	}
 
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type erase_index_unchecked(size_type firstpos, size_type lastpos) noexcept
 	{
 		size_type const erase_count = lastpos - firstpos;
@@ -1968,6 +1987,7 @@ public:
 		// erase the single bit [idx, idx+1)
 		return this->erase_index_unchecked(idx, idx + 1);
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr size_type erase_index_unchecked(size_type idx) noexcept
 	{
 		// erase the single bit [idx, idx+1)
@@ -2487,6 +2507,7 @@ inline constexpr ::std::strong_ordering operator<=>(
 }
 
 template <typename allocator>
+FAST_IO_UNSAFE_API
 constexpr void swap(::fast_io::containers::bitvec<allocator> &lhs, ::fast_io::containers::bitvec<allocator> &rhs) noexcept
 {
 	lhs.swap(rhs);
@@ -2560,6 +2581,7 @@ constexpr ::fast_io::containers::bitvec<allocator> bitvec_bit_ceil(::fast_io::co
 namespace details
 {
 template <::std::integral chtype, typename underlying>
+FAST_IO_UNSAFE_API
 inline constexpr chtype *pr_rsv_bin_full(chtype *outit, underlying const *first, underlying const *last) noexcept
 {
 #if 1
@@ -2621,6 +2643,7 @@ inline constexpr chtype *pr_rsv_bin_full(chtype *outit, underlying const *first,
 }
 
 template <::std::integral chtype, typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr chtype *pr_rsv_bitvec(chtype *outit, ::fast_io::containers::bitvec<allocator> const &bv) noexcept
 {
 	constexpr auto underlying_digits{::fast_io::containers::bitvec<allocator>::underlying_digits};
@@ -2653,6 +2676,7 @@ inline constexpr ::std::size_t print_reserve_size(::fast_io::io_reserve_type_t<c
 }
 
 template <::std::integral chtype, typename allocator>
+FAST_IO_UNSAFE_API
 inline constexpr chtype *print_reserve_define(::fast_io::io_reserve_type_t<chtype, ::fast_io::containers::bitvec<allocator>>, chtype *it, ::fast_io::containers::bitvec<allocator> const &bv) noexcept
 {
 	return ::fast_io::details::pr_rsv_bitvec(it, bv);

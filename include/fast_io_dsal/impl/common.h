@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -116,6 +117,7 @@ struct handle_holder
 		requires(is_trivally_stored_allocator_handle<handle>)
 		: value(small_object)
 	{}
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder(handle *small_object) noexcept
 		requires is_trivally_stored_allocator_handle<handle>
 		: value(*small_object)
@@ -127,13 +129,18 @@ struct handle_holder
 		value = ::fast_io::typed_generic_allocator_adapter<handle, handle>::handle_allocate(large_object, 1);
 		::std::construct_at(value, ::std::forward<handle>(large_object));
 	}
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder(handle *large_object) noexcept
 		requires(!is_trivally_stored_allocator_handle<handle>)
 		: value(large_object)
 	{}
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder(handle_holder const &) noexcept = default;
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder &operator=(handle_holder const &) noexcept = default;
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder(handle_holder &&) noexcept = default;
+	FAST_IO_UNSAFE_API
 	inline constexpr handle_holder &operator=(handle_holder &&) noexcept = default;
 #if __has_cpp_attribute(__gnu__::__always_inline__)
 	[[__gnu__::__always_inline__]]

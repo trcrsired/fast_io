@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::operations::defines
 {
@@ -38,6 +39,7 @@ namespace fast_io::details
 {
 
 template <::std::input_or_output_iterator Iter1, ::std::sentinel_for<Iter1> Sent, ::std::input_or_output_iterator Iter2>
+FAST_IO_UNSAFE_API
 inline constexpr Iter2 uninitialized_relocate_ignore(Iter1 first, Sent last, Iter2 dest)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*first))> ||
 								   !::std::is_nothrow_destructible_v<::std::iter_value_t<Iter1>>)
@@ -99,6 +101,7 @@ inline constexpr Iter2 uninitialized_relocate_ignore(Iter1 first, Sent last, Ite
 }
 
 template <::std::bidirectional_iterator Iter1, ::std::sentinel_for<Iter1> Snt, ::std::bidirectional_iterator Iter2>
+FAST_IO_UNSAFE_API
 inline constexpr Iter2 uninitialized_relocate_backward_ignore(Iter1 first, Snt last, Iter2 dest)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(!::std::is_nothrow_constructible_v<::std::iter_value_t<Iter2>, decltype(::std::move(*first))> ||
 								   !::std::is_nothrow_destructible_v<::std::iter_value_t<Iter1>>)
