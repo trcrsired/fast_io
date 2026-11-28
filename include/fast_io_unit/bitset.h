@@ -1,9 +1,10 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
 
-struct bitset_print_reserve_proxy
+struct FAST_IO_LIFETIME_EXPRESSION bitset_print_reserve_proxy
 {
 	using manip_tag = manip_tag_t;
 

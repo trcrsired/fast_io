@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -7,7 +8,7 @@ namespace manipulators
 {
 
 template <typename T>
-struct debug_view_t
+struct FAST_IO_LIFETIME_EXPRESSION debug_view_t
 {
 	using manip_tag = manip_tag_t;
 	T reference;

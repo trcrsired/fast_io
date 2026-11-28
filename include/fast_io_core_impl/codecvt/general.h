@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -586,7 +587,7 @@ namespace manipulators
 {
 
 template <encoding_scheme src_scheme, encoding_scheme dst_scheme, ::std::integral char_type>
-struct code_cvt_t
+struct FAST_IO_LIFETIME_EXPRESSION code_cvt_t
 {
 	using manip_tag = manip_tag_t;
 	basic_io_scatter_t<char_type> reference;
@@ -610,6 +611,7 @@ inline constexpr auto code_cvt(basic_io_scatter_t<char_type> t) noexcept
 
 template <encoding_scheme src_scheme = encoding_scheme::execution_charset,
 		  encoding_scheme dst_scheme = encoding_scheme::execution_charset, ::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr auto code_cvt_os_c_str(char_type const *cstr) noexcept
 {
 	return ::fast_io::manipulators::code_cvt<src_scheme, dst_scheme>(::fast_io::manipulators::os_c_str(cstr));
@@ -617,6 +619,7 @@ inline constexpr auto code_cvt_os_c_str(char_type const *cstr) noexcept
 
 template <encoding_scheme src_scheme = encoding_scheme::execution_charset,
 		  encoding_scheme dst_scheme = encoding_scheme::execution_charset, ::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr auto code_cvt_os_c_str(char_type const *cstr, ::std::size_t n) noexcept
 {
 	return ::fast_io::manipulators::code_cvt<src_scheme, dst_scheme>(::fast_io::mnp::os_c_str(cstr, n));

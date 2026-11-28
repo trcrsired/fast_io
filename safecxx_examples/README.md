@@ -267,12 +267,15 @@ C-string manipulator factories that take raw pointers (`os_c_str(p)`,
 `os_c_str_with_known_size(p, n)`, `strvw(first, last)`, `code_cvt_os_c_str(p)`,
 …) are `[[unsafe]]`: a C-style string or iterator pair carries no owner. The
 array overload `os_c_str_carr("literal")` stays callable from safe source.
-Their result types (the `basic_os_c_str` family) carry
-`FAST_IO_LIFETIME_EXPRESSION` (`[[lifetime_expression]]`): they may only exist
-as temporaries inside an expression. Storing one in a variable or field is
-rejected; see `manipulator_expression.cc` and
-`manipulator_expression_reject.cc`. This is a lifetime property of the type,
-not an `[[unsafe]]` fence or call restriction.
+Their result types carry `FAST_IO_LIFETIME_EXPRESSION`
+(`[[lifetime_expression]]`): they may only exist as temporaries inside an
+expression. Storing one in a variable or field is rejected. This applies to
+**every** manipulator in fast_io — the C-string family plus all types
+satisfying the library's `manipulator` concept (`scalar_manip_t`, `chvw_t`,
+`code_cvt_t`, `parameter`, the width/percentage/IP/date/hash/serialization
+manipulators, …), 34 types in total. Driver types are excluded. See
+`manipulator_expression.cc` and `manipulator_expression_reject.cc`. This is a
+lifetime property of the type, not an `[[unsafe]]` fence or call restriction.
 
 ### How much of a real program is safe
 

@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io::details
 {
@@ -75,7 +76,7 @@ struct basic_lebe_get_integral
 };
 
 template <::std::size_t sz, typename value_type>
-struct basic_lebe_put_integral
+struct FAST_IO_LIFETIME_EXPRESSION basic_lebe_put_integral
 {
 	using manip_tag = manip_tag_t;
 #ifndef __INTELLISENSE__
@@ -89,7 +90,7 @@ struct basic_lebe_put_integral
 };
 
 template <::std::endian end, typename value_type>
-struct basic_lebe_get_put
+struct FAST_IO_LIFETIME_EXPRESSION basic_lebe_get_put
 {
 	using manip_tag = manip_tag_t;
 #ifndef __INTELLISENSE__

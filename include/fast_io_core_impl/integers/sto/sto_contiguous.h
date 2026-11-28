@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 #include "sto_generate_base_tb.h"
 
 namespace fast_io
@@ -1693,7 +1694,7 @@ namespace manipulators
 {
 
 template <typename char_type>
-struct ch_get_t
+struct FAST_IO_LIFETIME_EXPRESSION ch_get_t
 {
 	using manip_tag = manip_tag_t;
 	char_type &reference;

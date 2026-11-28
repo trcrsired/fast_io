@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -18,7 +19,7 @@ println("vec.begin():",fast_io::mnp::funcvw(vec.begin())," vec.end()",fast_io::m
 namespace manipulators
 {
 template <typename T>
-struct chvw_t
+struct FAST_IO_LIFETIME_EXPRESSION chvw_t
 {
 	using manip_tag = manip_tag_t;
 	T reference;
@@ -52,6 +53,7 @@ print_alias_define(io_alias_t, basic_os_str_known_size_without_null_terminated<c
 }
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_str_known_size_without_null_terminated<char_type> os_c_str(char_type const *ch, ::std::size_t n) noexcept
 {
 	return {ch, ::fast_io::cstr_nlen(ch, n)};
@@ -66,6 +68,7 @@ inline constexpr basic_os_str_known_size_without_null_terminated<char_type> os_c
 }
 
 template <::std::integral char_type>
+FAST_IO_UNSAFE_API
 inline constexpr basic_os_c_str_with_known_size<char_type> os_c_str_null_terminated(char_type const *ch, ::std::size_t n) noexcept
 {
 	return {ch, n};
@@ -108,6 +111,7 @@ inline constexpr void os_c_str(decltype(nullptr), ::std::size_t) noexcept = dele
 
 template <::std::contiguous_iterator Iter>
 	requires ::std::integral<::std::iter_value_t<Iter>>
+FAST_IO_UNSAFE_API
 inline constexpr basic_io_scatter_t<::std::remove_cvref_t<::std::iter_value_t<Iter>>> strvw(Iter first,
 																							Iter last) noexcept
 {

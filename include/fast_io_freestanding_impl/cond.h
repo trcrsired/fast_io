@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -20,7 +21,7 @@ namespace manipulators
 {
 
 template <typename T1, typename T2>
-struct condition
+struct FAST_IO_LIFETIME_EXPRESSION condition
 {
 	using manip_tag = manip_tag_t;
 	using alias_type1 = T1;

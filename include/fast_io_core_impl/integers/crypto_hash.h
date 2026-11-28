@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -62,7 +63,7 @@ inline constexpr ::std::size_t hex_encoding_prv_size_cal(::std::byte const *firs
 } // namespace details
 
 template <bool uppercase>
-struct basic_hex_encode
+struct FAST_IO_LIFETIME_EXPRESSION basic_hex_encode
 {
 	using manip_tag = manip_tag_t;
 	::std::byte const *reference{};
@@ -84,7 +85,7 @@ inline constexpr char_type *print_reserve_define(io_reserve_type_t<char_type, ::
 }
 
 template <::std::integral ch_type, typename T>
-struct basic_crypto_hash_as_file
+struct FAST_IO_LIFETIME_EXPRESSION basic_crypto_hash_as_file
 {
 	using output_char_type = ch_type;
 	using manip_tag = manip_tag_t;
@@ -220,7 +221,7 @@ enum class digest_format
 };
 
 template <digest_format d, typename T>
-struct hash_digest_t
+struct FAST_IO_LIFETIME_EXPRESSION hash_digest_t
 {
 	using manip_tag = manip_tag_t;
 	using reference_type = T;
@@ -246,7 +247,7 @@ inline constexpr hash_digest_t<digest_format::raw_bytes, ctx const &> hash_diges
 }
 
 template <digest_format d, crypto_hash_context T>
-struct hash_compress_t
+struct FAST_IO_LIFETIME_EXPRESSION hash_compress_t
 {
 	using manip_tag = manip_tag_t;
 	using reference_type = T;

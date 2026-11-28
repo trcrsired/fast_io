@@ -33,6 +33,7 @@
 #include "fast_io_dsal/impl/misc/push_macros.h"
 #include "fast_io_dsal/impl/misc/push_warnings.h"
 #include "fast_io_core_impl/safecxx_fence.h"
+#include "fast_io_core_impl/safecxx_attr.h"
 
 FAST_IO_SAFECXX_IMPL_BEGIN
 #include "fast_io_core_impl/freestanding/herbceptions.h"

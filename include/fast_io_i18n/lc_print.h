@@ -1,4 +1,5 @@
 #pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 
 // lc_print — dump a whole locale in the LC_* category text form
@@ -588,7 +589,7 @@ namespace manipulators
 // the whole-locale dump, as a value — the raw lc_locale pointer stays
 // non-printable; wrapping it asks for the dump explicitly, like
 // master's print_define on basic_lc_all did for `loc`
-struct lc_dump_t
+struct FAST_IO_LIFETIME_EXPRESSION lc_dump_t
 {
 	using manip_tag = manip_tag_t;
 	::fast_io::l10n::lc_locale const *reference;

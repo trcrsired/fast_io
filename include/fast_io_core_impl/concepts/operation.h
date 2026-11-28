@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -266,7 +267,7 @@ template <typename T>
 concept manipulator = requires(T t) { typename T::manip_tag; };
 
 template <typename T>
-struct parameter
+struct FAST_IO_LIFETIME_EXPRESSION parameter
 {
 	using manip_tag = manip_tag_t;
 	T reference;

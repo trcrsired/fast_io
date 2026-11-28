@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -13,7 +14,7 @@ namespace manipulators
  * use — obs-date forms (rfc850, asctime) are not accepted.
  */
 template <typename T>
-struct imf_date_manip_t
+struct FAST_IO_LIFETIME_EXPRESSION imf_date_manip_t
 {
 	using manip_tag = manip_tag_t;
 	T *reference;

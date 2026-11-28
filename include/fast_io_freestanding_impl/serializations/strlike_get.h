@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -15,7 +16,7 @@ namespace manipulators
 {
 
 template <typename T>
-struct basic_strlike_get
+struct FAST_IO_LIFETIME_EXPRESSION basic_strlike_get
 {
 	using value_type = T;
 	using manip_tag = manip_tag_t;

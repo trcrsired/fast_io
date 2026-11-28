@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -7,7 +8,7 @@ namespace manipulators
 {
 
 template <typename value_type>
-struct basic_leb128_get_put
+struct FAST_IO_LIFETIME_EXPRESSION basic_leb128_get_put
 {
 	using manip_tag = manip_tag_t;
 #ifndef __INTELLISENSE__

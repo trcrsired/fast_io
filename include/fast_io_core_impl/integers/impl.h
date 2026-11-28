@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC system_header
 #endif
@@ -81,7 +82,7 @@ inline constexpr ip_flags ip_default_flags{.showport = true};
 inline constexpr ip_flags ip_default_inaddr_flags{};
 
 template <ip_flags flags, typename T>
-struct ip_manip_t
+struct FAST_IO_LIFETIME_EXPRESSION ip_manip_t
 {
 	using value_type = T;
 	using manip_tag = manip_tag_t;
@@ -113,7 +114,7 @@ inline constexpr ip_scan_flags ip_scan_no_ipv4_mapped_ipv6{.requireport = true, 
 inline constexpr ip_scan_flags ip_scan_default_inaddr_flags{};
 
 template <ip_scan_flags flags, typename T>
-struct ip_scan_manip_t
+struct FAST_IO_LIFETIME_EXPRESSION ip_scan_manip_t
 {
 	using value_type = T;
 	using manip_tag = manip_tag_t;
@@ -157,7 +158,7 @@ inline constexpr scalar_flags floating_point_default_scalar_flags{.floating = fl
 inline constexpr scalar_flags address_default_scalar_flags{.base = 16, .showbase = true, .full = true};
 
 template <scalar_flags flags, typename T>
-struct scalar_manip_t
+struct FAST_IO_LIFETIME_EXPRESSION scalar_manip_t
 {
 	using value_type = T;
 	using scalar_flags_type = scalar_flags;
@@ -173,14 +174,14 @@ struct scalar_manip_t
 	T reference;
 };
 
-struct member_function_pointer_holder_t
+struct FAST_IO_LIFETIME_EXPRESSION member_function_pointer_holder_t
 {
 	using manip_tag = manip_tag_t;
 	::fast_io::freestanding::array<::std::size_t, ::fast_io::details::method_ptr_hold_size> reference;
 };
 
 template <typename T>
-struct whole_get_t
+struct FAST_IO_LIFETIME_EXPRESSION whole_get_t
 {
 	using value_type = T;
 	using manip_tag = manip_tag_t;
@@ -466,7 +467,7 @@ namespace manipulators
 {
 
 template <scalar_flags flags, typename T>
-struct scalar_manip_precision_t
+struct FAST_IO_LIFETIME_EXPRESSION scalar_manip_precision_t
 {
 	using scalar_flags_type = scalar_flags;
 	using manip_tag = manip_tag_t;
@@ -482,7 +483,7 @@ struct scalar_manip_precision_t
 };
 
 template <scalar_placement flags, typename T>
-struct width_t
+struct FAST_IO_LIFETIME_EXPRESSION width_t
 {
 	using manip_tag = manip_tag_t;
 #ifndef __INTELLISENSE__
@@ -497,7 +498,7 @@ struct width_t
 };
 
 template <scalar_placement flags, typename T, ::std::integral ch_type>
-struct width_ch_t
+struct FAST_IO_LIFETIME_EXPRESSION width_ch_t
 {
 	using manip_tag = manip_tag_t;
 	using char_type = ch_type;
@@ -514,7 +515,7 @@ struct width_ch_t
 };
 
 template <typename T>
-struct width_runtime_t
+struct FAST_IO_LIFETIME_EXPRESSION width_runtime_t
 {
 	using manip_tag = manip_tag_t;
 	scalar_placement placement;
@@ -530,7 +531,7 @@ struct width_runtime_t
 };
 
 template <typename T, ::std::integral ch_type>
-struct width_runtime_ch_t
+struct FAST_IO_LIFETIME_EXPRESSION width_runtime_ch_t
 {
 	using manip_tag = manip_tag_t;
 	using char_type = ch_type;

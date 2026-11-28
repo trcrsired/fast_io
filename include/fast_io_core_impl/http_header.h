@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "fast_io_core_impl/safecxx_attr.h"
 
 namespace fast_io
 {
@@ -395,7 +396,7 @@ enum class line_skipper_tag
 };
 
 template <line_skipper_tag tag>
-struct line_skipper
+struct FAST_IO_LIFETIME_EXPRESSION line_skipper
 {
 	using manip_tag = manip_tag_t;
 	inline static constexpr line_skipper_tag tag_value{tag};
