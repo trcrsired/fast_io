@@ -151,22 +151,21 @@ C++ and no lifetime attributes.
 
 ### `print` without `[[unsafe]]`
 
-The core I/O API (`fast_io.h`) can be used from safe source with **no fence in
-user code**. The implementation is trusted-unsafe; only the user's calls are
-checked. Two equivalent trust declarations:
+`fast_io.h` self-fences its implementation under `__SAFECXX__`, so a normal
+include with `-I` is enough — no `-isystem` and no fence in user code:
 
-- **`#include <fast_io_safecxx_safe.h>`** (with plain `-I`). This facade opens a
-  `[[unsafe]]` fence in a *library header* around `<fast_io.h>`. A fence opened
-  in a header (not the main file) relaxes syntax for the implementation but
-  does **not** mark its declarations unsafe-to-call, so `print` is callable.
-- **`-isystem /path/to/fast_io/include`** with a plain `#include <fast_io.h>`.
-  The dialect already exempts system headers from safe-source checks and does
-  not implicitly call-restrict functions declared there.
+```sh
+clang++ --config=$HOME/cfgs/x86_64-linux-gnu-libcxx.cfg \
+  -std=c++26 -fsafecxx -fherbceptions -lherbceptions -O2 -s -Iinclude \
+  safecxx_examples/print_hello.cc -o /tmp/print_hello
+```
 
-`print_hello.cc` demonstrates the facade form; it compiles, links and runs with
-`-Iinclude` and prints `hello world`. Lifetime diagnostics are unaffected: the
-`[[lifetime("this")]]` marks in the DSAL headers still classify views, so
-dangling views and owner-freeze violations are still rejected in user code.
+The fence is opened in the library header: it relaxes syntax for the imported
+implementation but does not mark the public API unsafe-to-call, so `print` is
+callable from safe source. `print_hello.cc` prints `hello world`. Lifetime
+diagnostics are unaffected: the `[[lifetime("this")]]` marks in the DSAL
+headers still classify views, so dangling views and owner-freeze violations are
+still rejected in user code.
 
 `view_invalidation_reject.cc` documents the owner-freeze rule: a non-const
 member call on an owner is rejected while a live view borrows from it. The same
@@ -211,7 +210,6 @@ Still open / design notes:
   `freestanding/herbceptions.h`, `freestanding/addressof.h`,
   `concepts/type.h`, etc. The isolated run produced 204 diagnostics, all in
   the vector implementation once those support headers were fenced.
-- The driver config includes fast_io with `-I`, so fast_io is not a system
-  header. Fencing it is the user's trust declaration; system headers stay
-  directly usable. `fast_io_safecxx_safe.h` provides the header-local fence for
-  core I/O, so user code needs no fence at all (see `print_hello.cc`).
+- The driver config includes fast_io with `-I`. `fast_io.h` now declares its
+  own trust with a library-header fence, so core I/O is usable directly from
+  safe source (see `print_hello.cc`).
