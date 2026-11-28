@@ -215,6 +215,7 @@ inline constexpr OIter partial_sort_copy_iters(
 template<::std::ranges::input_range R1,
   ::std::ranges::random_access_range R2,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R2> partial_sort_copy(
   R1 &&r1, R2 &&r2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

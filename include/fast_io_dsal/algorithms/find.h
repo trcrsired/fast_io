@@ -399,6 +399,7 @@ inline constexpr Iter find_iters(Iter first, Snt last, T const& value)
 }
 
 template<::std::ranges::range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> find(R&& r, T const& value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(!::fast_io::details::algorithms::find_ranges_no_throw<R, T>)
 {
@@ -440,6 +441,7 @@ inline constexpr Iter find_if_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::input_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> find_if(R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_ranges_no_throw<R, F>)
@@ -488,6 +490,7 @@ inline constexpr Iter find_if_not_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::input_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> find_if_not(R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::find_if_ranges_no_throw<R, F>)

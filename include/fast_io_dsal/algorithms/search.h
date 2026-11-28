@@ -274,6 +274,7 @@ inline constexpr Iter adjacent_find_iters(
 
 template<::std::ranges::forward_range R,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> adjacent_find(
   R &&r, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -332,6 +333,7 @@ inline constexpr Iter1 find_end_iters(
 
 template<::std::ranges::forward_range R1, ::std::ranges::forward_range R2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R1> find_end(
   R1 &&r1, R2 &&r2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -398,6 +400,7 @@ inline constexpr Iter1 find_first_of_iters(
 
 template<::std::ranges::forward_range R1, ::std::ranges::forward_range R2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R1> find_first_of(
   R1 &&r1, R2 &&r2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -463,6 +466,7 @@ inline constexpr Iter1 search_iters(
 
 template<::std::ranges::forward_range R1, ::std::ranges::forward_range R2,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R1> search(
   R1 &&r1, R2 &&r2, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -528,6 +532,7 @@ inline constexpr Iter search_n_iters(
 
 template<::std::ranges::forward_range R, typename T,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> search_n(
   R &&r, ::std::size_t count, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

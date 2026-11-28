@@ -389,6 +389,7 @@ inline constexpr Iter uninitialized_default_construct_iters(Iter first, Snt last
 }
 
 template<::std::ranges::range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_default_construct(
   R &&r)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -414,6 +415,7 @@ inline constexpr Iter uninitialized_default_construct_n_iters(
 }
 
 template<::std::ranges::input_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_default_construct_n(
   R &&r, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -439,6 +441,7 @@ inline constexpr Iter uninitialized_value_construct_iters(Iter first, Snt last)
 }
 
 template<::std::ranges::range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_value_construct(
   R &&r)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -464,6 +467,7 @@ inline constexpr Iter uninitialized_value_construct_n_iters(
 }
 
 template<::std::ranges::input_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_value_construct_n(
   R &&r, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

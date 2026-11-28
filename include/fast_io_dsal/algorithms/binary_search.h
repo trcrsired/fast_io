@@ -124,6 +124,7 @@ inline constexpr Iter lower_bound_iters(
 
 template<::std::ranges::forward_range R, typename T,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> lower_bound(
   R &&r, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -184,6 +185,7 @@ inline constexpr Iter upper_bound_iters(
 
 template<::std::ranges::forward_range R, typename T,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> upper_bound(
   R &&r, T const &value, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

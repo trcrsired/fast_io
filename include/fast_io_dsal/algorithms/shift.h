@@ -157,6 +157,7 @@ inline constexpr Iter shift_left_iters(
 }
 
 template<::std::ranges::forward_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> shift_left(
   R &&r, ::std::ranges::range_difference_t<R> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -210,6 +211,7 @@ inline constexpr Iter shift_right_iters(
 }
 
 template<::std::ranges::bidirectional_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> shift_right(
   R &&r, ::std::ranges::range_difference_t<R> n)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

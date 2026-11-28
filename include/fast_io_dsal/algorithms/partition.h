@@ -293,6 +293,7 @@ inline constexpr Iter partition_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::forward_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> partition(R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::partition_swap_iters_no_throw<
@@ -373,6 +374,7 @@ inline constexpr Iter stable_partition_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::forward_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> stable_partition(
   R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -423,6 +425,7 @@ inline constexpr Iter partition_point_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::forward_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> partition_point(
   R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

@@ -150,6 +150,7 @@ inline constexpr Iter destroy_iters(Iter first, Snt last)
 }
 
 template<::std::ranges::range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> destroy(R &&r)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::destroy_ranges_no_throw<R>)
@@ -171,6 +172,7 @@ inline constexpr Iter destroy_n_iters(Iter first, ::std::size_t count)
 }
 
 template<::std::ranges::input_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> destroy_n(
   R &&r, ::std::size_t count)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

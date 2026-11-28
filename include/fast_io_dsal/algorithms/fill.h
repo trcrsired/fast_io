@@ -393,6 +393,7 @@ inline constexpr Iter fill_iters(Iter first, Snt last, T const &value)
 }
 
 template<::std::ranges::range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> fill(R &&r, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::fill_ranges_no_throw<R, T>)
@@ -414,6 +415,7 @@ inline constexpr Iter fill_n_iters(Iter first, ::std::size_t count, T const &val
 }
 
 template<::std::ranges::input_range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> fill_n(
   R &&r, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -451,6 +453,7 @@ inline constexpr Iter uninitialized_fill_iters(
 }
 
 template<::std::ranges::range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_fill(
   R &&r, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
@@ -476,6 +479,7 @@ inline constexpr Iter uninitialized_fill_n_iters(
 }
 
 template<::std::ranges::input_range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> uninitialized_fill_n(
   R &&r, ::std::size_t count, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

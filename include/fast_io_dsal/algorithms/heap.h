@@ -269,6 +269,7 @@ inline constexpr Iter is_heap_until_iters(Iter first, Iter last, Cmp cmp = Cmp{}
 
 template<::std::ranges::random_access_range R,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> is_heap_until(R &&r, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !(::fast_io::details::algorithms::is_heap_iters_no_throw<

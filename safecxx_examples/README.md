@@ -241,6 +241,14 @@ Public APIs are then classified:
 `include_layers.cc` includes every layer and uses a range-based algorithm from
 safe source; `include_layers_reject.cc` documents a rejected iterator call.
 
+Algorithms follow the same rule: iterator-taking kernels (`*_iters`,
+`*_pointer`, `*_ptr`) and range overloads that **return an iterator** are
+`[[unsafe]]` (36 additional range overloads); index-based overloads and pure
+range algorithms that return a value stay safe. Index access requires a
+random-access range, so node-based containers (`list`, `forward_list`) have no
+safe index API and remain iterator-only — their `begin()` is call-restricted.
+See `algorithms_range.cc` and `algorithms_range_reject.cc`.
+
 All container families are classified the same way as `vector`/`span`:
 `array`, `bitvec`, `deque`, `forward_list`, `list`, `priority_queue`, `queue`,
 `sized_string`, `sized_vector`, `stack`, the btree/swiss map and set families,

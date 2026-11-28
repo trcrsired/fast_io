@@ -114,6 +114,7 @@ inline constexpr Iter generate_n_iters(Iter first, ::std::size_t count, G g)
 }
 
 template<::std::ranges::range R, typename G>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> generate_n(
   R &&r, ::std::size_t count, G g)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

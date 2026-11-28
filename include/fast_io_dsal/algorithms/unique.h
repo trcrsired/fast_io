@@ -135,6 +135,7 @@ inline constexpr Iter unique_iters(
 
 template<::std::ranges::forward_range R,
   typename Cmp = ::fast_io::algorithms::equal_to>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> unique(
   R &&r, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(

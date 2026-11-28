@@ -249,6 +249,7 @@ inline constexpr Iter remove_iters(Iter first, Snt last, T const &value)
 }
 
 template<::std::ranges::forward_range R, typename T>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> remove(R &&r, T const &value)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_ranges_no_throw<R, T>)
@@ -298,6 +299,7 @@ inline constexpr Iter remove_if_iters(Iter first, Snt last, F f)
 }
 
 template<::std::ranges::forward_range R, typename F>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> remove_if(R &&r, F f)
   FAST_IO_HERBCEPTIONS_THROWS_IF(
     !::fast_io::details::algorithms::remove_if_ranges_no_throw<R, F>)

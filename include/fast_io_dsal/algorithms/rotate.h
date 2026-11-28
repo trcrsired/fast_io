@@ -580,6 +580,7 @@ inline constexpr Iter rotate_iters(Iter first, Iter middle, Snt last)
 }
 
 template<::std::ranges::forward_range R>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> rotate(
   R &&r, ::std::ranges::iterator_t<R> middle)
   FAST_IO_HERBCEPTIONS_THROWS_IF(

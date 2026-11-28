@@ -81,6 +81,7 @@ inline constexpr Iter is_sorted_until_iters(
 
 template<::std::ranges::forward_range R,
   typename Cmp = ::fast_io::algorithms::compare_three_way>
+FAST_IO_UNSAFE_API
 inline constexpr ::std::ranges::iterator_t<R> is_sorted_until(
   R &&r, Cmp cmp = Cmp{})
   FAST_IO_HERBCEPTIONS_THROWS_IF(
