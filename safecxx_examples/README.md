@@ -149,6 +149,11 @@ can be included directly after the usual support-header fence.
 All spellings are guarded by `__SAFECXX__`, so an ordinary compiler sees plain
 C++ and no lifetime attributes.
 
+`view_invalidation_reject.cc` documents the owner-freeze rule: a non-const
+member call on an owner is rejected while a live view borrows from it. The
+freeze follows liveness rather than a hardcoded list of container mutators, and
+`[[unsafe]]` fences permit the call because it is a call restriction.
+
 ## What this exposed about safe C++
 
 Fixed in the compiler (`safecxx` branch of the LLVM fork):
