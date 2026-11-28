@@ -20,6 +20,17 @@
 #define FAST_IO_WARN_TRAILING_LITERAL 0
 #endif
 
+// The print family only reads its arguments, so in the safe dialect they are
+// `in` borrows rather than forwarding references. In plain C++ the spelling
+// stays `T&&` so the ABI and template-argument deduction are unchanged.
+#if defined(__SAFECXX__)
+#define FAST_IO_PRINT_IN in
+#define FAST_IO_PRINT_IN_TYPE(T) T
+#else
+#define FAST_IO_PRINT_IN
+#define FAST_IO_PRINT_IN_TYPE(T) T &&
+#endif
+
 namespace fast_io
 {
 
@@ -143,7 +154,8 @@ template <typename T, typename... Args>
 #elif __has_cpp_attribute(msvc::forceinline)
 [[msvc::forceinline]]
 #endif
-inline constexpr void print(T &&t, Args &&...args)
+inline constexpr void print(FAST_IO_PRINT_IN FAST_IO_PRINT_IN_TYPE(T) t,
+	FAST_IO_PRINT_IN FAST_IO_PRINT_IN_TYPE(Args)... args)
 	FAST_IO_HERBCEPTIONS_THROWS_IF(::fast_io::details::io_print_may_throw<false, T, Args...>())
 {
 	::fast_io::details::io_print_check_no_consecutive_character_arrays<T, Args...>();
