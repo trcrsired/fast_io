@@ -240,3 +240,22 @@ Public APIs are then classified:
 
 `include_layers.cc` includes every layer and uses a range-based algorithm from
 safe source; `include_layers_reject.cc` documents a rejected iterator call.
+
+### How much of a real program is safe
+
+`construct_fstream_from_syscall.cc` is the safe-C++ version of the upstream
+`examples/0007.legacy` program. Compiled verbatim it produces exactly **two**
+diagnostics, both on one statement:
+
+```cpp
+*fout.rdbuf() = std::move(*fbf.fb);
+```
+
+Moving a `std::filebuf` across the fast_io/legacy boundary requires
+dereferencing two opaque `streambuf*` pointers, so only that statement is
+wrapped in `[[unsafe]] { ... }`. Everything else is safe source: syscall file
+construction (`posix_file`, `c_file`, `filebuf_file`) and their move chains,
+`std::ofstream`, `filebuf_io_observer`, `print`/`println` with timestamps,
+UTC/local time, manipulators, handle views and observer casts. The fenced
+version builds, links and runs, printing the same report as plain C++. The
+`_l10n` variant has the same two diagnostics on its equivalent line.
