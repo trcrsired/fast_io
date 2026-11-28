@@ -299,7 +299,10 @@ with no owner a borrow could be tied to; safe source must wrap such a call in
 parameter kinds (`in`/`inout`) and borrow only from owned streams/scanners.
 `seek`, `rewind` and buffer-flush are safe too — they take only a stream and a
 position, never a raw pointer.
-`operations_classify.cc` and `operations_classify_reject.cc` show both sides.
+`operations_classify.cc` and `operations_classify_reject.cc` show both sides;
+`async_highlevel.cc` shows the async side (`async_print`, `async_scan`,
+`async_transmit` are safe, while `async_pread`/`async_pwrite`/`async_scatter_*`
+need a fence).
 The `[[unsafe]]` mark is on the declarations only; the library implementation
 itself is inside its header fence, so the safe high-level APIs keep working
 without a user-written fence.
